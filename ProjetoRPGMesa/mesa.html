@@ -8,367 +8,165 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
-<style>
-  :root{ /* galerinha, aqui fica as cores tudo guardadinhas, porque é a que nós iremos utilizar mais */
-    --parchment:#EFE3C8;
-    --parchment-2:#E4D3AC;
-    --parchment-edge:#cbb488;
-    --leather:#4A3226;
-    --leather-2:#392619;
-    --leather-3:#2A1B12;
-    --bronze:#B08D57;
-    --bronze-light:#D8BE8A;
-    --ember:#8C3A2B;
-    --ember-light:#B85A42;
-    --ink:#2E2318;
-    --ink-soft:#5c4c3c;
-    --hp-good:#5C7A52;
-    --hp-bad:#A33636;
-    --shadow: rgba(20,12,6,0.45);
-  }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
-    margin:0;
-    font-family:'Lora', serif;
-    color:var(--ink);
-    background:var(--leather-3);
-    overflow:hidden;
-  }
-  h1,h2,h3,.brand,.tab-label,.stat-label{font-family:'Cinzel', serif;}
-
-  
-  .parchment-bg{
-    background-color:var(--parchment);
-    background-image:
-      radial-gradient(ellipse at 15% 20%, rgba(176,141,87,0.16), transparent 45%),
-      radial-gradient(ellipse at 85% 75%, rgba(140,58,43,0.10), transparent 50%),
-      radial-gradient(ellipse at 50% 100%, rgba(74,50,38,0.14), transparent 55%);
-  }
-  .leather-bg{
-    background-color:var(--leather);
-    background-image:
-      repeating-linear-gradient(115deg, rgba(0,0,0,0.08) 0 2px, transparent 2px 6px),
-      radial-gradient(ellipse at 30% 0%, rgba(216,190,138,0.10), transparent 60%);
-  }
-
-  
-  .screen{position:fixed; top:0; right:0; bottom:0; left:0; height:100vh; width:100vw; display:none;}
-  .screen.active{display:flex;}
-
-  /* tela de login */
-  #screen-login{
-    align-items:center; justify-content:center;
-    background:
-      radial-gradient(circle at 30% 35%, rgba(140,58,43,0.55), transparent 55%),
-      linear-gradient(180deg, #1a1310 0%, #241914 45%, #3a2117 100%);
-  }
-  .login-card{
-    width:420px; max-width:90vw;
-    background:linear-gradient(180deg, #f1e4c6, #e6d4ac);
-    border:1px solid var(--bronze);
-    border-radius:4px;
-    box-shadow:0 30px 60px var(--shadow), inset 0 0 0 6px rgba(74,50,38,0.9), inset 0 0 0 8px rgba(216,190,138,0.4);
-    padding:44px 40px 34px;
-    position:relative;
-  }
-  .login-seal{
-    position:absolute; top:-28px; left:50%; transform:translateX(-50%);
-    width:56px; height:56px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, var(--ember-light), var(--ember) 60%, #5e2519 100%);
-    border:2px solid var(--bronze-light);
-    box-shadow:0 6px 14px var(--shadow);
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px;
-  }
-  .login-card h1{
-    margin:14px 0 4px; text-align:center; font-size:24px; letter-spacing:0.02em; color:var(--leather-3);
-  }
-  .login-sub{
-    text-align:center; color:var(--ink-soft); font-style:italic; font-size:14px; margin:0 0 26px;
-  }
-  .field{margin-bottom:16px;}
-  .field label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px; letter-spacing:0.02em;}
-  .field input{
-    width:100%; padding:10px 12px; font-family:'Lora',serif; font-size:14px;
-    background:#fbf6e8; border:1px solid var(--parchment-edge); border-radius:3px; color:var(--ink);
-  }
-  .field input:focus{outline:2px solid var(--ember-light); outline-offset:1px;}
-  .btn-primary{
-    width:100%; padding:12px; margin-top:6px;
-    background:linear-gradient(180deg, var(--ember-light), var(--ember));
-    color:#f6e9d4; border:1px solid #6e2c20; border-radius:3px;
-    font-family:'Cinzel',serif; font-size:13px; letter-spacing:0.06em; cursor:pointer;
-    box-shadow:0 3px 0 #5e2519;
-  }
-  .btn-primary:hover{filter:brightness(1.06);}
-  .btn-primary:active{transform:translateY(2px); box-shadow:0 1px 0 #5e2519;}
-  .login-foot{text-align:center; margin-top:16px; font-size:12px; color:var(--ink-soft);}
-
-
-  /* qui começa os coisos aqui do app */
-  #screen-app{display:none;}
-  #screen-app.active{display:flex;}
-  .rail{
-    width:92px; flex-shrink:0;
-    display:flex; flex-direction:column; align-items:center;
-    padding:18px 0;
-    border-right:3px solid var(--leather-3);
-    box-shadow:inset -8px 0 16px -12px black;
-  }
-  .rail-brand{
-    width:46px; height:46px; border-radius:50%;
-    background:radial-gradient(circle at 35% 30%, var(--ember-light), var(--ember) 65%, #5e2519 100%);
-    border:2px solid var(--bronze);
-    margin-bottom:22px; display:flex; align-items:center; justify-content:center; font-size:20px;
-  }
-  .tab{
-    width:72px; padding:10px 4px 12px; margin-bottom:6px; border-radius:6px;
-    display:flex; flex-direction:column; align-items:center; gap:6px;
-    color:var(--parchment-2); opacity:0.62; cursor:pointer; border:1px solid transparent;
-    transition:opacity .15s;
-  }
-  .tab .tab-icon{font-size:19px;}
-  .tab .tab-label{font-size:9.5px; letter-spacing:0.04em; text-transform:uppercase;}
-  .tab:hover{opacity:0.85;}
-  .tab.active{
-    opacity:1; background:rgba(176,141,87,0.16);
-    border-color:var(--bronze); color:var(--bronze-light);
-  }
-  .rail-spacer{flex:1;}
-  .tab-exit{color:#c9a37e; opacity:0.55;}
-
-  .stage{flex:1; display:flex; flex-direction:column; overflow:hidden;}
-  .tab-content{display:none; flex-direction:column; height:100%; min-height:0;}
-  .tab-content.visible{display:flex;}
-  .stage-header{
-    padding:20px 34px 14px; display:flex; align-items:baseline; justify-content:space-between;
-    border-bottom:1px solid var(--parchment-edge); flex-shrink:0;
-  }
-  .stage-header h1{font-size:22px; margin:0; color:var(--leather-3); letter-spacing:0.01em;}
-  .stage-header .crumb{font-size:12px; color:var(--ink-soft); font-style:italic;}
-  .stage-body{flex:1; overflow:auto; padding:26px 34px 34px; min-height:0;}
-
-
-  /* Tela de companha - não dá pra criar e nem clicar, só para admirirar yee*/
-  .campaign-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:18px;}
-  .campaign-card{
-    background:linear-gradient(180deg, #f4e9cf, #e9d8b2);
-    border:1px solid var(--parchment-edge); border-left:5px solid var(--ember);
-    border-radius:3px; padding:16px 18px; box-shadow:0 3px 8px rgba(74,50,38,0.15);
-    cursor:pointer; transition:transform .12s;
-  }
-  .campaign-card:hover{transform:translateY(-2px); box-shadow:0 8px 16px rgba(74,50,38,0.22);}
-  .campaign-card h3{margin:0 0 6px; font-size:16px; color:var(--leather-3);}
-  .campaign-card p{margin:0; font-size:12.5px; color:var(--ink-soft);}
-  .campaign-card .meta{margin-top:10px; display:flex; gap:10px; font-size:11px; color:var(--bronze);}
-  .new-campaign{
-    border:2px dashed var(--parchment-edge); border-radius:3px; display:flex; align-items:center; justify-content:center;
-    flex-direction:column; gap:6px; color:var(--ink-soft); cursor:pointer; min-height:96px;
-  }
-  .new-campaign:hover{border-color:var(--ember); color:var(--ember);}
-
-
-  /* Tela da mesa pra rodar o dadinho*/
-  .table-layout{display:grid; grid-template-columns:1fr 300px; gap:20px; height:100%;}
-  .panel{
-    background:linear-gradient(180deg, #f4e9cf, #ecdbb6);
-    border:1px solid var(--parchment-edge); border-radius:4px;
-    box-shadow:0 3px 10px rgba(74,50,38,0.14);
-    display:flex; flex-direction:column; overflow:hidden;
-  }
-  .panel h2{margin:0; padding:12px 16px; font-size:13px; letter-spacing:0.05em;
-    background:var(--leather); color:var(--bronze-light); text-transform:uppercase;}
-  .log{flex:1; overflow:auto; padding:14px 16px; display:flex; flex-direction:column; gap:10px;}
-  .log-entry{padding:8px 12px; border-left:3px solid var(--bronze); background:rgba(255,255,255,0.35); border-radius:0 3px 3px 0; font-size:13px;}
-  .log-entry.narracao{border-left-color:var(--ink-soft); font-style:italic; color:var(--ink-soft);}
-  .log-entry.jogador{border-left-color:var(--ember);}
-  .log-entry.arduino{border-left-color:#3f7d4a; background:rgba(92,122,82,0.14);}
-  .log-entry .who{font-weight:600; margin-right:6px; color:var(--leather-3);}
-  .log-entry .roll{display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:var(--leather); color:var(--bronze-light); font-family:'Cinzel',serif; font-size:11.5px;}
-
-  .dice-tray{padding:14px 16px; border-top:1px solid var(--parchment-edge); display:flex; gap:10px; align-items:center;}
-  .die-face{
-    width:46px; height:46px; border-radius:8px; background:var(--leather); color:var(--bronze-light);
-    display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:17px;
-    border:1px solid var(--bronze); flex-shrink:0;
-  }
-  .die-face.rolling{animation:spin .5s linear infinite;}
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  .dice-tray .btn-arduino{
-    flex:1; padding:11px; background:linear-gradient(180deg,#6f9463,#4f6f47); color:#eef4e9; border:1px solid #3a5334;
-    border-radius:4px; font-family:'Cinzel',serif; font-size:12px; letter-spacing:0.03em; cursor:pointer; box-shadow:0 2px 0 #33481f;
-  }
-  .dice-tray .btn-arduino:active{transform:translateY(2px); box-shadow:none;}
-  .dice-tray .conn-dot{width:8px; height:8px; border-radius:50%; background:#5C7A52; box-shadow:0 0 6px #5C7A52;}
-  .dice-tray .conn-label{font-size:10.5px; color:var(--ink-soft);}
-
-  .side-col{display:flex; flex-direction:column; gap:16px; overflow:auto;}
-  .turn-list{list-style:none; margin:0; padding:10px; display:flex; flex-direction:column; gap:6px;}
-  .turn-row{
-    display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:4px;
-    background:rgba(255,255,255,0.35);
-  }
-  .turn-row.current{background:rgba(140,58,43,0.14); border:1px solid var(--ember);}
-  .turn-row .avatar{width:30px; height:30px; border-radius:50%; background:var(--bronze); flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:13px; color:#3a2a1c; font-family:'Cinzel',serif;}
-  .turn-row .name{flex:1; font-size:12.5px;}
-  .turn-row .init{font-family:'Cinzel',serif; font-size:12px; color:var(--ember);}
-  .hp-bar{height:6px; border-radius:3px; background:#d8c39a; margin-top:3px; overflow:hidden;}
-  .hp-bar .fill{height:100%; background:var(--hp-good);}
-  .turn-row .name-wrap{flex:1;}
-
-  /* Telas de Personagens */
-  .char-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:20px;}
-  .char-card{
-    background:linear-gradient(180deg, #f4e9cf, #e9d8b2); border:1px solid var(--parchment-edge);
-    border-radius:6px; overflow:hidden; box-shadow:0 3px 8px rgba(74,50,38,0.15); cursor:pointer;
-  }
-  .char-card:hover{box-shadow:0 8px 18px rgba(74,50,38,0.25);}
-  .char-portrait{
-    height:150px; background:linear-gradient(160deg, var(--leather), var(--leather-3));
-    display:flex; align-items:center; justify-content:center; font-size:44px; color:var(--bronze);
-    position:relative;
-  }
-  .char-portrait .class-tag{
-    position:absolute; bottom:6px; left:6px; font-size:10px; padding:2px 7px; border-radius:10px;
-    background:rgba(0,0,0,0.45); color:var(--bronze-light); font-family:'Cinzel',serif; letter-spacing:0.03em;
-  }
-  .char-info{padding:10px 12px 14px;}
-  .char-info h3{margin:0 0 3px; font-size:14.5px; color:var(--leather-3);}
-  .char-info p{margin:0; font-size:11.5px; color:var(--ink-soft);}
-
-  .empty-note{color:var(--ink-soft); font-size:12.5px; font-style:italic; text-align:center; padding:30px 10px;}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!--  LOGIN -->
-  <div class="screen active" id="screen-login">
-    <div class="login-card">
-      <div class="login-seal">⚔️</div>
+  <div class="tela ativa" id="tela-login">
+    <div class="cartao-login">
+      <div class="selo-login">⚔️</div>
       <h1>Salão da Mesa</h1>
-      <p class="login-sub">Sua campanha, seus dados, seu tabuleiro — conectados.</p>
-      <div class="field">
+      <p class="subtitulo-login">Sua campanha, seus dados, seu tabuleiro — conectados.</p>
+      <div class="campo">
         <label>Nome de usuário</label>
         <input type="text" placeholder="ex: cleverson_mestre">
       </div>
-      <div class="field">
+      <div class="campo">
         <label>Senha</label>
         <input type="password" placeholder="••••••••">
       </div>
-      <button class="btn-primary" onclick="enterApp()">ENTRAR NA MESA</button>
-      <p class="login-foot">Ainda não tem conta? <span style="color:var(--ember); cursor:pointer;">Criar conta</span></p>
+      <button class="botao-principal" onclick="entrarAplicativo()">ENTRAR NA MESA</button>
+      <p class="rodape-login">Ainda não tem conta? <span class="link-formulario" onclick="mostrarCadastro()">Criar conta</span></p>
+    </div>
+  </div>
+
+  <!-- CADASTRO -->
+  <div class="tela" id="tela-cadastro">
+    <div class="cartao-login">
+      <div class="selo-login">🛡️</div>
+      <h1>Junte-se à Mesa</h1>
+      <p class="subtitulo-login">Crie sua conta e reúna seu grupo para a próxima aventura.</p>
+      <form onsubmit="cadastrarConta(event)">
+        <div class="campo">
+          <label for="nome-cadastro">Nome de usuário</label>
+          <input id="nome-cadastro" type="text" placeholder="ex: cleverson_mestre" required>
+        </div>
+        <div class="campo">
+          <label for="email-cadastro">E-mail</label>
+          <input id="email-cadastro" type="email" placeholder="voce@email.com" required>
+        </div>
+        <div class="campo">
+          <label for="senha-cadastro">Senha</label>
+          <input id="senha-cadastro" type="password" placeholder="Crie uma senha" minlength="6" required>
+        </div>
+        <div class="termos">
+          <input id="termos" type="checkbox" required>
+          <label for="termos">Li e aceito os <span class="link-formulario">Termos de Uso e a Política de Privacidade</span>.</label>
+        </div>
+        <button class="botao-principal" type="submit">CRIAR MINHA CONTA</button>
+      </form>
+      <p class="rodape-login">Já tem uma conta? <span class="link-formulario" onclick="mostrarLogin()">Entrar na mesa</span></p>
     </div>
   </div>
 
   <!--  APP  -->
-  <div class="screen" id="screen-app">
-    <nav class="rail leather-bg">
-      <div class="rail-brand">🎲</div>
-      <div class="tab active" data-target="tab-campanhas">
-        <div class="tab-icon">📜</div><div class="tab-label">Campanha</div>
+  <div class="tela" id="tela-aplicativo">
+    <nav class="barra-lateral fundo-couro">
+      <div class="marca-barra">🎲</div>
+      <div class="aba ativa" data-target="aba-campanhas">
+        <div class="icone-aba">📜</div><div class="rotulo-aba">Campanha</div>
       </div>
-      <div class="tab" data-target="tab-mesa">
-        <div class="tab-icon">🗺️</div><div class="tab-label">Mesa</div>
+      <div class="aba" data-target="aba-mesa">
+        <div class="icone-aba">🗺️</div><div class="rotulo-aba">Mesa</div>
       </div>
-      <div class="tab" data-target="tab-personagens">
-        <div class="tab-icon">🛡️</div><div class="tab-label">Heróis</div>
+      <div class="aba" data-target="aba-personagens">
+        <div class="icone-aba">🛡️</div><div class="rotulo-aba">Heróis</div>
       </div>
-      <div class="tab" data-target="tab-regras">
-        <div class="tab-icon">📖</div><div class="tab-label">Regras</div>
+      <div class="aba" data-target="aba-regras">
+        <div class="icone-aba">📖</div><div class="rotulo-aba">Regras</div>
       </div>
-      <div class="rail-spacer"></div>
-      <div class="tab tab-exit" onclick="exitApp()">
-        <div class="tab-icon">🚪</div><div class="tab-label">Sair</div>
+      <div class="espacador-barra"></div>
+      <div class="aba aba-saida" onclick="sairAplicativo()">
+        <div class="icone-aba">🚪</div><div class="rotulo-aba">Sair</div>
       </div>
     </nav>
 
-    <div class="stage parchment-bg">
+    <div class="area-principal fundo-pergaminho">
 
       <!-- CAMPANHAS -->
-      <section class="tab-content visible" id="tab-campanhas">
-        <div class="stage-header">
+      <section class="conteudo-aba visivel" id="aba-campanhas">
+        <div class="cabecalho-area">
           <h1>Campanhas</h1>
-          <span class="crumb">4 campanhas ativas</span>
+          <span class="migalha">4 campanhas ativas</span>
         </div>
-        <div class="stage-body">
-          <div class="campaign-grid">
-            <div class="campaign-card">
+        <div class="corpo-area">
+          <div class="grade-campanhas">
+            <div class="cartao-campanha">
               <h3>A Cidadela das Salamandras</h3>
               <p>Um general em chamas ameaça o vale de Rhoumed.</p>
-              <div class="meta"><span>👑 Mestre: Nefertyne</span><span>👥 4 jogadores</span></div>
+              <div class="metadados"><span>👑 Mestre: Nefertyne</span><span>👥 4 jogadores</span></div>
             </div>
-            <div class="campaign-card">
+            <div class="cartao-campanha">
               <h3>Pousada Água Azul</h3>
               <p>Um pouso tranquilo esconde segredos nos porões.</p>
-              <div class="meta"><span>👑 Mestre: Cleverson</span><span>👥 3 jogadores</span></div>
+              <div class="metadados"><span>👑 Mestre: Cleverson</span><span>👥 3 jogadores</span></div>
             </div>
-            <div class="campaign-card">
+            <div class="cartao-campanha">
               <h3>Castelo Ravenloft</h3>
               <p>Teias gigantes cobrem a floresta ao redor do castelo.</p>
-              <div class="meta"><span>👑 Mestre: Brando</span><span>👥 5 jogadores</span></div>
+              <div class="metadados"><span>👑 Mestre: Brando</span><span>👥 5 jogadores</span></div>
             </div>
-            <div class="new-campaign">
-              <div style="font-size:22px;">+</div>
-              <div style="font-size:12px;">Criar nova campanha</div>
+            <div class="nova-campanha">
+              <div class="icone-nova-campanha">+</div>
+              <div class="rotulo-nova-campanha">Criar nova campanha</div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- MESA / SESSÃO -->
-      <section class="tab-content" id="tab-mesa">
-        <div class="stage-header">
+      <section class="conteudo-aba" id="aba-mesa">
+        <div class="cabecalho-area">
           <h1>Cidadela das Salamandras — Sessão 7</h1>
-          <span class="crumb">Rodada 3 · Turno de Arthur</span>
+          <span class="migalha">Rodada 3 · Turno de Arthur</span>
         </div>
-        <div class="stage-body">
-          <div class="table-layout" style="height:100%;">
-            <div class="panel">
+        <div class="corpo-area">
+          <div class="estrutura-mesa">
+            <div class="painel">
               <h2>Registro da Mesa</h2>
-              <div class="log" id="log">
-                <div class="log-entry narracao">O General Salamandra investe com a lança contra Hurry, mas o golpe não perfura sua armadura.</div>
-                <div class="log-entry jogador"><span class="who">Arthur</span> mira no devorador de mentes e dispara uma flecha. <span class="roll">1d20+3 = 19</span></div>
-                <div class="log-entry narracao">A flecha envolvida em chamas crava no ombro da criatura.</div>
-                <div class="log-entry jogador"><span class="who">Caine</span> avança com o cajado sagrado contra a sacerdotisa. <span class="roll">1d20+5 = 14</span></div>
+              <div class="registro" id="registro">
+                <div class="entrada-registro narracao">O General Salamandra investe com a lança contra Hurry, mas o golpe não perfura sua armadura.</div>
+                <div class="entrada-registro jogador"><span class="autor">Arthur</span> mira no devorador de mentes e dispara uma flecha. <span class="rolagem">1d20+3 = 19</span></div>
+                <div class="entrada-registro narracao">A flecha envolvida em chamas crava no ombro da criatura.</div>
+                <div class="entrada-registro jogador"><span class="autor">Caine</span> avança com o cajado sagrado contra a sacerdotisa. <span class="rolagem">1d20+5 = 14</span></div>
               </div>
-              <div class="dice-tray">
-                <div class="die-face" id="dieFace">🎲</div>
-                <button class="btn-arduino" onclick="rollFromArduino()">⚡ Aguardando dado físico do Arduino…</button>
-                <div class="conn-dot"></div><span class="conn-label">Conectado</span>
+              <div class="bandeja-dados">
+                <div class="face-dado" id="face-dado">🎲</div>
+                <button class="botao-arduino" onclick="rolarDoArduino()">⚡ Aguardando dado físico do Arduino…</button>
+                <div class="ponto-conexao"></div><span class="rotulo-conexao">Conectado</span>
               </div>
             </div>
 
-            <div class="side-col">
-              <div class="panel">
+            <div class="coluna-lateral">
+              <div class="painel">
                 <h2>Ordem de Turno</h2>
-                <ul class="turn-list">
-                  <li class="turn-row current">
+                <ul class="lista-turnos">
+                  <li class="linha-turno atual">
                     <div class="avatar">A</div>
-                    <div class="name-wrap"><div class="name">Arthur</div><div class="hp-bar"><div class="fill" style="width:82%;"></div></div></div>
-                    <div class="init">19</div>
+                    <div class="envoltorio-nome"><div class="nome">Arthur</div><div class="barra-vida"><div class="preenchimento vida-82"></div></div></div>
+                    <div class="iniciativa">19</div>
                   </li>
-                  <li class="turn-row">
+                  <li class="linha-turno">
                     <div class="avatar">C</div>
-                    <div class="name-wrap"><div class="name">Caine</div><div class="hp-bar"><div class="fill" style="width:64%;"></div></div></div>
-                    <div class="init">16</div>
+                    <div class="envoltorio-nome"><div class="nome">Caine</div><div class="barra-vida"><div class="preenchimento vida-64"></div></div></div>
+                    <div class="iniciativa">16</div>
                   </li>
-                  <li class="turn-row">
+                  <li class="linha-turno">
                     <div class="avatar">H</div>
-                    <div class="name-wrap"><div class="name">Hurry</div><div class="hp-bar"><div class="fill" style="width:38%; background:var(--hp-bad);"></div></div></div>
-                    <div class="init">12</div>
+                    <div class="envoltorio-nome"><div class="nome">Hurry</div><div class="barra-vida"><div class="preenchimento vida-38"></div></div></div>
+                    <div class="iniciativa">12</div>
                   </li>
-                  <li class="turn-row">
+                  <li class="linha-turno">
                     <div class="avatar">R</div>
-                    <div class="name-wrap"><div class="name">Rhamak</div><div class="hp-bar"><div class="fill" style="width:91%;"></div></div></div>
-                    <div class="init">8</div>
+                    <div class="envoltorio-nome"><div class="nome">Rhamak</div><div class="barra-vida"><div class="preenchimento vida-91"></div></div></div>
+                    <div class="iniciativa">8</div>
                   </li>
                 </ul>
               </div>
-              <div class="panel">
+              <div class="painel">
                 <h2>Mestre</h2>
-                <div style="padding:14px 16px; font-size:12.5px; color:var(--ink-soft);">
+                <div class="nota-mestre">
                   Nefertyne está narrando esta cena. Use <strong>/sussurro</strong> para falar apenas com ela.
                 </div>
               </div>
@@ -378,39 +176,39 @@
       </section>
 
       <!-- PERSONAGENS -->
-      <section class="tab-content" id="tab-personagens">
-        <div class="stage-header">
+      <section class="conteudo-aba" id="aba-personagens">
+        <div class="cabecalho-area">
           <h1>Personagens</h1>
-          <span class="crumb">3 fichas nesta campanha</span>
+          <span class="migalha">3 fichas nesta campanha</span>
         </div>
-        <div class="stage-body">
-          <div class="char-grid">
-            <div class="char-card">
-              <div class="char-portrait">🗡️<span class="class-tag">Guerreiro</span></div>
-              <div class="char-info"><h3>Arthur</h3><p>Nível 6 · Humano</p></div>
+        <div class="corpo-area">
+          <div class="grade-personagens">
+            <div class="cartao-personagem">
+              <div class="retrato-personagem">🗡️<span class="etiqueta-classe">Guerreiro</span></div>
+              <div class="informacoes-personagem"><h3>Arthur</h3><p>Nível 6 · Humano</p></div>
             </div>
-            <div class="char-card">
-              <div class="char-portrait">🏹<span class="class-tag">Patrulheiro</span></div>
-              <div class="char-info"><h3>Caine</h3><p>Nível 5 · Elfo</p></div>
+            <div class="cartao-personagem">
+              <div class="retrato-personagem">🏹<span class="etiqueta-classe">Patrulheiro</span></div>
+              <div class="informacoes-personagem"><h3>Caine</h3><p>Nível 5 · Elfo</p></div>
             </div>
-            <div class="char-card">
-              <div class="char-portrait">🔥<span class="class-tag">Bárbaro</span></div>
-              <div class="char-info"><h3>Hurry</h3><p>Nível 6 · Meio-orc</p></div>
+            <div class="cartao-personagem">
+              <div class="retrato-personagem">🔥<span class="etiqueta-classe">Bárbaro</span></div>
+              <div class="informacoes-personagem"><h3>Hurry</h3><p>Nível 6 · Meio-orc</p></div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- REGRAS -->
-      <section class="tab-content" id="tab-regras">
-        <div class="stage-header">
+      <section class="conteudo-aba" id="aba-regras">
+        <div class="cabecalho-area">
           <h1>Regras da Casa</h1>
-          <span class="crumb">Editável apenas pelo Mestre</span>
+          <span class="migalha">Editável apenas pelo Mestre</span>
         </div>
-        <div class="stage-body">
-          <div class="panel" style="max-width:640px;">
+        <div class="corpo-area">
+          <div class="painel painel-regras">
             <h2>Combate</h2>
-            <div style="padding:16px 18px; font-size:13.5px; line-height:1.7; color:var(--ink);">
+            <div class="texto-regras">
               Acertos críticos causam dano dobrado apenas nos dados, não nos modificadores. Ações lendárias de monstros podem
               ser usadas entre turnos, conforme descrito na ficha do monstro.
             </div>
@@ -422,41 +220,54 @@
   </div>
 
 <script>
-function enterApp(){
-  document.getElementById('screen-login').classList.remove('active');
-  document.getElementById('screen-app').classList.add('active');
+function entrarAplicativo(){
+  document.getElementById('tela-login').classList.remove('ativa');
+  document.getElementById('tela-aplicativo').classList.add('ativa');
 }
-function exitApp(){
-  document.getElementById('screen-app').classList.remove('active');
-  document.getElementById('screen-login').classList.add('active');
+function mostrarCadastro(){
+  document.getElementById('tela-login').classList.remove('ativa');
+  document.getElementById('tela-cadastro').classList.add('ativa');
 }
-document.querySelectorAll('.tab[data-target]').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab[data-target]').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('visible'));
-    document.getElementById(tab.dataset.target).classList.add('visible');
+function mostrarLogin(){
+  document.getElementById('tela-cadastro').classList.remove('ativa');
+  document.getElementById('tela-login').classList.add('ativa');
+}
+function cadastrarConta(event){
+  event.preventDefault();
+  alert('Conta criada com sucesso! Agora você já pode entrar na mesa.');
+  mostrarLogin();
+}
+function sairAplicativo(){
+  document.getElementById('tela-aplicativo').classList.remove('ativa');
+  document.getElementById('tela-login').classList.add('ativa');
+}
+document.querySelectorAll('.aba[data-target]').forEach(aba=>{
+  aba.addEventListener('click', ()=>{
+    document.querySelectorAll('.aba[data-target]').forEach(t=>t.classList.remove('ativa'));
+    aba.classList.add('ativa');
+    document.querySelectorAll('.conteudo-aba').forEach(c=>c.classList.remove('visivel'));
+    document.getElementById(aba.dataset.target).classList.add('visivel');
   });
 });
 
-function rollFromArduino(){
-  const die = document.getElementById('dieFace');
-  die.classList.add('rolling');
+function rolarDoArduino(){
+  const die = document.getElementById('face-dado');
+  die.classList.add('rolando');
   let ticks = 0;
   const iv = setInterval(()=>{
     die.textContent = Math.ceil(Math.random()*20);
     ticks++;
     if(ticks > 8){
       clearInterval(iv);
-      die.classList.remove('rolling');
+      die.classList.remove('rolando');
       const result = Math.ceil(Math.random()*20);
       die.textContent = result;
-      const log = document.getElementById('log');
+      const registro = document.getElementById('registro');
       const entry = document.createElement('div');
-      entry.className = 'log-entry arduino';
-      entry.innerHTML = '<span class="who">⚡ Dado físico</span> valor lido do Arduino <span class="roll">d20 = '+result+'</span>';
-      log.appendChild(entry);
-      log.scrollTop = log.scrollHeight;
+      entry.className = 'entrada-registro arduino';
+      entry.innerHTML = '<span class="autor">⚡ Dado físico</span> valor lido do Arduino <span class="rolagem">d20 = '+result+'</span>';
+      registro.appendChild(entry);
+      registro.scrollTop = registro.scrollHeight;
     }
   }, 70);
 }
