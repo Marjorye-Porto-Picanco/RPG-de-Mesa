@@ -1,0 +1,13 @@
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\bin\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.deps.json
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\bin\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.dll
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\bin\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.pdb
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.csproj.AssemblyReference.cache
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.AssemblyInfoInputs.cache
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.AssemblyInfo.cs
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.csproj.CoreCompileInputs.cache
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.dll
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\refint\RPG-de-Mesa.ServiceDefaults.dll
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-Mesa.ServiceDefaults.pdb
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\ref\RPG-de-Mesa.ServiceDefaults.dll
+C:\Users\kauan\source\repos\RPG-de-Mesa\RPG-de-Mesa.ServiceDefaults\obj\Debug\net10.0\RPG-de-M.DB3DF209.Up2Date

@@ -1,0 +1,53 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\kauan\\.nuget\\packages\\microsoft.aspnetcore.components.webview\\10.0.0\\staticwebassets\\blazor.modules.json",
+      "PackagePath": "staticwebassets\\_framework\\blazor.modules.json"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\.nuget\\packages\\microsoft.aspnetcore.components.webview\\10.0.0\\staticwebassets\\blazor.webview.js",
+      "PackagePath": "staticwebassets\\_framework\\blazor.webview.js"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\source\\repos\\RPG-de-Mesa\\RPG-de-Mesa\\obj\\Debug\\net10.0-android\\scopedcss\\bundle\\RPG-de-Mesa.styles.css",
+      "PackagePath": "staticwebassets\\RPG-de-Mesa.styles.css"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\source\\repos\\RPG-de-Mesa\\RPG-de-Mesa\\wwwroot\\app.css",
+      "PackagePath": "staticwebassets\\app.css"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\source\\repos\\RPG-de-Mesa\\RPG-de-Mesa\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\source\\repos\\RPG-de-Mesa\\RPG-de-Mesa\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.min.css",
+      "PackagePath": "staticwebassets\\lib\\bootstrap\\dist\\css\\bootstrap.min.css"
+    },
+    {
+      "Id": "C:\\Users\\kauan\\source\\repos\\RPG-de-Mesa\\RPG-de-Mesa\\wwwroot\\lib\\bootstrap\\dist\\css\\bootstrap.min.css.map",
+      "PackagePath": "staticwebassets\\lib\\bootstrap\\dist\\css\\bootstrap.min.css.map"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0-android\\staticwebassets\\msbuild.RPG-de-Mesa.Microsoft.AspNetCore.StaticWebAssetEndpoints.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssetEndpoints.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0-android\\staticwebassets\\msbuild.RPG-de-Mesa.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0-android\\staticwebassets\\msbuild.build.RPG-de-Mesa.props",
+      "PackagePath": "build\\RPG-de-Mesa.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0-android\\staticwebassets\\msbuild.buildMultiTargeting.RPG-de-Mesa.props",
+      "PackagePath": "buildMultiTargeting\\RPG-de-Mesa.props"
+    },
+    {
+      "Id": "obj\\Debug\\net10.0-android\\staticwebassets\\msbuild.buildTransitive.RPG-de-Mesa.props",
+      "PackagePath": "buildTransitive\\RPG-de-Mesa.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

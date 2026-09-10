@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="RPG-de-Mesa.AppHost/RPG-de-Mesa.AppHost.csproj" />
+  <Project Path="RPG-de-Mesa.ServiceDefaults/RPG-de-Mesa.ServiceDefaults.csproj" />
+  <Project Path="RPG-de-Mesa/RPG-de-Mesa.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>
