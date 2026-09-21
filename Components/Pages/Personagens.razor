@@ -1,0 +1,46 @@
+@page "/personagens"
+@layout TelaCheiaLayout
+
+@* PERSONAGENS: adicionar um pequeno texto dentro do card mostrando se o personagem já participa
+   de uma campanha ou não; um "brilho" indicando que está em modo campanha (não pode ser usado
+   no momento) — o personagem disponível fica normal. *@
+
+<div class="mesa-app">
+    <BarraLateral />
+    <div class="area-principal fundo-pergaminho">
+        <section class="conteudo-pagina">
+            <div class="cabecalho-area">
+                <h1>Personagens</h1>
+                <span class="migalha">@Personagens.Count fichas nesta campanha</span>
+            </div>
+            <div class="corpo-area">
+                <div class="grade-personagens">
+                    @foreach (var personagem in Personagens)
+                    {
+                        <div class="cartao-personagem">
+                            <div class="retrato-personagem">
+                                @personagem.Emoji
+                                <span class="etiqueta-classe">@personagem.Classe</span>
+                            </div>
+                            <div class="informacoes-personagem">
+                                <h3>@personagem.Nome</h3>
+                                <p>Nível @personagem.Nivel · @personagem.Raca</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private List<PersonagemResumo> Personagens = new()
+    {
+        new("🗡️", "Guerreiro", "Arthur", 6, "Humano"),
+        new("🏹", "Patrulheiro", "Caine", 5, "Elfo"),
+        new("🔥", "Bárbaro", "Hurry", 6, "Meio-orc"),
+    };
+
+    private record PersonagemResumo(string Emoji, string Classe, string Nome, int Nivel, string Raca);
+}

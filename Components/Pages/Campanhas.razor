@@ -1,0 +1,55 @@
+@page "/campanhas"
+@layout TelaCheiaLayout
+
+@* CAMPANHAS: adicionar modo clique e aparecer uma telinha com opacidade escura no fundo.
+   Adicionar no "Criar nova Campanha" uma tela na qual poderá ser escolhido título, uma breve
+   descrição, senha (caso for uma campanha pública ou privada), quantidade de jogadores.
+   O criador da sala deverá ser o mestre do RPG criado/iniciado por ele. *@
+
+<div class="mesa-app">
+    <BarraLateral />
+    <div class="area-principal fundo-pergaminho">
+        <section class="conteudo-pagina">
+            <div class="cabecalho-area">
+                <h1>Campanhas</h1>
+                <span class="migalha">@Campanhas.Count campanhas ativas</span>
+            </div>
+            <div class="corpo-area">
+                <div class="grade-campanhas">
+                    @foreach (var campanha in Campanhas)
+                    {
+                        <div class="cartao-campanha">
+                            <h3>@campanha.Titulo</h3>
+                            <p>@campanha.Resumo</p>
+                            <div class="metadados">
+                                <span>👑 Mestre: @campanha.Mestre</span>
+                                <span>👥 @campanha.Jogadores jogadores</span>
+                            </div>
+                        </div>
+                    }
+                    <div class="nova-campanha" @onclick="CriarCampanha">
+                        <div class="icone-nova-campanha">+</div>
+                        <div class="rotulo-nova-campanha">Criar nova campanha</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private List<CampanhaResumo> Campanhas = new()
+    {
+        new("A Cidadela das Salamandras", "Um general em chamas ameaça o vale de Rhoumed.", "Nefertyne", 4),
+        new("Pousada Água Azul", "Um pouso tranquilo esconde segredos nos porões.", "Cleverson", 3),
+        new("Castelo Ravenloft", "Teias gigantes cobrem a floresta ao redor do castelo.", "Brando", 5),
+    };
+
+    private void CriarCampanha()
+    {
+        // TODO: abrir o formulário de criação de campanha (título, descrição,
+        // pública/privada + senha, quantidade de jogadores). Quem cria vira o Mestre.
+    }
+
+    private record CampanhaResumo(string Titulo, string Resumo, string Mestre, int Jogadores);
+}

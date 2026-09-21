@@ -1,0 +1,38 @@
+@page "/"
+@layout TelaCheiaLayout
+@inject NavigationManager Navegacao
+
+@* LOGIN: inserir o campo de ter opção de logar com o Google, Facebook ou outras redes sociais *@
+
+<div class="tela-cheia tela-autenticacao">
+    <div class="cartao-login">
+        <div class="selo-login">⚔️</div>
+        <h1>Salão da Mesa</h1>
+        <p class="subtitulo-login">Sua campanha, seus dados, seu tabuleiro — conectados.</p>
+
+        <div class="campo">
+            <label for="nome-login">Nome de Usuário</label>
+            <input id="nome-login" type="text" @bind="NomeUsuario" placeholder="ex: cleverson_mestre">
+        </div>
+        <div class="campo">
+            <label for="senha-login">Senha</label>
+            <input id="senha-login" type="password" @bind="Senha" placeholder="••••••••">
+        </div>
+
+        <button class="botao-principal" @onclick="Entrar">ENTRAR NA MESA</button>
+        <p class="rodape-login">Ainda não tem conta? <a class="link-formulario" href="/cadastro">Criar conta</a></p>
+    </div>
+</div>
+
+@code {
+    private string NomeUsuario = "";
+    private string Senha = "";
+
+    private void Entrar()
+    {
+        // TODO: validar NomeUsuario/Senha usando Services/ConexaoBanco.cs
+        // antes de navegar. Por enquanto navega direto para a tela de
+        // campanhas, como no protótipo.
+        Navegacao.NavigateTo("/campanhas");
+    }
+}
