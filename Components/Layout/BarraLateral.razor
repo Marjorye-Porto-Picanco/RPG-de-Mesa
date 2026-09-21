@@ -1,0 +1,29 @@
+@* Barra lateral do app. Fica aqui @Kauan !!
+   Antes essa mesma marcação estava copiada dentro de cada aba do
+   Cadastro.razor — agora é um componente único, incluído com <BarraLateral />
+   em Campanhas.razor, Mesa.razor, Personagens.razor e Regras.razor.
+   A aba "ativa" não depende mais de JavaScript: o NavLink do Blazor já
+   adiciona a classe "ativa" sozinho quando a rota atual bate com o href. *@
+
+<nav class="barra-lateral fundo-couro">
+    <div class="marca-barra">🎲</div>
+
+    <NavLink class="aba" ActiveClass="ativa" href="/campanhas">
+        <div class="icone-aba">📜</div><div class="rotulo-aba">Campanha</div>
+    </NavLink>
+    <NavLink class="aba" ActiveClass="ativa" href="/mesa">
+        <div class="icone-aba">🗺️</div><div class="rotulo-aba">Mesa</div>
+    </NavLink>
+    <NavLink class="aba" ActiveClass="ativa" href="/personagens">
+        <div class="icone-aba">🛡️</div><div class="rotulo-aba">Heróis</div>
+    </NavLink>
+    <NavLink class="aba" ActiveClass="ativa" href="/regras">
+        <div class="icone-aba">📖</div><div class="rotulo-aba">Regras</div>
+    </NavLink>
+
+    <div class="espacador-barra"></div>
+
+    <NavLink class="aba aba-saida" href="/">
+        <div class="icone-aba">🚪</div><div class="rotulo-aba">Sair</div>
+    </NavLink>
+</nav>

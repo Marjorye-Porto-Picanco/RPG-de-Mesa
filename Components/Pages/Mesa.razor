@@ -1,0 +1,129 @@
+@page "/mesa"
+@layout TelaCheiaLayout
+
+@* MESA / SESSÃO: onde a mecânica do jogo vai se desenvolver. Adaptar as notificações do jogo
+   que aparecem na tela, talvez movendo-as para o canto. Colocar o mapa do jogo selecionado pelo
+   mestre (apenas o mestre tem controle de mudar eventos, mapas, monstros e turnos — os jogadores
+   têm apenas o controle dos seus turnos, personagens e ações). *@
+
+<div class="mesa-app">
+    <BarraLateral />
+    <div class="area-principal fundo-pergaminho">
+        <section class="conteudo-pagina">
+            <div class="cabecalho-area">
+                <h1>Cidadela das Salamandras — Sessão 7</h1>
+                <span class="migalha">Rodada 3 · Turno de Arthur</span>
+            </div>
+            <div class="corpo-area">
+                <div class="estrutura-mesa">
+
+                    <div class="painel">
+                        <h2>Registro da Mesa</h2>
+                        <div class="registro">
+                            @foreach (var entrada in Registro)
+                            {
+                                <div class="entrada-registro @entrada.Tipo">
+                                    @if (!string.IsNullOrEmpty(entrada.Autor))
+                                    {
+                                        <span class="autor">@entrada.Autor</span>
+                                    }
+                                    @entrada.Texto
+                                    @if (!string.IsNullOrEmpty(entrada.Rolagem))
+                                    {
+                                        <span class="rolagem">@entrada.Rolagem</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div class="bandeja-dados">
+                            <div class="face-dado">@FaceDado</div>
+                            <button class="botao-arduino" @onclick="RolarDado" disabled="@Rolando">
+                                @(Rolando ? "🎲 Lendo o dado…" : "⚡ Aguardando dado físico do Arduino…")
+                            </button>
+                            <div class="ponto-conexao"></div><span class="rotulo-conexao">Conectado</span>
+                        </div>
+                    </div>
+
+                    <div class="coluna-lateral">
+                        <div class="painel">
+                            <h2>Ordem de Turno</h2>
+                            <ul class="lista-turnos">
+                                @foreach (var combatente in OrdemDeTurno)
+                                {
+                                    <li class="linha-turno @(combatente.NaVez ? "atual" : "")">
+                                        <div class="avatar">@combatente.Nome[0]</div>
+                                        <div class="envoltorio-nome">
+                                            <div class="nome">@combatente.Nome</div>
+                                            <div class="barra-vida">
+                                                <div class="preenchimento"
+                                                     style="width:@(combatente.VidaPercentual)%; @(combatente.VidaPercentual <= 40 ? "background:var(--vida-ruim);" : "")">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="iniciativa">@combatente.Iniciativa</div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="painel">
+                            <h2>Mestre</h2>
+                            <div class="nota-mestre">
+                                Nefertyne está narrando esta cena. Use <strong>/sussurro</strong> para falar apenas com ela.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private bool Rolando;
+    private string FaceDado = "🎲";
+
+    private List<EntradaRegistro> Registro = new()
+    {
+        new("narracao", "", "O General Salamandra investe com a lança contra Hurry, mas o golpe não perfura sua armadura.", ""),
+        new("jogador", "Arthur", "mira no devorador de mentes e dispara uma flecha.", "1d20+3 = 19"),
+        new("narracao", "", "A flecha envolvida em chamas crava no ombro da criatura.", ""),
+        new("jogador", "Caine", "avança com o cajado sagrado contra a sacerdotisa.", "1d20+5 = 14"),
+    };
+
+    private List<Combatente> OrdemDeTurno = new()
+    {
+        new("Arthur", 19, 82, true),
+        new("Caine", 16, 64, false),
+        new("Hurry", 12, 38, false),
+        new("Rhamak", 8, 91, false),
+    };
+
+    // Simula a leitura do dado físico. Quando o Arduino estiver pronto,
+    // troque o `Random` abaixo por uma leitura real da porta serial — por
+    // exemplo, injetando um Services/ConexaoArduino que usa
+    // System.IO.Ports.SerialPort para ler a linha que o Arduino envia
+    // (ex: "ROLL:17") e devolver o número.
+    private async Task RolarDado()
+    {
+        if (Rolando) return;
+        Rolando = true;
+        var aleatorio = new Random();
+
+        for (int i = 0; i < 8; i++)
+        {
+            FaceDado = aleatorio.Next(1, 21).ToString();
+            StateHasChanged();
+            await Task.Delay(70);
+        }
+
+        int resultado = aleatorio.Next(1, 21);
+        FaceDado = resultado.ToString();
+        Registro.Add(new EntradaRegistro("arduino", "⚡ Dado físico", "valor lido do Arduino", $"d20 = {resultado}"));
+        Rolando = false;
+        StateHasChanged();
+    }
+
+    private record EntradaRegistro(string Tipo, string Autor, string Texto, string Rolagem);
+    private record Combatente(string Nome, int Iniciativa, int VidaPercentual, bool NaVez);
+}

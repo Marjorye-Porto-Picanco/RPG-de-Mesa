@@ -1,225 +1,61 @@
-﻿@page "/counter"
+﻿@page "/cadastro"
+@layout TelaCheiaLayout
+@inject NavigationManager Navegacao
 
-<!--Aqui começa o 1.1 (o 1.0 tá no figma) do protótipo de como vai ficar a tela do RPG de mesa num software/aplicativo/mobile/qualquer coisa-->
-<!--Adicionar: -->
-<!--Tela de usuário, onde pode editar, estilizar, customizar e saber o nível dele como jogador ou sua experiência, saber quantas vezes ele jogou de cada um, assim facilitar ua preferência sendo jogador ou mestre;
-Nome e apelidO, seu nome de usuário será normal e real, mas o usuário pode escolher um apelido para entrar na imersão do rpg ou de fácil reconhecimento, ex: Nome: Cleverson, Apelido: DragãoGuerreiro -->
-<!--Configurações, onde terá as regras de termos de uso e privacidade bem explicadinho e as opções de conta, privacidade e etc...-->
-<!-- ................................ -->
+@* CADASTRO: inserir o campo de ter opção de logar com o Google, Facebook ou outras redes sociais *@
+@* Adicionar depois: tela de usuário (editar, estilizar, ver nível/experiência como jogador ou
+   mestre); campo de apelido além do nome real (ex: Nome: Cleverson, Apelido: DragãoGuerreiro);
+   configurações com termos de uso/privacidade e opções de conta. *@
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<div class="tela-cheia tela-autenticacao">
+    <div class="cartao-login">
+        <div class="selo-login">🛡️</div>
+        <h1>Junte-se à Mesa</h1>
+        <p class="subtitulo-login">Crie sua conta e reúna seu grupo para a próxima aventura.</p>
 
-<link rel="stylesheet" href="style.css">
-
-<div class="mesa-app">
-
-    <!--  LOGIN  : inserir o campo de ter opção de logar com o Google, facebook, ou outras redes sociais-->
-    <div class="tela ativa" id="tela-login">
-        <div class="cartao-login">
-            <div class="selo-login">⚔️</div>
-            <h1>Salão da Mesa</h1>
-            <p class="subtitulo-login">Sua campanha, seus dados, seu tabuleiro — conectados.</p>
+        <EditForm Model="this" OnValidSubmit="CriarConta">
             <div class="campo">
-                <label>Nome de Usuário</label>
-                <input type="text" placeholder="ex: cleverson_mestre">
+                <label for="nome-cadastro">Nome de usuário</label>
+                <input id="nome-cadastro" type="text" @bind="NomeUsuario" placeholder="ex: cleverson_mestre" required>
             </div>
             <div class="campo">
-                <label>Senha</label>
-                <input type="password" placeholder="••••••••">
+                <label for="email-cadastro">E-mail</label>
+                <input id="email-cadastro" type="email" @bind="Email" placeholder="voce@email.com" required>
             </div>
-            <button class="botao-principal" onclick="entrarAplicativo()">ENTRAR NA MESA</button>
-            <p class="rodape-login">Ainda não tem conta? <span class="link-formulario" onclick="mostrarCadastro()">Criar conta</span></p>
-        </div>
+            <div class="campo">
+                <label for="senha-cadastro">Senha</label>
+                <input id="senha-cadastro" type="password" @bind="Senha" placeholder="Crie uma senha" minlength="6" required>
+            </div>
+            <div class="termos">
+                <input id="termos" type="checkbox" @bind="AceitouTermos" required>
+                <label for="termos">Li e aceito os <span class="link-formulario">Termos de Uso e a Política de Privacidade</span>.</label>
+            </div>
+            <button class="botao-principal" type="submit">CRIAR MINHA CONTA</button>
+        </EditForm>
+
+        @if (MostrarSucesso)
+        {
+            <p class="rodape-login">✅ Conta criada com sucesso! Redirecionando para o login…</p>
+        }
+
+        <p class="rodape-login">Já tem uma conta? <a class="link-formulario" href="/">Entrar na mesa</a></p>
     </div>
-
-    <!-- CADASTRO : inserir o campo de ter opção de logar com o Google, facebook, ou outras redes sociais-->
-    <div class="tela" id="tela-cadastro">
-        <div class="cartao-login">
-            <div class="selo-login">🛡️</div>
-            <h1>Junte-se à Mesa</h1>
-            <p class="subtitulo-login">Crie sua conta e reúna seu grupo para a próxima aventura.</p>
-            <form onsubmit="cadastrarConta(event)">
-                <div class="campo">
-                    <label for="nome-cadastro">Nome de usuário</label>
-                    <input id="nome-cadastro" type="text" placeholder="ex: cleverson_mestre" required>
-                </div>
-                <div class="campo">
-                    <label for="email-cadastro">E-mail</label>
-                    <input id="email-cadastro" type="email" placeholder="voce@email.com" required>
-                </div>
-                <div class="campo">
-                    <label for="senha-cadastro">Senha</label>
-                    <input id="senha-cadastro" type="password" placeholder="Crie uma senha" minlength="6" required>
-                </div>
-                <div class="termos">
-                    <input id="termos" type="checkbox" required>
-                    <label for="termos">Li e aceito os <span class="link-formulario">Termos de Uso e a Política de Privacidade</span>.</label>
-                </div>
-                <button class="botao-principal" type="submit">CRIAR MINHA CONTA</button>
-            </form>
-            <p class="rodape-login">Já tem uma conta? <span class="link-formulario" onclick="mostrarLogin()">Entrar na mesa</span></p>
-        </div>
-    </div>
-
-    <!--  APP : onde fica a barra lateral. Fica aqui @Kauan  !! -->
-    <div class="tela" id="tela-aplicativo">
-        <nav class="barra-lateral fundo-couro">
-            <div class="marca-barra">🎲</div>
-            <div class="aba ativa" data-target="aba-campanhas">
-                <div class="icone-aba">📜</div><div class="rotulo-aba">Campanha</div>
-            </div>
-            <div class="aba" data-target="aba-mesa">
-                <div class="icone-aba">🗺️</div><div class="rotulo-aba">Mesa</div>
-            </div>
-            <div class="aba" data-target="aba-personagens">
-                <div class="icone-aba">🛡️</div><div class="rotulo-aba">Heróis</div>
-            </div>
-            <div class="aba" data-target="aba-regras">
-                <div class="icone-aba">📖</div><div class="rotulo-aba">Regras</div>
-            </div>
-            <div class="espacador-barra"></div>
-            <div class="aba aba-saida" onclick="sairAplicativo()">
-                <div class="icone-aba">🚪</div><div class="rotulo-aba">Sair</div>
-            </div>
-        </nav>
-
-        <div class="area-principal fundo-pergaminho">
-
-            <!-- CAMPANHAS : adicionar modo clique e aparecer uma telinha com opacidade escura no fundo. Adicionar no "Criar nova Campanha" uma tela na qual poderá ser escolhido título, uma breve descrição, senha (caso for uma companha pública ou privada), quantidade de jogadores. O criador da sala deverá ser o mestre do RPG criado/iniciado por ele.  -->
-            <section class="conteudo-aba visivel" id="aba-campanhas">
-                <div class="cabecalho-area">
-                    <h1>Campanhas</h1>
-                    <span class="migalha">4 campanhas ativas</span>
-                </div>
-                <div class="corpo-area">
-                    <div class="grade-campanhas">
-                        <div class="cartao-campanha">
-                            <h3>A Cidadela das Salamandras</h3>
-                            <p>Um general em chamas ameaça o vale de Rhoumed.</p>
-                            <div class="metadados"><span>👑 Mestre: Nefertyne</span><span>👥 4 jogadores</span></div>
-                        </div>
-                        <div class="cartao-campanha">
-                            <h3>Pousada Água Azul</h3>
-                            <p>Um pouso tranquilo esconde segredos nos porões.</p>
-                            <div class="metadados"><span>👑 Mestre: Cleverson</span><span>👥 3 jogadores</span></div>
-                        </div>
-                        <div class="cartao-campanha">
-                            <h3>Castelo Ravenloft</h3>
-                            <p>Teias gigantes cobrem a floresta ao redor do castelo.</p>
-                            <div class="metadados"><span>👑 Mestre: Brando</span><span>👥 5 jogadores</span></div>
-                        </div>
-                        <div class="nova-campanha">
-                            <div class="icone-nova-campanha">+</div>
-                            <div class="rotulo-nova-campanha">Criar nova campanha</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- MESA / SESSÃO : onde a mecânica do jogo vai se desenvolver. Adaptar as notificações do jogo que aparecem na tela, talvez, movendo-as para o canto. Colocar o mapa do jogo selecionado pelo mestre (apenas o mestre tem controle de mudar os eventos, mapas, monstros e turnos. Os jogadores tem apenas o controle de seus turnos, personagens e ações dos seus personagens.) -->
-            <section class="conteudo-aba" id="aba-mesa">
-                <div class="cabecalho-area">
-                    <h1>Cidadela das Salamandras — Sessão 7</h1>
-                    <span class="migalha">Rodada 3 · Turno de Arthur</span>
-                </div>
-                <div class="corpo-area">
-                    <div class="estrutura-mesa">
-                        <div class="painel">
-                            <h2>Registro da Mesa</h2>
-                            <div class="registro" id="registro">
-                                <div class="entrada-registro narracao">O General Salamandra investe com a lança contra Hurry, mas o golpe não perfura sua armadura.</div>
-                                <div class="entrada-registro jogador"><span class="autor">Arthur</span> mira no devorador de mentes e dispara uma flecha. <span class="rolagem">1d20+3 = 19</span></div>
-                                <div class="entrada-registro narracao">A flecha envolvida em chamas crava no ombro da criatura.</div>
-                                <div class="entrada-registro jogador"><span class="autor">Caine</span> avança com o cajado sagrado contra a sacerdotisa. <span class="rolagem">1d20+5 = 14</span></div>
-                            </div>
-                            <div class="bandeja-dados">
-                                <div class="face-dado" id="face-dado">🎲</div>
-                                <button class="botao-arduino" onclick="rolarDoArduino()">⚡ Aguardando dado físico do Arduino…</button>
-                                <div class="ponto-conexao"></div><span class="rotulo-conexao">Conectado</span>
-                            </div>
-                        </div>
-
-                        <div class="coluna-lateral">
-                            <div class="painel">
-                                <h2>Ordem de Turno</h2>
-                                <ul class="lista-turnos">
-                                    <li class="linha-turno atual">
-                                        <div class="avatar">A</div>
-                                        <div class="envoltorio-nome"><div class="nome">Arthur</div><div class="barra-vida"><div class="preenchimento vida-82"></div></div></div>
-                                        <div class="iniciativa">19</div>
-                                    </li>
-                                    <li class="linha-turno">
-                                        <div class="avatar">C</div>
-                                        <div class="envoltorio-nome"><div class="nome">Caine</div><div class="barra-vida"><div class="preenchimento vida-64"></div></div></div>
-                                        <div class="iniciativa">16</div>
-                                    </li>
-                                    <li class="linha-turno">
-                                        <div class="avatar">H</div>
-                                        <div class="envoltorio-nome"><div class="nome">Hurry</div><div class="barra-vida"><div class="preenchimento vida-38"></div></div></div>
-                                        <div class="iniciativa">12</div>
-                                    </li>
-                                    <li class="linha-turno">
-                                        <div class="avatar">R</div>
-                                        <div class="envoltorio-nome"><div class="nome">Rhamak</div><div class="barra-vida"><div class="preenchimento vida-91"></div></div></div>
-                                        <div class="iniciativa">8</div>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="painel">
-                                <h2>Mestre</h2>
-                                <div class="nota-mestre">
-                                    Nefertyne está narrando esta cena. Use <strong>/sussurro</strong> para falar apenas com ela.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- PERSONAGENS : adicionar um pequeno texto dentro do card para mostrar qual personagem já participa de uma campanha ou não, colocar um tipo de brilho para mostrar que está em modo campanha, ou seja, ele não pode ser usado no momento. E o personagem disponível ficará normal. -->
-            <section class="conteudo-aba" id="aba-personagens">
-                <div class="cabecalho-area">
-                    <h1>Personagens</h1>
-                    <span class="migalha">3 fichas nesta campanha</span>
-                </div>
-                <div class="corpo-area">
-                    <div class="grade-personagens">
-                        <div class="cartao-personagem">
-                            <div class="retrato-personagem">🗡️<span class="etiqueta-classe">Guerreiro</span></div>
-                            <div class="informacoes-personagem"><h3>Arthur</h3><p>Nível 6 · Humano</p></div>
-                        </div>
-                        <div class="cartao-personagem">
-                            <div class="retrato-personagem">🏹<span class="etiqueta-classe">Patrulheiro</span></div>
-                            <div class="informacoes-personagem"><h3>Caine</h3><p>Nível 5 · Elfo</p></div>
-                        </div>
-                        <div class="cartao-personagem">
-                            <div class="retrato-personagem">🔥<span class="etiqueta-classe">Bárbaro</span></div>
-                            <div class="informacoes-personagem"><h3>Hurry</h3><p>Nível 6 · Meio-orc</p></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- REGRAS : Preencher e  especificar melhor as regras do jogo e de como funciona o mundo do RPG; As regras de uso do site poderá ser implementado nas configurações com emoji de ⚙️-->
-            <section class="conteudo-aba" id="aba-regras">
-                <div class="cabecalho-area">
-                    <h1>Regras da Casa</h1>
-                    <span class="migalha">Editável apenas pelo Mestre</span>
-                </div>
-                <div class="corpo-area">
-                    <div class="painel painel-regras">
-                        <h2>Combate</h2>
-                        <div class="texto-regras">
-                            Acertos críticos causam dano dobrado apenas nos dados, não nos modificadores. Ações lendárias de monstros podem
-                            ser usadas entre turnos, conforme descrito na ficha do monstro.
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </div>
-    </div>
-
-
 </div>
+
+@code {
+    private string NomeUsuario = "";
+    private string Email = "";
+    private string Senha = "";
+    private bool AceitouTermos;
+    private bool MostrarSucesso;
+
+    private async Task CriarConta()
+    {
+        // TODO: gravar o novo usuário (Models/usuario.cs + Services/ConexaoBanco.cs)
+        // antes de navegar de volta pro login.
+        MostrarSucesso = true;
+        StateHasChanged();
+        await Task.Delay(1200);
+        Navegacao.NavigateTo("/");
+    }
+}
