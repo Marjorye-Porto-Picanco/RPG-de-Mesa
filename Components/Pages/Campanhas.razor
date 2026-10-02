@@ -12,11 +12,11 @@
         <section class="conteudo-pagina">
             <div class="cabecalho-area">
                 <h1>Campanhas</h1>
-                <span class="migalha">@Campanhas.Count campanhas ativas</span>
+                <span class="migalha">@_campanhas.Count campanhas ativas</span>
             </div>
             <div class="corpo-area">
                 <div class="grade-campanhas">
-                    @foreach (var campanha in Campanhas)
+                    @foreach (var campanha in _campanhas)
                     {
                         <div class="cartao-campanha">
                             <h3>@campanha.Titulo</h3>
@@ -38,7 +38,7 @@
 </div>
 
 @code {
-    private List<CampanhaResumo> Campanhas = new()
+    private List<CampanhaResumo> _campanhas = new()
     {
         new("A Cidadela das Salamandras", "Um general em chamas ameaça o vale de Rhoumed.", "Nefertyne", 4),
         new("Pousada Água Azul", "Um pouso tranquilo esconde segredos nos porões.", "Cleverson", 3),

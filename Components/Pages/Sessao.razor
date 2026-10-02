@@ -1,0 +1,125 @@
+﻿@page "/sessao"
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<section class="base">
+    <header class="titulo">Titulo da sessão/Campanha</header>
+    <!-- BARRA LATERAL ESQUERDA -->
+    <aside class="sidebar-left">
+        <div class="sidebar-icons">
+            <a href="#"><i class="bi bi-person-fill"></i></a>
+            <a href="#"><i class="bi bi-dice-6"></i></a>
+            <a href="#"><i class="bi bi-shield-shaded"></i></a>
+            <a href="#"><i class="bi bi-book"></i></a>
+            <a href="#"><i class="bi bi-map"></i></a>
+            <a href="#"><i class="bi bi-droplet-half"></i></a>
+        </div>
+        <div class="config-btn">
+            <a href="#"><i class="bi bi-gear-fill"></i></a>
+        </div>
+    </aside>
+
+    <section class="lado-esquerdo">
+        <!-- sla -->
+        <div class="espaco">
+            <h1>não sei para que vou usar isso</h1>
+        </div>
+
+        <!-- chat -->
+        <div class="chat-box">
+            <div class="chat-abas">
+                <span>Chat</span>
+                <span>Log</span>
+                <span>NPC</span>
+                <span>Geral</span>
+            </div>
+
+            <div class="chat-mensagens">
+                <p><strong>Mestre:</strong> Bem-vindos a Faerong!</p>
+                <p><strong>KXrj:</strong> Rolo percepção?</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="centro-conteudo">
+        <div class="mapa-container">
+            <!-- tem que por a malha por cima daqui e carregar a imagem por baixo -->
+            <img src="https://images.unsplash.com/photo-1524654458049-e36be0721fa2?auto=format&fit=crop&w=1200&q=80"
+                 alt="Mapa da Sessão" />
+        </div>
+
+        <div class="acoes-turno">
+            <div class="botoes-container">
+                <button class="btn-rpg">Atacar</button>
+                <button class="btn-rpg">Conjurar Magia</button>
+                <button class="btn-rpg">Disparada</button>
+                <button class="btn-rpg">Desengajar</button>
+                <button class="btn-rpg">Esquivar</button>
+                <button class="btn-rpg">Esconder</button>
+            </div>
+        </div>
+    </section>
+
+    <aside class="painel-jogadores">
+        <!-- Jogador 1 (Mestre) -->
+        <div class="card-jogador">
+            <div class="avatar">
+                <img src="caminho/para/imagem-mestre.png" alt="Cleverson" />
+            </div>
+            <div class="info-jogador">
+                <h3>Cleverson</h3>
+                <span class="classe">Mestre</span>
+            </div>
+        </div>
+
+        <!-- Divisória Dourada após o Mestre -->
+        <div class="linha-dourada"></div>
+
+        <!-- Jogador 2 -->
+        <div class="card-jogador">
+            <div class="avatar">
+                <img src="caminho/para/imagem-kxrj.png" alt="KXrj" />
+            </div>
+            <div class="info-jogador">
+                <h3>KXrj</h3>
+                <span class="classe">Nada</span>
+            </div>
+        </div>
+
+        <!-- Jogador 3 -->
+        <div class="card-jogador">
+            <div class="avatar">
+                <img src="caminho/para/imagem-mj.png" alt="M.J" />
+            </div>
+            <div class="info-jogador">
+                <h3>M.J</h3>
+                <span class="classe">Maga</span>
+            </div>
+        </div>
+
+        <!-- Jogador 4 -->
+        <div class="card-jogador">
+            <div class="avatar">
+                <img src="caminho/para/imagem-ecoz.png" alt="Ecoz" />
+            </div>
+            <div class="info-jogador">
+                <h3>Ecoz</h3>
+                <span class="classe">Pistoleiro</span>
+            </div>
+        </div>
+
+        <!-- Jogador 5 -->
+        <div class="card-jogador">
+            <div class="avatar avatar-vazio"></div>
+            <div class="info-jogador">
+                <h3>Fulanitz08</h3>
+                <span class="classe">Escudeiro</span>
+            </div>
+        </div>
+    </aside>
+
+    <style>
+               
+
+    </style>
+</section>

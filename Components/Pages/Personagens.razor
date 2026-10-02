@@ -11,11 +11,11 @@
         <section class="conteudo-pagina">
             <div class="cabecalho-area">
                 <h1>Personagens</h1>
-                <span class="migalha">@Personagens.Count fichas nesta campanha</span>
+                <span class="migalha">@_personagens.Count fichas nesta campanha</span>
             </div>
             <div class="corpo-area">
                 <div class="grade-personagens">
-                    @foreach (var personagem in Personagens)
+                    @foreach (var personagem in _personagens)
                     {
                         <div class="cartao-personagem">
                             <div class="retrato-personagem">
@@ -35,7 +35,7 @@
 </div>
 
 @code {
-    private List<PersonagemResumo> Personagens = new()
+    private List<PersonagemResumo> _personagens = new()
     {
         new("🗡️", "Guerreiro", "Arthur", 6, "Humano"),
         new("🏹", "Patrulheiro", "Caine", 5, "Elfo"),

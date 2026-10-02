@@ -1,0 +1,151 @@
+
+<style >
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+.fundo {
+    background-color: gray;
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+    .fundo h1 {
+        color: white;
+        margin-bottom: 16px;
+    }
+
+.campos {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.42);
+    width: 90%;
+    max-width: 440px;
+    border-radius: 17px;
+    padding: 30px 24px;
+}
+
+.sla {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+    .sla p {
+        color: white;
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    .sla input {
+        border: none;
+        outline: none;
+        font-size: 15px;
+        border-radius: 10px;
+        width: 100%;
+        height: 44px;
+        padding: 0 14px;
+    }
+
+.campos button {
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    width: 100%;
+    background-color: #007bff;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+    .campos button:hover {
+        background-color: #0056b3;
+    }
+
+.icons-login {
+    margin: 18px 0;
+    gap: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+    .icons-login a {
+        color: white;
+        font-size: 26px;
+        text-decoration: none;
+        display: inline-flex;
+        transition: opacity 0.2s;
+    }
+
+        .icons-login a:hover {
+            opacity: 0.8;
+        }
+
+.termo {
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+    .termo a {
+        color: #4da6ff;
+        text-decoration: underline;
+    }
+
+/* Pop-up via pseudo-classe :target */
+.pop-up {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+    .pop-up:target {
+        display: flex;
+    }
+
+.conteiner {
+    position: relative;
+    background-color: white;
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 450px;
+    width: 100%;
+    line-height: 1.5;
+    color: #333;
+}
+
+.fechar-popup {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    text-decoration: none;
+    font-size: 26px;
+    color: #666;
+    font-weight: bold;
+}
+
+</style >
