@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="RPGdeMesa.csproj" />
+  <Project Path="RPGdeMesa.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
 </Solution>
