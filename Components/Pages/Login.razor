@@ -3,6 +3,7 @@
 @layout Layout.EmptyLayout
 
 @using RPGdeMesa.Services
+@using RPGdeMesa.ViewModel
 @inject UsuarioService UsuarioService
 @inject NavigationManager Navigation
 
@@ -14,29 +15,29 @@
     <div class="campos">
         <div class="sla">
             <p>Email ou Usuário</p>
-            <input type="text" id="email" @bind="loginOuEmail" autocomplete="username" />
+            <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
         </div>
 
         <div class="sla">
             <p>Senha</p>
-            <input type="password" id="senha" @bind="senha" autocomplete="current-password" />
+            <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
         </div>
 
-        @if (!string.IsNullOrEmpty(mensagemFeedback))
+        @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
         {
-            <p style="color: @(sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
-                @mensagemFeedback
+            <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
+                @viewModel.MensagemFeedback
             </p>
         }
 
-        <button type="button" @onclick="entrar" disabled="@isProcessing">
-            @(isProcessing ? "Entrando..." : "Entrar")
+        <button type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
+            @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
         </button>
 
         <div class="icons-login">
-            <a href="#" @onclick="LoginComGoogle" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" @onclick="LoginComFacebook" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" @onclick="LoginComGitHub" @onclick:preventDefault aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
+            <a href="#" @onclick="viewModel.LoginComGoogleAsync" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
+            <a href="#" @onclick="viewModel.LoginComFacebookAsync" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" @onclick="viewModel.LoginComGitHubAsync" @onclick:preventDefault aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
         </div>
 
         <label class="termo">
@@ -45,231 +46,18 @@
     </div>
 </section>
 
-@code{
-    private string loginOuEmail = "";
-        private string senha = "";
-        private string mensagemFeedback = "";
-        private bool sucesso = false;
-        private bool isProcessing = false;
+@code {
+    private LoginViewModel viewModel = default!;
 
-        private async Task entrar()
-        {
-            if (isProcessing) return;
-
-            try
-            {
-                isProcessing = true;
-                mensagemFeedback = "";
-                StateHasChanged();
-
-            // Autentica o usuário
-            var resultado = await UsuarioService.AutenticarAsync(loginOuEmail, senha);
-
-            sucesso = resultado.Sucesso;
-            mensagemFeedback = resultado.Mensagem;
-
-            if (sucesso && resultado.UsuarioLogado != null)
-            {           
-                await Task.Delay(800);
-                Navigation.NavigateTo("/sessao");
-            }
-        }
-        finally
-        {
-            isProcessing = false;
-            StateHasChanged();
-        }
-    }
-    private async Task LoginComGoogle()
+    protected override void OnInitialized()
     {
-        string clientId = "";
-        string redirectUri = DeviceInfo.Platform == DevicePlatform.WinUI ? "http://localhost:5000/" : "rpgdemesa://";
-        string urlAutenticacao = $"https://accounts.google.com/o/oauth2/v2/auth?client_id={clientId}&redirect_uri={redirectUri}&response_type=code&scope=email%20profile";
+        viewModel = new LoginViewModel(UsuarioService, Navigation);
 
-        await ProcessarLoginSocial("Google", urlAutenticacao, redirectUri);
+        viewModel.OnChange += StateHasChanged;
     }
 
-    private async Task LoginComFacebook() { }
-    private async Task LoginComGitHub() { }
-
-    private async Task ProcessarLoginSocial(string provedor, string urlAutenticacao, string redirectUri)
-    {
-        if (isProcessing) return;
-
-        try
-        {
-            isProcessing = true;
-            mensagemFeedback = "Aguardando autenticação...";
-            StateHasChanged();
-
-            string emailObtido = "";
-            string nomeObtido = "";
-
-            if (DeviceInfo.Platform == DevicePlatform.WinUI)
-            {
-                var listener = new System.Net.HttpListener();
-                listener.Prefixes.Add("http://localhost:5000/");
-                listener.Start();
-
-                if (provedor.Equals("Google", StringComparison.OrdinalIgnoreCase) && !urlAutenticacao.Contains("scope="))
-                {
-                    urlAutenticacao += "&scope=openid%20email%20profile";
-                }
-
-                await Launcher.Default.OpenAsync(new Uri(urlAutenticacao));
-
-                var context = await listener.GetContextAsync();
-                var request = context.Request;
-                string codigoAutorizacao = request.QueryString["code"];
-
-                var response = context.Response;
-                string responseString = "";
-                try
-                {
-                    using var stream = await FileSystem.OpenAppPackageFileAsync("sucesso-auth.html");
-                    using var reader = new StreamReader(stream);
-                    responseString = await reader.ReadToEndAsync();
-                }
-                catch
-                {
-                    responseString = "<html><body><h3>Autenticação realizada com sucesso! Pode fechar esta janela.</h3></body></html>";
-                }
-
-                var buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
-                response.ContentLength64 = buffer.Length;
-                await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                response.OutputStream.Close();
-                listener.Stop();
-
-                if (!string.IsNullOrEmpty(codigoAutorizacao))
-                {
-                    string emailRealDoGoogle = "";
-                    string nomeRealDoGoogle = "";
-
-                    try
-                    {
-                        using var httpClient = new HttpClient();
-
-                        string clientId = "";
-                        string clientSecret = "";
-                        string callbackUri = "http://localhost:5000/";
-
-                        var tokenRequestData = new Dictionary<string, string>
-                        {
-                            { "code", codigoAutorizacao },
-                            { "client_id", clientId },
-                            { "client_secret", clientSecret },
-                            { "redirect_uri", callbackUri },
-                            { "grant_type", "authorization_code" }
-                        };
-
-                        var tokenResponse = await httpClient.PostAsync("https://oauth2.googleapis.com/token", new FormUrlEncodedContent(tokenRequestData));
-
-                        string tokenJsonResponse = await tokenResponse.Content.ReadAsStringAsync();
-                        System.Diagnostics.Debug.WriteLine($"[DEBUG TOKEN RESPOSTA]: {tokenJsonResponse}");
-
-                        if (tokenResponse.IsSuccessStatusCode)
-                        {
-                            using var doc = System.Text.Json.JsonDocument.Parse(tokenJsonResponse);
-                            if (doc.RootElement.TryGetProperty("access_token", out var accessTokenProp))
-                            {
-                                string accessToken = accessTokenProp.GetString();
-
-                                var requestUser = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
-                                requestUser.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-                                var userInfoResponse = await httpClient.SendAsync(requestUser);
-                                string userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
-                                System.Diagnostics.Debug.WriteLine($"[DEBUG USERINFO RESPOSTA]: {userInfoJson}");
-
-                                if (userInfoResponse.IsSuccessStatusCode)
-                                {
-                                    using var userDoc = System.Text.Json.JsonDocument.Parse(userInfoJson);
-
-                                    if (userDoc.RootElement.TryGetProperty("email", out var emailProp))
-                                        emailRealDoGoogle = emailProp.GetString();
-
-                                    if (userDoc.RootElement.TryGetProperty("name", out var nameProp))
-                                        nomeRealDoGoogle = nameProp.GetString();
-                                }
-                            }
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[FALHA AO OBTER TOKEN]: Status {tokenResponse.StatusCode} - {tokenJsonResponse}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[EXCEÇÃO NO FLUXO GOOGLE]: {ex.Message} | Stack: {ex.StackTrace}");
-                    }
-
-                    if (string.IsNullOrEmpty(emailRealDoGoogle))
-                    {
-                        mensagemFeedback = "Erro: O Google não retornou o e-mail do usuário.";
-                        sucesso = false;
-                        isProcessing = false;
-                        StateHasChanged();
-                        return;
-                    }
-
-                    var resultado = await UsuarioService.AutenticarOuCadastrarSocialAsync(emailRealDoGoogle, nomeRealDoGoogle);
-                    sucesso = resultado.Sucesso;
-                    mensagemFeedback = resultado.Mensagem;
-
-                    if (sucesso)
-                    {
-                        await Task.Delay(1000);
-                        Navigation.NavigateTo("/sessao");
-                    }
-                }
-                else
-                {
-                    mensagemFeedback = "Código de autorização não encontrado.";
-                    sucesso = false;
-                }
-            }
-            else
-            {
-                var authResult = await WebAuthenticator.AuthenticateAsync(
-                    new Uri(urlAutenticacao),
-                    new Uri(redirectUri)
-                );
-
-                string codigoAutorizacao = authResult?.Properties != null && authResult.Properties.TryGetValue("code", out var code)
-                    ? code
-                    : null;
-
-                emailObtido = authResult?.Properties?["email"] ?? "usuario_social@exemplo.com";
-                nomeObtido = authResult?.Properties?["name"] ?? $"aventureiro_{provedor.ToLower()}";
-
-                var resultado = await UsuarioService.AutenticarOuCadastrarSocialAsync(emailObtido, nomeObtido);
-
-                sucesso = resultado.Sucesso;
-                mensagemFeedback = resultado.Mensagem;
-
-                if (sucesso)
-                {
-                    await Task.Delay(1000);
-                    Navigation.NavigateTo("/sessao");
-                }
-            }
-        }
-        catch (TaskCanceledException)
-        {
-            mensagemFeedback = "Autenticação social cancelada.";
-            sucesso = false;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[ERRO LOGIN SOCIAL {provedor}]: {ex.Message}");
-            mensagemFeedback = $"Erro ao autenticar com o {provedor}. Tente novamente.";
-            sucesso = false;
-        }
-        finally
-        {
-            isProcessing = false;
-            StateHasChanged();
-        }
+    public void Dispose()
+    {      
+        viewModel.OnChange -= StateHasChanged;
     }
 }
