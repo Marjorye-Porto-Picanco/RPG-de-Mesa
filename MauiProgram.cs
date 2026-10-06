@@ -1,4 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using RPGdeMesa.Data;
+using RPGdeMesa.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace RPGdeMesa
 {
@@ -20,7 +23,8 @@ namespace RPGdeMesa
     		builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
-
+            builder.Services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
+            builder.Services.AddTransient<UsuarioService>();
             return builder.Build();
         }
     }

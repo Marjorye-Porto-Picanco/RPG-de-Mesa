@@ -1,77 +1,310 @@
 ﻿@page "/cadastro"
+@using RPGdeMesa.Services
+@inject UsuarioService UsuarioService
+@inject NavigationManager Navigation
 
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="fundo">
     <h1>Cadastro</h1>
     <div class="campos">
         <div class="sla">
             <p>Utilizador</p>
-            <input type="text" id="usuario" autocomplete="username" />
+            <input type="text" id="usuario" @bind="usuario" autocomplete="username" />
         </div>
 
         <div class="sla">
             <p>Email</p>
-            <input type="email" id="email" autocomplete="email" />
+            <input type="email" id="email" @bind="email" autocomplete="email" />
         </div>
 
         <div class="sla">
             <p>Senha</p>
-            <input type="password" id="senha" autocomplete="new-password" />
+            <input type="password" id="senha" @bind="senha" autocomplete="new-password" />
         </div>
 
         <div class="sla">
             <p>Confirmar Senha</p>
-            <input type="password" id="confirmar-senha" autocomplete="new-password" />
+            <input type="password" id="confirmar-senha" @bind="confirmarSenha" autocomplete="new-password" />
         </div>
 
-        <button type="button">Cadastrar</button>
+        @if (!string.IsNullOrEmpty(mensagemFeedback))
+        {
+            <p style="color: @(sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
+                @mensagemFeedback
+            </p>
+        }
 
         <div class="icons-login">
-            <a href="#" aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
+            <a href="#" @onclick="RegistrarComGoogle" @onclick:preventDefault aria-label="Cadastrar com Google"><i class="bi bi-google"></i></a>
+            <a href="#" @onclick="RegistrarComFacebook" @onclick:preventDefault aria-label="Cadastrar com Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" @onclick="RegistrarComGitHub" @onclick:preventDefault aria-label="Cadastrar com GitHub"><i class="bi bi-github"></i></a>
         </div>
 
-    <label class="termo">
-    <input type="checkbox" />
-    <span>Concordar com os <a href="#" @onclick="() => ExibirModal = true" @onclick:preventDefault>termos de uso</a></span>
-</label>
+        <label class="termo">
+            <input type="checkbox" @bind="aceitouTermos" />
+            <span>Concordar com os <a href="#" @onclick="() => ExibirModal = true" @onclick:preventDefault>termos de uso</a></span>
+        </label>
+
+        <button type="button" @onclick="RealizarCadastro" disabled="@isProcessing">
+            @(isProcessing ? "Cadastrando..." : "Cadastrar")
+        </button>
     </div>
 </section>
+
 @if (ExibirModal)
 {
     <section class="pop-up-backdrop" @onclick="() => ExibirModal = false">
-        <!-- O @onclick:stopPropagation impede de fechar ao clicar dentro do card -->
         <div class="modal-rpg" @onclick:stopPropagation>
             <button type="button" class="fechar-popup" @onclick="() => ExibirModal = false" aria-label="Fechar">&times;</button>
-            
+
             <header class="modal-cabecalho">
                 <h3>Termos da Sessão</h3>
                 <div class="linha-dourada"></div>
             </header>
 
             <div class="modal-corpo">
-                <p>
-                    Ao adentrar a mesa, o aventureiro compromete-se a respeitar o Mestre e os demais jogadores.
-                </p>
-                <p>
-                    Decisões de dados (d20) são absolutas e não passíveis de barganha após roladas. O uso indevido de magias em tavernas resultará em penalidade direta imposta pela guarda local.
-                </p>
-                <p>
-                    Que seus acertos sejam críticos e que a sorte acompanhe sua jornada por Faerong!
-                </p>
+                <p>Ao adentrar a mesa, o aventureiro compromete-se a respeitar o Mestre e os demais jogadores.</p>
+                <p>Decisões de dados (d20) são absolutas e não passíveis de barganha após roladas.</p>
             </div>
 
             <footer class="modal-rodape">
-                <button type="button" class="btn-rpg-modal" @onclick="() => ExibirModal = false">
+                <button type="button" class="btn-rpg-modal" @onclick="AceitarTermosEFechar">
                     Entendido
                 </button>
             </footer>
         </div>
     </section>
 }
+
 @code {
     private bool ExibirModal = false;
+    private string usuario = "";
+    private string email = "";
+    private string senha = "";
+    private string confirmarSenha = "";
+    private bool aceitouTermos = false;
+
+    private string mensagemFeedback = "";
+    private bool sucesso = false;
+    private bool isProcessing = false;
+
+    private async Task RealizarCadastro()
+    {
+        if (isProcessing) return;
+        try
+        {
+            isProcessing = true;
+            mensagemFeedback = "";
+            StateHasChanged();
+
+            var resultado = await UsuarioService.CadastrarAsync(usuario, email, senha, confirmarSenha, aceitouTermos);
+            sucesso = resultado.Sucesso;
+            mensagemFeedback = resultado.Mensagem;
+
+            if (sucesso)
+            {
+                await Task.Delay(1200);
+                Navigation.NavigateTo("/login");
+            }
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AceitarTermosEFechar()
+    {
+        aceitouTermos = true;
+        ExibirModal = false;
+    }
+
+    private async Task RegistrarComGoogle()
+    {
+        string clientId = "";
+        string redirectUri = DeviceInfo.Platform == DevicePlatform.WinUI ? "http://localhost:5000/" : "rpgdemesa://";
+        string urlAutenticacao = $"https://accounts.google.com/o/oauth2/v2/auth?client_id={clientId}&redirect_uri={redirectUri}&response_type=code&scope=email%20profile";
+
+        await ProcessarRegistroSocial("Google", urlAutenticacao, redirectUri);
+    }
+
+    private async Task RegistrarComFacebook() { }
+    private async Task RegistrarComGitHub() { }
+
+    private async Task ProcessarRegistroSocial(string provedor, string urlAutenticacao, string redirectUri)
+    {
+        if (isProcessing) return;
+
+        try
+        {
+            isProcessing = true;
+            mensagemFeedback = "Aguardando autenticação...";
+            StateHasChanged();
+
+            string codigoAutorizacao = null;
+            System.Net.HttpListener listener = null;
+            System.Net.HttpListenerContext context = null;
+
+#if WINDOWS
+    // No Windows, usamos o HttpListener que já estava funcionando perfeitamente para você
+    listener = new System.Net.HttpListener();
+    listener.Prefixes.Add(redirectUri);
+    listener.Start();
+
+    await Launcher.Default.OpenAsync(new Uri(urlAutenticacao));
+
+    context = await listener.GetContextAsync();
+    codigoAutorizacao = context.Request.QueryString["code"];
+#elif ANDROID
+            // No Android, usamos o WebAuthenticator nativo do MAUI
+            var authResult = await WebAuthenticator.Default.AuthenticateAsync(
+                new Uri(urlAutenticacao),
+                new Uri(redirectUri)
+            );
+
+            if (authResult?.Properties != null && authResult.Properties.TryGetValue("code", out var codeVal))
+            {
+                codigoAutorizacao = codeVal;
+            }
+#else
+    // Fallback genérico caso rode em outra plataforma
+    await Launcher.Default.OpenAsync(new Uri(urlAutenticacao));
+    mensagemFeedback = "Plataforma não suportada para captura automática.";
+    isProcessing = false;
+    return;
+#endif
+
+            if (!string.IsNullOrEmpty(codigoAutorizacao))
+            {
+                string emailRealDoGoogle = "";
+                string nomeRealDoGoogle = "";
+
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    string clientId = "";
+                    string clientSecret = "";
+
+                    var tokenRequestData = new Dictionary<string, string>
+                    {
+                        { "code", codigoAutorizacao },
+                        { "client_id", clientId },
+                        { "client_secret", clientSecret },
+                        { "redirect_uri", redirectUri },
+                        { "grant_type", "authorization_code" }
+                    };
+
+                    var tokenResponse = await httpClient.PostAsync("https://oauth2.googleapis.com/token", new FormUrlEncodedContent(tokenRequestData));
+                    string tokenJsonResponse = await tokenResponse.Content.ReadAsStringAsync();
+
+                    if (tokenResponse.IsSuccessStatusCode)
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(tokenJsonResponse);
+                        if (doc.RootElement.TryGetProperty("access_token", out var accessTokenProp))
+                        {
+                            string accessToken = accessTokenProp.GetString();
+
+                            var requestUser = new HttpRequestMessage(HttpMethod.Get, "https://www.googleapis.com/oauth2/v3/userinfo");
+                            requestUser.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+                            var userInfoResponse = await httpClient.SendAsync(requestUser);
+                            string userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+
+                            if (userInfoResponse.IsSuccessStatusCode)
+                            {
+                                using var userDoc = System.Text.Json.JsonDocument.Parse(userInfoJson);
+
+                                if (userDoc.RootElement.TryGetProperty("email", out var emailProp))
+                                    emailRealDoGoogle = emailProp.GetString();
+
+                                if (userDoc.RootElement.TryGetProperty("name", out var nameProp))
+                                    nomeRealDoGoogle = nameProp.GetString();
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[EXCEÇÃO NO FLUXO GOOGLE]: {ex.Message}");
+                }
+
+                if (string.IsNullOrEmpty(emailRealDoGoogle))
+                {
+                    mensagemFeedback = "Erro: O Google não retornou o e-mail do usuário.";
+                    sucesso = false;
+                    listener?.Stop();
+                    return;
+                }
+
+                var resultado = await UsuarioService.CadastrarSocialAsync(emailRealDoGoogle, nomeRealDoGoogle);
+                sucesso = resultado.Sucesso;
+                mensagemFeedback = resultado.Mensagem;
+
+#if WINDOWS
+                // No Windows, respondemos o navegador com o arquivo HTML customizado
+                if (context != null)
+                {
+                    var response = context.Response;
+                    response.ContentType = "text/html; charset=utf-8";
+
+                    string responseString = "";
+                    try
+                    {
+                        using var stream = await FileSystem.OpenAppPackageFileAsync("retorno-auth.html");
+                        using var reader = new StreamReader(stream);
+                        responseString = await reader.ReadToEndAsync();
+                    }
+                    catch
+                    {
+                        responseString = "<html><body><h3>Autenticação realizada. Pode fechar esta janela.</h3></body></html>";
+                    }
+
+                    string tituloHtml = sucesso ? "Aventura Iniciada!" : "Aviso da Aventura";
+                    string classeCss = sucesso ? "sucesso" : "aviso";
+
+                    responseString = responseString
+                        .Replace("Aventura Iniciada!", tituloHtml)
+                        .Replace("class=\"mensagem-status\"", $"class=\"mensagem-status {classeCss}\"")
+                        .Replace("[[MENSAGEM_PLACEHOLDER]]", mensagemFeedback);
+
+                    var buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+                    response.ContentLength64 = buffer.Length;
+                    await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    response.OutputStream.Close();
+                }
+                listener?.Stop();
+#endif
+
+                if (sucesso)
+                {
+                    await Task.Delay(1500);
+                    Navigation.NavigateTo("/login");
+                }
+            }
+            else
+            {
+                mensagemFeedback = "Código de autorização não encontrado.";
+                sucesso = false;
+                listener?.Stop();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            mensagemFeedback = "Autenticação social cancelada.";
+            sucesso = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ERRO REGISTRO SOCIAL {provedor}]: {ex.Message}");
+            mensagemFeedback = $"Erro ao registrar com o {provedor}. Tente novamente.";
+            sucesso = false;
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
 }

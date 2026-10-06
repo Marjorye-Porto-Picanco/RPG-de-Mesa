@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG de Mesa - Autenticação</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: #1e1e1e;
+            border: 2px solid #d4af37;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            color: #d4af37;
+            margin-top: 0;
+        }
+
+        .mensagem-status {
+            font-size: 16px;
+            line-height: 1.5;
+            font-weight: bold;
+        }
+
+        .sucesso {
+            color: #28a745;
+        }
+
+        .aviso {
+            color: #f0ad4e;
+        }
+
+        .sub {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 15px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class='card'>
+        <h2 id="titulo-pagina">Aventura Iniciada!</h2>
+        <p id="texto-mensagem" class="mensagem-status">[[MENSAGEM_PLACEHOLDER]]</p>
+        <p class='sub'>Pode fechar esta aba e retornar ao aplicativo do RPG de Mesa.</p>
+    </div>
+</body>
+</html>
