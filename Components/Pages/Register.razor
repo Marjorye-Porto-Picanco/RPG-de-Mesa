@@ -1,77 +1,94 @@
 ﻿@page "/cadastro"
+@using RPGdeMesa.Services
+@using RPGdeMesa.ViewModel
+@inject UsuarioService UsuarioService
+@inject NavigationManager Navigation
 
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="fundo">
     <h1>Cadastro</h1>
     <div class="campos">
         <div class="sla">
             <p>Utilizador</p>
-            <input type="text" id="usuario" autocomplete="username" />
+            <input type="text" id="usuario" @bind="viewModel.Usuario" autocomplete="username" />
         </div>
 
         <div class="sla">
             <p>Email</p>
-            <input type="email" id="email" autocomplete="email" />
+            <input type="email" id="email" @bind="viewModel.Email" autocomplete="email" />
         </div>
 
         <div class="sla">
             <p>Senha</p>
-            <input type="password" id="senha" autocomplete="new-password" />
+            <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="new-password" />
         </div>
 
         <div class="sla">
             <p>Confirmar Senha</p>
-            <input type="password" id="confirmar-senha" autocomplete="new-password" />
+            <input type="password" id="confirmar-senha" @bind="viewModel.ConfirmarSenha" autocomplete="new-password" />
         </div>
 
-        <button type="button">Cadastrar</button>
+        @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
+        {
+            <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
+                @viewModel.MensagemFeedback
+            </p>
+        }
 
         <div class="icons-login">
-            <a href="#" aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
+            <a href="#" @onclick="viewModel.RegistrarComGoogleAsync" @onclick:preventDefault aria-label="Cadastrar com Google"><i class="bi bi-google"></i></a>
+            <a href="#" @onclick="viewModel.RegistrarComFacebookAsync" @onclick:preventDefault aria-label="Cadastrar com Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" @onclick="viewModel.RegistrarComGitHubAsync" @onclick:preventDefault aria-label="Cadastrar com GitHub"><i class="bi bi-github"></i></a>
         </div>
 
-    <label class="termo">
-    <input type="checkbox" />
-    <span>Concordar com os <a href="#" @onclick="() => ExibirModal = true" @onclick:preventDefault>termos de uso</a></span>
-</label>
+        <label class="termo">
+            <input type="checkbox" @bind="viewModel.AceitouTermos" />
+            <span>Concordar com os <a href="#" @onclick="viewModel.AbrirModal" @onclick:preventDefault>termos de uso</a></span>
+        </label>
+
+        <button type="button" @onclick="viewModel.RealizarCadastroAsync" disabled="@viewModel.IsProcessing">
+            @(viewModel.IsProcessing ? "Cadastrando..." : "Cadastrar")
+        </button>
     </div>
 </section>
-@if (ExibirModal)
+
+@if (viewModel.ExibirModal)
 {
-    <section class="pop-up-backdrop" @onclick="() => ExibirModal = false">
-        <!-- O @onclick:stopPropagation impede de fechar ao clicar dentro do card -->
+    <section class="pop-up-backdrop" @onclick="viewModel.FecharModal">
         <div class="modal-rpg" @onclick:stopPropagation>
-            <button type="button" class="fechar-popup" @onclick="() => ExibirModal = false" aria-label="Fechar">&times;</button>
-            
+            <button type="button" class="fechar-popup" @onclick="viewModel.FecharModal" aria-label="Fechar">&times;</button>
+
             <header class="modal-cabecalho">
                 <h3>Termos da Sessão</h3>
                 <div class="linha-dourada"></div>
             </header>
 
             <div class="modal-corpo">
-                <p>
-                    Ao adentrar a mesa, o aventureiro compromete-se a respeitar o Mestre e os demais jogadores.
-                </p>
-                <p>
-                    Decisões de dados (d20) são absolutas e não passíveis de barganha após roladas. O uso indevido de magias em tavernas resultará em penalidade direta imposta pela guarda local.
-                </p>
-                <p>
-                    Que seus acertos sejam críticos e que a sorte acompanhe sua jornada por Faerong!
-                </p>
+                <p>Ao adentrar a mesa, o aventureiro compromete-se a respeitar o Mestre e os demais jogadores.</p>
+                <p>Decisões de dados (d20) são absolutas e não passíveis de barganha após roladas.</p>
             </div>
 
             <footer class="modal-rodape">
-                <button type="button" class="btn-rpg-modal" @onclick="() => ExibirModal = false">
+                <button type="button" class="btn-rpg-modal" @onclick="viewModel.AceitarTermosEFechar">
                     Entendido
                 </button>
             </footer>
         </div>
     </section>
 }
+
 @code {
-    private bool ExibirModal = false;
+    private RegisterViewModel viewModel = default!;
+
+    protected override void OnInitialized()
+    {
+        viewModel = new RegisterViewModel(UsuarioService, Navigation);
+        viewModel.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        viewModel.OnChange -= StateHasChanged;
+    }
 }

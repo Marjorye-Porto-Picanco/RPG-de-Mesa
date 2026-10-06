@@ -2,6 +2,9 @@
 @page "/login"
 @layout Layout.EmptyLayout
 
+@using RPGdeMesa.Services
+@using RPGdeMesa.ViewModel
+@inject UsuarioService UsuarioService
 @inject NavigationManager Navigation
 
 <link rel="stylesheet"
@@ -12,20 +15,29 @@
     <div class="campos">
         <div class="sla">
             <p>Email ou Usuário</p>
-            <input type="text" id="email" autocomplete="username" />
+            <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
         </div>
 
         <div class="sla">
             <p>Senha</p>
-            <input type="password" id="senha" autocomplete="current-password" />
+            <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
         </div>
 
-        <button type="button" @onclick="entrar">Entrar</button>
+        @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
+        {
+            <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
+                @viewModel.MensagemFeedback
+            </p>
+        }
+
+        <button type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
+            @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
+        </button>
 
         <div class="icons-login">
-            <a href="#" aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
+            <a href="#" @onclick="viewModel.LoginComGoogleAsync" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
+            <a href="#" @onclick="viewModel.LoginComFacebookAsync" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" @onclick="viewModel.LoginComGitHubAsync" @onclick:preventDefault aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
         </div>
 
         <label class="termo">
@@ -34,10 +46,18 @@
     </div>
 </section>
 
-@code{
-    void entrar()
+@code {
+    private LoginViewModel viewModel = default!;
+
+    protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/sessao");
+        viewModel = new LoginViewModel(UsuarioService, Navigation);
+
+        viewModel.OnChange += StateHasChanged;
     }
+
+    public void Dispose()
+    {      
+        viewModel.OnChange -= StateHasChanged;
     }
 }
