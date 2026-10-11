@@ -1,6 +1,7 @@
 ﻿@page "/"
 @page "/login"
 @layout Layout.EmptyLayout
+@implements IDisposable
 
 @using RPGdeMesa.Services
 @using RPGdeMesa.ViewModel
@@ -10,39 +11,48 @@
 <link rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
-<section class="fundo">
-    <h1>Login</h1>
-    <div class="campos">
-        <div class="sla">
-            <p>Email ou Usuário</p>
-            <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
+<section class="login">
+    <div class="formes">
+        <h1 class="selo-login">Login</h1>
+        <p class="subtitulo-login">Entre para continuar sua aventura</p>
+
+        <div class="campos">
+            <div class="sla">
+                <p>Email ou Usuário</p>
+                <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
+            </div>
+
+            <div class="sla">
+                <p>Senha</p>
+                <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
+            {
+                <p class="feedback-msg" style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545");">
+                    @viewModel.MensagemFeedback
+                </p>
+            }
+
+            <button type="button" class="btn-principal" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
+                @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
+            </button>
+
+            <div class="icons">
+                <a href="#" @onclick="viewModel.LoginComGoogleAsync" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
+                <a href="#" @onclick="viewModel.LoginComFacebookAsync" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
+                <a href="#" @onclick="viewModel.LoginComGitHubAsync" @onclick:preventDefault aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
+            </div>
+
+            <label class="termo">
+                <span>Não possui conta? <a href="/cadastro" class="link-formulario">Cadastre-se</a></span>
+            </label>
+
+            <!-- Botão de voltar ao login -->
+            <button type="button" class="btn-secundario" @onclick='() => Navigation.NavigateTo("/login")'>
+                <i class="bi bi-arrow-left"></i> Voltar ao Login
+            </button>
         </div>
-
-        <div class="sla">
-            <p>Senha</p>
-            <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
-        </div>
-
-        @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
-        {
-            <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
-                @viewModel.MensagemFeedback
-            </p>
-        }
-
-        <button type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
-            @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
-        </button>
-
-        <div class="icons-login">
-            <a href="#" @onclick="viewModel.LoginComGoogleAsync" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" @onclick="viewModel.LoginComFacebookAsync" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" @onclick="viewModel.LoginComGitHubAsync" @onclick:preventDefault aria-label="Entrar com GitHub"><i class="bi bi-github"></i></a>
-        </div>
-
-        <label class="termo">
-            <span>Não possui conta? <a href="/cadastro">Cadastre-se</a></span>
-        </label>
     </div>
 </section>
 
@@ -52,7 +62,6 @@
     protected override void OnInitialized()
     {
         viewModel = new LoginViewModel(UsuarioService, Navigation);
-
         viewModel.OnChange += StateHasChanged;
     }
 
