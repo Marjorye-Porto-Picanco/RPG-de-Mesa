@@ -1,120 +1,140 @@
-
 * {
     padding: 0;
     margin: 0;
     box-sizing: border-box;
-    font-family: Arial, sans-serif;
 }
 
-.fundo {
-    background-color: gray;
-    min-height: 100vh;
+/* ======== ESTILOS DA PÁGINA (Baseados no Login) ======== */
+.login {
     width: 100%;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
-    padding: 20px 0;
+    background: radial-gradient(circle at 30% 35%, rgba(140,58,43,0.55), transparent 55%), linear-gradient(180deg, #1a1310 0%, #241914 45%, #3a2117 100%);
+    overflow: auto;
+    padding: 32px 0;
+    font-family: sans-serif;
 }
 
-    .fundo h1 {
-        color: white;
-        margin-bottom: 16px;
-    }
+.formes {
+    border-radius: 17px;
+    padding: 35px;
+    width: 45%;
+    max-width: 450px;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 15px;
+    color: #241914;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.selo-login {
+    font-size: 2.5rem;
+    margin-bottom: -10px;
+}
+
+.subtitulo-login {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 5px;
+}
 
 .campos {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.42);
-    width: 90%;
-    max-width: 440px;
-    border-radius: 17px;
-    padding: 30px 24px;
-}
-
-.sla {
+    gap: 5px;
     width: 100%;
-    margin-bottom: 16px;
+    max-width: 300px;
+    text-align: left;
 }
 
-    .sla p {
-        color: white;
-        font-size: 16px;
-        margin-bottom: 6px;
+    .campos p {
+        font-weight: bold;
+        font-size: 0.9rem;
     }
 
-    .sla input {
-        border: none;
-        outline: none;
-        font-size: 15px;
-        border-radius: 10px;
+    .campos input {
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
         width: 100%;
-        height: 44px;
-        padding: 0 14px;
     }
 
-.campos button {
+button {
     padding: 12px 20px;
-    border-radius: 10px;
+    border-radius: 6px;
     border: none;
-    width: 100%;
-    background-color: #007bff;
-    color: white;
-    font-size: 16px;
+    background-color: #3a2117;
     font-weight: bold;
+    width: 100%;
+    max-width: 300px;
+    transition: background 0.2s;
     cursor: pointer;
-    margin-top: 10px;
-    transition: background-color 0.2s;
+    margin-top: 5px;
 }
 
-    .campos button:hover {
-        background-color: #0056b3;
+    button:hover {
+        background-color: #523022;
     }
 
-.icons-login {
-    margin: 18px 0;
-    gap: 20px;
+.icons {
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 5px;
 }
 
-    .icons-login a {
-        color: white;
-        font-size: 26px;
+    .icons a {
+        color: #241914;
+        font-size: 1.5rem;
+        cursor: pointer;
         text-decoration: none;
-        display: inline-flex;
-        transition: opacity 0.2s;
+        transition: color 0.2s;
     }
 
-        .icons-login a:hover {
-            opacity: 0.8;
+        .icons a:hover {
+            color: #8c3a2b;
         }
 
-
-/* Link dos termos na página */
-.termo {
-    color: #f7eedf;
-    font-size: 14px;
+/* Estilos de links e termos adaptados para o fundo branco */
+.termo-box {
     display: flex;
     align-items: center;
     gap: 8px;
+    font-size: 0.9rem;
     cursor: pointer;
+    margin: 5px 0;
 }
 
-    .termo a {
-        color: #d6b53a;
-        text-decoration: underline;
-        font-weight: 600;
+    .termo-box input {
+        width: auto;
+        cursor: pointer;
     }
 
-        .termo a:hover {
-            color: #f3d46a;
+    .termo-box a, .link-formulario {
+        color: #8c3a2b;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+        .termo-box a:hover, .link-formulario:hover {
+            text-decoration: underline;
         }
 
-/* Fundo escuro com desfoque */
+.rodape-link {
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+
+/* ======== SEU POP-UP (Intacto) ======== */
 .pop-up-backdrop {
     position: fixed;
     top: 0;
@@ -130,11 +150,10 @@
     z-index: 9999;
 }
 
-/* Caixa temática estilo RPG */
 .modal-rpg {
     position: relative;
-    background-color: #f7eedf; /* Tom pergaminho claro */
-    border: 2px solid #c9a461; /* Borda dourada */
+    background-color: #f7eedf;
+    border: 2px solid #c9a461;
     border-radius: 8px;
     max-width: 480px;
     width: 100%;
@@ -144,7 +163,6 @@
     animation: entradaModal 0.2s ease-out;
 }
 
-/* Botão fechar (X) */
 .fechar-popup {
     position: absolute;
     top: 10px;
@@ -156,13 +174,16 @@
     color: #82695c;
     cursor: pointer;
     transition: color 0.15s;
+    width: auto;
+    padding: 0;
+    margin: 0;
 }
 
     .fechar-popup:hover {
         color: #42281f;
+        background: none;
     }
 
-/* Cabeçalho do modal */
 .modal-cabecalho h3 {
     font-family: 'Cinzel', serif;
     font-size: 20px;
@@ -179,7 +200,6 @@
     margin: 10px 0 14px 0;
 }
 
-/* Conteúdo textual */
 .modal-corpo {
     font-size: 14px;
     line-height: 1.6;
@@ -193,7 +213,6 @@
         margin-bottom: 12px;
     }
 
-/* Rodapé com botão de confirmação */
 .modal-rodape {
     display: flex;
     justify-content: center;
@@ -211,6 +230,7 @@
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: auto;
 }
 
     .btn-rpg-modal:hover {
@@ -230,4 +250,3 @@
         transform: scale(1);
     }
 }
-

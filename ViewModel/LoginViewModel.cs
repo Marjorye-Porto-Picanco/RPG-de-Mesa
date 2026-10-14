@@ -41,7 +41,7 @@ namespace RPGdeMesa.ViewModel
                 if (Sucesso && resultado.UsuarioLogado != null)
                 {
                     await Task.Delay(800);
-                    _navigation.NavigateTo("/sessao");
+                    _navigation.NavigateTo("/campanhas");
                 }
             }
             finally
