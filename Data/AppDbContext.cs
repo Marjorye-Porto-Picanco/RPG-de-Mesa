@@ -9,8 +9,8 @@ namespace RPGdeMesa.Data
 		public DbSet<Usuario> Usuarios { get; set; }
 		public DbSet<Perfil> Perfeis { get; set; }
 		public DbSet<Personagem> Personagens { get; set; }
-
-		public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        public DbSet<Campanha> Campanhas { get; set; }
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
 		{
 		}
 

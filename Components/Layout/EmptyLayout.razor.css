@@ -1,0 +1,14 @@
+/* CSS for EmptyLayout component */
+
+.layout-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #120e0b; /* fundo escuro temático de RPG */
+    color: #e0d5c1;
+}
+
+.layout-conteudo {
+    flex: 1;
+    padding: 1.5rem 2rem;
+}

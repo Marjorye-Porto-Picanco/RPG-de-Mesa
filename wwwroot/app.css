@@ -99,3 +99,102 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+/* Barra RPG */
+.barra-rpg {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    min-height: 60px;
+    align-items: center;
+    gap: 36px;
+    padding: 0 5%;
+    border-bottom: 1px solid rgba(220, 181, 102, 0.25);
+    background: rgba(24, 16, 12, 0.95);
+    color: #ead6ad;
+    font-family: Georgia, "Times New Roman", serif;
+    box-sizing: border-box;
+}
+
+    .barra-rpg a,
+    .barra-rpg a:hover,
+    .barra-rpg a:focus,
+    .barra-rpg a:visited {
+        text-decoration: none !important;
+    }
+
+    .barra-rpg .marca-rpg {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #ead6ad !important;
+        font-size: 17px;
+        white-space: nowrap;
+        text-decoration: none !important;
+    }
+
+        .barra-rpg .marca-rpg span {
+            color: #d4aa56;
+            font-size: 22px;
+        }
+
+    .barra-rpg .nav-rpg {
+        display: flex;
+        align-self: stretch;
+        align-items: center;
+        gap: 25px;
+    }
+
+    .barra-rpg .nav-link-rpg {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        border-bottom: 2px solid transparent;
+        color: #c5b79d !important;
+        font-size: 14px;
+        text-decoration: none !important;
+        transition: color 0.2s, border-color 0.2s;
+    }
+
+        .barra-rpg .nav-link-rpg:hover,
+        .barra-rpg .nav-link-rpg.active {
+            border-bottom-color: #d3ac60 !important;
+            color: #f5e4bf !important;
+        }
+
+    .barra-rpg .mesa-atual {
+        margin-left: auto;
+        color: #c5b79d;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+        .barra-rpg .mesa-atual span {
+            padding-left: 8px;
+            color: #d4aa56;
+        }
+
+@media (max-width: 650px) {
+    .barra-rpg {
+        min-height: 54px;
+        gap: 16px;
+        padding: 0 15px;
+    }
+
+        .barra-rpg .marca-rpg {
+            font-size: 14px;
+        }
+
+        .barra-rpg .nav-rpg {
+            gap: 14px;
+        }
+
+        .barra-rpg .nav-link-rpg {
+            font-size: 12px;
+        }
+
+        .barra-rpg .mesa-atual {
+            display: none;
+        }
+}

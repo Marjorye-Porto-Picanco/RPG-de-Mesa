@@ -1,55 +1,34 @@
 @page "/campanhas"
-@layout TelaCheiaLayout
+<NavMenu />
 
-@* CAMPANHAS: adicionar modo clique e aparecer uma telinha com opacidade escura no fundo.
-   Adicionar no "Criar nova Campanha" uma tela na qual poderá ser escolhido título, uma breve
-   descrição, senha (caso for uma campanha pública ou privada), quantidade de jogadores.
-   O criador da sala deverá ser o mestre do RPG criado/iniciado por ele. *@
+<div class="tela-rpg tela-campanhas">
 
-<div class="mesa-app">
-    <BarraLateral />
-    <div class="area-principal fundo-pergaminho">
-        <section class="conteudo-pagina">
-            <div class="cabecalho-area">
+    <main class="conteudo-rpg">
+        <div class="titulo-pagina">
+            <div>
+                <p class="sobretitulo-rpg">Sua biblioteca de aventuras</p>
                 <h1>Campanhas</h1>
-                <span class="migalha">@_campanhas.Count campanhas ativas</span>
+                <p class="texto-apoio">Histórias prontas para continuar.</p>
             </div>
-            <div class="corpo-area">
-                <div class="grade-campanhas">
-                    @foreach (var campanha in _campanhas)
-                    {
-                        <div class="cartao-campanha">
-                            <h3>@campanha.Titulo</h3>
-                            <p>@campanha.Resumo</p>
-                            <div class="metadados">
-                                <span>👑 Mestre: @campanha.Mestre</span>
-                                <span>👥 @campanha.Jogadores jogadores</span>
-                            </div>
-                        </div>
-                    }
-                    <div class="nova-campanha" @onclick="CriarCampanha">
-                        <div class="icone-nova-campanha">+</div>
-                        <div class="rotulo-nova-campanha">Criar nova campanha</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
+            <a class="botao-dourado" href="/criar-campanha"><span aria-hidden="true">+</span> Nova campanha</a>
+        </div>
+
+        <div class="grade-campanhas">
+            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha A Legião Grotesca">
+                <img src="img/capacampanha1.png" alt="Capa da campanha A Legião Grotesca" />
+                <span class="estado-campanha">Em andamento</span>
+                <div class="info-campanha"><span>2D6 World</span><h2>A Legião Grotesca</h2><small>Última sessão há 2 dias</small></div>
+            </a>
+
+            <a class="cartao-adicionar" href="/criar-campanha">
+                <span class="mais-adicionar" aria-hidden="true">+</span>
+                <strong>Criar campanha</strong>
+                <small>Comece uma nova aventura</small>
+            </a>
+        </div>
+    </main>
 </div>
 
 @code {
-    private List<CampanhaResumo> _campanhas = new()
-    {
-        new("A Cidadela das Salamandras", "Um general em chamas ameaça o vale de Rhoumed.", "Nefertyne", 4),
-        new("Pousada Água Azul", "Um pouso tranquilo esconde segredos nos porões.", "Cleverson", 3),
-        new("Castelo Ravenloft", "Teias gigantes cobrem a floresta ao redor do castelo.", "Brando", 5),
-    };
 
-    private void CriarCampanha()
-    {
-        // TODO: abrir o formulário de criação de campanha (título, descrição,
-        // pública/privada + senha, quantidade de jogadores). Quem cria vira o Mestre.
-    }
-
-    private record CampanhaResumo(string Titulo, string Resumo, string Mestre, int Jogadores);
 }
