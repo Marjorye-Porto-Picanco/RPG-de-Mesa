@@ -1,0 +1,100 @@
+@page "/criar-campanha"
+@layout Layout.EmptyLayout
+@using RPGdeMesa.Services
+@using RPGdeMesa.ViewModel
+@inject CampanhaService CampanhaService
+@inject NavigationManager Navigation
+
+<main class="tela-rpg editor-campanha">
+    <a class="voltar-campanhas" href="/campanhas"><span aria-hidden="true">←</span> Voltar às campanhas</a>
+
+    <div class="cabecalho-editor">
+        <p class="sobretitulo-rpg">Abra os portões da aventura</p>
+        <h1>Nova campanha</h1>
+        <p class="texto-apoio">Prepare o cenário e reúna seu grupo.</p>
+    </div>
+
+    <div class="painel-editor">
+        <section class="formulario-campanha" aria-label="Detalhes da campanha">
+
+            <label class="campo-campanha campo-nome">
+                <span>Nome da campanha*</span>
+                <input type="text" @bind="viewModel.Nome" placeholder="Ex.: As Crônicas de Eldoria" />
+            </label>
+
+            <div class="recursos-campanha">
+                <div class="campo-campanha">
+                    <label for="monstros">Monstros</label>
+                    <div class="entrada-com-acao"><input id="monstros" type="text" placeholder="Adicionar criatura" /><button type="button" aria-label="Adicionar monstro">+</button></div>
+                </div>
+                <div class="campo-campanha">
+                    <label for="npcs">NPCs</label>
+                    <div class="entrada-com-acao"><input id="npcs" type="text" placeholder="Adicionar personagem" /><button type="button" aria-label="Adicionar NPC">+</button></div>
+                </div>
+                <div class="campo-campanha">
+                    <label for="itens">Itens</label>
+                    <div class="entrada-com-acao"><input id="itens" type="text" placeholder="Adicionar item" /><button type="button" aria-label="Adicionar item">+</button></div>
+                </div>
+                <div class="campo-campanha">
+                    <label for="mapa">Mapa da campanha</label>
+                    <input class="entrada-arquivo" id="mapa" type="file" accept="image/*" />
+                </div>
+            </div>
+
+            <div class="campo-campanha">
+                <label for="notas">Notas da campanha</label>
+                <textarea id="notas" @bind="viewModel.Notas" rows="3" placeholder="Anote os primeiros detalhes da aventura..."></textarea>
+            </div>
+
+            <fieldset class="seletor-capas">
+                <legend>Capa da campanha</legend>
+                <input class="entrada-arquivo" id="capa" type="file" accept="image/*" />
+            </fieldset>
+
+            @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
+            {
+                <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 10px 0; font-weight: bold;">
+                    @viewModel.MensagemFeedback
+                </p>
+            }
+
+            <button class="botao-dourado botao-criar" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@viewModel.IsProcessing">
+                @(viewModel.IsProcessing ? "Criando..." : "Criar campanha") <span aria-hidden="true">→</span>
+            </button>
+        </section>
+
+        <aside class="painel-grupo">
+            <div class="convite-campanha">
+                <p class="sobretitulo-rpg">Convide seu grupo</p>
+                <h2>Código de convite</h2>
+                <div class="codigo-convite"><strong>ELD-7K2F</strong><button type="button" aria-label="Copiar código">▢</button></div>
+                <p class="texto-apoio">Compartilhe este código com seus jogadores.</p>
+            </div>
+            <div class="lista-jogadores">
+                <h2>Jogadores <span>1</span></h2>
+                <div class="jogador-campanha">
+                    <span class="avatar-jogador">M</span>
+                    <div><strong>Mestre da mesa</strong><small>Organizador</small></div>
+                    <a href="/personagens">Ver ficha</a>
+                </div>
+                <div class="vaga-jogador"><span aria-hidden="true">+</span> Aguardando jogadores</div>
+            </div>
+            <div class="nota-editor"><span aria-hidden="true">✦</span> Você poderá editar os detalhes da campanha depois.</div>
+        </aside>
+    </div>
+</main>
+
+@code {
+    private CriarCampanhaViewModel viewModel = default!;
+
+    protected override void OnInitialized()
+    {
+        viewModel = new CriarCampanhaViewModel(CampanhaService, Navigation);
+        viewModel.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        viewModel.OnChange -= StateHasChanged;
+    }
+}

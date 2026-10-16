@@ -1,0 +1,75 @@
+﻿@page "/personagem-editar"
+
+<NavMenu />
+
+<div class="mesa-edicao">
+    <main class="palco">
+        <section class="ficha-personagem" aria-labelledby="nome-personagem">
+            <div class="ficha-cabecalho">
+                <div class="retrato-coluna">
+                    <div class="retrato">
+                        <img id="imagem-personagem-atual" src="img/armaduraprata.png" alt="Retrato do personagem" />
+                    </div>
+                    <label class="upload-imagem-botao retrato-upload">
+                        <span aria-hidden="true">↑</span> Foto
+                        <input id="imagem-personagem-edicao" type="file" accept="image/*" aria-label="Alterar foto do personagem" />
+                    </label>
+                </div>  
+                <div class="identidade">
+                    <p class="sobretitulo">Ficha de personagem</p>
+                    <h1 id="nome-personagem">Lyra Ventobrasa</h1>
+                    <p class="descricao-personagem">Elfa • Patrulheira • Nível 07</p>
+                    <div class="dados-personagem">
+                        <span><b>Raça</b> Elfa da floresta</span>
+                        <span><b>Tendência</b> Caótica e boa</span>
+                        <span><b>Antecedente</b> Batedora</span>
+                    </div>
+                </div>
+                <div class="marcadores">
+                    <div class="marcador-classe"><span>Classe</span><b>Patrulheira</b></div>
+                    <div class="marcador-nivel"><span>XP</span><b>12.450</b></div>
+                </div>
+            </div>
+
+            <div class="troca-ficha" role="tablist" aria-label="Visão da ficha">
+                <button class="aba-ficha @(abaAtiva == "atributos" ? "ativa" : "")"
+                        @onclick='() => MudarAba("atributos")'
+                        type="button" role="tab" aria-selected="@(abaAtiva == "atributos")">
+                    Atributos
+                </button>
+                <button class="aba-ficha @(abaAtiva == "personagem" ? "ativa" : "")"
+                        @onclick='() => MudarAba("personagem")'
+                        type="button" role="tab" aria-selected="@(abaAtiva == "personagem")">
+                    Personagem <span aria-hidden="true">↔</span>
+                </button>
+                <button class="aba-ficha @(abaAtiva == "inventario" ? "ativa" : "")"
+                        @onclick='() => MudarAba("inventario")'
+                        type="button" role="tab" aria-selected="@(abaAtiva == "inventario")">
+                    Inventário
+                </button>
+            </div>
+
+            @switch (abaAtiva)
+            {
+                case "atributos":
+                    <FichaAtributos />
+                    break;
+                case "personagem":
+                    <FichaDetalhes />
+                    break;
+                case "inventario":
+                    <FichaInventario />
+                    break;
+            }
+        </section>
+    </main>
+</div>
+
+@code {
+    private string abaAtiva = "atributos";
+
+    private void MudarAba(string novaAba)
+    {
+        abaAtiva = novaAba;
+    }
+}

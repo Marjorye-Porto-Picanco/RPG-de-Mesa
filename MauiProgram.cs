@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Data;
 using RPGdeMesa.Services;
-using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.ViewModel;
 
 namespace RPGdeMesa
 {
@@ -20,11 +21,22 @@ namespace RPGdeMesa
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Logging.AddDebug();
 #endif
+            // Registro do Banco de Dados
             builder.Services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
+
+            // Registro dos Serviços 
             builder.Services.AddTransient<UsuarioService>();
+            builder.Services.AddTransient<CampanhaService>();
+            builder.Services.AddTransient<AuthService>();
+
+            // Registro dos ViewModels
+            builder.Services.AddTransient<LoginViewModel>(); 
+            builder.Services.AddTransient<RegisterViewModel>();
+
+
             return builder.Build();
         }
     }

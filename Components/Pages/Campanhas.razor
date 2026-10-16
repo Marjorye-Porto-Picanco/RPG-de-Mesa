@@ -6,76 +6,50 @@
    descrição, senha (caso for uma campanha pública ou privada), quantidade de jogadores.
    O criador da sala deverá ser o mestre do RPG criado/iniciado por ele. *@
 
-<<link href="campanhas.razor.css" rel="stylesheet" />
-
-<div class="tela-rpg tela-campanhas">
-
-    <main class="conteudo-rpg">
-        <div class="titulo-pagina">
-            <div>
-                <p class="sobretitulo-rpg">Sua biblioteca de aventuras</p>
+<div class="mesa-app">
+    <BarraLateral />
+    <div class="area-principal fundo-pergaminho">
+        <section class="conteudo-pagina">
+            <div class="cabecalho-area">
                 <h1>Campanhas</h1>
                 <p class="texto-apoio">Histórias prontas para continuar.</p>
             </div>
-            <a class="botao-dourado" href="/criar-campanha"><span aria-hidden="true">+</span> Nova campanha</a>
-        </div>
-
-        <div class="grade-campanhas">
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha A Legião Grotesca">
-                <img src="img/capacampanha1.png" alt="Capa da campanha A Legião Grotesca" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>2D6 World</span><h2>A Legião Grotesca</h2><small>Última sessão há 2 dias</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Erathia">
-                <img src="img/capacampanha2.png" alt="Capa da campanha Erathia" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Fantasia</span><h2>Erathia</h2><small>4 aventureiros</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Perseguidor Noturno">
-                <img src="img/capacampanha3.png" alt="Capa da campanha Perseguidor Noturno" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Ordem Paranormal</span><h2>Perseguidor Noturno</h2><small>Última sessão ontem</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Mistérios da Floresta">
-                <img src="img/capacampanha4.png" alt="Capa da campanha Gravity Fallsfile:///home/mah/teste/criar-campanha.html" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Aventura</span><h2>Gravity Falls</h2><small>4 aventureiros</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Ecos da Teia">
-                <img src="img/capacampanha5.png" alt="Capa ilustrada de uma equipe de aventureiros" />
-                <span class="estado-campanha">Em andamento</span> file:///home/mah/teste/criar-campanha.html
-                <div class="info-campanha"><span>Fantasia urbana</span><h2>Ecos da Teia</h2><small>Última sessão há 1 semana</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Revolução Mutante">
-                <img src="img/capacampanha6.png" alt="Capa de uma aventura de super-heróis" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Super-heróis</span><h2>Revolução Mutante</h2><small>5 aventureiros</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha A Coroa dos Vermes">
-                <img src="img/capacampanha7.png" alt="Capa da campanha A Coroa dos Vermes" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>2D6 World</span><h2>A Coroa dos Vermes</h2><small>Última sessão há 5 dias</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Heróis em Crise">
-                <img src="img/capacampanha8.png" alt="Capa de uma aventura de super-heróis" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Heróis</span><h2>Heróis em Crise</h2><small>6 aventureiros</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha Guerras Secretas">
-                <img src="img/capacampanha9.png" alt="Capa de uma aventura de super-heróis" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Aventura</span><h2>Guerras Secretas</h2><small>Última sessão há 3 dias</small></div>
-            </a>
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha KULT: Divindade Perdida">
-                <img src="img/capacampanha10.png" alt="Capa da campanha KULT: Divindade Perdida" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>Horror</span><h2>KULT: Divindade Perdida</h2><small>3 aventureiros</small></div>
-            </a>
-            <a class="cartao-adicionar" href="/criar-campanha">
-                <span class="mais-adicionar" aria-hidden="true">+</span>
-                <strong>Criar campanha</strong>
-                <small>Comece uma nova aventura</small>
-            </a>
-        </div>
-    </main>
+            <div class="corpo-area">
+                <div class="grade-campanhas">
+                    @foreach (var campanha in _campanhas)
+                    {
+                        <div class="cartao-campanha">
+                            <h3>@campanha.Titulo</h3>
+                            <p>@campanha.Resumo</p>
+                            <div class="metadados">
+                                <span>👑 Mestre: @campanha.Mestre</span>
+                                <span>👥 @campanha.Jogadores jogadores</span>
+                            </div>
+                        </div>
+                    }
+                    <div class="nova-campanha" @onclick="CriarCampanha">
+                        <div class="icone-nova-campanha">+</div>
+                        <div class="rotulo-nova-campanha">Criar nova campanha</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 </div>
+
+@code {
+    private List<CampanhaResumo> _campanhas = new()
+    {
+        new("A Cidadela das Salamandras", "Um general em chamas ameaça o vale de Rhoumed.", "Nefertyne", 4),
+        new("Pousada Água Azul", "Um pouso tranquilo esconde segredos nos porões.", "Cleverson", 3),
+        new("Castelo Ravenloft", "Teias gigantes cobrem a floresta ao redor do castelo.", "Brando", 5),
+    };
+
+    private void CriarCampanha()
+    {
+        // TODO: abrir o formulário de criação de campanha (título, descrição,
+        // pública/privada + senha, quantidade de jogadores). Quem cria vira o Mestre.
+    }
+
+    private record CampanhaResumo(string Titulo, string Resumo, string Mestre, int Jogadores);
+}

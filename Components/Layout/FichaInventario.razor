@@ -1,0 +1,215 @@
+﻿<div class="visao-ficha visao-inventario" id="visao-inventario" role="tabpanel" aria-labelledby="aba-inventario">
+    <form id="form-inventario" class="inventario-aba" @onsubmit:preventDefault="true">
+        <div class="corpo-inventario">
+            <div class="listas-itens">
+                <!-- Seção: Armas -->
+                <section class="categoria-itens" aria-labelledby="titulo-armas">
+                    <div class="titulo-categoria">
+                        <h2 id="titulo-armas"><span aria-hidden="true">⌁</span> Armas</h2>
+                        <button class="adicionar-item" type="button" @onclick='() => AdicionarItem("Armas")' aria-label="Adicionar arma" title="Adicionar arma">
+                            <span aria-hidden="true">+</span>
+                        </button>
+                    </div>
+                    <div class="cabecalho-linha" aria-hidden="true">
+                        <span>Nome</span>
+                        <span>Qtd.</span>
+                        <span>Peso (kg)</span>
+                        <span>Valor</span>
+                        <span></span>
+                    </div>
+                    <div class="lista-linhas" id="lista-armas">
+                        @foreach (var item in Itens.Where(i => i.Categoria == "Armas"))
+                        {
+                            <div class="item-linha">
+                                <input @bind="item.Nome" placeholder="Nome da arma" aria-label="Nome da arma" />
+                                <input type="number" min="0" @bind="item.Quantidade" aria-label="Quantidade" />
+                                <input type="number" min="0" step="0.1" @bind="item.Peso" aria-label="Peso" />
+                                <input @bind="item.Valor" placeholder="Valor" aria-label="Valor" />
+                                <button class="remover-item" type="button" @onclick="() => RemoverItem(item)" aria-label="Remover item">×</button>
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <!-- Seção: Armaduras e escudos -->
+                <section class="categoria-itens" aria-labelledby="titulo-armaduras">
+                    <div class="titulo-categoria">
+                        <h2 id="titulo-armaduras"><span aria-hidden="true">⌁</span> Armaduras e escudos</h2>
+                        <button class="adicionar-item" type="button" @onclick='() => AdicionarItem("Armaduras")' aria-label="Adicionar armadura" title="Adicionar armadura">
+                            <span aria-hidden="true">+</span>
+                        </button>
+                    </div>
+                    <div class="cabecalho-linha" aria-hidden="true">
+                        <span>Nome</span>
+                        <span>Qtd.</span>
+                        <span>Peso (kg)</span>
+                        <span>Valor</span>
+                        <span></span>
+                    </div>
+                    <div class="lista-linhas" id="lista-armaduras">
+                        @foreach (var item in Itens.Where(i => i.Categoria == "Armaduras"))
+                        {
+                            <div class="item-linha">
+                                <input @bind="item.Nome" placeholder="Nome da armadura" aria-label="Nome da armadura" />
+                                <input type="number" min="0" @bind="item.Quantidade" aria-label="Quantidade" />
+                                <input type="number" min="0" step="0.1" @bind="item.Peso" aria-label="Peso" />
+                                <input @bind="item.Valor" placeholder="Valor" aria-label="Valor" />
+                                <button class="remover-item" type="button" @onclick="() => RemoverItem(item)" aria-label="Remover item">×</button>
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <!-- Seção: Poções e consumíveis -->
+                <section class="categoria-itens" aria-labelledby="titulo-pocoes">
+                    <div class="titulo-categoria">
+                        <h2 id="titulo-pocoes"><span aria-hidden="true">⌁</span> Poções e consumíveis</h2>
+                        <button class="adicionar-item" type="button" @onclick='() => AdicionarItem("Consumiveis")' aria-label="Adicionar consumível" title="Adicionar consumível">
+                            <span aria-hidden="true">+</span>
+                        </button>
+                    </div>
+                    <div class="cabecalho-linha" aria-hidden="true">
+                        <span>Nome</span>
+                        <span>Qtd.</span>
+                        <span>Peso (kg)</span>
+                        <span>Valor</span>
+                        <span></span>
+                    </div>
+                    <div class="lista-linhas" id="lista-pocoes">
+                        @foreach (var item in Itens.Where(i => i.Categoria == "Consumiveis"))
+                        {
+                            <div class="item-linha">
+                                <input @bind="item.Nome" placeholder="Nome da poção" aria-label="Nome da poção" />
+                                <input type="number" min="0" @bind="item.Quantidade" aria-label="Quantidade" />
+                                <input type="number" min="0" step="0.1" @bind="item.Peso" aria-label="Peso" />
+                                <input @bind="item.Valor" placeholder="Valor" aria-label="Valor" />
+                                <button class="remover-item" type="button" @onclick="() => RemoverItem(item)" aria-label="Remover item">×</button>
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                <!-- Seção: Materiais e outros -->
+                <section class="categoria-itens" aria-labelledby="titulo-outros">
+                    <div class="titulo-categoria">
+                        <h2 id="titulo-outros"><span aria-hidden="true">⌁</span> Materiais e outros</h2>
+                        <button class="adicionar-item" type="button" @onclick='() => AdicionarItem("Outros")' aria-label="Adicionar material ou item" title="Adicionar material ou item">
+                            <span aria-hidden="true">+</span>
+                        </button>
+                    </div>
+                    <div class="cabecalho-linha" aria-hidden="true">
+                        <span>Nome</span>
+                        <span>Qtd.</span>
+                        <span>Peso (kg)</span>
+                        <span>Valor</span>
+                        <span></span>
+                    </div>
+                    <div class="lista-linhas" id="lista-outros">
+                        @foreach (var item in Itens.Where(i => i.Categoria == "Outros"))
+                        {
+                            <div class="item-linha">
+                                <input @bind="item.Nome" placeholder="Nome do item" aria-label="Nome do item" />
+                                <input type="number" min="0" @bind="item.Quantidade" aria-label="Quantidade" />
+                                <input type="number" min="0" step="0.1" @bind="item.Peso" aria-label="Peso" />
+                                <input @bind="item.Valor" placeholder="Valor" aria-label="Valor" />
+                                <button class="remover-item" type="button" @onclick="() => RemoverItem(item)" aria-label="Remover item">×</button>
+                            </div>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <aside class="resumo-inventario" aria-label="Resumo do inventário">
+                <!-- Moedas -->
+                <section class="painel-moedas">
+                    <h2>Moedas</h2>
+                    <div class="moedas-grade">
+                        <label class="moeda"><span class="icone-moeda">PC</span><input type="number" min="0" @bind="MoedasPC" aria-label="Peças de cobre" /><small>PC</small></label>
+                        <label class="moeda"><span class="icone-moeda prata">PP</span><input type="number" min="0" @bind="MoedasPP" aria-label="Peças de prata" /><small>PP</small></label>
+                        <label class="moeda"><span class="icone-moeda electrum">PE</span><input type="number" min="0" @bind="MoedasPE" aria-label="Peças de electrum" /><small>PE</small></label>
+                        <label class="moeda"><span class="icone-moeda ouro">PO</span><input type="number" min="0" @bind="MoedasPO" aria-label="Peças de ouro" /><small>PO</small></label>
+                        <label class="moeda"><span class="icone-moeda platina">PL</span><input type="number" min="0" @bind="MoedasPL" aria-label="Peças de platina" /><small>PL</small></label>
+                    </div>
+                    <p class="nota-moedas">Atualize o tesouro conforme a aventura avança.</p>
+                </section>
+
+                <!-- Capacidade de Carga -->
+                <section class="painel-carga">
+                    <h2>Carga carregada</h2>
+                    <p>
+                        <strong id="peso-atual-texto">@PesoTotal.ToString("0.0") kg</strong>
+                        <span> / @LimiteCarga.ToString("0.0") kg</span>
+                    </p>
+                    <progress id="barra-carga" max="@LimiteCarga" value="@PesoTotal" aria-label="Carga carregada em relação ao limite"></progress>
+                    <small>Limite de carga</small>
+                </section>
+
+                <!-- Notas -->
+                <label class="painel-notas" for="notas-inventario">
+                    <span>Notas do inventário</span>
+                    <textarea id="notas-inventario" rows="7" @bind="Notas" placeholder="Anote detalhes, origem ou efeitos dos itens."></textarea>
+                </label>
+            </aside>
+        </div>
+
+        <div class="rodape-inventario">
+            
+            <button class="botao-salvar-inventario" type="button" @onclick="SalvarInventario">
+                <span aria-hidden="true">▣</span> Salvar inventário
+            </button>
+        </div>
+    </form>
+</div>
+
+@code {
+    public class ItemInventario
+    {
+        public string Nome { get; set; } = "";
+        public int Quantidade { get; set; } = 1;
+        public double Peso { get; set; } = 0.0;
+        public string Valor { get; set; } = "";
+        public string Categoria { get; set; } = "Outros";
+    }
+
+    private List<ItemInventario> Itens = new()
+    {
+        new ItemInventario { Nome = "Arco longo", Quantidade = 1, Peso = 1.0, Valor = "50 po", Categoria = "Armas" },
+        new ItemInventario { Nome = "Adaga de caça", Quantidade = 2, Peso = 0.5, Valor = "2 po", Categoria = "Armas" },
+        new ItemInventario { Nome = "Couro batido", Quantidade = 1, Peso = 6.5, Valor = "45 po", Categoria = "Armaduras" },
+        new ItemInventario { Nome = "Poção de cura", Quantidade = 3, Peso = 0.5, Valor = "50 po", Categoria = "Consumiveis" },
+        new ItemInventario { Nome = "Ração de viagem", Quantidade = 5, Peso = 1.0, Valor = "5 pp", Categoria = "Consumiveis" },
+        new ItemInventario { Nome = "Amuleto de âmbar", Quantidade = 1, Peso = 0.2, Valor = "25 po", Categoria = "Outros" }
+    };
+
+    private int MoedasPC = 0;
+    private int MoedasPP = 0;
+    private int MoedasPE = 0;
+    private int MoedasPO = 12;
+    private int MoedasPL = 0;
+
+    private double LimiteCarga = 76.3;
+    private double PesoTotal => Itens.Sum(i => i.Peso * i.Quantidade);
+
+    private string Notas = "O amuleto de âmbar pertenceu à avó de Lyra.";
+    private void AdicionarItem(string categoria)
+    {
+        Itens.Add(new ItemInventario
+        {
+            Nome = "",
+            Quantidade = 1,
+            Peso = 0.0,
+            Valor = "",
+            Categoria = categoria
+        });
+    }
+
+    private void RemoverItem(ItemInventario item)
+    {
+        Itens.Remove(item);
+    }
+
+    private void SalvarInventario()
+    {
+       
+    }
+}

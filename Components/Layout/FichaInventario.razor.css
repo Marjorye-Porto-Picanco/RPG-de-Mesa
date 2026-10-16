@@ -1,0 +1,163 @@
+/* CSS for FichaInventario component */
+.visao-inventario {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.corpo-inventario {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(240px, 1fr);
+    gap: 18px;
+}
+
+.listas-itens {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.categoria-itens {
+    border: 1px solid rgba(126, 87, 31, 0.4);
+    border-radius: 8px;
+    background: rgba(144, 103, 32, 0.15);
+    padding: 10px;
+}
+
+.titulo-categoria {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+    .titulo-categoria h2 {
+        margin: 0;
+        color: #765524;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+.cabecalho-linha,
+.item-linha {
+    display: grid;
+    grid-template-columns: 1fr 50px 60px 70px 24px;
+    gap: 6px;
+    align-items: center;
+}
+
+.cabecalho-linha {
+    font-size: 9px;
+    color: #8b6832;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.item-linha input {
+    min-height: 26px;
+    padding: 2px 6px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
+    border-radius: 4px;
+    background: rgba(255, 245, 225, 0.8);
+    color: #493519;
+    font-size: 11px;
+}
+
+.adicionar-item,
+.remover-item {
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.adicionar-item {
+    width: 22px;
+    height: 22px;
+    background: #a47a2d;
+    color: #fff2d4;
+    font-size: 14px;
+}
+
+.remover-item {
+    height: 24px;
+    background: rgba(173, 109, 88, 0.2);
+    color: #ad6d58;
+}
+
+.resumo-inventario {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.painel-moedas,
+.painel-carga {
+    padding: 12px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
+    border-radius: 8px;
+    background: rgba(144, 103, 32, 0.2);
+}
+
+.moedas-grade {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+}
+
+.moeda {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 9px;
+}
+
+    .moeda input {
+        width: 100%;
+        min-height: 26px;
+        text-align: center;
+        border: 1px solid rgba(126, 87, 31, 0.4);
+        background: rgba(255, 245, 225, 0.9);
+    }
+
+.painel-carga progress {
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+}
+
+.painel-notas textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid rgba(126, 87, 31, 0.4);
+    border-radius: 6px;
+    background: rgba(255, 245, 225, 0.8);
+    resize: vertical;
+}
+
+.rodape-inventario {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(126, 87, 31, 0.3);
+}
+
+.botao-salvar-inventario {
+    min-height: 34px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 4px;
+    background: #866a35;
+    color: #fff1d1;
+    cursor: pointer;
+}
+
+@media (max-width: 620px) {
+    .corpo-inventario {
+        grid-template-columns: 1fr;
+    }
+}

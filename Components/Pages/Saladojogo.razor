@@ -1,0 +1,151 @@
+﻿@page "/saladojogo"
+
+<div class="sala-jogo">
+    <header class="game-header">
+        <a class="game-home" href="home" aria-label="Voltar à Home" title="Voltar à Home">←</a>
+        <div class="game-heading">
+            <p>Crônicas de Eldoria</p>
+            <h1>A trilha esquecida</h1>
+        </div>
+        <div class="game-presence"><span class="presence-light"></span> Mesa aberta <span class="presence-divider">·</span> 4 jogadores</div>
+        <!--tem que por a tela do sessao inciar aqui ainda-->
+        <a class="game-exit" href="sessao-iniciar">Sair da mesa</a>
+    </header>
+
+    <div class="game-layout">
+        <aside class="game-toolbar" aria-label="Ferramentas da mesa">
+            <button class="toolbar-user" id="perfil-jogador" type="button" title="Seu perfil" aria-label="Seu perfil">
+                <span class="toolbar-avatar" id="avatar-jogador">M</span>
+            </button>
+            <button class="toolbar-dice" @onclick="AbrirModal" id="abrir-dados" type="button" title="Rolar dados" aria-label="Abrir dados para rolar">
+                <span aria-hidden="true">⚄</span>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="toolbar-tool selecionada" type="button" data-ferramenta="mapa" title="Mapa" aria-label="Mapa"><span aria-hidden="true">▦</span></button>
+            <button class="toolbar-tool" type="button" data-ferramenta="combate" title="Combate" aria-label="Combate"><span aria-hidden="true">⚔</span></button>
+            <button class="toolbar-tool" type="button" data-ferramenta="diario" title="Diário" aria-label="Diário"><span aria-hidden="true">▤</span></button>
+            <!--tem que por a tela do invetario aqui ainda-->
+            <button class="toolbar-tool @(inventario ? "selecionada" : "")"
+                    @onclick="AbrirInventario"
+                    type="button"
+                    data-ferramenta="inventario"
+                    title="Inventário"
+                    aria-label="Inventário">
+                <span aria-hidden="true">◇</span>
+            </button>
+            <span class="toolbar-spacer"></span>
+            <button class="toolbar-tool" type="button" id="alternar-grade" title="Alternar grade" aria-label="Alternar grade do mapa" aria-pressed="false"><span aria-hidden="true">▧</span></button>
+        </aside>
+
+        <main class="game-main">
+            <div class="map-toolbar">
+                <div class="map-location"><span class="location-mark" aria-hidden="true">⌖</span><span><strong>Estalagem do Carvalho</strong><small>Vila de Briarmoor · Interior</small></span></div>
+                <div class="map-controls" aria-label="Controles do mapa">
+                    <button id="diminuir-zoom" type="button" title="Diminuir zoom" aria-label="Diminuir zoom">−</button>
+                    <span id="nivel-zoom">100%</span>
+                    <button id="aumentar-zoom" type="button" title="Aumentar zoom" aria-label="Aumentar zoom">+</button>
+                    <button id="resetar-zoom" type="button" title="Ajustar mapa" aria-label="Ajustar mapa">⤢</button>
+                </div>
+            </div>
+
+            <section class="map-stage" id="mapa-palco" aria-label="Mapa da sessão">
+                <div class="map-grid" aria-hidden="true"></div>
+                <div class="map-art" id="mapa-arte">
+                    <img src="img/mapaderpg1" alt="Mapa tático da Estalagem do Carvalho, com salão, mesas e áreas externas" />
+                    <button class="map-marker marker-lyra" type="button" title="Lyra Ventobrasa">LV</button>
+                    <button class="map-marker marker-tharion" type="button" title="Tharion Alvorada">TA</button>
+                    <button class="map-marker marker-mira" type="button" title="Mira Valefria">MV</button>
+                    <button class="map-marker marker-brann" type="button" title="Brann Pedrassol">BR</button>
+                </div>
+                <div class="map-caption"><span class="map-caption-dot"></span> Cena atual <span>·</span> A estalagem está quieta demais.</div>
+            </section>
+
+            <section class="game-console">
+                <div class="chat-panel">
+                    <div class="chat-tabs" role="tablist" aria-label="Canais da mesa">
+                        <button class="chat-tab ativa" type="button" role="tab" aria-selected="true" data-canal="chat">Chat</button>
+                        <button class="chat-tab" type="button" role="tab" aria-selected="false" data-canal="registro">Registro</button>
+                        <button class="chat-tab" type="button" role="tab" aria-selected="false" data-canal="npcs">NPCs</button>
+                        <button class="chat-tab" type="button" role="tab" aria-selected="false" data-canal="geral">Geral</button>
+                    </div>
+                    <div class="chat-feed" id="chat-feed" aria-live="polite">
+                        <p class="chat-line"><strong class="chat-name mestre">Mestre</strong><span>A chuva aperta contra as janelas. O estalajadeiro observa o grupo em silêncio.</span><time>19:42</time></p>
+                        <p class="chat-line"><strong class="chat-name lyra">Lyra</strong><span>Quero examinar a mesa junto à lareira.</span><time>19:43</time></p>
+                        <p class="chat-line"><strong class="chat-name tharion">Tharion</strong><span>Fico de olho na porta dos fundos.</span><time>19:44</time></p>
+                    </div>
+                    <form class="chat-compose" id="form-chat">
+                        <input id="mensagem-chat" type="text" maxlength="240" placeholder="Escreva para a mesa..." aria-label="Mensagem para a mesa" autocomplete="off" />
+                        <button type="submit" aria-label="Enviar mensagem" title="Enviar mensagem">↑</button>
+                    </form>
+                </div>
+
+                <div class="action-panel">
+                    <div class="action-heading"><span>Ações rápidas</span><small>Atalhos de rolagem</small></div>
+                    <div class="action-slots">
+                        <button class="action-slot" type="button" data-faces="20" data-modifier="5" data-label="Ataque"><span class="slot-icon">⚔</span><span>Ataque</span><small>d20 + 5</small></button>
+                        <button class="action-slot" type="button" data-faces="20" data-modifier="3" data-label="Perícia"><span class="slot-icon">⌕</span><span>Perícia</span><small>d20 + 3</small></button>
+                        <button class="action-slot" type="button" data-faces="8" data-modifier="2" data-label="Dano"><span class="slot-icon">✦</span><span>Dano</span><small>d8 + 2</small></button>
+                        <button class="action-slot" type="button" data-faces="12" data-modifier="0" data-label="Magia"><span class="slot-icon">✧</span><span>Magia</span><small>d12</small></button>
+                        <button class="action-slot" type="button" data-faces="20" data-modifier="4" data-label="Iniciativa"><span class="slot-icon">◷</span><span>Iniciativa</span><small>d20 + 4</small></button>
+                        <button class="action-slot" type="button" data-faces="20" data-modifier="0" data-label="Dado livre"><span class="slot-icon">⚄</span><span>Dado livre</span><small>d20</small></button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="players-panel" aria-labelledby="jogadores-titulo">
+            <div class="players-heading">
+                <div><p class="panel-kicker">Na mesa</p><h2 id="jogadores-titulo">Jogadores</h2></div>
+                <span class="players-count">4 <small>/ 5</small></span>
+            </div>
+            <div class="players-list">
+                <article class="player-card mestre-card">
+                    <span class="player-avatar avatar-mestre">M</span>
+                    <div><strong id="nome-mestre">Mestre da mesa</strong><span>Mestre</span></div>
+                    <span class="mic-status" title="Microfone ativo" aria-label="Microfone ativo">●</span>
+                </article>
+                <article class="player-card">
+                    <span class="player-avatar avatar-lyra"><img src="img/armaduraprata.png" alt="" /></span>
+                    <div><strong>Lyra Ventobrasa</strong><span>Patrulheira · Nível 7</span></div>
+                    <span class="mic-status" title="Microfone ativo" aria-label="Microfone ativo">●</span>
+                </article>
+                <article class="player-card">
+                    <span class="player-avatar avatar-tharion">TA</span>
+                    <div><strong>Tharion Alvorada</strong><span>Paladino · Nível 5</span></div>
+                    <span class="mic-status" title="Microfone ativo" aria-label="Microfone ativo">●</span>
+                </article>
+                <article class="player-card">
+                    <span class="player-avatar avatar-mira">MV</span>
+                    <div><strong>Mira Valefria</strong><span>Barda · Nível 4</span></div>
+                    <span class="mic-status silenciado" title="Microfone silenciado" aria-label="Microfone silenciado">●</span>
+                </article>
+                <article class="player-card offline-card">
+                    <span class="player-avatar avatar-brann">BR</span>
+                    <div><strong>Brann Pedrassol</strong><span>Conectando...</span></div>
+                    <span class="mic-status desconectado" title="Desconectado" aria-label="Desconectado">●</span>
+                </article>
+            </div>
+            <div class="players-footer"><span class="presence-light"></span> 3 conectados</div>
+        </aside>
+    </div>
+</div>
+@if (Dado)
+{
+    <Dadopopup FecharModal="FecharModal" />
+}
+
+@if (inventario)
+{
+    <Inventario_popup FecharModal="FecharInventario" />
+}
+
+@code {
+    private bool inventario = false;
+    private bool Dado = false;
+
+    private void AbrirInventario() => inventario = true;
+    private void FecharInventario() => inventario = false;
+
+    private void AbrirModal() => Dado = true;
+    private void FecharModal() => Dado = false;
+}
