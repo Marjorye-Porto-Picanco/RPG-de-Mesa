@@ -1,0 +1,184 @@
+<link href="telas.css" rel="stylesheet" />
+<link href="sessao-iniciar.css" rel="stylesheet" />
+<link href="navbar.css" rel="stylesheet" />
+<link href="upload-imagem.css" rel="stylesheet" />
+<script src="upload-imagem.js"></script>
+
+<div class="app-shell">
+    <iframe class="navbar-frame" src="navbar.html" title="Navegação principal"></iframe>
+
+    <main class="app-content">
+        <div class="page-heading">
+            <div><p class="page-kicker">Prepare a mesa</p><h1 class="page-title">Iniciar sessão</h1><p class="page-description">Reúna o grupo, registre o plano e acompanhe o tempo de jogo.</p></div>
+        </div>
+
+        <section class="session-running" id="sessao-ativa" aria-live="polite" hidden>
+            <div class="running-topline"><span class="session-live" id="estado-sessao">Sessão em andamento</span><a class="action-secondary" href="saladojogo.html">Entrar na sala de jogo</a></div>
+            <h2 id="nome-sessao-ativa">Crônicas de Eldoria</h2>
+            <p id="detalhes-sessao-ativa">Sessão de jogo</p>
+            <img id="imagem-sessao-ativa" class="session-image-preview" alt="Imagem da sessão" hidden />
+            <div class="session-timer" id="cronometro" role="timer" aria-label="Duração da sessão">00:00:00</div>
+            <div class="session-controls">
+                <button id="pausar-sessao" type="button">Pausar sessão</button>
+                <button id="encerrar-sessao" type="button">Finalizar sessão</button>
+            </div>
+        </section>
+
+        <div class="session-layout" id="configurar-sessao">
+            <form class="form-panel session-form" id="form-sessao">
+                <section>
+                    <h2>Detalhes da sessão</h2>
+                    <div class="form-grid">
+                        <label class="form-field full-width">Nome da sessão<input name="nome" required maxlength="80" value="Crônicas de Eldoria · A trilha esquecida" /></label>
+                        <label class="form-field">Campanha<select name="campanha"><option>Crônicas de Eldoria</option><option>O Véu de Cinzas</option><option>Erathia</option><option>A Legião Grotesca</option><option>Perseguidor Noturno</option><option>Mistérios da Floresta</option><option>Ecos da Teia</option><option>Revolução Mutante</option><option>A Coroa dos Vermes</option><option>Heróis em Crise</option><option>Guerras Secretas</option><option>KULT: Divindade Perdida</option></select></label>
+                        <label class="form-field">Data<input name="data" type="date" required /></label>
+                        <label class="form-field">Horário<input name="horario" type="time" value="19:00" /></label>
+                        <label class="form-field">Local ou chamada<input name="local" placeholder="Ex.: Mesa da taverna / Discord" /></label>
+                        <div class="form-field full-width upload-imagem">
+                            <span>Imagem da sessão</span>
+                            <img id="imagem-sessao-previa" class="upload-imagem-preview" alt="Prévia da imagem da sessão" hidden />
+                            <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher imagem da sessão<input id="arquivo-sessao" type="file" accept="image/*" aria-label="Escolher imagem da sessão" /></label>
+                            <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                        </div>
+                        <input name="imagem" type="hidden" />
+                        <div class="form-field full-width">
+                            <span>Personagens presentes</span>
+                            <div class="session-players" id="jogadores-sessao">
+                                <label class="player-option"><input type="checkbox" name="participantes" value="Lyra Ventobrasa" checked /><span>Lyra Ventobrasa<span>Elfa · Patrulheira</span></span></label>
+                                <label class="player-option"><input type="checkbox" name="participantes" value="Tharion Alvorada" checked /><span>Tharion Alvorada<span>Humano · Paladino</span></span></label>
+                                <label class="player-option"><input type="checkbox" name="participantes" value="Mira Valefria" checked /><span>Mira Valefria<span>Meia-elfa · Barda</span></span></label>
+                                <label class="player-option"><input type="checkbox" name="participantes" value="Brann Pedrassol" /><span>Brann Pedrassol<span>Anão · Guerreiro</span></span></label>
+                            </div>
+                        </div>
+                        <label class="form-field full-width">Notas para esta sessão<textarea name="notas" placeholder="Objetivos, cenas importantes, pistas ou lembretes."></textarea></label>
+                    </div>
+                </section>
+                <div class="form-footer">
+                    <p id="status-sessao" class="form-status" role="status" aria-live="polite"></p>
+                    <button class="action-primary" type="submit">Começar a jogar <span aria-hidden="true">→</span></button>
+                </div>
+            </form>
+
+            <aside class="session-summary" aria-label="Resumo da sessão">
+                <h2>Resumo da mesa</h2>
+                <div class="summary-line"><span>Campanha</span><strong id="resumo-campanha">Crônicas de Eldoria</strong></div>
+                <div class="summary-line"><span>Data</span><strong id="resumo-data">Hoje</strong></div>
+                <div class="summary-line"><span>Horário</span><strong id="resumo-horario">19:00</strong></div>
+                <div class="summary-line"><span>Jogadores</span><strong id="resumo-jogadores">3 presentes</strong></div>
+                <div class="summary-line"><span>Local</span><strong id="resumo-local">A definir</strong></div>
+            </aside>
+        </div>
+    </main>
+</div>
+
+<script>
+    const chaveSessaoAtiva = "salao-sessao-ativa";
+    const formularioSessao = document.querySelector("#form-sessao");
+    const painelSessaoAtiva = document.querySelector("#sessao-ativa");
+    const configuracaoSessao = document.querySelector("#configurar-sessao");
+    const campoDataSessao = formularioSessao.elements.data;
+    campoDataSessao.valueAsDate = new Date();
+    let imagemSessao = "";
+    window.conectarUploadImagem(document.querySelector("#arquivo-sessao"), document.querySelector("#imagem-sessao-previa"), (imagem) => {
+        imagemSessao = imagem;
+        formularioSessao.elements.imagem.value = imagem;
+    });
+    const campanhaSelecionada = new URLSearchParams(window.location.search).get("campanha");
+    if (campanhaSelecionada && Array.from(formularioSessao.elements.campanha.options).some((opcao) => opcao.value === campanhaSelecionada)) {
+        formularioSessao.elements.campanha.value = campanhaSelecionada;
+    }
+    let intervaloCronometro;
+
+    JSON.parse(localStorage.getItem("salao-personagens") || "[]").forEach((personagem) => {
+        const jaExiste = Array.from(formularioSessao.querySelectorAll('[name="participantes"]')).some((campo) => campo.value === personagem.nome);
+        if (jaExiste) return;
+        const label = document.createElement("label");
+        label.className = "player-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.name = "participantes";
+        checkbox.value = personagem.nome;
+        const texto = document.createElement("span");
+        texto.append(document.createTextNode(personagem.nome));
+        const detalhe = document.createElement("span");
+        detalhe.textContent = `${personagem.raca} · ${personagem.classe}`;
+        texto.append(detalhe);
+        label.append(checkbox, texto);
+        document.querySelector("#jogadores-sessao").append(label);
+    });
+
+    function formatarDuracao(segundos) {
+        const horas = Math.floor(segundos / 3600).toString().padStart(2, "0");
+        const minutos = Math.floor((segundos % 3600) / 60).toString().padStart(2, "0");
+        const restante = (segundos % 60).toString().padStart(2, "0");
+        return `${horas}:${minutos}:${restante}`;
+    }
+
+    function mostrarSessao(sessao) {
+        configuracaoSessao.hidden = true;
+        painelSessaoAtiva.hidden = false;
+        document.querySelector("#nome-sessao-ativa").textContent = sessao.nome;
+        document.querySelector("#detalhes-sessao-ativa").textContent = `${sessao.campanha} · ${sessao.participantes.length} jogadores · ${sessao.local || "Local não definido"}`;
+        const imagemSessaoAtiva = document.querySelector("#imagem-sessao-ativa");
+        imagemSessaoAtiva.hidden = !sessao.imagem;
+        if (sessao.imagem) imagemSessaoAtiva.src = sessao.imagem;
+        document.querySelector("#estado-sessao").textContent = sessao.status === "pausada" ? "Sessão pausada" : "Sessão em andamento";
+        document.querySelector("#pausar-sessao").textContent = sessao.status === "pausada" ? "Retomar sessão" : "Pausar sessão";
+        atualizarCronometro(sessao);
+        clearInterval(intervaloCronometro);
+        if (sessao.status === "ativa") intervaloCronometro = setInterval(() => atualizarCronometro(sessao), 1000);
+    }
+
+    function atualizarCronometro(sessao) {
+        const duracao = sessao.duracaoPausada + (sessao.status === "ativa" ? Math.floor((Date.now() - sessao.iniciadaEm) / 1000) : 0);
+        document.querySelector("#cronometro").textContent = formatarDuracao(duracao);
+    }
+
+    function atualizarResumo() {
+        document.querySelector("#resumo-campanha").textContent = formularioSessao.elements.campanha.value;
+        document.querySelector("#resumo-horario").textContent = formularioSessao.elements.horario.value || "A definir";
+        const data = formularioSessao.elements.data.value;
+        document.querySelector("#resumo-data").textContent = data ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${data}T12:00:00Z`)) : "Hoje";
+        document.querySelector("#resumo-jogadores").textContent = `${formularioSessao.querySelectorAll('[name="participantes"]:checked').length} presentes`;
+        document.querySelector("#resumo-local").textContent = formularioSessao.elements.local.value || "A definir";
+    }
+
+    formularioSessao.addEventListener("input", atualizarResumo);
+    formularioSessao.addEventListener("change", atualizarResumo);
+    formularioSessao.addEventListener("submit", (evento) => {
+        evento.preventDefault();
+        const valores = Object.fromEntries(new FormData(formularioSessao).entries());
+        const participantes = new FormData(formularioSessao).getAll("participantes");
+        const sessao = { ...valores, participantes, status: "ativa", iniciadaEm: Date.now(), duracaoPausada: 0 };
+        localStorage.setItem(chaveSessaoAtiva, JSON.stringify(sessao));
+        mostrarSessao(sessao);
+    });
+
+    document.querySelector("#pausar-sessao").addEventListener("click", () => {
+        const sessao = JSON.parse(localStorage.getItem(chaveSessaoAtiva) || "null");
+        if (!sessao) return;
+        if (sessao.status === "ativa") {
+            sessao.duracaoPausada += Math.floor((Date.now() - sessao.iniciadaEm) / 1000);
+            sessao.status = "pausada";
+        } else {
+            sessao.iniciadaEm = Date.now();
+            sessao.status = "ativa";
+        }
+        localStorage.setItem(chaveSessaoAtiva, JSON.stringify(sessao));
+        mostrarSessao(sessao);
+    });
+
+    document.querySelector("#encerrar-sessao").addEventListener("click", () => {
+        const sessao = JSON.parse(localStorage.getItem(chaveSessaoAtiva) || "null");
+        if (!sessao) return;
+        clearInterval(intervaloCronometro);
+        localStorage.removeItem(chaveSessaoAtiva);
+        painelSessaoAtiva.hidden = true;
+        configuracaoSessao.hidden = false;
+        document.querySelector("#status-sessao").textContent = "Sessão finalizada. Seu próximo encontro já pode ser preparado.";
+    });
+
+    const sessaoSalva = JSON.parse(localStorage.getItem(chaveSessaoAtiva) || "null");
+    if (sessaoSalva) mostrarSessao(sessaoSalva);
+    atualizarResumo();
+</script>

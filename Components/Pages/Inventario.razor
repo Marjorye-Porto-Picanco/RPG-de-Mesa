@@ -1,0 +1,18 @@
+@page "/inventario-antigo" 
+@inject NavigationManager Navigation
+
+<p>O inventário agora fica na ficha do personagem. <a href="" @onclick="Redirecionar" @onclick:preventDefault>Abrir inventário</a></p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        
+        Redirecionar();
+    }
+
+    private void Redirecionar()
+    {
+        
+        Navigation.NavigateTo("personagem-editar?aba=inventario", replace: true);
+    }
+}

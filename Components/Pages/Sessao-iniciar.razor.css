@@ -1,0 +1,166 @@
+.session-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+    gap: 22px;
+}
+
+.session-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.session-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.player-option {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border: 1px solid rgba(127, 93, 45, 0.32);
+    background: rgba(255, 251, 239, 0.42);
+    color: #4c3922;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.player-option input {
+    accent-color: #8b6a30;
+}
+
+.player-option span {
+    display: block;
+    margin-top: 3px;
+    color: #826b47;
+    font-size: 10px;
+}
+
+.session-summary {
+    padding: 18px;
+    border-top: 2px solid #927342;
+    background: rgba(44, 33, 25, 0.9);
+}
+
+.session-summary h2 {
+    margin: 0 0 15px;
+    color: #eddfc2;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(227, 205, 164, 0.13);
+    color: #b8a98d;
+    font-size: 11px;
+}
+
+.summary-line strong {
+    color: #e5d2ad;
+    font-weight: 500;
+    text-align: right;
+}
+
+.session-running {
+    padding: 26px clamp(20px, 4vw, 38px);
+    border: 1px solid rgba(207, 174, 109, 0.52);
+    background: #263a32 url("img/maprpg.png") center / cover;
+    box-shadow: inset 0 0 0 999px rgba(21, 30, 25, 0.77);
+    color: #f1e6ce;
+}
+
+.session-running[hidden] {
+    display: none;
+}
+
+.running-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.session-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #bed2a0;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.session-live::before {
+    width: 7px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #92bb69;
+    box-shadow: 0 0 10px rgba(146, 187, 105, 0.7);
+    content: "";
+}
+
+.session-running h2 {
+    margin: 15px 0 6px;
+    font-size: 25px;
+    font-weight: 500;
+}
+
+.session-running p {
+    margin: 0;
+    color: #d1c5ab;
+    font-size: 12px;
+}
+
+.session-timer {
+    margin: 24px 0;
+    color: #f0d891;
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: clamp(38px, 7vw, 62px);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+}
+
+.session-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.session-controls button {
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid rgba(223, 196, 135, 0.55);
+    background: rgba(32, 26, 20, 0.65);
+    color: #f0e5ce;
+    cursor: pointer;
+}
+
+.session-controls button:hover {
+    background: rgba(133, 102, 51, 0.56);
+}
+
+@media (max-width: 920px) {
+    .session-layout {
+        grid-template-columns: minmax(0, 1fr) 235px;
+    }
+}
+
+@media (max-width: 700px) {
+    .session-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .session-players {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
