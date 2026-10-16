@@ -3,26 +3,32 @@ using RPGdeMesa.Models;
 
 namespace RPGdeMesa.Data
 {
-	public class AppDbContext : DbContext
-	{
-		// Define as tabelas do banco de dados
-		public DbSet<Usuario> Usuarios { get; set; }
-		public DbSet<Perfil> Perfeis { get; set; }
-		public DbSet<Personagem> Personagens { get; set; }
+    public class AppDbContext : DbContext
+    {
+        // Define as tabelas do banco de dados
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Perfil> Perfis { get; set; }
+        public DbSet<Personagem> Personagens { get; set; }
         public DbSet<Campanha> Campanhas { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-		{
-		}
+        {
+        }
 
-		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-		{
-			if (!optionsBuilder.IsConfigured)
-			{
-				// Substitua com os dados da sua instância local do SQL Server
-				string connectionString = @"Server=localhost;
-										  Database=rpg_system;
-										  Trusted_Connection=True;
-										  TrustServerCertificate=True;";
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                // Substitua com os dados da sua instância local do SQL Server
+                string connectionString = @"Server=rpgsystem.database.windows.net,1433;
+                            Initial Catalog=rpg_system;
+                            Persist Security Info=False;
+                            User ID=cleverson; 
+                            Password=Seila1234@;
+                            MultipleActiveResultSets=False;
+                            Encrypt=True;
+                            TrustServerCertificate=True;
+                            Connection Timeout=30;";
+
 
                 optionsBuilder.UseSqlServer(connectionString, sqlOptions =>
                 {
@@ -32,7 +38,7 @@ namespace RPGdeMesa.Data
                         errorNumbersToAdd: null);
                 });
             }
-		}
+        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

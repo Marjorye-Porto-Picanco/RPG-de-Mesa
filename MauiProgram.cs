@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Data;
 using RPGdeMesa.Services;
-using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.ViewModel;
 
 namespace RPGdeMesa
 {
@@ -26,9 +27,15 @@ namespace RPGdeMesa
             // Registro do Banco de Dados
             builder.Services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
 
-            // Registro dos Serviços (A MÁGICA ACONTECE AQUI)
+            // Registro dos Serviços 
             builder.Services.AddTransient<UsuarioService>();
-            builder.Services.AddTransient<CampanhaService>(); // <--- ADICIONAMOS ESTA LINHA!
+            builder.Services.AddTransient<CampanhaService>();
+            builder.Services.AddTransient<AuthService>();
+
+            // Registro dos ViewModels
+            builder.Services.AddTransient<LoginViewModel>(); 
+            builder.Services.AddTransient<RegisterViewModel>();
+
 
             return builder.Build();
         }
