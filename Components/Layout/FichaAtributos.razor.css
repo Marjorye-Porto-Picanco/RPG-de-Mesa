@@ -1,0 +1,239 @@
+/* CSS for FichaAtributos component */
+.ficha-corpo {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    flex: 1;
+    grid-template-columns: 82px minmax(150px, 1fr) 126px;
+    align-items: stretch;
+    gap: 18px;
+}
+
+.atributos h2,
+.pericias h2 {
+    margin: 0 0 9px;
+    color: #9a712f;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.atributos {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.atributo {
+    display: grid;
+    min-height: 51px;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 5px 7px;
+    border: 1px solid rgba(150, 108, 48, 0.62);
+    border-radius: 42% 42% 45% 45%;
+    color: #815e2b;
+    text-align: center;
+}
+
+    .atributo span {
+        grid-column: 1 / -1;
+        font-size: 10px;
+    }
+
+    .atributo b {
+        justify-self: end;
+        font-size: 17px;
+        font-weight: 500;
+    }
+
+    .atributo small {
+        justify-self: start;
+        padding-left: 4px;
+        font-size: 10px;
+    }
+
+    .atributo.destaque {
+        border-color: #b7812a;
+        background: rgba(179, 128, 38, 0.12);
+        color: #704916;
+    }
+
+/* ==========================================================================
+   ANOTAÇÕES & DIÁRIO
+   ========================================================================== */
+.anotacoes {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bloco-anotacao {
+    min-height: 83px;
+    padding: 9px 12px 11px;
+    border: 1px solid rgba(126, 87, 31, 0.34);
+    border-radius: 17px;
+    background: rgba(153, 111, 37, 0.88);
+    color: #fff1d1;
+    box-shadow: inset 0 0 18px rgba(78, 49, 12, 0.13);
+}
+
+    .bloco-anotacao h2 {
+        margin: 0 0 8px;
+        color: #fff0cc;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    .bloco-anotacao p,
+    .diario p {
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+.valor-destaque {
+    font-size: 22px !important;
+    text-align: center;
+}
+
+    .valor-destaque span {
+        font-size: 10px;
+    }
+
+.diario {
+    flex: 1;
+    min-height: 120px;
+    overflow: hidden;
+    border: 1px solid #9f762f;
+    border-radius: 6px;
+    background: rgba(144, 103, 32, 0.85);
+    color: #fff1d1;
+}
+
+.diario-abas {
+    display: flex;
+    min-height: 31px;
+    justify-content: space-around;
+    border-bottom: 1px solid rgba(255, 231, 181, 0.54);
+    background: rgba(205, 163, 76, 0.6);
+}
+
+    .diario-abas span {
+        display: grid;
+        flex: 1;
+        place-items: center;
+        border-right: 1px solid rgba(255, 231, 181, 0.34);
+        color: #fff0cc;
+        font-size: 10px;
+    }
+
+    .diario-abas .aba-selecionada {
+        background: rgba(255, 238, 195, 0.13);
+    }
+
+.diario p {
+    padding: 12px;
+}
+
+/* ==========================================================================
+   PERÍCIAS & SALVAGUARDAS
+   ========================================================================== */
+.pericias {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pericias-grupo {
+    padding: 10px 11px;
+    border: 1px solid rgba(111, 79, 38, 0.16);
+    border-radius: 16px;
+    background: rgba(89, 72, 48, 0.83);
+    color: #f0e1c5;
+}
+
+    .pericias-grupo h2 {
+        margin-bottom: 8px;
+        color: #ecd39d;
+        font-size: 11px;
+        text-align: center;
+    }
+
+    .pericias-grupo ul {
+        display: grid;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .pericias-grupo li {
+        position: relative;
+        padding-left: 13px;
+        color: #ded0b7;
+        font-size: 10px;
+    }
+
+        .pericias-grupo li::before {
+            position: absolute;
+            top: 3px;
+            left: 0;
+            width: 6px;
+            height: 6px;
+            border: 1px solid #d7c6a5;
+            border-radius: 50%;
+            content: "";
+        }
+
+        .pericias-grupo li.treinada::before {
+            border-color: #d6a84d;
+            background: #d6a84d;
+        }
+
+.pericias-lista {
+    flex: 1;
+}
+
+/* ==========================================================================
+   RESPONSIVIDADE (ATRIBUTOS)
+   ========================================================================== */
+@media (max-width: 620px) {
+    .ficha-corpo {
+        grid-template-columns: 1fr 1fr;
+        gap: 18px 14px;
+    }
+
+    .atributos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-column: 1 / -1;
+    }
+
+        .atributos h2 {
+            grid-column: 1 / -1;
+        }
+
+    .atributo {
+        min-height: 58px;
+    }
+
+    .anotacoes {
+        grid-column: 1 / -1;
+    }
+
+    .bloco-anotacao {
+        min-height: 76px;
+    }
+
+    .diario {
+        min-height: 112px;
+    }
+
+    .pericias {
+        display: grid;
+        grid-column: 1 / -1;
+        grid-template-columns: 1fr 1.4fr;
+    }
+}

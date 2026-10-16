@@ -1,0 +1,81 @@
+/* CSS for Upload-imagem component */
+.upload-imagem {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.upload-imagem-preview {
+    display: block;
+    width: min(100%, 260px);
+    max-height: 190px;
+    object-fit: cover;
+    border: 1px solid rgba(137, 102, 47, 0.45);
+    background: rgba(255, 251, 239, 0.6);
+}
+
+    .upload-imagem-preview[hidden] {
+        display: none;
+    }
+
+    .upload-imagem-preview.imagem-carregada {
+        object-fit: cover;
+    }
+
+.upload-imagem-botao {
+    position: relative;
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    overflow: hidden;
+    padding: 0 13px;
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background: rgba(255, 251, 239, 0.62);
+    color: #594323;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .upload-imagem-botao:hover {
+        background: rgba(243, 224, 181, 0.9);
+    }
+
+    .upload-imagem-botao input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+.upload-imagem-ajuda,
+.upload-imagem-status {
+    margin: 0;
+    color: #826b47;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+    .upload-imagem-status:empty {
+        display: none;
+    }
+
+.profile-photo-preview {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.session-image-preview {
+    width: min(100%, 320px);
+    max-height: 150px;
+    object-fit: cover;
+}

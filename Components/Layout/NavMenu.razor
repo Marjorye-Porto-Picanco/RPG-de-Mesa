@@ -1,19 +1,29 @@
 ﻿<header class="barra-rpg">
-    <NavLink class="marca-rpg" href="/campanhas" Match="NavLinkMatch.All">
-        <span aria-hidden="true">⚔</span> RPGdeMesa
+    <NavLink class="marca-rpg" href="/home" Match="NavLinkMatch.All" aria-label="Salão da Mesa, início">
+        <span class="marca-icone" aria-hidden="true">⚔</span>
+        <span>Salão da Mesa</span>
     </NavLink>
 
     <nav class="nav-rpg" aria-label="Navegação principal">
-        <NavLink class="nav-link-rpg" href="/campanhas" Match="NavLinkMatch.All">
+        <NavLink class="nav-link-rpg" href="/home" Match="NavLinkMatch.All">
+            Início
+        </NavLink>
+        <NavLink class="nav-link-rpg" href="/campanhas">
             Campanhas
         </NavLink>
         <NavLink class="nav-link-rpg" href="/personagem-lib">
             Personagens
         </NavLink>
-        <NavLink class="nav-link-rpg" href="/not-found">
+        <NavLink class="nav-link-rpg" href="/monstros-lib">
             Monstros
+        </NavLink>
+        <NavLink class="nav-link-rpg" href="/saladojogo">
+            Sessão
         </NavLink>
     </nav>
 
-    
+    <NavLink class="perfil-rpg" href="/perfil" aria-label="Abrir perfil">
+        <span class="perfil-iniciais">MM</span>
+        <span class="perfil-nome">Mestre da mesa</span>
+    </NavLink>
 </header>

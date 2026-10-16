@@ -1,0 +1,48 @@
+﻿@page "/dadopopup"
+
+<div class="modal-backdrop" @onclick="FecharModal"></div>
+
+<main class="dice-popup" aria-labelledby="titulo-dados">
+    <header class="dice-popup-header">
+        <div>
+            <p id="contexto-dado">Rolagem da mesa</p>
+            <h1 id="titulo-dados">Rolar dados</h1>
+        </div>
+        <button class="dice-close" id="fechar-popup" type="button" aria-label="Fechar rolagem" @onclick="FecharModal">×</button>
+    </header>
+
+    <form id="form-rolagem" @onsubmit:preventDefault="true">
+        <section class="dice-selection" aria-labelledby="rotulo-dado">
+            <p class="dice-section-label" id="rotulo-dado">Escolha o dado</p>
+            <div class="dice-faces" role="group" aria-label="Tipo de dado">
+                <button class="dice-face" type="button" data-faces="4" aria-pressed="false">d4</button>
+                <button class="dice-face" type="button" data-faces="6" aria-pressed="false">d6</button>
+                <button class="dice-face" type="button" data-faces="8" aria-pressed="false">d8</button>
+                <button class="dice-face" type="button" data-faces="10" aria-pressed="false">d10</button>
+                <button class="dice-face" type="button" data-faces="12" aria-pressed="false">d12</button>
+                <button class="dice-face" type="button" data-faces="20" aria-pressed="false">d20</button>
+                <button class="dice-face" type="button" data-faces="100" aria-pressed="false">d100</button>
+            </div>
+        </section>
+
+        <div class="dice-options">
+            <label class="dice-field">Quantidade<input id="quantidade-dados" type="number" min="1" max="20" value="1" /></label>
+            <label class="dice-field">Modificador<input id="modificador-dado" type="number" min="-100" max="100" value="0" /></label>
+        </div>
+
+        <button class="dice-roll" type="submit"><span aria-hidden="true">⚄</span> Rolar</button>
+    </form>
+
+    <section class="dice-result" id="resultado-dado" aria-live="polite" hidden>
+        <p class="dice-result-label">Resultado total</p>
+        <strong class="dice-total" id="total-dado">0</strong>
+        <p class="dice-expression" id="expressao-dado"></p>
+        <div class="dice-breakdown" id="detalhe-dados" aria-label="Resultados individuais"></div>
+    </section>
+    <p class="dice-popup-footer">Os resultados são compartilhados com o registro da sessão.</p>
+</main>
+
+@code {
+    [Parameter]
+    public EventCallback FecharModal { get; set; }
+}

@@ -1,0 +1,55 @@
+﻿@page "/personagem-criar"
+
+<div class="app-shell">
+   
+
+    <main class="app-content">
+        <a class="text-link" href="personagem-lib">← Voltar aos personagens</a>
+        <div class="page-heading" style="margin-top: 16px">
+            <div><p class="page-kicker">Uma nova história começa</p><h1 class="page-title">Criar personagem</h1><p class="page-description">Registre as informações essenciais do seu aventureiro.</p></div>
+        </div>
+
+        <form id="form-personagem" class="form-layout">
+            <section class="form-panel">
+                <h2>Identidade e jornada</h2>
+                <div class="form-grid">
+                    <label class="form-field full-width">Nome do personagem<input name="nome" required maxlength="60" placeholder="Ex.: Lyra Ventobrasa" autocomplete="off" /></label>
+                    <label class="form-field">Raça<select name="raca" required><option value="">Escolha uma raça</option><option>Humano</option><option>Elfo</option><option>Anão</option><option>Halfling</option><option>Meio-elfo</option><option>Tiefling</option><option>Orc</option><option>Outra</option></select></label>
+                    <label class="form-field">Classe<select name="classe" required><option value="">Escolha uma classe</option><option>Bárbaro</option><option>Bardo</option><option>Clérigo</option><option>Druida</option><option>Guerreiro</option><option>Ladino</option><option>Mago</option><option>Paladino</option><option>Patrulheiro</option><option>Bruxo</option><option>Outra</option></select></label>
+                    <label class="form-field">Nível<input name="nivel" type="number" min="1" max="20" value="1" required /></label>
+                    <label class="form-field">Campanha<select name="campanha"><option>Crônicas de Eldoria</option><option>O Véu de Cinzas</option><option>Erathia</option><option>Sem campanha</option></select></label>
+                    <label class="form-field">Antecedente<input name="antecedente" maxlength="50" placeholder="Ex.: Batedora" /></label>
+                    <label class="form-field">Tendência<select name="tendencia"><option>Neutra</option><option>Leal e boa</option><option>Neutra e boa</option><option>Caótica e boa</option><option>Leal e neutra</option><option>Caótica e neutra</option><option>Leal e má</option><option>Neutra e má</option><option>Caótica e má</option></select></label>
+                    <div class="form-divider">Atributos</div>
+                    <div class="stat-fields">
+                        <label class="form-field">Força<input name="forca" type="number" min="1" max="30" value="10" /></label>
+                        <label class="form-field">Destreza<input name="destreza" type="number" min="1" max="30" value="10" /></label>
+                        <label class="form-field">Constituição<input name="constituicao" type="number" min="1" max="30" value="10" /></label>
+                        <label class="form-field">Inteligência<input name="inteligencia" type="number" min="1" max="30" value="10" /></label>
+                        <label class="form-field">Sabedoria<input name="sabedoria" type="number" min="1" max="30" value="10" /></label>
+                        <label class="form-field">Carisma<input name="carisma" type="number" min="1" max="30" value="10" /></label>
+                    </div>
+                    <label class="form-field full-width">História e anotações<textarea name="historia" maxlength="1200" placeholder="De onde veio? O que busca? O que não consegue esquecer?"></textarea></label>
+                </div>
+                <div class="form-footer">
+                    <p id="status-personagem" class="form-status" role="status" aria-live="polite"></p>
+                    <div><a class="action-secondary" href="personagens-lib.html">Cancelar</a> <button class="action-primary" type="submit">Criar personagem <span aria-hidden="true">→</span></button></div>
+                </div>
+            </section>
+
+            <aside class="form-aside">
+                <div class="aside-portrait"><img id="imagem-personagem-preview" src="img/armaduraprata.png" alt="Prévia do retrato do personagem" /></div>
+                <div class="upload-imagem">
+                    <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher foto do personagem<input id="imagem-personagem" type="file" accept="image/*" aria-label="Escolher foto do personagem" /></label>
+                    <p class="upload-imagem-ajuda">JPG, PNG ou WebP. A imagem é reduzida para armazenamento.</p>
+                    <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                </div>
+                <div class="aside-note"><strong>Uma ficha por vez</strong>Você poderá consultar seus personagens na biblioteca e continuar ajustando os detalhes da aventura depois.</div>
+            </aside>
+        </form>
+    </main>
+</div>
+
+@code {
+
+}

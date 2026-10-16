@@ -1,0 +1,50 @@
+﻿@page "/monstros-lib"
+<NavMenu />
+
+<div class="app-shell">
+
+
+    <main class="app-content">
+        <div class="page-heading">
+            <div><p class="page-kicker">Bestiário da mesa</p><h1 class="page-title">Biblioteca de monstros</h1><p class="page-description">Ameaças conhecidas e criaturas criadas para suas campanhas.</p></div>
+            <a class="action-primary" href="monstro-criar"><span aria-hidden="true">+</span> Cadastrar monstro</a>
+        </div>
+
+        <div class="toolbar-library" role="search">
+            <label class="search-field"><span aria-hidden="true">⌕</span><input id="busca-monstro" type="search" placeholder="Buscar por nome, tipo ou alinhamento" aria-label="Buscar monstros" /></label>
+            <label><span class="page-kicker" style="display:none">Tipo</span><select class="filter-select" id="filtro-tipo" aria-label="Filtrar por tipo"><option value="todos">Todos os tipos</option><option value="dragao">Dragões</option><option value="fera">Feras</option><option value="monstruosidade">Monstruosidades</option><option value="morto-vivo">Mortos-vivos</option><option value="outro">Outros</option></select></label>
+        </div>
+
+        <div class="monster-grid" id="grade-monstros" aria-live="polite">
+            <article class="monster-card" data-nome="dragão das cinzas" data-tipo="dragao" data-descricao="dragão enorme caótico e mau, fogo, voo" data-cr="16">
+                <div class="monster-art"><img src="img/capacampanha10.png" alt="Dragão ancestral em meio às chamas" /><span class="monster-cr">ND 16</span></div>
+                <div class="monster-info"><h2>Dragão das cinzas</h2><p>Dragão enorme · Caótico e mau</p><div class="monster-tags"><span>Fogo</span><span>Voo</span><span>Lendário</span></div></div>
+            </article>
+            <article class="monster-card" data-nome="lobo espectral" data-tipo="morto-vivo" data-descricao="lobo médio neutro e mau sombra necrótico" data-cr="3">
+                <div class="monster-art"><img src="img/capacampanha7.png" alt="Floresta sombria sob uma névoa espectral" /><span class="monster-cr">ND 3</span></div>
+                <div class="monster-info"><h2>Lobo espectral</h2><p>Morto-vivo médio · Neutro e mau</p><div class="monster-tags"><span>Sombra</span><span>Necrótico</span><span>Faro aguçado</span></div></div>
+            </article>
+            <article class="monster-card" data-nome="mímico antigo" data-tipo="monstruosidade" data-descricao="mímico médio neutro armadilha transformação" data-cr="2">
+                <div class="monster-art"><img src="img/capacampanha3.png" alt="Ruínas antigas guardando um tesouro" /><span class="monster-cr">ND 2</span></div>
+                <div class="monster-info"><h2>Mímico antigo</h2><p>Monstruosidade média · Neutro</p><div class="monster-tags"><span>Armadilha</span><span>Transformação</span></div></div>
+            </article>
+            <article class="monster-card" data-nome="urso-coruja" data-tipo="fera" data-descricao="urso coruja grande imparcial floresta fera" data-cr="3">
+                <div class="monster-art"><img src="img/capacampanha6.png" alt="Criatura selvagem em uma paisagem de fantasia" /><span class="monster-cr">ND 3</span></div>
+                <div class="monster-info"><h2>Urso-coruja</h2><p>Fera grande · Imparcial</p><div class="monster-tags"><span>Floresta</span><span>Investida</span></div></div>
+            </article>
+            <article class="monster-card" data-nome="cão infernal" data-tipo="fera" data-descricao="cão infernal médio leal e mau fogo infernal" data-cr="5">
+                <div class="monster-art"><img src="img/capacampanha8.png" alt="Ameaça infernal em uma cidade em ruínas" /><span class="monster-cr">ND 5</span></div>
+                <div class="monster-info"><h2>Cão infernal</h2><p>Fera média · Leal e mau</p><div class="monster-tags"><span>Fogo</span><span>Faro</span><span>Matilha</span></div></div>
+            </article>
+            <article class="monster-card" data-nome="ogro das cavernas" data-tipo="outro" data-descricao="ogro grande caótico e mau bruto caverna" data-cr="2">
+                <div class="monster-art"><img src="img/capacampanha9.png" alt="Uma criatura gigantesca à espreita" /><span class="monster-cr">ND 2</span></div>
+                <div class="monster-info"><h2>Ogro das cavernas</h2><p>Gigante grande · Caótico e mau</p><div class="monster-tags"><span>Bruto</span><span>Caverna</span></div></div>
+            </article>
+        </div>
+    </main>
+</div>
+
+
+@code {
+
+}

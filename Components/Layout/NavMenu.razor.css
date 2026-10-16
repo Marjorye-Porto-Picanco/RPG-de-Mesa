@@ -1,104 +1,158 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+}
+
+/* ==========================================================================
+   CONTAINER PRINCIPAL DA BARRA
+   ========================================================================== */
 .barra-rpg {
     position: relative;
     z-index: 10;
     display: flex;
+    width: 100%;
     min-height: 60px;
+    height: 60px;
     align-items: center;
-    gap: 36px;
-    padding: 0 5%;
+    gap: clamp(14px, 2.5vw, 32px);
+    padding: 0 clamp(12px, 4vw, 40px);
     border-bottom: 1px solid rgba(220, 181, 102, 0.25);
-    background: rgba(24, 16, 12, 0.95);
+    background: rgba(24, 16, 12, 0.96);
     color: #ead6ad;
-    font-family: Georgia, "Times New Roman", serif;
-    box-sizing: border-box;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
 }
 
-    /* Força a remoção de cores e estilos padrão em todos os links da barra */
-    .barra-rpg a,
-    .barra-rpg a:hover,
-    .barra-rpg a:focus,
-    .barra-rpg a:visited {
+    /* Reset de links da barra */
+    .barra-rpg ::deep a,
+    .barra-rpg a {
         text-decoration: none !important;
+        color: inherit;
     }
 
-    /* Marca RPG */
-    .barra-rpg .marca-rpg {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        color: #ead6ad !important;
-        font-size: 17px;
-        white-space: nowrap;
-        text-decoration: none !important;
-    }
-
-        .barra-rpg .marca-rpg span {
-            color: #d4aa56;
-            font-size: 22px;
+        .barra-rpg ::deep a:focus-visible,
+        .barra-rpg a:focus-visible {
+            outline: 2px solid #f0d17f;
+            outline-offset: 2px;
         }
 
-    /* Navegação central */
-    .barra-rpg .nav-rpg {
-        display: flex;
-        align-self: stretch;
+    /* ==========================================================================
+   MARCA / LOGOTIPO
+   ========================================================================== */
+    .barra-rpg .marca-rpg {
+        display: inline-flex;
+        flex: 0 0 auto;
         align-items: center;
-        gap: 25px;
+        gap: 9px;
+        color: #f0dfbb !important;
+        font-size: 16px;
+        white-space: nowrap;
     }
 
-    .barra-rpg .nav-link-rpg {
+    .barra-rpg .marca-icone {
+        color: #d4aa56;
+        font-size: 21px;
+    }
+
+    /* ==========================================================================
+   LINKS CENTRAIS DE NAVEGAÇÃO
+   ========================================================================== */
+    .barra-rpg .nav-rpg {
         display: flex;
-        height: 100%;
+        min-width: 0;
+        flex: 1;
+        align-self: stretch;
+        align-items: center;
+        gap: clamp(12px, 2vw, 24px);
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+        .barra-rpg .nav-rpg::-webkit-scrollbar {
+            display: none;
+        }
+
+    .barra-rpg .nav-link-rpg {
+        display: inline-flex;
+        min-height: 100%;
+        flex: 0 0 auto;
         align-items: center;
         border-bottom: 2px solid transparent;
         color: #c5b79d !important;
-        font-size: 14px;
-        text-decoration: none !important;
+        font-size: 13px;
+        white-space: nowrap;
         transition: color 0.2s, border-color 0.2s;
     }
 
-        /* Link ativo / hover */
+        /* Estado ativo do NavLink no Blazor */
         .barra-rpg .nav-link-rpg:hover,
-        .barra-rpg .nav-link-rpg.active {
+        .barra-rpg .nav-link-rpg.active,
+        .barra-rpg .nav-link-rpg[aria-current="page"] {
             border-bottom-color: #d3ac60;
             color: #f5e4bf !important;
         }
 
-    /* Texto da mesa à direita */
-    .barra-rpg .mesa-atual {
+    /* ==========================================================================
+   PERFIL (DIREITA)
+   ========================================================================== */
+    .barra-rpg .perfil-rpg {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 8px;
         margin-left: auto;
-        color: #c5b79d;
-        font-size: 13px;
-        cursor: pointer;
-        user-select: none;
+        color: #e2ceaa !important;
+        font-size: 12px;
         white-space: nowrap;
+        cursor: pointer;
     }
 
-        .barra-rpg .mesa-atual span {
-            padding-left: 8px;
-            color: #d4aa56;
-        }
+    .barra-rpg .perfil-iniciais {
+        display: grid;
+        width: 32px;
+        aspect-ratio: 1;
+        place-items: center;
+        border: 1px solid #9e7b3e;
+        border-radius: 50%;
+        background: #344239;
+        color: #f0dfbb;
+        font-size: 10px;
+        font-weight: bold;
+    }
 
-/* Responsividade */
-@media (max-width: 650px) {
+/* ==========================================================================
+   RESPONSIVIDADE (MOBILE)
+   ========================================================================== */
+@media (max-width: 600px) {
     .barra-rpg {
         min-height: 54px;
-        gap: 16px;
-        padding: 0 15px;
+        height: 54px;
+        gap: 12px;
+        padding: 0 10px;
     }
 
         .barra-rpg .marca-rpg {
-            font-size: 14px;
+            gap: 5px;
+            font-size: 13px;
         }
 
-        .barra-rpg .nav-rpg {
-            gap: 14px;
+        .barra-rpg .marca-icone {
+            font-size: 17px;
         }
 
         .barra-rpg .nav-link-rpg {
-            font-size: 12px;
+            font-size: 11px;
         }
 
-        .barra-rpg .mesa-atual {
+        .barra-rpg .perfil-nome {
             display: none;
+        }
+
+        .barra-rpg .perfil-iniciais {
+            width: 28px;
         }
 }
