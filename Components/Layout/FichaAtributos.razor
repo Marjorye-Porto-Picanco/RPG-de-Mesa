@@ -1,12 +1,14 @@
-﻿<div class="ficha-corpo visao-ficha" id="visao-atributos" role="tabpanel" aria-labelledby="aba-atributos">
+﻿@using RPGdeMesa.Models
+
+<div class="ficha-corpo visao-ficha" id="visao-atributos" role="tabpanel" aria-labelledby="aba-atributos">
     <aside class="atributos" aria-label="Atributos">
         <h2>Atributos</h2>
-        <div class="atributo"><span>Força</span><b>12</b><small>+1</small></div>
-        <div class="atributo destaque"><span>Destreza</span><b>18</b><small>+4</small></div>
-        <div class="atributo"><span>Constituição</span><b>14</b><small>+2</small></div>
-        <div class="atributo"><span>Inteligência</span><b>13</b><small>+1</small></div>
-        <div class="atributo"><span>Sabedoria</span><b>16</b><small>+3</small></div>
-        <div class="atributo"><span>Carisma</span><b>10</b><small>+0</small></div>
+        <div class="atributo"><span>Força</span><b>@Personagem.Forca</b><small>@ObterModificador(Personagem.Forca)</small></div>
+        <div class="atributo destaque"><span>Destreza</span><b>@Personagem.Destreza</b><small>@ObterModificador(Personagem.Destreza)</small></div>
+        <div class="atributo"><span>Constituição</span><b>@Personagem.Constituicao</b><small>@ObterModificador(Personagem.Constituicao)</small></div>
+        <div class="atributo"><span>Inteligência</span><b>@Personagem.Inteligencia</b><small>@ObterModificador(Personagem.Inteligencia)</small></div>
+        <div class="atributo"><span>Sabedoria</span><b>@Personagem.Sabedoria</b><small>@ObterModificador(Personagem.Sabedoria)</small></div>
+        <div class="atributo"><span>Carisma</span><b>@Personagem.Carisma</b><small>@ObterModificador(Personagem.Carisma)</small></div>
     </aside>
 
     <div class="anotacoes">
@@ -19,8 +21,8 @@
             <p>Nem toda trilha segura leva ao destino certo.</p>
         </section>
         <section class="bloco-anotacao">
-            <h2>Pontos de vida temporários</h2>
-            <p class="valor-destaque">08 <span>pontos</span></p>
+            <h2>Pontos de vida</h2>
+            <p class="valor-destaque">@Personagem.PvAtual / @Personagem.PvMaximo <span>PV</span></p>
         </section>
         <section class="diario">
             <div class="diario-abas" aria-label="Seções do diário">
@@ -63,3 +65,14 @@
         </div>
     </aside>
 </div>
+
+@code {
+    [Parameter]
+    public Personagem Personagem { get; set; } = new();
+
+    private string ObterModificador(int valor)
+    {
+        int mod = (valor - 10) / 2;
+        return mod >= 0 ? $"+{mod}" : $"{mod}";
+    }
+}

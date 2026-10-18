@@ -1,34 +1,151 @@
 @page "/campanhas"
+@using RPGdeMesa.Services
+@using RPGdeMesa.Models
+@inject CampanhaService CampanhaService
+@inject SessaoUsuarioService SessaoUsuario
+@inject NavigationManager Navigation
+
 <NavMenu />
 
 <div class="tela-rpg tela-campanhas">
-
     <main class="conteudo-rpg">
         <div class="titulo-pagina">
             <div>
                 <p class="sobretitulo-rpg">Sua biblioteca de aventuras</p>
                 <h1>Campanhas</h1>
-                <p class="texto-apoio">Histórias prontas para continuar.</p>
+                <p class="texto-apoio">Histórias prontas para continuar ou participar.</p>
             </div>
             <a class="botao-dourado" href="/criar-campanha"><span aria-hidden="true">+</span> Nova campanha</a>
         </div>
 
-        <div class="grade-campanhas">
-            <a class="cartao-campanha" href="/campanha" aria-label="Abrir campanha A Legião Grotesca">
-                <img src="img/capacampanha1.png" alt="Capa da campanha A Legião Grotesca" />
-                <span class="estado-campanha">Em andamento</span>
-                <div class="info-campanha"><span>2D6 World</span><h2>A Legião Grotesca</h2><small>Última sessão há 2 dias</small></div>
-            </a>
+        <div class="painel-convite-container">
+            <div class="painel-convite-barra">
+                <div class="painel-convite-input-wrapper">
+                    <span class="icone-chave" aria-hidden="true">🔑</span>
+                    <input type="text" @bind="codigoConviteInput" placeholder="Digite o código de convite da campanha (Ex.: ABC-123)" class="painel-convite-input" />
+                </div>
+                <button type="button" class="botao-dourado" @onclick="EntrarPorCodigoAsync">Entrar na campanha</button>
+            </div>
+            @if (!string.IsNullOrEmpty(mensagemFeedback))
+            {
+                <p class="feedback-mensagem @(sucessoConvite ? "sucesso" : "erro")">@mensagemFeedback</p>
+            }
+        </div>
 
-            <a class="cartao-adicionar" href="/criar-campanha">
-                <span class="mais-adicionar" aria-hidden="true">+</span>
-                <strong>Criar campanha</strong>
-                <small>Comece uma nova aventura</small>
-            </a>
+        <div class="abas-navegacao">
+            <button type="button" class="botao-aba @(abaAtiva == "mestre" ? "ativo" : "")" @onclick='() => abaAtiva = "mestre"'>
+                👑 Como Mestre (@campanhasMestre.Count)
+            </button>
+            <button type="button" class="botao-aba @(abaAtiva == "jogador" ? "ativo" : "")" @onclick='() => abaAtiva = "jogador"'>
+                ⚔️ Como Jogador (@campanhasJogador.Count)
+            </button>
+        </div>
+
+        <div class="grade-campanhas">
+            @if (abaAtiva == "mestre")
+            {
+                if (campanhasMestre.Any())
+                {
+                    foreach (var campanha in campanhasMestre)
+                    {
+                        <a class="cartao-campanha" href="/campanha/@campanha.IdCampanha" aria-label="Abrir campanha @campanha.Nome">
+                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
+                            <span class="estado-campanha tag-mestre">Mestre (Criador)</span>
+                            <div class="info-campanha">
+                                <span>Código: @campanha.CodigoConvite</span>
+                                <h2>@campanha.Nome</h2>
+                                <small>Criada em @campanha.DataCriacao.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <p class="aviso-vazio">Você ainda não criou nenhuma campanha como Mestre.</p>
+                }
+
+                <a class="cartao-adicionar" href="/criar-campanha">
+                    <span class="mais-adicionar" aria-hidden="true">+</span>
+                    <strong>Criar campanha</strong>
+                    <small>Comece uma nova aventura</small>
+                </a>
+            }
+            else
+            {
+                if (campanhasJogador.Any())
+                {
+                    foreach (var campanha in campanhasJogador)
+                    {
+                        <a class="cartao-campanha" href="/campanha/@campanha.IdCampanha" aria-label="Abrir campanha @campanha.Nome">
+                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
+                            <span class="estado-campanha tag-jogador">Jogador</span>
+                            <div class="info-campanha">
+                                <span>Aventureiro</span>
+                                <h2>@campanha.Nome</h2>
+                                <small>Participando</small>
+                            </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <p class="aviso-vazio">Você ainda não está participando de nenhuma campanha como jogador. Use um código de convite acima!</p>
+                }
+            }
         </div>
     </main>
 </div>
 
 @code {
+    private List<Campanha> campanhasMestre = new();
+    private List<Campanha> campanhasJogador = new();
+    
+    private string codigoConviteInput = "";
+    private string mensagemFeedback = "";
+    private bool sucessoConvite = false;
+    private string abaAtiva = "mestre";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarCampanhasAsync();
+    }
+
+    private async Task CarregarCampanhasAsync()
+    {
+        int idUsuario = SessaoUsuario.IdUsuarioLogado;
+        if (idUsuario > 0)
+        {
+            campanhasMestre = await CampanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
+            campanhasJogador = await CampanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+        }
+    }
+
+    private async Task EntrarPorCodigoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(codigoConviteInput))
+        {
+            sucessoConvite = false;
+            mensagemFeedback = "Digite um código de convite válido.";
+            return;
+        }
+
+        int idUsuario = SessaoUsuario.IdUsuarioLogado;
+        if (idUsuario <= 0)
+        {
+            sucessoConvite = false;
+            mensagemFeedback = "Faça login novamente para entrar em uma campanha.";
+            return;
+        }
+
+        var resultado = await CampanhaService.EntrarNaCampanhaPorCodigoAsync(idUsuario, codigoConviteInput.Trim());
+        sucessoConvite = resultado.Sucesso;
+        mensagemFeedback = resultado.Mensagem;
+
+        if (sucessoConvite)
+        {
+            codigoConviteInput = "";
+            await CarregarCampanhasAsync();
+            StateHasChanged();
+        }
+    }
 }

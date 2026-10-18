@@ -1,0 +1,108 @@
+﻿using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.Models;
+using System;
+
+namespace RPGdeMesa.Data
+{
+    public class AppDbContext : DbContext
+    {
+        // Mapeamento de todas as Tabelas do Banco de Dados
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Perfil> Perfis { get; set; }
+        public DbSet<Personagem> Personagens { get; set; }
+        public DbSet<Campanha> Campanhas { get; set; }
+        public DbSet<NPC> Npcs { get; set; }
+        public DbSet<Item> Itens { get; set; }
+        public DbSet<Monstro> Monstros { get; set; }
+        public DbSet<PersonagemCampanha> PersonagensCampanha { get; set; }
+        public DbSet<UsuarioCampanha> UsuariosCampanha { get; set; }
+        public DbSet<MonstroCampanha> MonstroCampanhas { get; set; }
+
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                string connectionString = @"Server=rpgsystem.database.windows.net,1433;
+                            Initial Catalog=rpg_system;
+                            Persist Security Info=False;
+                            User ID=cleverson; 
+                            Password=Seila1234@;
+                            MultipleActiveResultSets=False;
+                            Encrypt=True;
+                            TrustServerCertificate=True;
+                            Connection Timeout=30;";
+
+                optionsBuilder.UseSqlServer(connectionString, sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorNumbersToAdd: null);
+                });
+            }
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Relacionamento 1:1 entre Usuario e Perfil
+            modelBuilder.Entity<Usuario>()
+                .HasOne(u => u.Perfil)
+                .WithOne(p => p.Usuario)
+                .HasForeignKey<Perfil>(p => p.IdAccount);
+
+            // Relacionamento 1:N entre Usuario e Personagem
+            modelBuilder.Entity<Usuario>()
+                .HasMany(u => u.Personagens)
+                .WithOne(p => p.Usuario)
+                .HasForeignKey(p => p.IdAccount);
+
+            // Configuração da Chave Composta e Relacionamentos de Personagem_Campanha
+            modelBuilder.Entity<PersonagemCampanha>()
+                .HasKey(pc => new { pc.IdPersonagem, pc.IdCampanha });
+
+            modelBuilder.Entity<PersonagemCampanha>()
+                .HasOne(pc => pc.Personagem)
+                .WithMany(p => p.PersonagemCampanhas)
+                .HasForeignKey(pc => pc.IdPersonagem);
+
+            modelBuilder.Entity<PersonagemCampanha>()
+                .HasOne(pc => pc.Campanha)
+                .WithMany(c => c.PersonagemCampanhas)
+                .HasForeignKey(pc => pc.IdCampanha);
+
+            // Configuração da Chave Composta e Relacionamentos de Usuario_Campanha
+            modelBuilder.Entity<UsuarioCampanha>()
+                .HasKey(uc => new { uc.IdAccount, uc.IdCampanha });
+
+            modelBuilder.Entity<UsuarioCampanha>()
+                .HasOne(uc => uc.Usuario)
+                .WithMany()
+                .HasForeignKey(uc => uc.IdAccount);
+
+            modelBuilder.Entity<UsuarioCampanha>()
+                .HasOne(uc => uc.Campanha)
+                .WithMany()
+                .HasForeignKey(uc => uc.IdCampanha);
+
+            // Configuração da Chave Composta e Relacionamentos de MonstroCampanha
+            modelBuilder.Entity<MonstroCampanha>()
+                .HasKey(mc => new { mc.IdMonstro, mc.IdCampanha });
+
+            modelBuilder.Entity<MonstroCampanha>()
+                .HasOne(mc => mc.Monstro)
+                .WithMany(m => m.MonstroCampanhas)
+                .HasForeignKey(mc => mc.IdMonstro);
+
+            modelBuilder.Entity<MonstroCampanha>()
+                .HasOne(mc => mc.Campanha)
+                .WithMany(c => c.MonstroCampanhas)
+                .HasForeignKey(mc => mc.IdCampanha);
+        }
+    }
+}

@@ -1,4 +1,8 @@
-﻿@page "/personagem-editar"
+﻿@page "/personagem-editar/{Id:int}"
+@using RPGdeMesa.ViewModel
+@inject PersonagemEditarViewModel ViewModel
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <NavMenu />
 
@@ -8,68 +12,91 @@
             <div class="ficha-cabecalho">
                 <div class="retrato-coluna">
                     <div class="retrato">
-                        <img id="imagem-personagem-atual" src="img/armaduraprata.png" alt="Retrato do personagem" />
+                        <img id="imagem-personagem-atual" src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)" alt="Retrato do personagem" />
                     </div>
                     <label class="upload-imagem-botao retrato-upload">
                         <span aria-hidden="true">↑</span> Foto
                         <input id="imagem-personagem-edicao" type="file" accept="image/*" aria-label="Alterar foto do personagem" />
                     </label>
-                </div>  
+                </div>
                 <div class="identidade">
                     <p class="sobretitulo">Ficha de personagem</p>
-                    <h1 id="nome-personagem">Lyra Ventobrasa</h1>
-                    <p class="descricao-personagem">Elfa • Patrulheira • Nível 07</p>
+                    <h1 id="nome-personagem">@ViewModel.PersonagemAtual.Nome</h1>
+                    <p class="descricao-personagem">@(ViewModel.PersonagemAtual.RacaTexto ?? "Raça") • @(ViewModel.PersonagemAtual.ClasseTexto ?? "Classe") • Nível @ViewModel.PersonagemAtual.Nivel</p>
                     <div class="dados-personagem">
-                        <span><b>Raça</b> Elfa da floresta</span>
-                        <span><b>Tendência</b> Caótica e boa</span>
-                        <span><b>Antecedente</b> Batedora</span>
+                        <span><b>Raça</b> @(ViewModel.PersonagemAtual.RacaTexto ?? "Não informada")</span>
+                        <span><b>Tendência</b> @(ViewModel.PersonagemAtual.Tendencia ?? "Neutra")</span>
+                        <span><b>Antecedente</b> @(ViewModel.PersonagemAtual.AntecedenteTexto ?? "Não informado")</span>
                     </div>
                 </div>
                 <div class="marcadores">
-                    <div class="marcador-classe"><span>Classe</span><b>Patrulheira</b></div>
-                    <div class="marcador-nivel"><span>XP</span><b>12.450</b></div>
+                    <div class="marcador-classe"><span>Classe</span><b>@(ViewModel.PersonagemAtual.ClasseTexto ?? "N/A")</b></div>
+                    <div class="marcador-nivel"><span>XP</span><b>@ViewModel.PersonagemAtual.ExperienciaXp.ToString("N0")</b></div>
                 </div>
             </div>
 
+            <!-- Botões de troca de abas -->
             <div class="troca-ficha" role="tablist" aria-label="Visão da ficha">
-                <button class="aba-ficha @(abaAtiva == "atributos" ? "ativa" : "")"
-                        @onclick='() => MudarAba("atributos")'
-                        type="button" role="tab" aria-selected="@(abaAtiva == "atributos")">
+                <button class="aba-ficha @(ViewModel.AbaAtiva == "atributos" ? "ativa" : "")"
+                        @onclick='() => ViewModel.MudarAba("atributos")'
+                        type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "atributos")">
                     Atributos
                 </button>
-                <button class="aba-ficha @(abaAtiva == "personagem" ? "ativa" : "")"
-                        @onclick='() => MudarAba("personagem")'
-                        type="button" role="tab" aria-selected="@(abaAtiva == "personagem")">
+                <button class="aba-ficha @(ViewModel.AbaAtiva == "personagem" ? "ativa" : "")"
+                        @onclick='() => ViewModel.MudarAba("personagem")'
+                        type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "personagem")">
                     Personagem <span aria-hidden="true">↔</span>
                 </button>
-                <button class="aba-ficha @(abaAtiva == "inventario" ? "ativa" : "")"
-                        @onclick='() => MudarAba("inventario")'
-                        type="button" role="tab" aria-selected="@(abaAtiva == "inventario")">
+                <button class="aba-ficha @(ViewModel.AbaAtiva == "inventario" ? "ativa" : "")"
+                        @onclick='() => ViewModel.MudarAba("inventario")'
+                        type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "inventario")">
                     Inventário
                 </button>
             </div>
 
-            @switch (abaAtiva)
+            <!-- Renderização dinâmica da aba ativa -->
+            @switch (ViewModel.AbaAtiva)
             {
                 case "atributos":
-                    <FichaAtributos />
+                    <FichaAtributos Personagem="@ViewModel.PersonagemAtual" />
                     break;
                 case "personagem":
-                    <FichaDetalhes />
+                    <FichaDetalhes Personagem="@ViewModel.PersonagemAtual" />
                     break;
                 case "inventario":
-                    <FichaInventario />
+                    <FichaInventario Personagem="@ViewModel.PersonagemAtual" />
                     break;
             }
+
+            @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
+            {
+                <div style="padding: 10px; margin-top: 15px; text-align: center; color: @(ViewModel.Sucesso ? "#28a745" : "#dc3545"); font-weight: bold;">
+                    @ViewModel.MensagemFeedback
+                </div>
+            }
+
+            <div style="padding: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <a class="action-secondary" href="/personagem-lib">Cancelar</a>
+                <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@ViewModel.IsProcessing">
+                    @(ViewModel.IsProcessing ? "Salvando..." : "Salvar Alterações")
+                </button>
+            </div>
         </section>
     </main>
 </div>
 
 @code {
-    private string abaAtiva = "atributos";
+    [Parameter]
+    public int Id { get; set; }
 
-    private void MudarAba(string novaAba)
+    protected override async Task OnInitializedAsync()
     {
-        abaAtiva = novaAba;
+        ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarPersonagemAsync(Id);
+    }
+
+    public void Dispose()
+    {
+        ViewModel.OnChange -= StateHasChanged;
     }
 }

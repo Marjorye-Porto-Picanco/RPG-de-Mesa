@@ -1,4 +1,6 @@
-﻿<div class="visao-ficha visao-inventario" id="visao-inventario" role="tabpanel" aria-labelledby="aba-inventario">
+﻿@using RPGdeMesa.Models
+
+<div class="visao-ficha visao-inventario" id="visao-inventario" role="tabpanel" aria-labelledby="aba-inventario">
     <form id="form-inventario" class="inventario-aba" @onsubmit:preventDefault="true">
         <div class="corpo-inventario">
             <div class="listas-itens">
@@ -153,7 +155,6 @@
         </div>
 
         <div class="rodape-inventario">
-            
             <button class="botao-salvar-inventario" type="button" @onclick="SalvarInventario">
                 <span aria-hidden="true">▣</span> Salvar inventário
             </button>
@@ -162,6 +163,9 @@
 </div>
 
 @code {
+    [Parameter]
+    public Personagem Personagem { get; set; } = new();
+
     public class ItemInventario
     {
         public string Nome { get; set; } = "";
@@ -191,6 +195,7 @@
     private double PesoTotal => Itens.Sum(i => i.Peso * i.Quantidade);
 
     private string Notas = "O amuleto de âmbar pertenceu à avó de Lyra.";
+    
     private void AdicionarItem(string categoria)
     {
         Itens.Add(new ItemInventario
@@ -210,6 +215,5 @@
 
     private void SalvarInventario()
     {
-       
     }
 }

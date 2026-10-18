@@ -356,3 +356,96 @@ body {
         gap: 8px;
     }
 }
+.painel-convite-container {
+    margin-bottom: 30px;
+}
+
+.painel-convite-barra {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(18, 18, 20, 0.8);
+    border: 1px solid #4a3b2c;
+    padding: 12px 16px;
+    border-radius: 6px;
+    flex-wrap: wrap;
+}
+
+.painel-convite-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 280px;
+}
+
+.icone-chave {
+    color: #a89f91;
+    font-size: 16px;
+}
+
+.painel-convite-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    outline: none;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.feedback-mensagem {
+    width: 100%;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    padding-left: 4px;
+}
+
+    .feedback-mensagem.sucesso {
+        color: #28a745;
+    }
+
+    .feedback-mensagem.erro {
+        color: #dc3545;
+    }
+
+.abas-navegacao {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.botao-aba {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    padding-bottom: 5px;
+    border-bottom: 2px solid transparent;
+    transition: color 150s ease, border-color 150s ease;
+}
+
+    .botao-aba.ativo {
+        color: #d4af37;
+        border-bottom-color: #d4af37;
+    }
+
+.tag-mestre {
+    background: #8b0000 !important;
+    color: #fff;
+}
+
+.tag-jogador {
+    background: #1e3a8a !important;
+    color: #fff;
+}
+
+.aviso-vazio {
+    color: #aaa;
+    grid-column: span 2;
+}
