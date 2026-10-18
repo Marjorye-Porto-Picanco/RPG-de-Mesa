@@ -27,6 +27,14 @@
                     </label>
 
                     <label class="form-field">
+                        Tipo do personagem
+                        <select @bind="tipoPersonagem">
+                            <option value="Personagem">Personagem</option>
+                            <option value="NPC">NPC</option>
+                        </select>
+                    </label>
+
+                    <label class="form-field">
                         Raça
                         <select @bind="ViewModel.PersonagemAtual.RacaTexto" required>
                             <option value="">Escolha uma raça</option>
@@ -134,6 +142,9 @@
         ViewModel.LimparFormulario();
         ViewModel.OnChange += StateHasChanged;
     }
+
+    // Campo local apenas para estruturar o select de tipo (Personagem / NPC)
+    private string tipoPersonagem = "Personagem";
 
     public void Dispose()
     {

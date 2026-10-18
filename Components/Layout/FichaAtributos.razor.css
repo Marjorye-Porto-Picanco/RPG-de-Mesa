@@ -1,96 +1,135 @@
-/* CSS for FichaAtributos component */
 .ficha-corpo {
-    position: relative;
-    z-index: 1;
     display: grid;
     flex: 1;
-    grid-template-columns: 82px minmax(150px, 1fr) 126px;
+    grid-template-columns: 150px minmax(220px, 1fr) 180px;
     align-items: stretch;
-    gap: 18px;
+    gap: 20px;
 }
 
 .atributos h2,
 .pericias h2 {
-    margin: 0 0 9px;
+    margin: 0 0 12px;
     color: #9a712f;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
+
+    .atributos h2::after {
+        display: block;
+        height: 1px;
+        margin-top: 9px;
+        background: linear-gradient(90deg, rgba(154, 113, 47, 0.62), transparent);
+        content: "";
+    }
 
 .atributos {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 8px;
+    padding: 14px 12px;
+    border: 1px solid rgba(132, 94, 39, 0.22);
+    border-radius: 16px;
+    background: rgba(255, 247, 226, 0.28);
 }
 
 .atributo {
     display: grid;
-    min-height: 51px;
+    position: relative;
+    min-height: 55px;
     grid-template-columns: 1fr auto;
     align-items: center;
-    padding: 5px 7px;
-    border: 1px solid rgba(150, 108, 48, 0.62);
-    border-radius: 42% 42% 45% 45%;
-    color: #815e2b;
-    text-align: center;
+    padding: 7px 10px;
+    border: 1px solid rgba(150, 108, 48, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 252, 241, 0.52);
+    color: #694b22;
+    text-align: left;
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
+
+    .atributo:hover {
+        transform: translateY(-1px);
+        border-color: rgba(163, 116, 41, 0.72);
+        box-shadow: 0 5px 12px rgba(75, 49, 16, 0.1);
+    }
 
     .atributo span {
         grid-column: 1 / -1;
+        color: #795a2d;
         font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.025em;
     }
 
     .atributo b {
         justify-self: end;
-        font-size: 17px;
-        font-weight: 500;
+        font-size: 21px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        line-height: 1;
     }
 
     .atributo small {
         justify-self: start;
-        padding-left: 4px;
+        min-width: 29px;
+        margin-left: 7px;
+        padding: 4px 6px;
+        border: 1px solid rgba(132, 94, 39, 0.19);
+        border-radius: 999px;
+        background: rgba(132, 94, 39, 0.09);
+        color: #765421;
         font-size: 10px;
+        font-weight: 700;
+        text-align: center;
     }
 
     .atributo.destaque {
-        border-color: #b7812a;
-        background: rgba(179, 128, 38, 0.12);
-        color: #704916;
+        border-color: rgba(173, 120, 35, 0.78);
+        background: linear-gradient(145deg, rgba(244, 222, 169, 0.92), rgba(227, 194, 124, 0.7));
+        color: #603e12;
+        box-shadow: inset 3px 0 #b7812a, 0 4px 12px rgba(103, 70, 21, 0.1);
     }
 
-/* ==========================================================================
-   ANOTAÇÕES & DIÁRIO
-   ========================================================================== */
+        .atributo.destaque span {
+            color: #684716;
+        }
+
+        .atributo.destaque small {
+            border-color: rgba(132, 94, 39, 0.3);
+            background: rgba(255, 248, 225, 0.48);
+        }
+
 .anotacoes {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .bloco-anotacao {
-    min-height: 83px;
-    padding: 9px 12px 11px;
-    border: 1px solid rgba(126, 87, 31, 0.34);
-    border-radius: 17px;
-    background: rgba(153, 111, 37, 0.88);
+    min-height: 72px;
+    padding: 12px 15px;
+    border: 1px solid rgba(126, 87, 31, 0.26);
+    border-left: 3px solid rgba(126, 87, 31, 0.68);
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(143, 105, 49, 0.94), rgba(124, 89, 39, 0.94));
     color: #fff1d1;
-    box-shadow: inset 0 0 18px rgba(78, 49, 12, 0.13);
+    box-shadow: 0 5px 14px rgba(72, 47, 14, 0.09);
 }
 
     .bloco-anotacao h2 {
-        margin: 0 0 8px;
-        color: #fff0cc;
+        margin: 0 0 7px;
+        color: #ffe9b5;
         font-size: 12px;
-        font-weight: 500;
-        text-align: center;
+        font-weight: 600;
     }
 
     .bloco-anotacao p,
     .diario p {
         margin: 0;
-        font-size: 11px;
-        line-height: 1.45;
+        font-size: 12px;
+        line-height: 1.55;
     }
 
 .valor-destaque {
@@ -104,42 +143,41 @@
 
 .diario {
     flex: 1;
-    min-height: 120px;
+    min-height: 130px;
     overflow: hidden;
-    border: 1px solid #9f762f;
-    border-radius: 6px;
-    background: rgba(144, 103, 32, 0.85);
+    border: 1px solid rgba(126, 87, 31, 0.58);
+    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(139, 99, 37, 0.96), rgba(119, 83, 31, 0.96));
     color: #fff1d1;
+    box-shadow: 0 5px 14px rgba(72, 47, 14, 0.09);
 }
 
 .diario-abas {
     display: flex;
-    min-height: 31px;
+    min-height: 36px;
     justify-content: space-around;
-    border-bottom: 1px solid rgba(255, 231, 181, 0.54);
-    background: rgba(205, 163, 76, 0.6);
+    border-bottom: 1px solid rgba(255, 231, 181, 0.3);
+    background: rgba(70, 48, 19, 0.2);
 }
 
     .diario-abas span {
         display: grid;
         flex: 1;
         place-items: center;
-        border-right: 1px solid rgba(255, 231, 181, 0.34);
-        color: #fff0cc;
+        border-right: 1px solid rgba(255, 231, 181, 0.2);
+        color: #f4dfb1;
         font-size: 10px;
     }
 
     .diario-abas .aba-selecionada {
-        background: rgba(255, 238, 195, 0.13);
+        background: rgba(255, 238, 195, 0.17);
+        color: #fff6dd;
     }
 
 .diario p {
-    padding: 12px;
+    padding: 15px;
 }
 
-/* ==========================================================================
-   PERÍCIAS & SALVAGUARDAS
-   ========================================================================== */
 .pericias {
     display: flex;
     flex-direction: column;
@@ -147,68 +185,113 @@
 }
 
 .pericias-grupo {
-    padding: 10px 11px;
-    border: 1px solid rgba(111, 79, 38, 0.16);
-    border-radius: 16px;
-    background: rgba(89, 72, 48, 0.83);
+    padding: 13px 14px;
+    border: 1px solid rgba(104, 82, 48, 0.28);
+    border-radius: 12px;
+    background: linear-gradient(155deg, rgba(81, 69, 49, 0.94), rgba(69, 57, 40, 0.94));
     color: #f0e1c5;
+    box-shadow: 0 5px 14px rgba(72, 47, 14, 0.08);
 }
 
     .pericias-grupo h2 {
-        margin-bottom: 8px;
-        color: #ecd39d;
+        margin-bottom: 10px;
+        color: #f0d79f;
         font-size: 11px;
-        text-align: center;
+        letter-spacing: 0.07em;
+        text-align: left;
+        text-transform: uppercase;
     }
 
     .pericias-grupo ul {
         display: grid;
-        gap: 5px;
+        gap: 7px;
         margin: 0;
         padding: 0;
         list-style: none;
     }
 
-    .pericias-grupo li {
-        position: relative;
-        padding-left: 13px;
-        color: #ded0b7;
-        font-size: 10px;
-    }
-
-        .pericias-grupo li::before {
-            position: absolute;
-            top: 3px;
-            left: 0;
-            width: 6px;
-            height: 6px;
-            border: 1px solid #d7c6a5;
-            border-radius: 50%;
-            content: "";
-        }
-
-        .pericias-grupo li.treinada::before {
-            border-color: #d6a84d;
-            background: #d6a84d;
-        }
-
 .pericias-lista {
     flex: 1;
 }
 
-/* ==========================================================================
-   RESPONSIVIDADE (ATRIBUTOS)
-   ========================================================================== */
-@media (max-width: 620px) {
+.opcao-proficiencia {
+    display: flex;
+    min-height: 27px;
+    align-items: center;
+    gap: 9px;
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: #e8dcc6;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+    .opcao-proficiencia:hover {
+        border-color: rgba(225, 184, 95, 0.24);
+        background: rgba(255, 239, 199, 0.07);
+    }
+
+    .opcao-proficiencia input {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
+        margin: 0;
+        border: 1px solid #d7c6a5;
+        border-radius: 50%;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+    }
+
+        .opcao-proficiencia input:checked {
+            border: 4px solid #e1b85f;
+            background: #fff0c8;
+            box-shadow: 0 0 0 2px rgba(225, 184, 95, 0.15);
+        }
+
+            .opcao-proficiencia input:checked + span {
+                color: #ffe5a4;
+                font-weight: 700;
+            }
+
+        .opcao-proficiencia input:focus-visible {
+            outline: 2px solid #f3d27c;
+            outline-offset: 3px;
+        }
+
+@media (max-width: 900px) {
     .ficha-corpo {
-        grid-template-columns: 1fr 1fr;
-        gap: 18px 14px;
+        grid-template-columns: 132px minmax(180px, 1fr) 160px;
+        gap: 14px;
+    }
+
+    .atributos {
+        padding: 12px 9px;
+    }
+
+    .atributo {
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+
+    .pericias-grupo {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
+
+@media (max-width: 760px) {
+    .ficha-corpo {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
     }
 
     .atributos {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        grid-column: 1 / -1;
+        grid-column: 1;
     }
 
         .atributos h2 {
@@ -219,21 +302,28 @@
         min-height: 58px;
     }
 
-    .anotacoes {
-        grid-column: 1 / -1;
-    }
-
-    .bloco-anotacao {
-        min-height: 76px;
-    }
-
-    .diario {
-        min-height: 112px;
+    .anotacoes,
+    .pericias {
+        grid-column: 1;
     }
 
     .pericias {
         display: grid;
-        grid-column: 1 / -1;
-        grid-template-columns: 1fr 1.4fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+
+    .pericias-lista {
+        flex: initial;
+    }
+}
+
+@media (max-width: 420px) {
+    .atributos {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pericias {
+        grid-template-columns: minmax(0, 1fr);
     }
 }

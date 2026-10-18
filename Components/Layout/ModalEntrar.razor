@@ -1,0 +1,83 @@
+﻿@using RPGdeMesa.Services
+@inject CampanhaService CampanhaService
+@inject SessaoUsuarioService SessaoUsuario
+
+<section class="modal-fundo" @onclick="FecharModal">
+    <div class="painel-convite-card" @onclick:stopPropagation="true">
+        <!-- Cabeçalho -->
+        <header class="modal-cabecalho">
+            <div class="modal-titulo-wrapper">
+                <span class="modal-subtitulo">Acesso de Jogador</span>
+                <h2>Entrar em uma Campanha</h2>
+            </div>
+            <button type="button" class="btn-fechar" @onclick="FecharModal" aria-label="Fechar">✕</button>
+        </header>
+
+        <!-- Corpo com Input e Ação -->
+        <div class="modal-corpo">
+            <p class="modal-instrucao">Peça o código de convite ao Mestre para se juntar à mesa de jogo.</p>
+            
+            <div class="campo-convite-wrapper">
+                <span class="icone-input" aria-hidden="true"></span>
+                <input type="text" 
+                       @bind="codigoConviteInput" 
+                       placeholder="Ex.: CMP-9876" 
+                       class="input-convite" 
+                       maxlength="20" />
+
+
+
+
+                       <!--bota um combo box aqui dos personagems criado para o enviado da ficha-->
+
+
+
+
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensagemFeedback))
+            {
+                <div class="alerta-feedback @(sucessoConvite ? "alerta-sucesso" : "alerta-erro")">
+                    <span>@(sucessoConvite ? "foi" : "não foi")</span>
+                    <p>@mensagemFeedback</p>
+                </div>
+            }
+
+            <button type="button" class="botao-dourado-cheio" @onclick="EntrarPorCodigoAsync">
+                ⚔️ Entrar na campanha
+            </button>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter] public EventCallback OnFechar { get; set; }
+    [Parameter] public EventCallback OnCampanhaEntrada { get; set; }
+
+    private string codigoConviteInput = string.Empty;
+    private string mensagemFeedback = string.Empty;
+    private bool sucessoConvite = false;
+
+    private async Task FecharModal() => await OnFechar.InvokeAsync();
+
+    private async Task EntrarPorCodigoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(codigoConviteInput))
+        {
+            mensagemFeedback = "Informe o código de convite antes de continuar.";
+            sucessoConvite = false;
+            return;
+        }
+
+        int idUsuario = SessaoUsuario.IdUsuarioLogado;
+
+        // Chamada real ao serviço:
+        // var resultado = await CampanhaService.EntrarComCodigoAsync(codigoConviteInput.Trim(), idUsuario);
+
+        sucessoConvite = true;
+        mensagemFeedback = "Vinculado à mesa com sucesso! Redirecionando...";
+
+        await Task.Delay(800);
+        await OnCampanhaEntrada.InvokeAsync();
+    }
+}

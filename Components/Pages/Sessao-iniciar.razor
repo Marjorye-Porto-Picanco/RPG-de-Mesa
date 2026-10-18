@@ -1,0 +1,82 @@
+﻿@page "/sessao-iniciar"
+
+
+
+<div class="app-shell">
+
+
+    <main class="app-content">
+        <div class="page-heading">
+            <div><p class="page-kicker">Prepare a mesa</p><h1 class="page-title">Iniciar sessão</h1><p class="page-description">Reúna o grupo, registre o plano e acompanhe o tempo de jogo.</p></div>
+        </div>
+
+        <section class="session-running" id="sessao-ativa" aria-live="polite" hidden>
+            <div class="running-topline"><span class="session-live" id="estado-sessao">Sessão em andamento</span><a class="action-secondary" href="saladojogo.html">Entrar na sala de jogo</a></div>
+            <h2 id="nome-sessao-ativa">Crônicas de Eldoria</h2>
+            <p id="detalhes-sessao-ativa">Sessão de jogo</p>
+            <img id="imagem-sessao-ativa" class="session-image-preview" alt="Imagem da sessão" hidden />
+            <div class="session-timer" id="cronometro" role="timer" aria-label="Duração da sessão">00:00:00</div>
+            <div class="session-controls">
+                <button id="pausar-sessao" type="button">Pausar sessão</button>
+                <button id="encerrar-sessao" type="button">Finalizar sessão</button>
+            </div>
+        </section>
+
+        <div class="session-layout" id="configurar-sessao">
+            <form class="form-panel session-form" id="form-sessao">
+                <section>
+                    <h2>Detalhes da sessão</h2>
+                    <div class="form-grid">
+                        <label class="form-field full-width">Nome da sessão<input name="nome" required maxlength="80" value="Crônicas de Eldoria · A trilha esquecida" /></label>
+                        <label class="form-field">Campanha<select name="campanha"><option>Crônicas de Eldoria</option><option>O Véu de Cinzas</option><option>Erathia</option><option>A Legião Grotesca</option><option>Perseguidor Noturno</option><option>Mistérios da Floresta</option><option>Ecos da Teia</option><option>Revolução Mutante</option><option>A Coroa dos Vermes</option><option>Heróis em Crise</option><option>Guerras Secretas</option><option>KULT: Divindade Perdida</option></select></label>
+                        <label class="form-field">Data<input name="data" type="date" required /></label>
+                        <label class="form-field">Horário<input name="horario" type="time" value="19:00" /></label>
+                        <label class="form-field">Local ou chamada<input name="local" placeholder="Ex.: Mesa da taverna / Discord" /></label>
+                        <div class="form-field full-width upload-imagem">
+                            <span>Imagem da sessão</span>
+                            <img id="imagem-sessao-previa" class="upload-imagem-preview" alt="Prévia da imagem da sessão" hidden />
+                            <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher imagem da sessão<input id="arquivo-sessao" type="file" accept="image/*" aria-label="Escolher imagem da sessão" /></label>
+                            <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                        </div>
+                        <input name="imagem" type="hidden" />
+                        <div class="form-field full-width">
+                            <span>Personagens presentes</span>
+                            <div class="session-players" id="jogadores-sessao">
+                                
+
+
+
+
+                                <!--bota aqui um combo box com os personagems que o mano possuir-->
+
+
+
+
+
+                            </div>
+                        </div>
+                        <label class="form-field full-width">Notas para esta sessão<textarea name="notas" placeholder="Objetivos, cenas importantes, pistas ou lembretes."></textarea></label>
+                    </div>
+                </section>
+                <div class="form-footer">
+                    <p id="status-sessao" class="form-status" role="status" aria-live="polite"></p>
+                    <button class="action-primary" type="submit">Começar a jogar <span aria-hidden="true">→</span></button>
+                </div>
+            </form>
+
+            <aside class="session-summary" aria-label="Resumo da sessão">
+                <h2>Resumo da mesa</h2>
+                <div class="summary-line"><span>Campanha</span><strong id="resumo-campanha">Crônicas de Eldoria</strong></div>
+                <div class="summary-line"><span>Data</span><strong id="resumo-data">Hoje</strong></div>
+                <div class="summary-line"><span>Horário</span><strong id="resumo-horario">19:00</strong></div>
+                <div class="summary-line"><span>Jogadores</span><strong id="resumo-jogadores">3 presentes</strong></div>
+                <div class="summary-line"><span>Local</span><strong id="resumo-local">A definir</strong></div>
+            </aside>
+        </div>
+    </main>
+</div>
+
+
+@code {
+
+}

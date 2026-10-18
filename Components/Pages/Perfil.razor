@@ -1,0 +1,57 @@
+﻿@page "/perfil"
+<NavMenu />
+<div class="app-shell">
+
+    <main class="app-content">
+        <div class="page-heading">
+            <div><p class="page-kicker">Sua conta na mesa</p><h1 class="page-title">Perfil e preferências</h1><p class="page-description">Mantenha suas informações pessoais e preferências organizadas.</p></div>
+        </div>
+
+        <div class="profile-layout">
+            <aside class="profile-summary" aria-label="Resumo do perfil">
+                <div class="profile-avatar" aria-hidden="true"><span data-avatar-perfil>MM</span><img id="imagem-perfil-preview" class="profile-photo-preview" alt="" hidden /></div>
+                <div><h2 data-nome-resumo>Mestre da mesa</h2><p data-usuario-resumo></p></div>
+                <div class="profile-metrics">
+                    <div><strong id="total-personagens">0</strong><small>personagens</small></div>
+                    <div><strong id="total-monstros">0</strong><small>criaturas próprias</small></div>
+                </div>
+                <div class="upload-imagem profile-image-upload">
+                    <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher foto de perfil<input id="imagem-perfil" type="file" accept="image/*" aria-label="Escolher foto de perfil" /></label>
+                    <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                </div>
+            </aside>
+
+            <form class="profile-settings form-panel" id="form-perfil">
+                <input name="imagem" type="hidden" />
+                <section class="settings-section">
+                    <h2>Informações pessoais</h2>
+                    <div class="form-grid">
+                        <label class="form-field">Nome de exibição<input name="nome" required maxlength="60" value="Mestre da mesa" /></label>
+                        <label class="form-field">Nome de usuário<input name="usuario" required maxlength="30" value="mestre" /></label>
+                        <label class="form-field">E-mail<input name="email" type="email" maxlength="100" placeholder="mestre@exemplo.com" /></label>
+                        <label class="form-field">Fuso horário<select name="fuso"><option value="America/Sao_Paulo">Brasília (GMT-3)</option><option value="America/Manaus">Manaus (GMT-4)</option><option value="America/Belem">Belém (GMT-3)</option><option value="Europe/Lisbon">Lisboa (GMT+0)</option></select></label>
+                        <label class="form-field full-width">Sobre você<textarea name="bio" maxlength="280" placeholder="Conte um pouco sobre seu estilo de jogo."></textarea></label>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h2>Preferências da mesa</h2>
+                    <div class="form-grid">
+                        <label class="form-field">Idioma<select name="idioma"><option value="pt-BR">Português (Brasil)</option><option value="pt-PT">Português (Portugal)</option><option value="en">English</option></select></label>
+                    </div>
+                    <label class="setting-toggle"><span>Novidades da campanha<small>Receber lembretes sobre sessões e atualizações.</small></span><input name="notificacoes" type="checkbox" checked /></label>
+                    <label class="setting-toggle"><span>Resumo semanal<small>Receber um panorama das suas mesas e personagens.</small></span><input name="resumo" type="checkbox" /></label>
+                </section>
+
+                <div class="form-footer">
+                    <p id="status-perfil" class="form-status" role="status" aria-live="polite">As informações deste perfil ficam salvas neste navegador.</p>
+                    <button class="action-primary" type="submit">Salvar perfil</button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+@code {
+
+}

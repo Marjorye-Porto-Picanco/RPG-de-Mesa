@@ -1,0 +1,172 @@
+/* Overlay escurecido */
+.modal-fundo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 8, 12, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+/* Container do modal no estilo card de RPG */
+.painel-convite-card {
+    background: #171821;
+    border: 1px solid #d4af37;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(212, 175, 55, 0.15);
+    width: 100%;
+    max-width: 440px;
+    padding: 1.5rem;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Cabeçalho */
+.modal-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    padding-bottom: 0.75rem;
+}
+
+.modal-subtitulo {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #c5a059;
+    font-weight: 600;
+}
+
+.modal-titulo-wrapper h2 {
+    margin: 0.2rem 0 0 0;
+    font-size: 1.35rem;
+    color: #f5f5f7;
+    font-weight: 700;
+}
+
+.btn-fechar {
+    background: transparent;
+    border: none;
+    color: #8e8e93;
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.2rem;
+    transition: color 0.2s ease;
+}
+
+    .btn-fechar:hover {
+        color: #fff;
+    }
+
+/* Conteúdo e Input */
+.modal-corpo {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-instrucao {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #a1a1aa;
+    line-height: 1.4;
+}
+
+.campo-convite-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.icone-input {
+    position: absolute;
+    left: 12px;
+    font-size: 1.1rem;
+    pointer-events: none;
+}
+
+.input-convite {
+    width: 100%;
+    background: #0f1015;
+    border: 1px solid #2f303d;
+    border-radius: 8px;
+    color: #f4f4f5;
+    font-size: 0.95rem;
+    padding: 0.75rem 0.85rem 0.75rem 2.6rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+    .input-convite:focus {
+        border-color: #d4af37;
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+    }
+
+    .input-convite::placeholder {
+        color: #52525b;
+    }
+
+/* Botão de confirmação dourado */
+.botao-dourado-cheio {
+    width: 100%;
+    background: linear-gradient(180deg, #e3ba4b 0%, #b8861e 100%);
+    border: none;
+    border-radius: 8px;
+    color: #141416;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: filter 0.2s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+    .botao-dourado-cheio:hover {
+        filter: brightness(1.1);
+    }
+
+    .botao-dourado-cheio:active {
+        transform: scale(0.99);
+    }
+
+/* Mensagens de feedback */
+.alerta-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+    .alerta-feedback p {
+        margin: 0;
+    }
+
+.alerta-erro {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+}
+
+.alerta-sucesso {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid #22c55e;
+    color: #86efac;
+}

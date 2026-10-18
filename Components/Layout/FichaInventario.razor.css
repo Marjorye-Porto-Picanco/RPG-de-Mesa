@@ -1,90 +1,583 @@
-/* CSS for FichaInventario component */
-.visao-inventario {
+/* ==========================================================================
+   ESTRUTURA GERAL DA MESA E PALCO
+   ========================================================================== */
+
+.mesa-edicao {
+    min-height: 100vh;
+    background: #20150f url("img/fundodemadeira.png.jpg") center / cover fixed;
+}
+
+.palco {
     display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 64px);
+    padding: 24px;
+}
+
+.navbar-frame {
+    display: block;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 64px;
+    border: 0;
+}
+
+/* ==========================================================================
+   FOLHA DA FICHA DO PERSONAGEM (PERGAMINHO)
+   ========================================================================== */
+
+.ficha-personagem {
+    position: relative;
+    display: flex;
+    width: min(100%, 1120px);
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    min-height: calc(100vh - 106px);
+    padding: 34px clamp(22px, 3vw, 48px) 30px;
+    overflow: hidden;
+    color: #493519;
+    border-radius: 6px;
+    background-color: #dfc38d;
+    background-image: linear-gradient(rgba(248, 229, 188, 0.78), rgba(226, 198, 143, 0.84)), url("img/papelantigo.png");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+    .ficha-personagem::after {
+        position: absolute;
+        z-index: 0;
+        inset: 10px;
+        border: 1px solid rgba(126, 87, 31, 0.35);
+        border-radius: 4px;
+        content: "";
+        pointer-events: none;
+    }
+
+.ficha-cabecalho,
+.ficha-corpo {
+    position: relative;
+    z-index: 1;
+}
+
+/* --- Cabeçalho da Ficha --- */
+.ficha-cabecalho {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 18px;
+}
+
+.retrato-coluna {
+    display: flex;
+    width: 86px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.retrato {
+    display: grid;
+    width: 86px;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #9b712e;
+    border-radius: 4px;
+    background: #281b12;
+    box-shadow: inset 0 0 0 3px rgba(214, 174, 98, 0.16);
+}
+
+    .retrato img {
+        width: 85%;
+        height: 85%;
+        object-fit: contain;
+    }
+
+.retrato-upload {
+    position: relative;
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    overflow: hidden;
+    padding: 0 6px;
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background: rgba(255, 251, 239, 0.65);
+    color: #594323;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+    .retrato-upload:hover {
+        background: rgba(255, 251, 239, 0.95);
+    }
+
+    .retrato-upload input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+.sobretitulo {
+    margin: 0 0 4px;
+    color: #936b2d;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.identidade h1 {
+    margin: 0;
+    color: #392819;
+    font-size: clamp(24px, 2.5vw, 34px);
+    font-weight: 600;
+    line-height: 1.05;
+}
+
+.descricao-personagem {
+    margin: 4px 0 10px;
+    color: #775b32;
+    font-size: 13px;
+}
+
+.dados-personagem {
+    display: grid;
+    gap: 3px;
+    color: #654a27;
+    font-size: 12px;
+}
+
+    .dados-personagem b {
+        display: inline-block;
+        min-width: 75px;
+        color: #8e692f;
+        font-weight: 600;
+    }
+
+.marcadores {
+    display: flex;
+    gap: 8px;
+}
+
+.marcador-classe,
+.marcador-nivel {
+    display: flex;
+    width: 58px;
+    min-height: 66px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid rgba(146, 102, 39, 0.7);
+    color: #765524;
+    text-align: center;
+    background: rgba(255, 248, 230, 0.3);
+}
+
+.marcador-classe {
+    clip-path: polygon(50% 0, 100% 18%, 92% 78%, 50% 100%, 8% 78%, 0 18%);
+}
+
+.marcador-nivel {
+    border-radius: 50%;
+}
+
+    .marcador-classe span,
+    .marcador-nivel span {
+        font-size: 9px;
+        text-transform: uppercase;
+    }
+
+    .marcador-classe b,
+    .marcador-nivel b {
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+/* --- Navegação por Abas --- */
+.troca-ficha {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-self: flex-end;
+    padding: 3px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 24px;
+    background: rgba(100, 70, 31, 0.12);
+}
+
+.aba-ficha {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 20px;
+    background: transparent;
+    color: #765524;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .aba-ficha.ativa,
+    .aba-ficha:hover {
+        background: #a47a2d;
+        color: #fff2d4;
+        box-shadow: 0 2px 6px rgba(65, 43, 14, 0.2);
+    }
+
+/* ==========================================================================
+   VISÃO PERSONAGEM (ABAS DE INFORMAÇÕES PESSOAIS)
+   ========================================================================== */
+
+.visao-personagem {
+    display: flex;
+    min-width: 0;
     flex-direction: column;
     flex: 1;
+    gap: 16px;
 }
+
+.dados-pessoais {
+    display: grid;
+    grid-template-columns: minmax(210px, 2fr) repeat(4, minmax(90px, 1fr));
+    gap: 10px;
+}
+
+.campo-personagem {
+    display: flex;
+    min-height: 58px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border: 1px solid rgba(146, 102, 39, 0.45);
+    border-radius: 8px;
+    background: rgba(241, 205, 104, 0.75);
+    color: #493519;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+    .campo-personagem span {
+        color: #805b22;
+        font-size: 9px;
+        font-weight: bold;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .campo-personagem input {
+        width: 100%;
+        padding: 4px 6px;
+        border: 1px solid rgba(156, 120, 61, 0.35);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.6);
+        color: #392819;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        outline: none;
+        transition: border-color 0.2s, background 0.2s;
+    }
+
+        .campo-personagem input:focus {
+            border-color: #8b5b18;
+            background: #fffdfa;
+            box-shadow: 0 0 0 2px rgba(139, 91, 24, 0.15);
+        }
+
+    .campo-personagem b {
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+/* Painéis de História e Descrição */
+.historia-grade {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(130px, 0.8fr) minmax(140px, 1fr) minmax(120px, 0.8fr);
+    gap: 14px;
+}
+
+.painel-personagem {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(126, 87, 31, 0.55);
+    border-radius: 10px;
+    background: rgba(146, 102, 33, 0.88);
+    color: #fff1d1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), inset 0 0 14px rgba(78, 49, 12, 0.18);
+}
+
+    .painel-personagem h2 {
+        margin: 0 0 8px;
+        color: #ffe6a6;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .painel-personagem p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .painel-personagem textarea {
+        width: 100%;
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid rgba(110, 75, 23, 0.5);
+        border-radius: 6px;
+        background: rgba(255, 252, 244, 0.88);
+        color: #382414;
+        font: inherit;
+        font-size: 12px;
+        line-height: 1.45;
+        outline: none;
+        resize: vertical;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+        .painel-personagem textarea:focus {
+            background: #ffffff;
+            border-color: #ffe194;
+            box-shadow: 0 0 0 2px rgba(184, 131, 40, 0.25);
+        }
+
+.aparencia {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.aliados {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.historia {
+    grid-column: 1;
+    grid-row: 2 / 4;
+}
+
+.outras-caracteristicas {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.tesouro {
+    border-color: #7a5018;
+    background: #2b1a11;
+}
+
+    .tesouro h2 {
+        color: #f1cf88;
+    }
+
+    .tesouro textarea {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fcebd2;
+        border-color: rgba(204, 157, 78, 0.35);
+    }
+
+        .tesouro textarea:focus {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: #dfb25d;
+        }
+
+/* ==========================================================================
+   VISÃO INVENTÁRIO (LIMPO, SEM CAIXA DUPLA EXTERNA)
+   ========================================================================== */
+
+.visao-inventario {
+    min-width: 0;
+    background: transparent !important;
+}
+
+.folha-inventario,
+.inventario-aba,
+#form-inventario {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+    .folha-inventario::before,
+    .inventario-aba::before,
+    #form-inventario::before {
+        display: none !important;
+        content: none !important;
+    }
 
 .corpo-inventario {
     display: grid;
-    grid-template-columns: minmax(0, 1.8fr) minmax(240px, 1fr);
-    gap: 18px;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.85fr);
+    align-items: start;
+    gap: clamp(18px, 3vw, 32px);
+    background: transparent;
 }
 
 .listas-itens {
     display: flex;
+    min-width: 0;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
+    background: transparent;
 }
 
 .categoria-itens {
-    border: 1px solid rgba(126, 87, 31, 0.4);
-    border-radius: 8px;
-    background: rgba(144, 103, 32, 0.15);
-    padding: 10px;
+    min-width: 0;
+    background: transparent;
 }
 
 .titulo-categoria {
     display: flex;
+    min-height: 30px;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    gap: 10px;
 }
 
     .titulo-categoria h2 {
         margin: 0;
-        color: #765524;
-        font-size: 13px;
+        color: #382619;
+        font-size: 14px;
+        font-variant: small-caps;
         font-weight: 600;
+    }
+
+        .titulo-categoria h2 span {
+            padding-right: 6px;
+            color: #b08026;
+            font-size: 18px;
+        }
+
+.adicionar-item,
+.remover-item {
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid #ae812f;
+    background: transparent;
+    color: #78541f;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.adicionar-item {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+}
+
+    .adicionar-item:hover {
+        background: rgba(176, 128, 38, 0.2);
+    }
+
+.remover-item {
+    width: 22px;
+    height: 22px;
+    border-color: transparent;
+    border-radius: 50%;
+    color: #933827;
+    font-size: 16px;
+}
+
+    .remover-item:hover {
+        background: rgba(147, 56, 39, 0.15);
     }
 
 .cabecalho-linha,
 .item-linha {
     display: grid;
-    grid-template-columns: 1fr 50px 60px 70px 24px;
-    gap: 6px;
+    grid-template-columns: minmax(80px, 1fr) 48px 58px 66px 24px;
     align-items: center;
+    gap: 6px;
 }
 
 .cabecalho-linha {
+    min-height: 24px;
+    border-bottom: 1px solid rgba(151, 107, 39, 0.55);
+    color: #795924;
     font-size: 9px;
-    color: #8b6832;
+    font-weight: 600;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    margin-bottom: 4px;
 }
 
-.item-linha input {
-    min-height: 26px;
-    padding: 2px 6px;
-    border: 1px solid rgba(126, 87, 31, 0.35);
-    border-radius: 4px;
-    background: rgba(255, 245, 225, 0.8);
-    color: #493519;
-    font-size: 11px;
+    .cabecalho-linha span:not(:first-child) {
+        text-align: center;
+    }
+
+.lista-linhas {
+    display: flex;
+    flex-direction: column;
 }
 
-.adicionar-item,
-.remover-item {
-    display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 4px;
-    cursor: pointer;
+.item-linha {
+    min-height: 34px;
+    border-bottom: 1px dotted rgba(141, 101, 37, 0.35);
 }
 
-.adicionar-item {
-    width: 22px;
-    height: 22px;
-    background: #a47a2d;
-    color: #fff2d4;
-    font-size: 14px;
-}
+    .item-linha input {
+        width: 100%;
+        min-width: 0;
+        padding: 4px 6px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+        color: #372517;
+        font: inherit;
+        font-size: 11px;
+        transition: all 0.2s;
+    }
 
-.remover-item {
-    height: 24px;
-    background: rgba(173, 109, 88, 0.2);
-    color: #ad6d58;
-}
+        .item-linha input:focus {
+            border-color: rgba(131, 89, 21, 0.45);
+            background: rgba(255, 251, 239, 0.85);
+            outline: none;
+        }
+
+        .item-linha input[type="number"] {
+            text-align: center;
+            appearance: textfield;
+        }
+
+            .item-linha input[type="number"]::-webkit-inner-spin-button,
+            .item-linha input[type="number"]::-webkit-outer-spin-button {
+                margin: 0;
+                appearance: none;
+            }
+
+        .item-linha input[data-campo="valor"] {
+            text-align: center;
+        }
+
+/* ==========================================================================
+   CARDS LATERAIS COLORIDOS (MOEDAS, CARGA, NOTAS)
+   ========================================================================== */
 
 .resumo-inventario {
     display: flex;
@@ -94,70 +587,323 @@
 
 .painel-moedas,
 .painel-carga {
-    padding: 12px;
-    border: 1px solid rgba(126, 87, 31, 0.35);
-    border-radius: 8px;
-    background: rgba(144, 103, 32, 0.2);
+    padding: 14px 16px;
+    border: 1px solid #a87d31;
+    border-radius: 10px;
+    background: linear-gradient(155deg, rgba(146, 108, 41, 0.94), rgba(113, 80, 31, 0.96));
+    color: #fff0ca;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16), inset 0 0 10px rgba(78, 49, 12, 0.15);
 }
+
+    .painel-moedas h2,
+    .painel-carga h2 {
+        margin: 0 0 12px;
+        color: #f7dfa4;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-align: center;
+        text-transform: uppercase;
+    }
 
 .moedas-grade {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
 }
 
 .moeda {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
+    gap: 4px;
+}
+
+.icone-moeda {
+    display: grid;
+    width: 32px;
+    aspect-ratio: 1;
+    place-items: center;
+    border: 2px solid #f0c65a;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #e8bb50, #9b661a 75%);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+    color: #352213;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+    .icone-moeda.prata {
+        border-color: #ddd8c5;
+        background: radial-gradient(circle at 35% 30%, #f4edda, #98917e 75%);
+    }
+
+    .icone-moeda.electrum {
+        border-color: #b7e3e2;
+        background: radial-gradient(circle at 35% 30%, #c4eceb, #598f8e 75%);
+    }
+
+    .icone-moeda.ouro {
+        border-color: #f7cb59;
+        background: radial-gradient(circle at 35% 30%, #ffe37b, #aa7214 75%);
+    }
+
+    .icone-moeda.platina {
+        border-color: #bfd2d1;
+        background: radial-gradient(circle at 35% 30%, #e2eeee, #728d8c 75%);
+    }
+
+.moeda input {
+    width: 100%;
+    min-height: 26px;
+    padding: 2px;
+    border: 1px solid rgba(247, 218, 159, 0.3);
+    border-radius: 4px;
+    background: rgba(30, 20, 12, 0.25);
+    color: #fff1d1;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+}
+
+.moeda small {
+    color: #f4dfa9;
     font-size: 9px;
 }
 
-    .moeda input {
-        width: 100%;
-        min-height: 26px;
-        text-align: center;
-        border: 1px solid rgba(126, 87, 31, 0.4);
-        background: rgba(255, 245, 225, 0.9);
-    }
+.nota-moedas {
+    margin: 10px 0 0;
+    color: #ebd7a9;
+    font-size: 10px;
+    font-style: italic;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.painel-carga p {
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+.painel-carga strong {
+    color: #fff0c8;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.painel-carga p span {
+    color: #ebd7a9;
+    font-size: 12px;
+}
 
 .painel-carga progress {
+    display: block;
     width: 100%;
     height: 10px;
-    border-radius: 5px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 6px;
+    background: #352316;
 }
 
-.painel-notas textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px;
-    border: 1px solid rgba(126, 87, 31, 0.4);
-    border-radius: 6px;
-    background: rgba(255, 245, 225, 0.8);
-    resize: vertical;
+    .painel-carga progress::-webkit-progress-bar {
+        border-radius: 6px;
+        background: #352316;
+    }
+
+    .painel-carga progress::-webkit-progress-value,
+    .painel-carga progress::-moz-progress-bar {
+        border-radius: 6px;
+        background: linear-gradient(90deg, #d49319, #f1c34b);
+    }
+
+.painel-carga > small {
+    display: block;
+    margin-top: 6px;
+    color: #eddaa9;
+    font-size: 10px;
+    text-align: center;
 }
+
+/* Bloco de Notas do Inventário */
+.painel-notas {
+    display: flex;
+    min-height: 170px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    border: 1px solid #7d521b;
+    border-radius: 10px;
+    background: #2d1c13;
+    color: #ebd09c;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+    .painel-notas > span {
+        color: #ebc868;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .painel-notas textarea {
+        width: 100%;
+        flex: 1;
+        min-height: 110px;
+        resize: vertical;
+        padding: 6px;
+        border: 1px solid rgba(199, 151, 74, 0.25);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        color: #f7ebd7;
+        font: italic 13px/1.55 Georgia, "Times New Roman", serif;
+        outline: none;
+    }
+
+        .painel-notas textarea:focus {
+            border-color: #dfb25d;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+/* ==========================================================================
+   RODAPÉ E BOTÕES DE AÇÃO
+   ========================================================================== */
 
 .rodape-inventario {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-top: 16px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(126, 87, 31, 0.3);
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 24px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(151, 107, 39, 0.35);
+    background: transparent;
 }
 
-.botao-salvar-inventario {
-    min-height: 34px;
-    padding: 0 16px;
-    border: 0;
-    border-radius: 4px;
-    background: #866a35;
-    color: #fff1d1;
+    .rodape-inventario p {
+        margin: 0;
+        color: #715328;
+        font-size: 11px;
+    }
+
+.botao-salvar-inventario,
+.botao-salvar-geral {
+    min-height: 38px;
+    padding: 0 20px;
+    border: 1px solid #8a6122;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #b58937 0%, #966c24 100%);
+    color: #fff6e0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    transition: filter 0.2s, transform 0.1s;
 }
 
-@media (max-width: 620px) {
+    .botao-salvar-inventario:hover,
+    .botao-salvar-geral:hover {
+        filter: brightness(1.1);
+    }
+
+    .botao-salvar-inventario:active,
+    .botao-salvar-geral:active {
+        transform: translateY(1px);
+    }
+
+/* ==========================================================================
+   RESPONSIVIDADE
+   ========================================================================== */
+
+@media (max-width: 760px) {
+    .ficha-personagem {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+
+    .visao-personagem .dados-pessoais {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .visao-personagem .campo-nome {
+        grid-column: 1 / -1;
+    }
+
+    .visao-personagem .historia-grade {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+
+    .visao-personagem .painel-personagem,
+    .visao-personagem .aparencia,
+    .visao-personagem .aliados,
+    .visao-personagem .historia,
+    .visao-personagem .outras-caracteristicas {
+        grid-column: 1;
+        grid-row: auto;
+        min-height: 130px;
+    }
+
     .corpo-inventario {
         grid-template-columns: 1fr;
+    }
+
+    .resumo-inventario {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+
+    .painel-notas {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 580px) {
+    .palco {
+        padding: 10px;
+    }
+
+    .ficha-cabecalho {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .retrato,
+    .retrato-coluna {
+        width: 64px;
+    }
+
+    .identidade h1 {
+        font-size: 22px;
+    }
+
+    .marcadores {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .resumo-inventario {
+        grid-template-columns: 1fr;
+    }
+
+    .painel-notas {
+        grid-column: 1;
+    }
+
+    .rodape-inventario {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .botao-salvar-inventario {
+        width: 100%;
     }
 }

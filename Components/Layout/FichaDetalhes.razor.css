@@ -1,4 +1,261 @@
-/* CSS for FichaDetalhes component */
+/* ==========================================================================
+   ESTRUTURA GERAL DA MESA E PALCO
+   ========================================================================== */
+
+.mesa-edicao {
+    min-height: 100vh;
+    background: #20150f url("img/fundodemadeira.png.jpg") center / cover fixed;
+}
+
+.palco {
+    display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 64px);
+    padding: 24px;
+}
+
+.navbar-frame {
+    display: block;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 64px;
+    border: 0;
+}
+
+/* ==========================================================================
+   FOLHA DA FICHA DO PERSONAGEM (PERGAMINHO)
+   ========================================================================== */
+
+.ficha-personagem {
+    position: relative;
+    display: flex;
+    width: min(100%, 1120px);
+    flex-direction: column;
+    gap: 26px;
+    min-width: 0;
+    min-height: calc(100vh - 106px);
+    padding: 34px clamp(22px, 3vw, 48px) 30px;
+    overflow: hidden;
+    color: #493519;
+    border-radius: 6px;
+    background-color: #dfc38d;
+    background-image: linear-gradient(rgba(248, 229, 188, 0.78), rgba(226, 198, 143, 0.84)), url("img/papelantigo.png");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.42);
+}
+
+    .ficha-personagem::after {
+        position: absolute;
+        z-index: 0;
+        inset: 9px;
+        border: 1px solid rgba(126, 87, 31, 0.38);
+        border-radius: 4px;
+        content: "";
+        pointer-events: none;
+    }
+
+.ficha-cabecalho,
+.ficha-corpo {
+    position: relative;
+    z-index: 1;
+}
+
+/* --- Cabeçalho da Ficha --- */
+.ficha-cabecalho {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 17px;
+}
+
+.retrato-coluna {
+    display: flex;
+    width: 86px;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.retrato {
+    display: grid;
+    width: 86px;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #9b712e;
+    border-radius: 4px;
+    background: #281b12;
+    box-shadow: inset 0 0 0 4px rgba(214, 174, 98, 0.16);
+}
+
+    .retrato img {
+        width: 84%;
+        height: 84%;
+        object-fit: contain;
+    }
+
+.retrato-upload {
+    position: relative;
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    overflow: hidden;
+    padding: 0 7px;
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background: rgba(255, 251, 239, 0.7);
+    color: #594323;
+    font-size: 9px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+    .retrato-upload:hover {
+        background: rgba(255, 251, 239, 0.95);
+        border-color: #704916;
+    }
+
+    .retrato-upload input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .retrato-upload:focus-within {
+        outline: 2px solid #704916;
+        outline-offset: 2px;
+    }
+
+.sobretitulo {
+    margin: 0 0 4px;
+    color: #936b2d;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.identidade h1 {
+    margin: 0;
+    color: #392819;
+    font-size: clamp(23px, 2.4vw, 34px);
+    font-weight: 600;
+    line-height: 1.05;
+}
+
+.descricao-personagem {
+    margin: 5px 0 12px;
+    color: #775b32;
+    font-size: 13px;
+}
+
+.dados-personagem {
+    display: grid;
+    gap: 3px;
+    color: #654a27;
+    font-size: 12px;
+}
+
+    .dados-personagem b {
+        display: inline-block;
+        min-width: 75px;
+        color: #8e692f;
+        font-weight: 600;
+    }
+
+/* Marcadores de Nível e Classe */
+.marcadores {
+    display: flex;
+    gap: 8px;
+}
+
+.marcador-classe,
+.marcador-nivel {
+    display: flex;
+    width: 58px;
+    min-height: 66px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid rgba(146, 102, 39, 0.7);
+    color: #765524;
+    text-align: center;
+    background: rgba(255, 248, 230, 0.35);
+}
+
+.marcador-classe {
+    clip-path: polygon(50% 0, 100% 18%, 92% 78%, 50% 100%, 8% 78%, 0 18%);
+}
+
+.marcador-nivel {
+    border-radius: 50%;
+}
+
+    .marcador-classe span,
+    .marcador-nivel span {
+        font-size: 9px;
+        text-transform: uppercase;
+    }
+
+    .marcador-classe b,
+    .marcador-nivel b {
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+/* --- Barra de Alternância de Abas --- */
+.troca-ficha {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-self: flex-end;
+    padding: 3px;
+    border: 1px solid rgba(126, 87, 31, 0.5);
+    border-radius: 24px;
+    background: rgba(100, 70, 31, 0.12);
+}
+
+.aba-ficha {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 20px;
+    background: transparent;
+    color: #765524;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .aba-ficha.ativa,
+    .aba-ficha:hover {
+        background: #a47a2d;
+        color: #fff2d4;
+        box-shadow: 0 2px 6px rgba(65, 43, 14, 0.2);
+    }
+
+    .aba-ficha:focus-visible {
+        outline: 2px solid #704916;
+        outline-offset: 2px;
+    }
+
+/* ==========================================================================
+   VISÃO DO PERSONAGEM (CAMPOS E HISTÓRIA)
+   ========================================================================== */
+
 .visao-personagem {
     display: flex;
     min-width: 0;
@@ -18,23 +275,49 @@
     min-height: 58px;
     flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    padding: 9px 13px;
+    gap: 4px;
+    padding: 8px 12px;
+    border: 1px solid rgba(146, 102, 39, 0.45);
+    border-radius: 8px;
     background: rgba(241, 205, 104, 0.84);
     color: #493519;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
     .campo-personagem span {
         color: #805b22;
         font-size: 10px;
+        font-weight: bold;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
     }
 
     .campo-personagem b {
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
     }
 
+    .campo-personagem input {
+        width: 100%;
+        padding: 3px 6px;
+        border: 1px solid rgba(156, 120, 61, 0.35);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.65);
+        color: #392819;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        outline: none;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+        .campo-personagem input:focus {
+            background: #ffffff;
+            border-color: #8b5b18;
+            box-shadow: 0 0 0 2px rgba(139, 91, 24, 0.15);
+        }
+
+/* Painéis de História, Aparência e Aliados */
 .historia-grade {
     display: grid;
     flex: 1;
@@ -46,22 +329,24 @@
 .painel-personagem {
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
     min-width: 0;
-    padding: 15px 17px;
+    padding: 14px 16px;
     border: 1px solid rgba(126, 87, 31, 0.58);
     border-radius: 10px;
     background: rgba(153, 111, 37, 0.86);
     color: #fff1d1;
-    box-shadow: inset 0 0 16px rgba(78, 49, 12, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14), inset 0 0 16px rgba(78, 49, 12, 0.16);
 }
 
     .painel-personagem h2 {
-        margin: 0 0 9px;
+        margin: 0 0 8px;
         color: #ffe8af;
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
         text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .painel-personagem p {
@@ -69,6 +354,28 @@
         font-size: 12px;
         line-height: 1.55;
     }
+
+    .painel-personagem textarea {
+        width: 100%;
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid rgba(110, 75, 23, 0.5);
+        border-radius: 6px;
+        background: rgba(255, 252, 244, 0.88);
+        color: #382414;
+        font: inherit;
+        font-size: 12px;
+        line-height: 1.45;
+        outline: none;
+        resize: vertical;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+        .painel-personagem textarea:focus {
+            background: #ffffff;
+            border-color: #ffe194;
+            box-shadow: 0 0 0 2px rgba(184, 131, 40, 0.25);
+        }
 
 .aparencia {
     grid-column: 1;
@@ -95,78 +402,164 @@
     background: #302016;
 }
 
-@media (max-width: 620px) {
-    .dados-pessoais {
+    .tesouro h2 {
+        color: #f1cf88;
+    }
+
+    .tesouro textarea {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fcebd2;
+        border-color: rgba(204, 157, 78, 0.35);
+    }
+
+        .tesouro textarea:focus {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: #dfb25d;
+        }
+/* ==========================================================================
+   REMOVER FUNDO BRANCO DOS INPUTS E TEXTAREAS (VISÃO PERSONAGEM)
+   ========================================================================== */
+
+/* 1. Inputs dos Dados Pessoais (Nome, Idade, Gênero, Altura, Peso) */
+.campo-personagem input {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid rgba(126, 87, 31, 0.45) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #392819 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    outline: none !important;
+    padding: 4px 2px !important;
+}
+
+    .campo-personagem input:focus {
+        border-bottom-color: #704916 !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+    }
+
+    .campo-personagem input::placeholder {
+        color: rgba(90, 60, 20, 0.55) !important;
+        font-weight: normal !important;
+    }
+
+/* 2. Textareas dos Painéis (Aparência, Aliados, História, Características) */
+.painel-personagem textarea {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 235, 180, 0.25) !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    color: #fff2d4 !important; /* Texto claro para contrastar com o card marrom */
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    outline: none !important;
+    padding: 8px 10px !important;
+}
+
+    .painel-personagem textarea:focus {
+        border-color: rgba(255, 235, 180, 0.6) !important;
+        background: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .painel-personagem textarea::placeholder {
+        color: rgba(255, 240, 200, 0.45) !important;
+    }
+
+/* 3. Ajuste específico para o Card de Tesouro (que possui fundo escuro) */
+.tesouro textarea {
+    border-color: rgba(200, 160, 80, 0.25) !important;
+    color: #edd4ab !important;
+}
+
+    .tesouro textarea:focus {
+        border-color: #dfb25d !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
+/* ==========================================================================
+   RESPONSIVIDADE
+   ========================================================================== */
+
+@media (max-width: 760px) {
+    .ficha-personagem {
+        padding-right: 22px;
+        padding-left: 22px;
+    }
+
+    .visao-personagem .dados-pessoais {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .campo-nome {
+    .visao-personagem .campo-nome {
         grid-column: 1 / -1;
     }
 
-    .historia-grade {
+    .visao-personagem .historia-grade {
         flex: initial;
         grid-template-columns: 1fr;
         grid-template-rows: auto;
     }
 
-    .painel-personagem,
-    .aparencia,
-    .aliados,
-    .historia,
-    .outras-caracteristicas {
+    .visao-personagem .painel-personagem,
+    .visao-personagem .aparencia,
+    .visao-personagem .aliados,
+    .visao-personagem .historia,
+    .visao-personagem .outras-caracteristicas {
         grid-column: 1;
         grid-row: auto;
         min-height: 120px;
     }
 
-    .historia {
+    .visao-personagem .historia {
         min-height: 220px;
     }
 }
 
-.input-ficha-inline {
-    background: transparent;
-    border: none;
-    border-bottom: 1px dashed rgba(128, 91, 34, 0.45);
-    color: #493519;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    width: 100%;
-    padding: 1px 0;
-}
-
-    .input-ficha-inline:focus {
-        outline: none;
-        border-bottom: 1px solid #493519;
-        background: rgba(255, 255, 255, 0.25);
+@media (max-width: 620px) {
+    .ficha-personagem {
+        min-height: auto;
+        padding: 27px 20px;
     }
 
-.textarea-ficha {
-    width: 100%;
-    height: 100%;
-    min-height: 70px;
-    background: rgba(255, 255, 255, 0.22);
-    border: 1px solid rgba(126, 87, 31, 0.35);
-    border-radius: 4px;
-    padding: 6px 8px;
-    font-family: inherit;
-    font-size: 12px;
-    color: #fff1d1;
-    resize: vertical;
-    line-height: 1.55;
-}
-
-    .textarea-ficha:focus {
-        outline: none;
-        border-color: #ffe8af;
-        background: rgba(255, 255, 255, 0.35);
-        color: #fff;
+    .palco {
+        padding: 12px;
     }
 
-.tesouro .textarea-ficha {
-    background: rgba(0, 0, 0, 0.25);
-    color: #f5e9cf;
-    border-color: rgba(180, 130, 70, 0.4);
+    .troca-ficha {
+        align-self: stretch;
+    }
+
+    .aba-ficha {
+        flex: 1;
+        padding: 0 10px;
+    }
+
+    .ficha-cabecalho {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .retrato,
+    .retrato-coluna {
+        width: 64px;
+    }
+
+    .identidade h1 {
+        font-size: 24px;
+    }
+
+    .marcadores {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+        margin-top: -2px;
+    }
+
+    .marcador-classe,
+    .marcador-nivel {
+        width: 54px;
+        min-height: 54px;
+    }
 }

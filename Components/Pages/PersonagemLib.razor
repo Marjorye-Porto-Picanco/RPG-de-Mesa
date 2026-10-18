@@ -17,29 +17,31 @@
                 <h1>Personagens</h1>
                 <p class="texto-apoio">Suas fichas reunidas em um só lugar.</p>
             </div>
-            <a class="botao-dourado" href="/personagem-criar"><span aria-hidden="true">+</span> Novo personagem</a>
+            <a class="botao-dourado" href="/personagem-criar">
+                <span aria-hidden="true">+</span> Novo personagem
+            </a>
         </div>
 
-        <div class="grade-personagens">
-            @if (personagens == null)
+        @if (personagens == null)
+        {
+            <p class="aviso-carregando">Carregando heróis...</p>
+        }
+        else
+        {
+            @if (!personagens.Any())
             {
-                <p style="color: #d4af37; grid-column: 1 / -1; text-align: center;">Carregando heróis...</p>
+                <p class="aviso-vazio">Nenhum personagem encontrado no seu bestiário pessoal.</p>
             }
-            else if (!personagens.Any())
-            {
-                <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #b7a78b; border: 1px dashed rgba(215, 182, 118, 0.4);">
-                    <p>Nenhum personagem encontrado no seu bestiário pessoal.</p>
-                    <a href="/personagem-criar" class="botao-dourado" style="margin-top: 15px; display: inline-block;">Criar meu primeiro personagem</a>
-                </div>
-            }
-            else
-            {
+
+            <div class="grade-personagens">
+            
+
                 @foreach (var p in personagens)
                 {
                     string iniciais = ObterIniciais(p.Nome);
-                    <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem">
+                    <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem" aria-label="Abrir ficha de @p.Nome">
                         <div class="retrato-personagem">
-                            <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="" />
+                            <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="Retrato de @p.Nome" />
                             <span>@iniciais</span>
                         </div>
                         <div class="info-personagem">
@@ -50,14 +52,14 @@
                         </div>
                     </a>
                 }
-            }
-
-            <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
-                <span class="mais-adicionar" aria-hidden="true">+</span>
-                <strong>Criar personagem</strong>
-                <small>Escreva uma nova história</small>
-            </a>
-        </div>
+                
+                <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
+                    <span class="mais-adicionar" aria-hidden="true">+</span>
+                    <strong>Criar personagem</strong>
+                    <small>Escreva uma nova história</small>
+                </a>
+            </div>
+        }
     </main>
 </div>
 
