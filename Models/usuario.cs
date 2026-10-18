@@ -30,8 +30,6 @@ namespace RPGdeMesa.Models
         // Relacionamento (1 : 1)
         public virtual Perfil? Perfil { get; set; }
 
-        // Relacionamentos (1 : N)
-        // public virtual ICollection<Campanha> CampanhasCriadas { get; set; } = new List<Campanha>();
         public virtual ICollection<Personagem> Personagens { get; set; } = new List<Personagem>();
     }
 }

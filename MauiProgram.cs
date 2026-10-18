@@ -31,11 +31,16 @@ namespace RPGdeMesa
             builder.Services.AddTransient<UsuarioService>();
             builder.Services.AddTransient<CampanhaService>();
             builder.Services.AddTransient<AuthService>();
-
+            builder.Services.AddSingleton<SessaoUsuarioService>();
+            builder.Services.AddScoped<MonstroService>();
+            builder.Services.AddScoped<PersonagemService>();
             // Registro dos ViewModels
+            builder.Services.AddTransient<CriarCampanhaViewModel>();
             builder.Services.AddTransient<LoginViewModel>(); 
             builder.Services.AddTransient<RegisterViewModel>();
-
+            builder.Services.AddScoped<MonstroCriarViewModel>();
+            builder.Services.AddScoped<PersonagemCriarViewModel>();
+            builder.Services.AddScoped<PersonagemEditarViewModel>();
 
             return builder.Build();
         }

@@ -1,5 +1,4 @@
-/* CSS for Monstros-lib component */
-/* Monster library */
+
 * {
     box-sizing: border-box;
 }
@@ -189,7 +188,6 @@ textarea {
         color: #f3dfa2;
     }
 
-/* Shared form components */
 .form-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 270px;
@@ -355,7 +353,6 @@ textarea {
     font-size: 11px;
 }
 
-/* Responsive */
 @media (max-width: 920px) {
     .form-layout {
         grid-template-columns: minmax(0, 1fr) 235px;
@@ -426,6 +423,7 @@ textarea {
             width: 100%;
         }
 }
+
 .toolbar-library {
     display: flex;
     align-items: center;
@@ -477,6 +475,7 @@ textarea {
     border: 1px solid rgba(210, 174, 105, 0.48);
     background: rgba(36, 27, 21, 0.92);
     color: #eee0c5;
+    cursor: pointer;
 }
 
 .monster-art {
@@ -575,4 +574,116 @@ textarea {
     .monster-art {
         height: 190px;
     }
+}
+
+/* --- ESTILOS DO POP-UP (MODAL DE VISUALIZAÇÃO) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content-custom {
+    position: relative;
+    width: min(1050px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+    background-color: var(--wood, #1b130f);
+    background-image: linear-gradient(rgba(25, 17, 13, 0.95), rgba(25, 17, 13, 0.98)), url("img/fundodemadeira.png.jpg");
+    background-position: center;
+    background-size: cover;
+    border: 1px solid rgba(217, 184, 120, 0.4);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    padding: 30px;
+    border-radius: 6px;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #d4b364;
+    cursor: pointer;
+    transition: color 150ms ease;
+}
+
+    .modal-close-btn:hover {
+        color: #f3dfa2;
+    }
+
+.cabecalho-modal {
+    margin-bottom: 16px;
+}
+
+.titulo-modal {
+    font-size: 26px;
+    color: #f3e7ce;
+}
+
+.field-label-title {
+    color: #b7a78c;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.field-value-box {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid rgba(127, 93, 45, 0.43);
+    border-radius: 3px;
+    background: rgba(255, 251, 239, 0.85); 
+    color: #2b1c14; 
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.caixa-descricao {
+    min-height: 70px;
+    white-space: pre-wrap;
+    height: auto;
+}
+
+.rodape-modal {
+    justify-content: flex-end;
+}
+
+.modal-content-custom::-webkit-scrollbar {
+    width: 8px; 
+}
+
+.modal-content-custom::-webkit-scrollbar-track {
+    background: rgba(25, 17, 13, 0.86); 
+    border-radius: 4px;
+}
+
+.modal-content-custom::-webkit-scrollbar-thumb {
+    background: #98712d; 
+    border-radius: 4px;
+    border: 1px solid rgba(217, 184, 120, 0.3);
+}
+
+    .modal-content-custom::-webkit-scrollbar-thumb:hover {
+        background: #d1a951; 
+    }
+
+.modal-content-custom {
+    scrollbar-width: thin;
+    scrollbar-color: #98712d rgba(25, 17, 13, 0.86);
 }

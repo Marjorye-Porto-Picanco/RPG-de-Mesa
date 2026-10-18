@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace RPGdeMesa.ViewModel
 {
@@ -8,12 +10,18 @@ namespace RPGdeMesa.ViewModel
         private readonly UsuarioService _usuarioService;
         private readonly AuthService _authService;
         private readonly NavigationManager _navigation;
+        private readonly SessaoUsuarioService _sessaoUsuario;
 
-        public LoginViewModel(UsuarioService usuarioService, AuthService authService, NavigationManager navigation)
+        public LoginViewModel(
+            UsuarioService usuarioService,
+            AuthService authService,
+            NavigationManager navigation,
+            SessaoUsuarioService sessaoUsuario)
         {
             _usuarioService = usuarioService;
             _authService = authService;
             _navigation = navigation;
+            _sessaoUsuario = sessaoUsuario;
         }
 
         public string LoginOuEmail { get; set; } = "";
@@ -42,6 +50,12 @@ namespace RPGdeMesa.ViewModel
 
                 if (Sucesso && resultado.UsuarioLogado != null)
                 {
+                    _sessaoUsuario.FazerLogin(
+                        resultado.UsuarioLogado.IdAccount,
+                        resultado.UsuarioLogado.UsarName,
+                        resultado.UsuarioLogado.EMail
+                    );
+
                     await Task.Delay(800);
                     _navigation.NavigateTo("/campanhas");
                 }
@@ -77,10 +91,16 @@ namespace RPGdeMesa.ViewModel
                 Sucesso = resultado.Sucesso;
                 MensagemFeedback = resultado.Mensagem;
 
-                if (Sucesso)
+                if (Sucesso && resultado.UsuarioLogado != null)
                 {
+                    _sessaoUsuario.FazerLogin(
+                        resultado.UsuarioLogado.IdAccount,
+                        resultado.UsuarioLogado.UsarName,
+                        resultado.UsuarioLogado.EMail
+                    );
+
                     await Task.Delay(1000);
-                    _navigation.NavigateTo("/sessao");
+                    _navigation.NavigateTo("/campanhas");
                 }
             }
             catch (Exception ex)

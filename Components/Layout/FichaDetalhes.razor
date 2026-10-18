@@ -1,31 +1,58 @@
-﻿<div class="visao-ficha visao-personagem" id="visao-personagem" role="tabpanel" aria-labelledby="aba-personagem">
+﻿@using RPGdeMesa.Models
+
+<div class="visao-ficha visao-personagem" id="visao-personagem" role="tabpanel" aria-labelledby="aba-personagem">
     <div class="dados-pessoais">
-        <div class="campo-personagem campo-nome"><span>Nome</span><b>Lyra Ventobrasa</b></div>
-        <div class="campo-personagem"><span>Idade</span><b>128 anos</b></div>
-        <div class="campo-personagem"><span>Gênero</span><b>Feminino</b></div>
-        <div class="campo-personagem"><span>Altura</span><b>1,72 m</b></div>
-        <div class="campo-personagem"><span>Peso</span><b>64 kg</b></div>
+        <div class="campo-personagem campo-nome">
+            <span>Nome</span>
+            <input @bind="Personagem.Nome" placeholder="Nome" style="background:transparent; border:none; border-bottom:1px solid #9c783d; color:inherit; font:inherit; font-weight:bold;" />
+        </div>
+        <div class="campo-personagem">
+            <span>Idade</span>
+            <input @bind="Personagem.Idade" placeholder="Ex: 128 anos" style="background:transparent; border:none; border-bottom:1px solid #9c783d; color:inherit; font:inherit; font-weight:bold;" />
+        </div>
+        <div class="campo-personagem">
+            <span>Gênero</span>
+            <input @bind="Personagem.Genero" placeholder="Ex: Feminino" style="background:transparent; border:none; border-bottom:1px solid #9c783d; color:inherit; font:inherit; font-weight:bold;" />
+        </div>
+        <div class="campo-personagem">
+            <span>Altura</span>
+            <input @bind="Personagem.Altura" placeholder="Ex: 1,72 m" style="background:transparent; border:none; border-bottom:1px solid #9c783d; color:inherit; font:inherit; font-weight:bold;" />
+        </div>
+        <div class="campo-personagem">
+            <span>Peso</span>
+            <input @bind="Personagem.Peso" placeholder="Ex: 64 kg" style="background:transparent; border:none; border-bottom:1px solid #9c783d; color:inherit; font:inherit; font-weight:bold;" />
+        </div>
     </div>
+    
     <div class="historia-grade">
         <section class="painel-personagem aparencia">
             <h2>Aparência</h2>
-            <p>Cabelos prateados, olhos verdes e marcas de sol nos ombros. Veste couro leve em tons de musgo.</p>
+            <textarea @bind="Personagem.Aparencia" rows="3" placeholder="Descreva a aparência..." style="width:100%; background:rgba(255,255,255,0.4); border:1px solid rgba(156,120,61,0.5); border-radius:4px; padding:6px; font:inherit; color:inherit;"></textarea>
         </section>
+        
         <section class="painel-personagem aliados">
             <h2>Aliados e organizações</h2>
-            <p>Guardiões do Bosque Antigo<br />Companhia da Lua Crescente</p>
+            <textarea @bind="Personagem.Aliados" rows="3" placeholder="Descreva aliados e organizações..." style="width:100%; background:rgba(255,255,255,0.4); border:1px solid rgba(156,120,61,0.5); border-radius:4px; padding:6px; font:inherit; color:inherit;"></textarea>
         </section>
+        
         <section class="painel-personagem historia">
             <h2>História do personagem</h2>
-            <p>Criada entre as trilhas da floresta, Lyra aprendeu a reconhecer cada mudança no vento. Deixou sua comunidade para investigar o desaparecimento de antigos marcos élficos e proteger as rotas que conectam os povoados.</p>
+            <textarea @bind="Personagem.Historia" rows="5" placeholder="De onde veio? O que busca?..." style="width:100%; background:rgba(255,255,255,0.4); border:1px solid rgba(156,120,61,0.5); border-radius:4px; padding:6px; font:inherit; color:inherit;"></textarea>
         </section>
+        
         <section class="painel-personagem outras-caracteristicas">
             <h2>Características e habilidades</h2>
-            <p>Visão no escuro · Ancestralidade feérica · Inimigo favorito: monstros · Exploradora natural</p>
+            <textarea @bind="Personagem.Caracteristicas" rows="3" placeholder="Características e habilidades..." style="width:100%; background:rgba(255,255,255,0.4); border:1px solid rgba(156,120,61,0.5); border-radius:4px; padding:6px; font:inherit; color:inherit;"></textarea>
         </section>
+        
         <section class="painel-personagem tesouro">
             <h2>Tesouro pessoal</h2>
-            <p>Um mapa incompleto herdado de sua avó e um broche de âmbar.</p>
+            <textarea @bind="Personagem.Tesouro" rows="3" placeholder="Tesouro pessoal..." style="width:100%; background:rgba(255,255,255,0.4); border:1px solid rgba(156,120,61,0.5); border-radius:4px; padding:6px; font:inherit; color:inherit;"></textarea>
         </section>
     </div>
 </div>
+
+@code {
+    [Parameter]
+    public Personagem Personagem { get; set; } = new();
+}

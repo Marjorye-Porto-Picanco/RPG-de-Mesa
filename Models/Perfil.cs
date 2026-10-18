@@ -23,7 +23,6 @@ namespace RPGdeMesa.Models
         [Column("data_criacao")]
         public DateTime DataCriacao { get; set; } = DateTime.Now;
 
-        // Propriedade de navegação
         public virtual Usuario Usuario { get; set; } = null!;
     }
 }

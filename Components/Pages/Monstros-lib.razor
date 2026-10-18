@@ -1,50 +1,241 @@
 ﻿@page "/monstros-lib"
+@using RPGdeMesa.Services
+@using RPGdeMesa.Models
+@inject MonstroService MonstroService
+@inject SessaoUsuarioService SessaoUsuario
+
 <NavMenu />
-
 <div class="app-shell">
-
-
     <main class="app-content">
         <div class="page-heading">
-            <div><p class="page-kicker">Bestiário da mesa</p><h1 class="page-title">Biblioteca de monstros</h1><p class="page-description">Ameaças conhecidas e criaturas criadas para suas campanhas.</p></div>
-            <a class="action-primary" href="monstro-criar"><span aria-hidden="true">+</span> Cadastrar monstro</a>
+            <div>
+                <p class="page-kicker">Bestiário da mesa</p>
+                <h1 class="page-title">Biblioteca de monstros</h1>
+                <p class="page-description">Ameaças conhecidas e criaturas criadas para suas campanhas.</p>
+            </div>
+            <a class="action-primary" href="/monstro-criar"><span aria-hidden="true">+</span> Cadastrar monstro</a>
         </div>
 
+        @if (!string.IsNullOrEmpty(mensagemErro))
+        {
+            <div style="background: rgba(220, 53, 69, 0.2); border: 1px solid #dc3545; padding: 15px; color: #ff8080; margin-bottom: 20px; border-radius: 4px; font-family: monospace;">
+                <strong>Erro capturado:</strong> @mensagemErro
+            </div>
+        }
+
         <div class="toolbar-library" role="search">
-            <label class="search-field"><span aria-hidden="true">⌕</span><input id="busca-monstro" type="search" placeholder="Buscar por nome, tipo ou alinhamento" aria-label="Buscar monstros" /></label>
-            <label><span class="page-kicker" style="display:none">Tipo</span><select class="filter-select" id="filtro-tipo" aria-label="Filtrar por tipo"><option value="todos">Todos os tipos</option><option value="dragao">Dragões</option><option value="fera">Feras</option><option value="monstruosidade">Monstruosidades</option><option value="morto-vivo">Mortos-vivos</option><option value="outro">Outros</option></select></label>
+            <label class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input id="busca-monstro" type="search" placeholder="Buscar por nome, tipo ou alinhamento" aria-label="Buscar monstros" @bind="termoBusca" @bind:event="oninput" />
+            </label>
+            <label>
+                <span class="page-kicker" style="display:none">Tipo</span>
+                <select class="filter-select" id="filtro-tipo" aria-label="Filtrar por tipo" @bind="filtroTipo">
+                    <option value="todos">Todos os tipos</option>
+                    <option value="dragao">Dragões</option>
+                    <option value="fera">Feras</option>
+                    <option value="monstruosidade">Monstruosidades</option>
+                    <option value="morto-vivo">Mortos-vivos</option>
+                    <option value="outro">Outros</option>
+                </select>
+            </label>
         </div>
 
         <div class="monster-grid" id="grade-monstros" aria-live="polite">
-            <article class="monster-card" data-nome="dragão das cinzas" data-tipo="dragao" data-descricao="dragão enorme caótico e mau, fogo, voo" data-cr="16">
-                <div class="monster-art"><img src="img/capacampanha10.png" alt="Dragão ancestral em meio às chamas" /><span class="monster-cr">ND 16</span></div>
-                <div class="monster-info"><h2>Dragão das cinzas</h2><p>Dragão enorme · Caótico e mau</p><div class="monster-tags"><span>Fogo</span><span>Voo</span><span>Lendário</span></div></div>
-            </article>
-            <article class="monster-card" data-nome="lobo espectral" data-tipo="morto-vivo" data-descricao="lobo médio neutro e mau sombra necrótico" data-cr="3">
-                <div class="monster-art"><img src="img/capacampanha7.png" alt="Floresta sombria sob uma névoa espectral" /><span class="monster-cr">ND 3</span></div>
-                <div class="monster-info"><h2>Lobo espectral</h2><p>Morto-vivo médio · Neutro e mau</p><div class="monster-tags"><span>Sombra</span><span>Necrótico</span><span>Faro aguçado</span></div></div>
-            </article>
-            <article class="monster-card" data-nome="mímico antigo" data-tipo="monstruosidade" data-descricao="mímico médio neutro armadilha transformação" data-cr="2">
-                <div class="monster-art"><img src="img/capacampanha3.png" alt="Ruínas antigas guardando um tesouro" /><span class="monster-cr">ND 2</span></div>
-                <div class="monster-info"><h2>Mímico antigo</h2><p>Monstruosidade média · Neutro</p><div class="monster-tags"><span>Armadilha</span><span>Transformação</span></div></div>
-            </article>
-            <article class="monster-card" data-nome="urso-coruja" data-tipo="fera" data-descricao="urso coruja grande imparcial floresta fera" data-cr="3">
-                <div class="monster-art"><img src="img/capacampanha6.png" alt="Criatura selvagem em uma paisagem de fantasia" /><span class="monster-cr">ND 3</span></div>
-                <div class="monster-info"><h2>Urso-coruja</h2><p>Fera grande · Imparcial</p><div class="monster-tags"><span>Floresta</span><span>Investida</span></div></div>
-            </article>
-            <article class="monster-card" data-nome="cão infernal" data-tipo="fera" data-descricao="cão infernal médio leal e mau fogo infernal" data-cr="5">
-                <div class="monster-art"><img src="img/capacampanha8.png" alt="Ameaça infernal em uma cidade em ruínas" /><span class="monster-cr">ND 5</span></div>
-                <div class="monster-info"><h2>Cão infernal</h2><p>Fera média · Leal e mau</p><div class="monster-tags"><span>Fogo</span><span>Faro</span><span>Matilha</span></div></div>
-            </article>
-            <article class="monster-card" data-nome="ogro das cavernas" data-tipo="outro" data-descricao="ogro grande caótico e mau bruto caverna" data-cr="2">
-                <div class="monster-art"><img src="img/capacampanha9.png" alt="Uma criatura gigantesca à espreita" /><span class="monster-cr">ND 2</span></div>
-                <div class="monster-info"><h2>Ogro das cavernas</h2><p>Gigante grande · Caótico e mau</p><div class="monster-tags"><span>Bruto</span><span>Caverna</span></div></div>
-            </article>
+            @if (MonstrosFiltrados.Any())
+            {
+                foreach (var monstro in MonstrosFiltrados)
+                {
+                    <div class="monster-card" @onclick="() => AbrirModal(monstro)">
+                        <div class="monster-art">
+                            <img src="@(string.IsNullOrEmpty(monstro.Imagem) ? "img/capacampanha3.png" : monstro.Imagem)" alt="Ilustração do monstro @monstro.Nome" />
+                            <span class="monster-cr">ND @(monstro.Nd)</span>
+                        </div>
+                        <div class="monster-info">
+                            <h2>@monstro.Nome</h2>
+                            <p>@(monstro.Tipo ?? "Criatura") @(monstro.Tamanho?.ToLower() ?? "médio") · @(monstro.Tendencia ?? "Neutro")</p>
+                            @if (!string.IsNullOrEmpty(monstro.Habilidades))
+                            {
+                                <div class="monster-tags">
+                                    @foreach (var hab in monstro.Habilidades.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <span>@hab.Trim()</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="mensagem-vazia">Nenhum monstro encontrado na sua biblioteca.</p>
+            }
         </div>
     </main>
 </div>
 
+<!-- POP-UP / MODAL DE VISUALIZAÇÃO -->
+@if (exibirModal && monstroSelecionado != null)
+{
+    <div class="modal-overlay" @onclick="FecharModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <button class="modal-close-btn" @onclick="FecharModal">×</button>
+
+            <div class="page-heading cabecalho-modal">
+                <div>
+                    <p class="page-kicker">Visualizar criatura</p>
+                    <h1 class="page-title titulo-modal">@monstroSelecionado.Nome</h1>
+                    <p class="page-description">Detalhes e estatísticas registradas no bestiário.</p>
+                </div>
+            </div>
+
+            <div class="form-layout">
+                <section class="form-panel">
+                    <h2>Descrição e estatísticas</h2>
+                    <div class="form-grid">
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Nome da criatura</span>
+                            <div class="field-value-box">@monstroSelecionado.Nome</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Tipo</span>
+                            <div class="field-value-box">@(monstroSelecionado.Tipo ?? "Outro")</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Tamanho</span>
+                            <div class="field-value-box">@(monstroSelecionado.Tamanho ?? "Médio")</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Alinhamento</span>
+                            <div class="field-value-box">@(string.IsNullOrEmpty(monstroSelecionado.Tendencia) ? "Não informado" : monstroSelecionado.Tendencia)</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Nível de desafio</span>
+                            <div class="field-value-box">ND @monstroSelecionado.Nd</div>
+                        </div>
+
+                        <div class="form-divider">Combate e sentidos</div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Classe de armadura</span>
+                            <div class="field-value-box">@monstroSelecionado.Defesa</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Pontos de vida</span>
+                            <div class="field-value-box">@monstroSelecionado.Vida</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Deslocamento</span>
+                            <div class="field-value-box">@(string.IsNullOrEmpty(monstroSelecionado.Deslocamento) ? "Não informado" : monstroSelecionado.Deslocamento)</div>
+                        </div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">Sentidos</span>
+                            <div class="field-value-box">@(string.IsNullOrEmpty(monstroSelecionado.Sentidos) ? "Não informado" : monstroSelecionado.Sentidos)</div>
+                        </div>
+
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Resistências e imunidades</span>
+                            <div class="field-value-box">@(string.IsNullOrEmpty(monstroSelecionado.Resistencias) ? "Nenhuma" : monstroSelecionado.Resistencias)</div>
+                        </div>
+
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Habilidades especiais</span>
+                            <div class="field-value-box">@(string.IsNullOrEmpty(monstroSelecionado.Habilidades) ? "Nenhuma" : monstroSelecionado.Habilidades)</div>
+                        </div>
+
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Descrição</span>
+                            <div class="field-value-box caixa-descricao">@(string.IsNullOrEmpty(monstroSelecionado.Descricao) ? "Nenhuma descrição fornecida." : monstroSelecionado.Descricao)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-footer rodape-modal">
+                        <button type="button" class="action-secondary" @onclick="FecharModal">Fechar</button>
+                    </div>
+                </section>
+
+                <aside class="form-aside">
+                    <div class="aside-portrait">
+                        <img src="@(string.IsNullOrEmpty(monstroSelecionado.Imagem) ? "img/capacampanha3.png" : monstroSelecionado.Imagem)" alt="Ilustração do monstro" />
+                    </div>
+                    <div class="aside-note">
+                        <strong>Bestiário da mesa</strong>
+                        Criatura registrada e pronta para ser utilizada nas suas campanhas e sessões de RPG.
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
+    private List<Monstro> listaMonstros = new();
+    private string termoBusca = "";
+    private string filtroTipo = "todos";
+    private string mensagemErro = "";
 
+    private bool exibirModal = false;
+    private Monstro? monstroSelecionado = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            int idUsuario = SessaoUsuario.IdUsuarioLogado;
+            if (idUsuario > 0)
+            {
+                listaMonstros = await MonstroService.ObterMonstrosPorUsuarioAsync(idUsuario);
+            }
+            else
+            {
+                mensagemErro = "Aviso: Nenhum usuário logado identificado (IdUsuarioLogado é 0 ou menor).";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensagemErro = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+        }
+    }
+
+    private void AbrirModal(Monstro monstro)
+    {
+        monstroSelecionado = monstro;
+        exibirModal = true;
+    }
+
+    private void FecharModal()
+    {
+        exibirModal = false;
+        monstroSelecionado = null;
+    }
+
+    private IEnumerable<Monstro> MonstrosFiltrados
+    {
+        get
+        {
+            var resultado = listaMonstros.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(termoBusca))
+            {
+                resultado = resultado.Where(m => (m.Nome != null && m.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
+                                                (m.Tipo != null && m.Tipo.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
+                                                (m.Tendencia != null && m.Tendencia.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
+            }
+
+            if (filtroTipo != "todos")
+            {
+                resultado = resultado.Where(m => m.Tipo != null && m.Tipo.Equals(filtroTipo, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return resultado;
+        }
+    }
 }
