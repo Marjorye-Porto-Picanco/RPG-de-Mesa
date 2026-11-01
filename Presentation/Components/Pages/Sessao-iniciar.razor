@@ -1,0 +1,285 @@
+﻿@page "/sessao-iniciar/{idCampanha:int}"
+@using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Domain.Campanhas
+@using RPGdeMesa.Domain.Bestiario
+@using RPGdeMesa.Domain.Itens
+@inject CampanhaService CampanhaService
+@inject NavigationManager Navigation
+
+<NavMenu />
+
+<div class="app-shell">
+    <main class="app-content">
+        <div class="session-layout">
+            <!-- Sidebar: Navegação e Jogadores -->
+            <aside class="session-sidebar">
+                <nav class="session-nav" aria-label="Páginas da sessão">
+                    <a class="session-nav-link @(iniciar ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirIniciar">Iniciar sessão</a>
+                    <a class="session-nav-link @(config ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirConfig">Configurações</a>
+                    <a class="session-nav-link @(hist ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirHist">Histórico</a>
+                </nav>
+
+                <section class="session-players-panel" aria-labelledby="titulo-jogadores">
+                    <h2 id="titulo-jogadores">Jogadores na Mesa</h2>
+                    <div class="session-players">
+                        @if (campanhaAtual?.Personagens != null && campanhaAtual.Personagens.Any())
+                        {
+                            @foreach (var p in campanhaAtual.Personagens)
+                            {
+                                <div class="player-option">
+                                    <span>@p.Nome<span>@(p.RacaTexto ?? "Aventureiro") · @(p.ClasseTexto ?? "Geral")</span></span>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="aviso-vazio" style="font-size: 0.85rem; padding: 10px; color: #888;">Nenhum personagem vinculado.</p>
+                        }
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Conteúdo Principal -->
+            <section class="preview-content">
+                @if (iniciar)
+                {
+                    <header class="page-heading">
+                        <div>
+                            <p class="page-kicker">Prepare a mesa</p>
+                            <h1>Iniciar sessão</h1>
+                            <p class="page-description">Reúna o grupo, gerencie o plano e acompanhe a aventura.</p>
+                        </div>
+                    </header>
+                    <section class="session-summary" aria-label="Resumo da sessão">
+                        <p class="summary-kicker">Campanha Ativa</p>
+                        <h2>@(campanhaAtual?.Nome ?? "Carregando...")</h2>
+                        <p class="summary-description">@(campanhaAtual?.Descricao ?? "Sem descrição informada.")</p>
+                        <dl class="summary-details">
+                            <div><dt>Código</dt><dd>@(campanhaAtual?.CodigoConvite ?? "---")</dd></div>
+                            <div><dt>Criação</dt><dd>@campanhaAtual?.DataCriacao.ToString("dd/MM/yyyy")</dd></div>
+                            <div><dt>Aventureiros</dt><dd>@(campanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
+                        </dl>
+                        <a class="action-primary" href="/campanhas">Voltar para campanhas <span aria-hidden="true">→</span></a>
+                    </section>
+                }
+
+                @if (config)
+                {
+                    <header class="page-heading">
+                        <div>
+                            <p class="page-kicker">Preparação da mesa</p>
+                            <h1>Configurações da sessão</h1>
+                            <p class="page-description">Monte encontros, monstros, NPCs e itens da aventura.</p>
+                        </div>
+                        <button class="add-button" type="button" @onclick="LimparFormulario"><span>+</span> Novo Registro</button>
+                    </header>
+
+                    <div class="session-page-content">
+                        <section class="configuration-content" aria-label="Conteúdo da sessão">
+                            <div class="configuration-heading">
+                                <div><p class="page-kicker">Encontro atual</p><h2>@(campanhaAtual?.Nome)</h2></div>
+                            </div>
+                            <div class="configuration-layout">
+                                <!-- LADO ESQUERDO: Navegador de Recursos (Vinculados / Disponíveis) -->
+                                <section class="resource-browser" aria-labelledby="titulo-recursos">
+                                    <h3 id="titulo-recursos">Elementos da sessão</h3>
+                                    
+                                    <div class="resource-tabs" role="tablist">
+                                        <button class="resource-tab @(categoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => categoriaAtiva = "todos"'>Todos</button>
+                                        <button class="resource-tab @(categoriaAtiva == "npcs" ? "ativa" : "")" @onclick='() => categoriaAtiva = "npcs"'>NPCs</button>
+                                        <button class="resource-tab @(categoriaAtiva == "monstros" ? "ativa" : "")" @onclick='() => categoriaAtiva = "monstros"'>Monstros</button>
+                                        <button class="resource-tab @(categoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => categoriaAtiva = "itens"'>Itens</button>
+                                    </div>
+
+                                    <div class="link-tabs" role="tablist" style="margin-top: 10px;">
+                                        <button class="link-tab @(modoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => modoVisualizacao = "vinculados"'>Vinculados</button>
+                                        <button class="link-tab @(modoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => modoVisualizacao = "disponiveis"'>Disponíveis (Conta)</button>
+                                    </div>
+
+                                    <div class="resource-list" style="margin-top: 15px; max-height: 280px; overflow-y: auto;">
+                                        @if (modoVisualizacao == "vinculados")
+                                        {
+                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "npcs")
+                                            {
+                                                @foreach (var npc in campanhaAtual?.Npcs ?? Enumerable.Empty<NPC>())
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px;">
+                                                        <span><strong>[NPC]</strong> @npc.Nome <span>@npc.Ocupacao</span></span>
+                                                    </div>
+                                                }
+                                            }
+                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "monstros")
+                                            {
+                                                @foreach (var mc in campanhaAtual?.MonstroCampanhas ?? Enumerable.Empty<MonstroCampanha>())
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px;">
+                                                        <span><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>ND: @mc.Monstro?.NivelDesafio</span></span>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @if (categoriaAtiva == "monstros" || categoriaAtiva == "todos")
+                                            {
+                                                @foreach (var m in monstrosDisponiveis)
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); cursor: pointer;" @onclick="() => VincularMonstro(m.IdMonstro)">
+                                                        <span>➕ Vincular Monstro: <strong>@m.Nome</strong></span>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                </section>
+
+                                <!-- LADO DIREITO: Formulário Dinâmico Baseado na Categoria Selecionada -->
+                                <form class="resource-editor" @onsubmit="SalvarRegistroAsync">
+                                    <div class="editor-heading">
+                                        <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar Novo @categoriaSelecionada.ToUpper()</h3></div>
+                                    </div>
+
+                                    <label class="form-field">
+                                        Categoria de Cadastro
+                                        <select @bind="categoriaSelecionada">
+                                            <option value="npc">NPC</option>
+                                            <option value="monstro">Monstro</option>
+                                            <option value="item">Item</option>
+                                        </select>
+                                    </label>
+
+                                    @if (categoriaSelecionada == "npc")
+                                    {
+                                        <label class="form-field">Nome do NPC<input @bind="npcNome" required maxlength="100" placeholder="Ex.: Aldeão" /></label>
+                                        <label class="form-field">Ocupação<input @bind="npcOcupacao" maxlength="50" placeholder="Ex.: Comerciante" /></label>
+                                        <label class="form-field">Alinhamento<input @bind="npcAlinhamento" maxlength="50" placeholder="Ex.: Neutro e bom" /></label>
+                                        <label class="form-field">Localização<input @bind="npcLocalizacao" maxlength="100" placeholder="Ex.: Praça central" /></label>
+                                        <label class="form-field">Descrição<textarea @bind="npcDescricao" rows="3" placeholder="Detalhes do NPC..."></textarea></label>
+                                    }
+                                    else if (categoriaSelecionada == "monstro")
+                                    {
+                                        <div style="padding: 15px; background: rgba(0,0,0,0.2); border-radius: 6px; text-align: center;">
+                                            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">Para criar novos monstros do zero, utilize o menu do Bestiário.</p>
+                                            <a class="action-secondary" href="/monstro-criar" style="display:inline-block; padding: 6px 12px;">Ir para Criar Monstro</a>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Poção de Cura" /></label>
+                                        <label class="form-field">Tipo<input @bind="itemTipo" maxlength="50" placeholder="Ex.: Consumível" /></label>
+                                        <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
+                                        <label class="form-field">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico ou utilidade..."></textarea></label>
+                                    }
+
+                                    @if (categoriaSelecionada != "monstro")
+                                    {
+                                        <div class="editor-actions">
+                                            <button class="save-button" type="submit">Salvar Registro</button>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(mensagemFeedback))
+                                    {
+                                        <p class="save-status" role="status" style="margin-top: 10px; color: #d4af37;">@mensagemFeedback</p>
+                                    }
+                                </form>
+                            </div>
+                        </section>
+                    </div>
+                }
+
+                @if (hist)
+                {
+                    <header class="page-heading">
+                        <div><p class="page-kicker">Memória da campanha</p><h1>Histórico das sessões</h1><p class="page-description">Acompanhe os registros desta mesa.</p></div>
+                    </header>
+                    <div class="session-page-content">
+                        <p class="aviso-vazio">Diário de bordo ativo para <strong>@(campanhaAtual?.Nome)</strong>.</p>
+                    </div>
+                }
+            </section>
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter] public int IdCampanha { get; set; }
+
+    private Campanha? campanhaAtual;
+    private List<Monstro> monstrosDisponiveis = new();
+
+    private bool config = false;
+    private bool iniciar = true;
+    private bool hist = false;
+    private string categoriaAtiva = "todos";
+    private string modoVisualizacao = "vinculados";
+    private string categoriaSelecionada = "npc";
+
+    private string npcNome = string.Empty, npcOcupacao = string.Empty, npcAlinhamento = string.Empty, npcLocalizacao = string.Empty, npcDescricao = string.Empty;
+    private string itemNome = string.Empty, itemTipo = string.Empty, itemDescricao = string.Empty; decimal itemPreco = 0;
+    private string mensagemFeedback = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CarregarDadosCampanhaAsync();
+    }
+
+    private async Task CarregarDadosCampanhaAsync()
+    {
+        if (IdCampanha > 0)
+        {
+            campanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+            if (campanhaAtual != null)
+            {
+                monstrosDisponiveis = await CampanhaService.ObterMonstrosDoUsuarioAsync(campanhaAtual.IdAccount);
+            }
+        }
+    }
+
+    private async Task SalvarRegistroAsync()
+    {
+        if (campanhaAtual == null) return;
+
+        try
+        {
+            if (categoriaSelecionada == "npc")
+            {
+                campanhaAtual.AdicionarNpc(npcNome, npcOcupacao, npcAlinhamento, npcLocalizacao, npcDescricao);
+                var resultado = await CampanhaService.AtualizarCampanhaAsync(campanhaAtual);
+                mensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado!" : resultado.Mensagem;
+                if (resultado.Sucesso) { npcNome = npcOcupacao = npcAlinhamento = npcLocalizacao = npcDescricao = string.Empty; }
+            }
+
+            await CarregarDadosCampanhaAsync();
+        }
+        catch (Exception ex)
+        {
+            mensagemFeedback = $"Erro: {ex.Message}";
+        }
+    }
+
+    private async Task VincularMonstro(int idMonstro)
+    {
+        try
+        {
+            var resultado = await CampanhaService.AdicionarMonstroNaCampanhaAsync(IdCampanha, idMonstro);
+            mensagemFeedback = resultado.Mensagem;
+            await CarregarDadosCampanhaAsync();
+        }
+        catch (Exception ex)
+        {
+            mensagemFeedback = $"Erro ao vincular: {ex.Message}";
+        }
+    }
+
+    private void LimparFormulario()
+    {
+        npcNome = npcOcupacao = npcAlinhamento = npcLocalizacao = npcDescricao = string.Empty;
+        itemNome = itemTipo = itemDescricao = string.Empty;
+        mensagemFeedback = string.Empty;
+    }
+
+    void AbrirIniciar() { iniciar = true; config = false; hist = false; }
+    void AbrirConfig() { iniciar = false; config = true; hist = false; }
+    void AbrirHist() { iniciar = false; config = false; hist = true; }
+}
