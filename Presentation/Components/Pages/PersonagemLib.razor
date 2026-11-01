@@ -1,0 +1,88 @@
+@page "/personagem-lib"
+@using RPGdeMesa.Presentation.Components.Layout
+@inject PersonagemService PersonagemService
+@inject SessaoUsuarioService SessaoUsuario
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<NavMenu />
+
+<div class="tela-rpg tela-personagens">
+    <main class="conteudo-rpg">
+        <div class="titulo-pagina">
+            <div>
+                <p class="sobretitulo-rpg">Heróis e lendas</p>
+                <h1>Personagens</h1>
+                <p class="texto-apoio">Suas fichas reunidas em um só lugar.</p>
+            </div>
+            <a class="botao-dourado" href="/personagem-criar">
+                <span aria-hidden="true">+</span> Novo personagem
+            </a>
+        </div>
+
+        @if (personagens == null)
+        {
+            <p class="aviso-carregando">Carregando heróis...</p>
+        }
+        else
+        {
+            @if (!personagens.Any())
+            {
+                <p class="aviso-vazio">Nenhum personagem encontrado no seu bestiário pessoal.</p>
+            }
+
+            <div class="grade-personagens">
+            
+
+                @foreach (var p in personagens)
+                {
+                    string iniciais = ObterIniciais(p.Nome);
+                    <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem" aria-label="Abrir ficha de @p.Nome">
+                        <div class="retrato-personagem">
+                            <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="Retrato de @p.Nome" />
+                            <span>@iniciais</span>
+                        </div>
+                        <div class="info-personagem">
+                            <span class="status-personagem">Aventureiro</span>
+                            <h2>@p.Nome</h2>
+                            <p>@(string.IsNullOrEmpty(p.RacaTexto) ? "Raça desconhecida" : p.RacaTexto) • @(string.IsNullOrEmpty(p.ClasseTexto) ? "Classe" : p.ClasseTexto) nível @p.Nivel</p>
+                            <small>Pronto para a aventura</small>
+                        </div>
+                    </a>
+                }
+                
+                <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
+                    <span class="mais-adicionar" aria-hidden="true">+</span>
+                    <strong>Criar personagem</strong>
+                    <small>Escreva uma nova história</small>
+                </a>
+            </div>
+        }
+    </main>
+</div>
+
+@code {
+    private List<Personagem>? personagens;
+
+    protected override async Task OnInitializedAsync()
+    {
+        int idUsuario = SessaoUsuario.IdUsuarioLogado;
+        if (idUsuario > 0)
+        {
+            personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+        }
+    }
+
+    private string ObterIniciais(string nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return "HP";
+        var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length >= 2)
+            return $"{char.ToUpper(partes[0][0])}{char.ToUpper(partes[1][0])}";
+        return nome.Substring(0, Math.Min(2, nome.Length)).ToUpper();
+    }
+
+    public void Dispose()
+    {
+    }
+}
