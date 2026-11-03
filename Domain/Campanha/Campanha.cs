@@ -1,7 +1,7 @@
 ﻿using RPGdeMesa.Domain.Common;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
-using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Domain.Campanhas;
 
@@ -22,8 +22,8 @@ public class Campanha : IAggregateRoot
     private readonly List<MonstroCampanha> _monstroCampanhas = new();
     public virtual IReadOnlyCollection<MonstroCampanha> MonstroCampanhas => _monstroCampanhas.AsReadOnly();
 
-    private readonly List<NPC> _npcs = new();
-    public virtual IReadOnlyCollection<NPC> Npcs => _npcs.AsReadOnly();
+    private readonly List<NpcCampanha> _npcCampanhas = new();
+    public virtual IReadOnlyCollection<NpcCampanha> NpcCampanhas => _npcCampanhas.AsReadOnly();
 
     public virtual ICollection<UsuarioCampanha> UsuarioCampanhas { get; private set; } = new List<UsuarioCampanha>();
 
@@ -31,7 +31,9 @@ public class Campanha : IAggregateRoot
         .Where(pc => pc.Personagem != null)
         .Select(pc => pc.Personagem!);
 
-
+    public IEnumerable<NPC> Npcs => _npcCampanhas
+        .Where(nc => nc.Npc != null)
+        .Select(nc => nc.Npc!);
 
     public Campanha() { }
 
@@ -83,11 +85,19 @@ public class Campanha : IAggregateRoot
         _monstroCampanhas.Add(new MonstroCampanha(IdCampanha, idMonstro));
     }
 
-    public NPC AdicionarNpc(string nome, string? ocupacao, string? alinhamento, string? localizacao, string? descricao)
+    public void VincularNpc(int idNpc)
     {
-        var npc = new NPC(IdCampanha, nome, ocupacao, alinhamento, localizacao, descricao);
-        _npcs.Add(npc);
-        return npc;
+        if (_npcCampanhas.Any(nc => nc.IdNpc == idNpc))
+            throw new DomainException("Este NPC já está vinculado à campanha.");
+
+        _npcCampanhas.Add(new NpcCampanha(IdCampanha, idNpc));
+    }
+
+    public void RemoverNpc(int idNpc)
+    {
+        var vinculo = _npcCampanhas.FirstOrDefault(nc => nc.IdNpc == idNpc);
+        if (vinculo != null)
+            _npcCampanhas.Remove(vinculo);
     }
 
     private static string GerarCodigoConvitePadrao() =>

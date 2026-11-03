@@ -13,14 +13,17 @@ public class NpcRepository : INpcRepository
     public async Task<NPC?> ObterPorIdAsync(int idNpc)
     {
         _contexto.ChangeTracker.Clear();
-        return await _contexto.Npcs.FirstOrDefaultAsync(n => n.IdNpc == idNpc);
+        return await _contexto.Npcs
+            .Include(n => n.NpcCampanhas)
+            .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
     }
 
     public async Task<List<NPC>> ListarPorUsuarioAsync(int idAccount)
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Npcs
-            .Where(n => n.IdAccount == idAccount || (n.Campanha != null && n.Campanha.IdAccount == idAccount))
+            .Include(n => n.NpcCampanhas)
+            .Where(n => n.IdAccount == idAccount)
             .ToListAsync();
     }
 
@@ -28,7 +31,8 @@ public class NpcRepository : INpcRepository
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Npcs
-            .Where(n => n.IdCampanha == idCampanha)
+            .Include(n => n.NpcCampanhas)
+            .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
             .ToListAsync();
     }
 

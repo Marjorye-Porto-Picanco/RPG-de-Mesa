@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<PersonagemCampanha> PersonagensCampanha { get; set; }
     public DbSet<UsuarioCampanha> UsuariosCampanha { get; set; }
     public DbSet<MonstroCampanha> MonstroCampanhas { get; set; }
+    public DbSet<NpcCampanha> NpcCampanhas { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -96,18 +97,18 @@ public class AppDbContext : DbContext
             e.Property(c => c.Nome).HasColumnName("nome");
             e.Property(c => c.DataCriacao).HasColumnName("data_criacao");
             e.Property(c => c.Descricao).HasColumnName("descricao");
-            e.Property(c => c.CodigoConvite).HasColumnName("codigo_convite").HasMaxLength(10);
+            e.Property(c => c.CodigoConvite).HasColumnName("codigo_convite").HasMaxLength(20);
 
             e.HasOne(c => c.UsuarioMestre)
              .WithMany()
              .HasForeignKey(c => c.IdAccount);
 
-            // Mapeamento explícito da relação com UsuarioCampanha para evitar colunas geradas por convenção
             e.HasMany(c => c.UsuarioCampanhas)
              .WithOne(uc => uc.Campanha)
              .HasForeignKey(uc => uc.IdCampanha);
 
             e.Ignore(c => c.Personagens);
+            e.Ignore(c => c.Npcs);
         });
 
         // 4. PERSONAGEM
@@ -183,7 +184,6 @@ public class AppDbContext : DbContext
             e.ToTable("NPC");
             e.HasKey(n => n.IdNpc);
             e.Property(n => n.IdNpc).HasColumnName("id_npc");
-            e.Property(n => n.IdCampanha).HasColumnName("id_campanha");
             e.Property(n => n.IdAccount).HasColumnName("id_account");
             e.Property(n => n.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
 
@@ -207,11 +207,6 @@ public class AppDbContext : DbContext
             e.Property(n => n.Alinhamento).HasColumnName("alinhamento").HasMaxLength(50);
             e.Property(n => n.Localizacao).HasColumnName("localizacao").HasMaxLength(100);
             e.Property(n => n.Descricao).HasColumnName("descricao");
-
-            e.HasOne(n => n.Campanha)
-             .WithMany(c => c.Npcs)
-             .HasForeignKey(n => n.IdCampanha)
-             .IsRequired(false);
 
             e.HasOne(n => n.Usuario)
              .WithMany()
@@ -283,6 +278,22 @@ public class AppDbContext : DbContext
             e.HasOne(mc => mc.Campanha)
              .WithMany(c => c.MonstroCampanhas)
              .HasForeignKey(mc => mc.IdCampanha);
+        });
+
+        modelBuilder.Entity<NpcCampanha>(e =>
+        {
+            e.ToTable("NPC_Campanha");
+            e.HasKey(nc => new { nc.IdNpc, nc.IdCampanha });
+            e.Property(nc => nc.IdNpc).HasColumnName("id_npc");
+            e.Property(nc => nc.IdCampanha).HasColumnName("id_campanha");
+
+            e.HasOne(nc => nc.Npc)
+             .WithMany(n => n.NpcCampanhas)
+             .HasForeignKey(nc => nc.IdNpc);
+
+            e.HasOne(nc => nc.Campanha)
+             .WithMany(c => c.NpcCampanhas)
+             .HasForeignKey(nc => nc.IdCampanha);
         });
     }
 }
