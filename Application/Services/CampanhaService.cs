@@ -168,8 +168,54 @@ public class CampanhaService
         }
         catch (Exception ex)
         {
-            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-            return (false, $"Erro ao vincular monstro: {erroDetalhado}");
+            return (false, $"Erro ao vincular monstro: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> CriarE_VincularMonstroNaCampanhaAsync(int idCampanha, Monstro monstro)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha == null) return (false, "Campanha não encontrada.");
+
+            monstro.PrepararNovoMonstro(campanha.IdAccount);
+            await _monstroRepo.AdicionarAsync(monstro);
+
+            campanha.VincularMonstro(monstro.IdMonstro);
+            await _campanhaRepo.AtualizarAsync(campanha);
+
+            return (true, "Monstro criado e vinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverMonstroDaCampanhaAsync(int idCampanha, int idMonstro)
+    {
+        try
+        {
+            await _campanhaRepo.RemoverMonstroCampanhaAsync(idCampanha, idMonstro);
+            return (true, "Monstro desvinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao desvincular: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverNpcDaCampanhaAsync(int idCampanha, int idNpc)
+    {
+        try
+        {
+            await _campanhaRepo.RemoverNpcAsync(idNpc);
+            return (true, "NPC removido com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao remover NPC: {ex.Message}");
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Campanhas;
 
 namespace RPGdeMesa.Domain.Campanhas;
 
@@ -15,4 +16,8 @@ public interface ICampanhaRepository
     Task<List<Item>> ListarTodosItensAsync();
     Task AdicionarAsync(Campanha campanha);
     Task AtualizarAsync(Campanha campanha);
+
+    // Novos métodos contratuais para remoção de vínculos na sessão
+    Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro);
+    Task RemoverNpcAsync(int idNpc);
 }
