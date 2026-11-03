@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<UsuarioCampanha> UsuariosCampanha { get; set; }
     public DbSet<MonstroCampanha> MonstroCampanhas { get; set; }
     public DbSet<NpcCampanha> NpcCampanhas { get; set; }
+    public DbSet<ItemCampanha> ItemCampanhas { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -109,6 +110,7 @@ public class AppDbContext : DbContext
 
             e.Ignore(c => c.Personagens);
             e.Ignore(c => c.Npcs);
+            e.Ignore(c => c.Itens);
         });
 
         // 4. PERSONAGEM
@@ -220,6 +222,7 @@ public class AppDbContext : DbContext
             e.ToTable("Item");
             e.HasKey(i => i.IdItem);
             e.Property(i => i.IdItem).HasColumnName("id_item");
+            e.Property(i => i.IdAccount).HasColumnName("id_account"); // Mapeamento da nova coluna
             e.Property(i => i.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
             e.Property(i => i.Tipo).HasColumnName("tipo").HasMaxLength(50);
             e.Property(i => i.Peso).HasColumnName("peso").HasColumnType("decimal(5, 2)");
@@ -229,6 +232,8 @@ public class AppDbContext : DbContext
             e.Property(i => i.Propriedades).HasColumnName("propriedades");
             e.Property(i => i.CaBonus).HasColumnName("ca_bonus");
             e.Property(i => i.Descricao).HasColumnName("descricao");
+            e.Property(i => i.Raridade).HasColumnName("raridade").HasMaxLength(50);
+            e.Property(i => i.Sintonizacao).HasColumnName("sintonizacao").HasMaxLength(10);
         });
 
         // 8. TABELAS ASSOCIATIVAS (N:N)
@@ -294,6 +299,22 @@ public class AppDbContext : DbContext
             e.HasOne(nc => nc.Campanha)
              .WithMany(c => c.NpcCampanhas)
              .HasForeignKey(nc => nc.IdCampanha);
+        });
+
+        modelBuilder.Entity<ItemCampanha>(e =>
+        {
+            e.ToTable("Item_Campanha");
+            e.HasKey(ic => new { ic.IdCampanha, ic.IdItem });
+            e.Property(ic => ic.IdCampanha).HasColumnName("id_campanha");
+            e.Property(ic => ic.IdItem).HasColumnName("id_item");
+
+            e.HasOne(ic => ic.Item)
+             .WithMany()
+             .HasForeignKey(ic => ic.IdItem);
+
+            e.HasOne(ic => ic.Campanha)
+             .WithMany(c => c.ItemCampanhas)
+             .HasForeignKey(ic => ic.IdCampanha);
         });
     }
 }

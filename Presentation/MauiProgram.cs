@@ -2,6 +2,7 @@
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
@@ -38,15 +39,17 @@ namespace RPGdeMesa
             builder.Services.AddScoped<IMonstroRepository, MonstroRepository>();
             builder.Services.AddScoped<IPersonagemRepository, PersonagemRepository>();
             builder.Services.AddScoped<INpcRepository, NpcRepository>();
+            builder.Services.AddScoped<IItemRepository, ItemRepository>();
 
 
-            // 2. CAMADA DE APPLICATION (Casos de Uso / Application Services)
-            builder.Services.AddTransient<UsuarioService>();
+                  // 2. CAMADA DE APPLICATION (Casos de Uso / Application Services)
+                  builder.Services.AddTransient<UsuarioService>();
             builder.Services.AddTransient<CampanhaService>();
             builder.Services.AddSingleton<SessaoUsuarioService>();
             builder.Services.AddScoped<MonstroService>();
             builder.Services.AddScoped<PersonagemService>();
             builder.Services.AddScoped<NpcService>();
+            builder.Services.AddScoped<ItemService>();
 
             // 3. CAMADA DE PRESENTATION / UI (Auth Nativo MAUI e ViewModels)
             builder.Services.AddTransient<AuthService>();

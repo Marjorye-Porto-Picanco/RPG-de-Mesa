@@ -21,6 +21,7 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
+            .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item) // <- Inclui os itens vinculados à campanha
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
@@ -122,6 +123,18 @@ public class CampanhaRepository : ICampanhaRepository
         if (vinculo != null)
         {
             _contexto.NpcCampanhas.Remove(vinculo);
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoverItemCampanhaAsync(int idCampanha, int idItem)
+    {
+        var vinculo = await _contexto.ItemCampanhas
+            .FirstOrDefaultAsync(ic => ic.IdCampanha == idCampanha && ic.IdItem == idItem);
+
+        if (vinculo != null)
+        {
+            _contexto.ItemCampanhas.Remove(vinculo);
             await _contexto.SaveChangesAsync();
         }
     }

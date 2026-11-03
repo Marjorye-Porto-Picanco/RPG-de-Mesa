@@ -6,6 +6,7 @@
 @using RPGdeMesa.Domain.Npcs
 @inject CampanhaService CampanhaService
 @inject NpcService NpcService
+@inject ItemService ItemService
 @inject NavigationManager Navigation
 
 <NavMenu />
@@ -86,7 +87,6 @@
                                 <section class="resource-browser" aria-labelledby="titulo-recursos">
                                     <h3 id="titulo-recursos">Elementos da sessão</h3>
 
-                                    <!-- Campo de pesquisa incorporado -->
                                     <div class="search-box" style="margin-bottom: 12px;">
                                         <span aria-hidden="true">⌕</span>
                                         <input id="busca-catalogo" type="search" @bind="termoBusca" @bind:event="oninput" placeholder="Busque por nome ou tipo" autocomplete="off" />
@@ -127,6 +127,16 @@
                                                     </div>
                                                 }
                                             }
+                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "itens")
+                                            {
+                                                @foreach (var ic in ItensVinculadosFiltrados)
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                                        <span><strong>[Item]</strong> @ic.Item?.Nome <span>(@ic.Item?.Tipo)</span></span>
+                                                        <button type="button" title="Desvincular Item" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularItem(ic.IdItem)">❌</button>
+                                                    </div>
+                                                }
+                                            }
                                         }
                                         else
                                         {
@@ -147,6 +157,16 @@
                                                     <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
                                                         <span>Monstro: <strong>@m.Nome</strong></span>
                                                         <button type="button" title="Vincular Monstro" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularMonstro(m.IdMonstro)">➕</button>
+                                                    </div>
+                                                }
+                                            }
+                                            @if (categoriaAtiva == "itens" || categoriaAtiva == "todos")
+                                            {
+                                                @foreach (var i in ItensDisponiveisFiltrados)
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
+                                                        <span>Item: <strong>@i.Nome</strong></span>
+                                                        <button type="button" title="Vincular Item" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularItem(i.IdItem)">➕</button>
                                                     </div>
                                                 }
                                             }
@@ -245,10 +265,37 @@
                                     }
                                     else
                                     {
-                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Poção" /></label>
-                                        <label class="form-field">Tipo<input @bind="itemTipo" maxlength="50" placeholder="Ex.: Consumível" /></label>
+                                        <!-- CAMPOS COMPLETOS DA TABELA DE ITENS -->
+                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
+                                        <label class="form-field">Tipo<input @bind="itemTipo" maxlength="50" placeholder="Ex.: Arma / Poção" /></label>
+                                        <label class="form-field">Peso (kg)<input @bind="itemPeso" type="number" step="0.1" min="0" /></label>
                                         <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
-                                        <label class="form-field">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico..."></textarea></label>
+                                        <label class="form-field">Dano<input @bind="itemDano" maxlength="20" placeholder="Ex.: 1d8" /></label>
+                                        <label class="form-field">Tipo de Dano<input @bind="itemTipoDano" maxlength="30" placeholder="Ex.: Cortante" /></label>
+                                        <label class="form-field">Propriedades<input @bind="itemPropriedades" maxlength="100" placeholder="Ex.: Versátil, acuidade" /></label>
+                                        <label class="form-field">Bônus de CA<input @bind="itemCaBonus" type="number" min="0" max="10" /></label>
+                                        
+                                        <label class="form-field">
+                                            Raridade
+                                            <select @bind="itemRaridade">
+                                                <option value="">Sem raridade</option>
+                                                <option value="Comum">Comum</option>
+                                                <option value="Incomum">Incomum</option>
+                                                <option value="Raro">Raro</option>
+                                                <option value="Muito Raro">Muito Raro</option>
+                                                <option value="Lendário">Lendário</option>
+                                            </select>
+                                        </label>
+
+                                        <label class="form-field">
+                                            Sintonização
+                                            <select @bind="itemSintonizacao">
+                                                <option value="Não">Não</option>
+                                                <option value="Sim">Sim</option>
+                                            </select>
+                                        </label>
+
+                                        <label class="form-field full-width">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico ou história do item..."></textarea></label>
                                     }
 
                                     <div class="editor-actions">
@@ -285,6 +332,7 @@
     private Campanha? campanhaAtual;
     private List<Monstro> monstrosDisponiveis = new();
     private List<NPC> npcsDisponiveis = new();
+    private List<Item> itensDisponiveis = new();
     private string termoBusca = string.Empty;
 
     private bool config = false;
@@ -294,7 +342,6 @@
     private string modoVisualizacao = "vinculados";
     private string categoriaSelecionada = "npc";
 
-    // Propriedades computadas para filtragem instantânea com a barra de busca
     private IEnumerable<NPC> NpcsVinculadosFiltrados =>
         (campanhaAtual?.Npcs ?? Array.Empty<NPC>()).Where(n =>
             string.IsNullOrWhiteSpace(termoBusca) ||
@@ -310,6 +357,14 @@
                 (mc.Monstro.TipoMonstro != null && mc.Monstro.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase))
             )));
 
+    private IEnumerable<ItemCampanha> ItensVinculadosFiltrados =>
+        (campanhaAtual?.ItemCampanhas ?? Enumerable.Empty<ItemCampanha>()).Where(ic =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            (ic.Item != null && (
+                ic.Item.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+                (ic.Item.Tipo != null && ic.Item.Tipo.Contains(termoBusca, StringComparison.OrdinalIgnoreCase))
+            )));
+
     private IEnumerable<NPC> NpcsDisponiveisFiltrados =>
         npcsDisponiveis.Where(n =>
             string.IsNullOrWhiteSpace(termoBusca) ||
@@ -323,6 +378,12 @@
             m.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
             (m.TipoMonstro != null && m.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
 
+    private IEnumerable<Item> ItensDisponiveisFiltrados =>
+        itensDisponiveis.Where(i =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            i.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+            (i.Tipo != null && i.Tipo.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
+
     // Campos do NPC
     private string npcNome = string.Empty, npcRaca = "Humano", npcClasse = "Guerreiro", npcTendencia = "Neutra", npcAntecedente = string.Empty, npcHistoria = string.Empty;
     private int npcNivel = 1;
@@ -332,8 +393,17 @@
     private string monstroNome = string.Empty, monstroTipo = "Outro", monstroTamanho = "Médio", monstroAlinhamento = string.Empty, monstroDeslocamento = "9 m", monstroSentidos = string.Empty, monstroResistencias = string.Empty, monstroHabilidades = string.Empty, monstroDescricao = string.Empty;
     private decimal monstroNd = 1; int monstroDefesa = 12, monstroVida = 15;
 
-    // Campos de Item
-    private string itemNome = string.Empty, itemTipo = string.Empty, itemDescricao = string.Empty; decimal itemPreco = 0;
+    // Campos de Item Completos
+    private string itemNome = string.Empty, itemTipo = string.Empty, itemDescricao = string.Empty;
+    private decimal? itemPeso = null;
+    private decimal? itemPreco = null;
+    private string? itemDano = string.Empty;
+    private string? itemTipoDano = string.Empty;
+    private string? itemPropriedades = string.Empty;
+    private int itemCaBonus = 0;
+    private string itemRaridade = string.Empty;
+    private string itemSintonizacao = "Não";
+    
     private string mensagemFeedback = string.Empty;
 
     protected override async Task OnParametersSetAsync()
@@ -355,6 +425,10 @@
                 var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
                 var idsNpcsVinculados = campanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
                 npcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
+
+                var todosItensUsuario = await ItemService.ObterItensPorUsuarioAsync(campanhaAtual.IdAccount);
+                var idsItensVinculados = campanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
+                itensDisponiveis = todosItensUsuario.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
             }
         }
     }
@@ -412,6 +486,46 @@
                 mensagemFeedback = resultado.Mensagem;
                 if (resultado.Sucesso) { monstroNome = monstroDescricao = string.Empty; }
             }
+            else if (categoriaSelecionada == "item")
+            {
+                var novoItem = new Item(
+                    idAccount: campanhaAtual.IdAccount, // Associa à conta do usuário logado
+                    nome: itemNome,
+                    tipo: itemTipo,
+                    peso: itemPeso,
+                    preco: itemPreco,
+                    dano: string.IsNullOrWhiteSpace(itemDano) ? null : itemDano,
+                    tipoDano: string.IsNullOrWhiteSpace(itemTipoDano) ? null : itemTipoDano,
+                    propriedades: string.IsNullOrWhiteSpace(itemPropriedades) ? null : itemPropriedades,
+                    caBonus: itemCaBonus,
+                    descricao: itemDescricao,
+                    raridade: string.IsNullOrEmpty(itemRaridade) ? null : itemRaridade,
+                    sintonizacao: itemSintonizacao
+                );
+
+                var resultadoCriacao = await ItemService.CriarItemAsync(campanhaAtual.IdAccount, novoItem);
+                if (resultadoCriacao.Sucesso)
+                {
+                    // Vincula automaticamente o item criado à campanha ativa
+                    if (resultadoCriacao.IdItemCriado > 0)
+                    {
+                        await CampanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, resultadoCriacao.IdItemCriado);
+                    }
+
+                    mensagemFeedback = "Item cadastrado e vinculado com sucesso!";
+                    itemNome = itemTipo = itemDescricao = string.Empty;
+                    itemDano = itemTipoDano = itemPropriedades = string.Empty;
+                    itemPeso = null;
+                    itemPreco = null;
+                    itemCaBonus = 0;
+                    itemRaridade = string.Empty;
+                    itemSintonizacao = "Não";
+                }
+                else
+                {
+                    mensagemFeedback = resultadoCriacao.Mensagem;
+                }
+            }
 
             await CarregarDadosCampanhaAsync();
         }
@@ -435,6 +549,13 @@
         await CarregarDadosCampanhaAsync();
     }
 
+    private async Task VincularItem(int idItem)
+    {
+        var resultado = await CampanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, idItem);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+    }
+
     private async Task DesvincularMonstro(int idMonstro)
     {
         var resultado = await CampanhaService.RemoverMonstroDaCampanhaAsync(IdCampanha, idMonstro);
@@ -449,11 +570,23 @@
         await CarregarDadosCampanhaAsync();
     }
 
+    private async Task DesvincularItem(int idItem)
+    {
+        var resultado = await CampanhaService.RemoverItemDaCampanhaAsync(IdCampanha, idItem);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+    }
+
     private void LimparFormulario()
     {
         npcNome = npcAntecedente = npcHistoria = string.Empty;
         monstroNome = monstroSentidos = monstroResistencias = monstroHabilidades = monstroDescricao = string.Empty;
-        itemNome = itemTipo = itemDescricao = string.Empty;
+        itemNome = itemTipo = itemDescricao = itemDano = itemTipoDano = itemPropriedades = string.Empty;
+        itemPeso = null;
+        itemPreco = null;
+        itemCaBonus = 0;
+        itemRaridade = string.Empty;
+        itemSintonizacao = "Não";
         mensagemFeedback = string.Empty;
     }
 
