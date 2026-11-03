@@ -1,9 +1,7 @@
 ﻿@page "/personagem-criar"
-
 @inject PersonagemCriarViewModel ViewModel
 @inject NavigationManager Navigation
 @implements IDisposable
-
 
 <div class="app-shell">
     <main class="app-content">
@@ -11,8 +9,8 @@
         <div class="page-heading" style="margin-top: 16px">
             <div>
                 <p class="page-kicker">Uma nova história começa</p>
-                <h1 class="page-title">Criar personagem</h1>
-                <p class="page-description">Registre as informações essenciais do seu aventureiro.</p>
+                <h1 class="page-title">Criar @(ViewModel.TipoSelecionado == "NPC" ? "NPC" : "personagem")</h1>
+                <p class="page-description">Registre as informações essenciais para a aventura.</p>
             </div>
         </div>
 
@@ -21,13 +19,13 @@
                 <h2>Identidade e jornada</h2>
                 <div class="form-grid">
                     <label class="form-field full-width">
-                        Nome do personagem
+                        Nome
                         <input @bind="ViewModel.PersonagemAtual.Nome" required maxlength="60" placeholder="Ex.: Lyra Ventobrasa" autocomplete="off" />
                     </label>
 
                     <label class="form-field">
-                        Tipo do personagem
-                        <select @bind="tipoPersonagem">
+                        Tipo da ficha
+                        <select @bind="ViewModel.TipoSelecionado">
                             <option value="Personagem">Personagem</option>
                             <option value="NPC">NPC</option>
                         </select>
@@ -117,33 +115,44 @@
                     <div>
                         <a class="action-secondary" href="/personagem-lib">Cancelar</a>
                         <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
-                            @(ViewModel.IsProcessing ? "Criando..." : "Criar personagem") <span aria-hidden="true">→</span>
+                            @(ViewModel.IsProcessing ? "Salvando..." : $"Criar {ViewModel.TipoSelecionado}") <span aria-hidden="true">→</span>
                         </button>
                     </div>
                 </div>
             </section>
 
             <aside class="form-aside">
-                <div class="aside-portrait"><img id="imagem-personagem-preview" src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)" alt="Prévia do retrato do personagem" /></div>
+                <div class="aside-portrait"><img id="imagem-personagem-preview" src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)" alt="Prévia do retrato" /></div>
                 <div class="upload-imagem">
-                    <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher foto do personagem<input id="imagem-personagem" type="file" accept="image/*" aria-label="Escolher foto do personagem" /></label>
+                    <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher foto<input id="imagem-personagem" type="file" accept="image/*" aria-label="Escolher foto" /></label>
                     <p class="upload-imagem-ajuda">JPG, PNG ou WebP. A imagem é reduzida para armazenamento.</p>
                 </div>
-                <div class="aside-note"><strong>Uma ficha por vez</strong>Você poderá consultar seus personagens na biblioteca e continuar ajustando os detalhes da aventura depois.</div>
+                <div class="aside-note"><strong>Uma ficha por vez</strong>Você poderá consultar seus personagens e NPCs na biblioteca e continuar ajustando os detalhes da aventura depois.</div>
             </aside>
         </form>
     </main>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "campanhaId")]
+    public int? CampanhaId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "tipo")]
+    public string? TipoInicial { get; set; }
+
     protected override void OnInitialized()
     {
         ViewModel.LimparFormulario();
+        ViewModel.IdCampanhaOpcional = CampanhaId;
+
+        if (!string.IsNullOrWhiteSpace(TipoInicial) &&
+           (TipoInicial.Equals("NPC", StringComparison.OrdinalIgnoreCase) || TipoInicial.Equals("Personagem", StringComparison.OrdinalIgnoreCase)))
+        {
+            ViewModel.TipoSelecionado = TipoInicial.Equals("NPC", StringComparison.OrdinalIgnoreCase) ? "NPC" : "Personagem";
+        }
+
         ViewModel.OnChange += StateHasChanged;
     }
-
-    // Campo local apenas para estruturar o select de tipo (Personagem / NPC)
-    private string tipoPersonagem = "Personagem";
 
     public void Dispose()
     {

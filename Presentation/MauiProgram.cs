@@ -37,6 +37,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<ICampanhaRepository, CampanhaRepository>();
             builder.Services.AddScoped<IMonstroRepository, MonstroRepository>();
             builder.Services.AddScoped<IPersonagemRepository, PersonagemRepository>();
+            builder.Services.AddScoped<INpcRepository, NpcRepository>();
 
 
             // 2. CAMADA DE APPLICATION (Casos de Uso / Application Services)
@@ -45,6 +46,7 @@ namespace RPGdeMesa
             builder.Services.AddSingleton<SessaoUsuarioService>();
             builder.Services.AddScoped<MonstroService>();
             builder.Services.AddScoped<PersonagemService>();
+            builder.Services.AddScoped<NpcService>();
 
             // 3. CAMADA DE PRESENTATION / UI (Auth Nativo MAUI e ViewModels)
             builder.Services.AddTransient<AuthService>();

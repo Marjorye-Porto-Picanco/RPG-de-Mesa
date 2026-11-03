@@ -67,10 +67,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Remove="Infrastructure\Repositories\NpcRepository.cs" />
-    </ItemGroup>
-
-    <ItemGroup>
       <None Remove="Platforms\Android\Resources\xml\network_security_config.xml" />
     </ItemGroup>
 

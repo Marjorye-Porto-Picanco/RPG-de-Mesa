@@ -2,6 +2,7 @@
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
 
@@ -183,7 +184,25 @@ public class AppDbContext : DbContext
             e.HasKey(n => n.IdNpc);
             e.Property(n => n.IdNpc).HasColumnName("id_npc");
             e.Property(n => n.IdCampanha).HasColumnName("id_campanha");
+            e.Property(n => n.IdAccount).HasColumnName("id_account");
             e.Property(n => n.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
+
+            e.Property(n => n.RacaTexto).HasColumnName("raca_texto").HasMaxLength(50);
+            e.Property(n => n.ClasseTexto).HasColumnName("classe").HasMaxLength(50);
+            e.Property(n => n.Nivel).HasColumnName("nivel");
+            e.Property(n => n.AntecedenteTexto).HasColumnName("antecedente_texto").HasMaxLength(50);
+            e.Property(n => n.Tendencia).HasColumnName("tendencia").HasMaxLength(50);
+
+            e.Property(n => n.Forca).HasColumnName("forca");
+            e.Property(n => n.Destreza).HasColumnName("destreza");
+            e.Property(n => n.Constituicao).HasColumnName("constituicao");
+            e.Property(n => n.Inteligencia).HasColumnName("inteligencia");
+            e.Property(n => n.Sabedoria).HasColumnName("sabedoria");
+            e.Property(n => n.Carisma).HasColumnName("carisma");
+
+            e.Property(n => n.Historia).HasColumnName("historia");
+            e.Property(n => n.Imagem).HasColumnName("imagem").HasMaxLength(255);
+
             e.Property(n => n.Ocupacao).HasColumnName("ocupacao").HasMaxLength(50);
             e.Property(n => n.Alinhamento).HasColumnName("alinhamento").HasMaxLength(50);
             e.Property(n => n.Localizacao).HasColumnName("localizacao").HasMaxLength(100);
@@ -191,7 +210,13 @@ public class AppDbContext : DbContext
 
             e.HasOne(n => n.Campanha)
              .WithMany(c => c.Npcs)
-             .HasForeignKey(n => n.IdCampanha);
+             .HasForeignKey(n => n.IdCampanha)
+             .IsRequired(false);
+
+            e.HasOne(n => n.Usuario)
+             .WithMany()
+             .HasForeignKey(n => n.IdAccount)
+             .IsRequired(false);
         });
 
         // 7. ITEM

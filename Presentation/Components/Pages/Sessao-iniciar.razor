@@ -3,7 +3,9 @@
 @using RPGdeMesa.Domain.Campanhas
 @using RPGdeMesa.Domain.Bestiario
 @using RPGdeMesa.Domain.Itens
+@using RPGdeMesa.Domain.Npcs
 @inject CampanhaService CampanhaService
+@inject NpcService NpcService
 @inject NavigationManager Navigation
 
 <NavMenu />
@@ -80,9 +82,15 @@
                                 <div><p class="page-kicker">Encontro atual</p><h2>@(campanhaAtual?.Nome)</h2></div>
                             </div>
                             <div class="configuration-layout">
-                                <!-- LADO ESQUERDO: Navegador de Recursos (Vinculados com ❌ / Disponíveis com ➕) -->
+                                <!-- LADO ESQUERDO: Navegador de Recursos -->
                                 <section class="resource-browser" aria-labelledby="titulo-recursos">
                                     <h3 id="titulo-recursos">Elementos da sessão</h3>
+
+                                    <!-- Campo de pesquisa incorporado -->
+                                    <div class="search-box" style="margin-bottom: 12px;">
+                                        <span aria-hidden="true">⌕</span>
+                                        <input id="busca-catalogo" type="search" @bind="termoBusca" @bind:event="oninput" placeholder="Busque por nome ou tipo" autocomplete="off" />
+                                    </div>
                                     
                                     <div class="resource-tabs" role="tablist">
                                         <button class="resource-tab @(categoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => categoriaAtiva = "todos"'>Todos</button>
@@ -93,7 +101,7 @@
 
                                     <div class="link-tabs" role="tablist" style="margin-top: 10px;">
                                         <button class="link-tab @(modoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => modoVisualizacao = "vinculados"'>Vinculados</button>
-                                        <button class="link-tab @(modoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => modoVisualizacao = "disponiveis"'>Disponíveis (Conta)</button>
+                                        <button class="link-tab @(modoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => modoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
                                     </div>
 
                                     <div class="resource-list" style="margin-top: 15px; max-height: 280px; overflow-y: auto;">
@@ -101,17 +109,17 @@
                                         {
                                             @if (categoriaAtiva == "todos" || categoriaAtiva == "npcs")
                                             {
-                                                @foreach (var npc in campanhaAtual?.Npcs ?? Enumerable.Empty<NPC>())
+                                                @foreach (var npc in NpcsVinculadosFiltrados)
                                                 {
                                                     <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                                        <span><strong>[NPC]</strong> @npc.Nome <span>(@npc.Ocupacao)</span></span>
+                                                        <span><strong>[NPC]</strong> @npc.Nome <span>(@(npc.ClasseTexto ?? npc.Ocupacao))</span></span>
                                                         <button type="button" title="Desvincular NPC" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularNpc(npc.IdNpc)">❌</button>
                                                     </div>
                                                 }
                                             }
                                             @if (categoriaAtiva == "todos" || categoriaAtiva == "monstros")
                                             {
-                                                @foreach (var mc in campanhaAtual?.MonstroCampanhas ?? Enumerable.Empty<MonstroCampanha>())
+                                                @foreach (var mc in MonstrosVinculadosFiltrados)
                                                 {
                                                     <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                                                         <span><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>(ND: @mc.Monstro?.NivelDesafio)</span></span>
@@ -122,9 +130,19 @@
                                         }
                                         else
                                         {
+                                            @if (categoriaAtiva == "npcs" || categoriaAtiva == "todos")
+                                            {
+                                                @foreach (var n in NpcsDisponiveisFiltrados)
+                                                {
+                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
+                                                        <span>NPC: <strong>@n.Nome</strong></span>
+                                                        <button type="button" title="Vincular NPC" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularNpcExistente(n.IdNpc)">➕</button>
+                                                    </div>
+                                                }
+                                            }
                                             @if (categoriaAtiva == "monstros" || categoriaAtiva == "todos")
                                             {
-                                                @foreach (var m in monstrosDisponiveis)
+                                                @foreach (var m in MonstrosDisponiveisFiltrados)
                                                 {
                                                     <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
                                                         <span>Monstro: <strong>@m.Nome</strong></span>
@@ -136,7 +154,7 @@
                                     </div>
                                 </section>
 
-                                <!-- LADO DIREITO: Formulário Completo Dinâmico -->
+                                <!-- LADO DIREITO: Formulário Dinâmico -->
                                 <form class="resource-editor" @onsubmit="SalvarRegistroAsync">
                                     <div class="editor-heading">
                                         <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar e Vincular @categoriaSelecionada.ToUpper()</h3></div>
@@ -266,6 +284,8 @@
 
     private Campanha? campanhaAtual;
     private List<Monstro> monstrosDisponiveis = new();
+    private List<NPC> npcsDisponiveis = new();
+    private string termoBusca = string.Empty;
 
     private bool config = false;
     private bool iniciar = true;
@@ -273,6 +293,35 @@
     private string categoriaAtiva = "todos";
     private string modoVisualizacao = "vinculados";
     private string categoriaSelecionada = "npc";
+
+    // Propriedades computadas para filtragem instantânea com a barra de busca
+    private IEnumerable<NPC> NpcsVinculadosFiltrados =>
+        (campanhaAtual?.Npcs ?? Array.Empty<NPC>()).Where(n =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            n.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+            (n.ClasseTexto != null && n.ClasseTexto.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
+            (n.Ocupacao != null && n.Ocupacao.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<MonstroCampanha> MonstrosVinculadosFiltrados =>
+        (campanhaAtual?.MonstroCampanhas ?? Enumerable.Empty<MonstroCampanha>()).Where(mc =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            (mc.Monstro != null && (
+                mc.Monstro.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+                (mc.Monstro.TipoMonstro != null && mc.Monstro.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase))
+            )));
+
+    private IEnumerable<NPC> NpcsDisponiveisFiltrados =>
+        npcsDisponiveis.Where(n =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            n.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+            (n.ClasseTexto != null && n.ClasseTexto.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
+            (n.Ocupacao != null && n.Ocupacao.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<Monstro> MonstrosDisponiveisFiltrados =>
+        monstrosDisponiveis.Where(m =>
+            string.IsNullOrWhiteSpace(termoBusca) ||
+            m.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
+            (m.TipoMonstro != null && m.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
 
     // Campos do NPC
     private string npcNome = string.Empty, npcRaca = "Humano", npcClasse = "Guerreiro", npcTendencia = "Neutra", npcAntecedente = string.Empty, npcHistoria = string.Empty;
@@ -299,7 +348,12 @@
             campanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
             if (campanhaAtual != null)
             {
-                monstrosDisponiveis = await CampanhaService.ObterMonstrosDoUsuarioAsync(campanhaAtual.IdAccount);
+                var todosMonstrosUsuario = await CampanhaService.ObterMonstrosDoUsuarioAsync(campanhaAtual.IdAccount);
+                var idsMonstrosVinculados = campanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
+                monstrosDisponiveis = todosMonstrosUsuario.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
+
+                var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
+                npcsDisponiveis = todosNpcsUsuario.Where(n => n.IdCampanha != IdCampanha).ToList();
             }
         }
     }
@@ -312,8 +366,25 @@
         {
             if (categoriaSelecionada == "npc")
             {
-                campanhaAtual.AdicionarNpc(npcNome, npcClasse, npcTendencia, "Local padrão", npcHistoria);
-                var resultado = await CampanhaService.AtualizarCampanhaAsync(campanhaAtual);
+                var novoNpc = new NPC(
+                    idAccount: campanhaAtual.IdAccount,
+                    nome: npcNome,
+                    racaTexto: npcRaca,
+                    classeTexto: npcClasse,
+                    nivel: npcNivel,
+                    antecedenteTexto: npcAntecedente,
+                    tendencia: npcTendencia,
+                    forca: npcForca,
+                    destreza: npcDestreza,
+                    constituicao: npcConstituicao,
+                    inteligencia: npcInteligencia,
+                    sabedoria: npcSabedoria,
+                    carisma: npcCarisma,
+                    historia: npcHistoria,
+                    idCampanha: IdCampanha
+                );
+
+                var resultado = await NpcService.CriarNpcAsync(campanhaAtual.IdAccount, novoNpc, IdCampanha);
                 mensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
                 if (resultado.Sucesso) { npcNome = npcAntecedente = npcHistoria = string.Empty; }
             }
@@ -352,6 +423,13 @@
     private async Task VincularMonstro(int idMonstro)
     {
         var resultado = await CampanhaService.AdicionarMonstroNaCampanhaAsync(IdCampanha, idMonstro);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+    }
+
+    private async Task VincularNpcExistente(int idNpc)
+    {
+        var resultado = await CampanhaService.AdicionarNpcNaCampanhaAsync(IdCampanha, idNpc);
         mensagemFeedback = resultado.Mensagem;
         await CarregarDadosCampanhaAsync();
     }

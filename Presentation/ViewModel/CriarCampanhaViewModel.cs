@@ -9,6 +9,7 @@ using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
