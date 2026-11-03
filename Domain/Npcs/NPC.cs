@@ -1,17 +1,15 @@
 ﻿using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Usuarios;
-using RPGdeMesa.Domain.ValueObjects;
 
 namespace RPGdeMesa.Domain.Npcs;
 
 public class NPC : IAggregateRoot
 {
     public int IdNpc { get; private set; }
-    public int? IdCampanha { get; private set; }
     public int? IdAccount { get; private set; }
 
-    public string Nome { get; private set; } = string.Empty;
+    public string Nome { get; set; } = string.Empty;
     public string? RacaTexto { get; set; }
     public string? ClasseTexto { get; set; }
     public int Nivel { get; set; } = 1;
@@ -27,31 +25,19 @@ public class NPC : IAggregateRoot
 
     public string? Historia { get; set; }
     public string? Imagem { get; set; } = "img/capacampanha3.png";
+
     public string? Ocupacao { get; private set; }
     public string? Alinhamento { get; private set; }
     public string? Localizacao { get; private set; }
     public string? Descricao { get; private set; }
 
-    public virtual Campanha? Campanha { get; private set; }
     public virtual Usuario? Usuario { get; private set; }
+
+    private readonly List<NpcCampanha> _npcCampanhas = new();
+    public virtual IReadOnlyCollection<NpcCampanha> NpcCampanhas => _npcCampanhas.AsReadOnly();
 
     public NPC() { }
 
-    // Construtor usado quando criado rápido dentro de uma campanha
-    public NPC(int idCampanha, string nome, string? ocupacao, string? alinhamento, string? localizacao, string? descricao)
-    {
-        ValidarNome(nome);
-        IdCampanha = idCampanha;
-        Nome = nome.Trim();
-        Ocupacao = ocupacao;
-        Alinhamento = alinhamento;
-        Tendencia = alinhamento ?? "Neutra";
-        Localizacao = localizacao;
-        Descricao = descricao;
-        Historia = descricao;
-    }
-
-    // Construtor completo para criação de NPC via Ficha (Biblioteca do Usuário ou Campanha)
     public NPC(
         int idAccount,
         string nome,
@@ -96,20 +82,19 @@ public class NPC : IAggregateRoot
         ValidarNome(nome);
 
         IdAccount = idAccount;
-        IdCampanha = idCampanha;
         Nome = nome.Trim();
+
+        if (idCampanha.HasValue && idCampanha.Value > 0)
+            VincularACampanha(idCampanha.Value);
     }
 
     public void VincularACampanha(int idCampanha)
     {
         if (idCampanha <= 0)
             throw new DomainException("ID de campanha inválido para vínculo.");
-        IdCampanha = idCampanha;
-    }
 
-    public void DesvincularDeCampanha()
-    {
-        IdCampanha = null;
+        if (!_npcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
+            _npcCampanhas.Add(new NpcCampanha(idCampanha, IdNpc));
     }
 
     private void ValidarNome(string nome)

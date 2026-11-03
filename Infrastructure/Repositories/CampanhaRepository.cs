@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Infrastructure.Persistence;
-using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Infrastructure.Repositories;
 
@@ -20,7 +20,7 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.UsuarioMestre)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
-            .Include(c => c.Npcs) 
+            .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
@@ -110,6 +110,18 @@ public class CampanhaRepository : ICampanhaRepository
         if (vinculo != null)
         {
             _contexto.MonstroCampanhas.Remove(vinculo);
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc)
+    {
+        var vinculo = await _contexto.NpcCampanhas
+            .FirstOrDefaultAsync(nc => nc.IdCampanha == idCampanha && nc.IdNpc == idNpc);
+
+        if (vinculo != null)
+        {
+            _contexto.NpcCampanhas.Remove(vinculo);
             await _contexto.SaveChangesAsync();
         }
     }

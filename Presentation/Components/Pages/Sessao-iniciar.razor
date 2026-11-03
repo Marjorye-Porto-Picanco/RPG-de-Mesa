@@ -353,7 +353,8 @@
                 monstrosDisponiveis = todosMonstrosUsuario.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
 
                 var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
-                npcsDisponiveis = todosNpcsUsuario.Where(n => n.IdCampanha != IdCampanha).ToList();
+                var idsNpcsVinculados = campanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
+                npcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
             }
         }
     }

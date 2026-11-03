@@ -76,26 +76,20 @@ public class CampanhaService
                     novaCampanha.VincularPersonagem(p.IdPersonagem);
             }
 
+            if (npcs != null)
+            {
+                foreach (var npc in npcs.Where(n => n.IdNpc > 0))
+                    novaCampanha.VincularNpc(npc.IdNpc);
+            }
+
             await _campanhaRepo.AdicionarAsync(novaCampanha);
 
-            if (npcs != null && npcs.Any())
+            if (npcs != null)
             {
-                foreach (var npc in npcs)
+                foreach (var npc in npcs.Where(n => n.IdNpc <= 0))
                 {
-                    if (npc.IdNpc > 0)
-                    {
-                        var npcExistente = await _npcRepo.ObterPorIdAsync(npc.IdNpc);
-                        if (npcExistente != null)
-                        {
-                            npcExistente.VincularACampanha(novaCampanha.IdCampanha);
-                            await _npcRepo.AtualizarAsync(npcExistente);
-                        }
-                    }
-                    else
-                    {
-                        npc.PrepararNovoNpc(idAccount, npc.Nome, novaCampanha.IdCampanha);
-                        await _npcRepo.AdicionarAsync(npc);
-                    }
+                    npc.PrepararNovoNpc(idAccount, npc.Nome, novaCampanha.IdCampanha);
+                    await _npcRepo.AdicionarAsync(npc);
                 }
             }
 
@@ -198,11 +192,11 @@ public class CampanhaService
     {
         try
         {
-            var npc = await _npcRepo.ObterPorIdAsync(idNpc);
-            if (npc == null) return (false, "NPC não encontrado.");
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha == null) return (false, "Campanha não encontrada.");
 
-            npc.VincularACampanha(idCampanha);
-            await _npcRepo.AtualizarAsync(npc);
+            campanha.VincularNpc(idNpc);
+            await _campanhaRepo.AtualizarAsync(campanha);
 
             return (true, "NPC vinculado à campanha com sucesso!");
         }
@@ -250,22 +244,12 @@ public class CampanhaService
     {
         try
         {
-            var npc = await _npcRepo.ObterPorIdAsync(idNpc);
-            if (npc == null) return (false, "NPC não encontrado.");
-
-            if (npc.IdAccount.HasValue && npc.IdAccount.Value > 0)
-            {
-                npc.DesvincularDeCampanha();
-                await _npcRepo.AtualizarAsync(npc);
-                return (true, "NPC desvinculado da campanha com sucesso!");
-            }
-
-            await _campanhaRepo.RemoverNpcAsync(idNpc);
-            return (true, "NPC removido com sucesso!");
+            await _campanhaRepo.RemoverNpcCampanhaAsync(idCampanha, idNpc);
+            return (true, "NPC desvinculado da campanha com sucesso!");
         }
         catch (Exception ex)
         {
-            return (false, $"Erro ao remover NPC: {ex.Message}");
+            return (false, $"Erro ao desvincular NPC: {ex.Message}");
         }
     }
 }
