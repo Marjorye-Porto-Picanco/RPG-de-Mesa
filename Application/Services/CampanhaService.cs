@@ -32,9 +32,17 @@ public class CampanhaService
                 return (false, "Código de convite gerado já existe. Tente salvar novamente.");
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
+
+            // Vincula automaticamente todos os itens padrão já existentes na base
+            var todosItensPadrao = await _campanhaRepo.ListarTodosItensAsync();
+            foreach (var item in todosItensPadrao)
+            {
+                novaCampanha.VincularItem(item.IdItem);
+            }
+
             await _campanhaRepo.AdicionarAsync(novaCampanha);
 
-            return (true, "Campanha forjada com sucesso!");
+            return (true, "Campanha forjada com sucesso com a base de itens padrão!");
         }
         catch (DomainException dex)
         {
@@ -63,6 +71,22 @@ public class CampanhaService
                 return (false, "Código de convite gerado já existe. Tente salvar novamente.");
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
+
+            // Vincula todos os itens padrão da base por padrão
+            var todosItensPadrao = await _campanhaRepo.ListarTodosItensAsync();
+            foreach (var itemPadrao in todosItensPadrao)
+            {
+                novaCampanha.VincularItem(itemPadrao.IdItem);
+            }
+
+            // Se o usuário passou itens específicos na lista que não sejam os padrões, garante o vínculo
+            if (itens != null)
+            {
+                foreach (var it in itens)
+                {
+                    try { novaCampanha.VincularItem(it.IdItem); } catch { /* Evita duplicar se já veio dos padrões */ }
+                }
+            }
 
             if (monstros != null)
             {
@@ -206,6 +230,24 @@ public class CampanhaService
         }
     }
 
+    public async Task<(bool Sucesso, string Mensagem)> AdicionarItemNaCampanhaAsync(int idCampanha, int idItem)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha == null) return (false, "Campanha não encontrada.");
+
+            campanha.VincularItem(idItem);
+            await _campanhaRepo.AtualizarAsync(campanha);
+
+            return (true, "Item vinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao vincular item: {ex.Message}");
+        }
+    }
+
     public async Task<(bool Sucesso, string Mensagem)> CriarE_VincularMonstroNaCampanhaAsync(int idCampanha, Monstro monstro)
     {
         try
@@ -250,6 +292,19 @@ public class CampanhaService
         catch (Exception ex)
         {
             return (false, $"Erro ao desvincular NPC: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverItemDaCampanhaAsync(int idCampanha, int idItem)
+    {
+        try
+        {
+            await _campanhaRepo.RemoverItemCampanhaAsync(idCampanha, idItem);
+            return (true, "Item desvinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao desvincular item: {ex.Message}");
         }
     }
 }

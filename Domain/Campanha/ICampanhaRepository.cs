@@ -20,4 +20,6 @@ public interface ICampanhaRepository
     Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc);
     Task RemoverNpcAsync(int idNpc);
+
+    Task RemoverItemCampanhaAsync(int idCampanha, int idItem);
 }

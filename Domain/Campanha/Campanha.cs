@@ -1,4 +1,5 @@
 ﻿using RPGdeMesa.Domain.Common;
+using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
@@ -25,6 +26,9 @@ public class Campanha : IAggregateRoot
     private readonly List<NpcCampanha> _npcCampanhas = new();
     public virtual IReadOnlyCollection<NpcCampanha> NpcCampanhas => _npcCampanhas.AsReadOnly();
 
+    private readonly List<ItemCampanha> _itemCampanhas = new();
+    public virtual IReadOnlyCollection<ItemCampanha> ItemCampanhas => _itemCampanhas.AsReadOnly();
+
     public virtual ICollection<UsuarioCampanha> UsuarioCampanhas { get; private set; } = new List<UsuarioCampanha>();
 
     public IEnumerable<Personagem> Personagens => _personagemCampanhas
@@ -34,6 +38,10 @@ public class Campanha : IAggregateRoot
     public IEnumerable<NPC> Npcs => _npcCampanhas
         .Where(nc => nc.Npc != null)
         .Select(nc => nc.Npc!);
+
+    public IEnumerable<Item> Itens => _itemCampanhas
+        .Where(ic => ic.Item != null)
+        .Select(ic => ic.Item!);
 
     public Campanha() { }
 
@@ -93,11 +101,19 @@ public class Campanha : IAggregateRoot
         _npcCampanhas.Add(new NpcCampanha(IdCampanha, idNpc));
     }
 
-    public void RemoverNpc(int idNpc)
+    public void VincularItem(int idItem)
     {
-        var vinculo = _npcCampanhas.FirstOrDefault(nc => nc.IdNpc == idNpc);
+        if (_itemCampanhas.Any(ic => ic.IdItem == idItem))
+            throw new DomainException("Este item já está vinculado à campanha.");
+
+        _itemCampanhas.Add(new ItemCampanha(IdCampanha, idItem));
+    }
+
+    public void RemoverItemCampanha(int idItem)
+    {
+        var vinculo = _itemCampanhas.FirstOrDefault(ic => ic.IdItem == idItem);
         if (vinculo != null)
-            _npcCampanhas.Remove(vinculo);
+            _itemCampanhas.Remove(vinculo);
     }
 
     private static string GerarCodigoConvitePadrao() =>
