@@ -100,4 +100,26 @@ public class CampanhaRepository : ICampanhaRepository
         _contexto.Campanhas.Update(campanha);
         await _contexto.SaveChangesAsync();
     }
+
+    public async Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro)
+    {
+        var vinculo = await _contexto.MonstroCampanhas
+            .FirstOrDefaultAsync(mc => mc.IdCampanha == idCampanha && mc.IdMonstro == idMonstro);
+
+        if (vinculo != null)
+        {
+            _contexto.MonstroCampanhas.Remove(vinculo);
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoverNpcAsync(int idNpc)
+    {
+        var npc = await _contexto.Npcs.FirstOrDefaultAsync(n => n.IdNpc == idNpc);
+        if (npc != null)
+        {
+            _contexto.Npcs.Remove(npc);
+            await _contexto.SaveChangesAsync();
+        }
+    }
 }

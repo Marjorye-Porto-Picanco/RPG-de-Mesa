@@ -2,6 +2,7 @@
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Infrastructure.Persistence;
@@ -36,6 +37,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<ICampanhaRepository, CampanhaRepository>();
             builder.Services.AddScoped<IMonstroRepository, MonstroRepository>();
             builder.Services.AddScoped<IPersonagemRepository, PersonagemRepository>();
+
 
             // 2. CAMADA DE APPLICATION (Casos de Uso / Application Services)
             builder.Services.AddTransient<UsuarioService>();

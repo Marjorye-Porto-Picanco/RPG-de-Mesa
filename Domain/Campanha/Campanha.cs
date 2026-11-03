@@ -30,6 +30,8 @@ public class Campanha : IAggregateRoot
         .Where(pc => pc.Personagem != null)
         .Select(pc => pc.Personagem!);
 
+
+
     public Campanha() { }
 
     public Campanha(int idAccountMestre, string nome, string? descricao, string? codigoConvite = null)

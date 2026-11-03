@@ -80,7 +80,7 @@
                                 <div><p class="page-kicker">Encontro atual</p><h2>@(campanhaAtual?.Nome)</h2></div>
                             </div>
                             <div class="configuration-layout">
-                                <!-- LADO ESQUERDO: Navegador de Recursos (Vinculados / Disponíveis) -->
+                                <!-- LADO ESQUERDO: Navegador de Recursos (Vinculados com ❌ / Disponíveis com ➕) -->
                                 <section class="resource-browser" aria-labelledby="titulo-recursos">
                                     <h3 id="titulo-recursos">Elementos da sessão</h3>
                                     
@@ -103,8 +103,9 @@
                                             {
                                                 @foreach (var npc in campanhaAtual?.Npcs ?? Enumerable.Empty<NPC>())
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px;">
-                                                        <span><strong>[NPC]</strong> @npc.Nome <span>@npc.Ocupacao</span></span>
+                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                                        <span><strong>[NPC]</strong> @npc.Nome <span>(@npc.Ocupacao)</span></span>
+                                                        <button type="button" title="Desvincular NPC" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularNpc(npc.IdNpc)">❌</button>
                                                     </div>
                                                 }
                                             }
@@ -112,8 +113,9 @@
                                             {
                                                 @foreach (var mc in campanhaAtual?.MonstroCampanhas ?? Enumerable.Empty<MonstroCampanha>())
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px;">
-                                                        <span><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>ND: @mc.Monstro?.NivelDesafio</span></span>
+                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                                        <span><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>(ND: @mc.Monstro?.NivelDesafio)</span></span>
+                                                        <button type="button" title="Desvincular Monstro" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularMonstro(mc.IdMonstro)">❌</button>
                                                     </div>
                                                 }
                                             }
@@ -124,8 +126,9 @@
                                             {
                                                 @foreach (var m in monstrosDisponiveis)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); cursor: pointer;" @onclick="() => VincularMonstro(m.IdMonstro)">
-                                                        <span>➕ Vincular Monstro: <strong>@m.Nome</strong></span>
+                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
+                                                        <span>Monstro: <strong>@m.Nome</strong></span>
+                                                        <button type="button" title="Vincular Monstro" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularMonstro(m.IdMonstro)">➕</button>
                                                     </div>
                                                 }
                                             }
@@ -133,10 +136,10 @@
                                     </div>
                                 </section>
 
-                                <!-- LADO DIREITO: Formulário Dinâmico Baseado na Categoria Selecionada -->
+                                <!-- LADO DIREITO: Formulário Completo Dinâmico -->
                                 <form class="resource-editor" @onsubmit="SalvarRegistroAsync">
                                     <div class="editor-heading">
-                                        <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar Novo @categoriaSelecionada.ToUpper()</h3></div>
+                                        <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar e Vincular @categoriaSelecionada.ToUpper()</h3></div>
                                     </div>
 
                                     <label class="form-field">
@@ -150,33 +153,89 @@
 
                                     @if (categoriaSelecionada == "npc")
                                     {
-                                        <label class="form-field">Nome do NPC<input @bind="npcNome" required maxlength="100" placeholder="Ex.: Aldeão" /></label>
-                                        <label class="form-field">Ocupação<input @bind="npcOcupacao" maxlength="50" placeholder="Ex.: Comerciante" /></label>
-                                        <label class="form-field">Alinhamento<input @bind="npcAlinhamento" maxlength="50" placeholder="Ex.: Neutro e bom" /></label>
-                                        <label class="form-field">Localização<input @bind="npcLocalizacao" maxlength="100" placeholder="Ex.: Praça central" /></label>
-                                        <label class="form-field">Descrição<textarea @bind="npcDescricao" rows="3" placeholder="Detalhes do NPC..."></textarea></label>
+                                        <label class="form-field">Nome do NPC<input @bind="npcNome" required maxlength="60" placeholder="Ex.: Aldeão" /></label>
+                                        <label class="form-field">
+                                            Raça
+                                            <select @bind="npcRaca">
+                                                <option value="Humano">Humano</option>
+                                                <option value="Elfo">Elfo</option>
+                                                <option value="Anão">Anão</option>
+                                                <option value="Outra">Outra</option>
+                                            </select>
+                                        </label>
+                                        <label class="form-field">
+                                            Classe
+                                            <select @bind="npcClasse">
+                                                <option value="Guerreiro">Guerreiro</option>
+                                                <option value="Mago">Mago</option>
+                                                <option value="Bardo">Bardo</option>
+                                                <option value="Outra">Outra</option>
+                                            </select>
+                                        </label>
+                                        <label class="form-field">Nível<input @bind="npcNivel" type="number" min="1" max="20" /></label>
+                                        <label class="form-field">Antecedente<input @bind="npcAntecedente" maxlength="50" placeholder="Ex.: Batedor" /></label>
+                                        <label class="form-field">
+                                            Tendência
+                                            <select @bind="npcTendencia">
+                                                <option value="Neutra">Neutra</option>
+                                                <option value="Leal e boa">Leal e boa</option>
+                                                <option value="Caótica e má">Caótica e má</option>
+                                            </select>
+                                        </label>
+
+                                        <div class="form-divider" style="margin: 10px 0 5px 0; font-size: 0.85rem; color: #d4af37;">Atributos</div>
+                                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                            <label class="form-field" style="font-size:0.8rem;">FOR<input @bind="npcForca" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">DES<input @bind="npcDestreza" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">CON<input @bind="npcConstituicao" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">INT<input @bind="npcInteligencia" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">SAB<input @bind="npcSabedoria" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">CAR<input @bind="npcCarisma" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                        </div>
+
+                                        <label class="form-field" style="margin-top: 8px;">História e anotações<textarea @bind="npcHistoria" rows="2" placeholder="Detalhes do NPC..."></textarea></label>
                                     }
                                     else if (categoriaSelecionada == "monstro")
                                     {
-                                        <div style="padding: 15px; background: rgba(0,0,0,0.2); border-radius: 6px; text-align: center;">
-                                            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">Para criar novos monstros do zero, utilize o menu do Bestiário.</p>
-                                            <a class="action-secondary" href="/monstro-criar" style="display:inline-block; padding: 6px 12px;">Ir para Criar Monstro</a>
-                                        </div>
+                                        <label class="form-field">Nome da criatura<input @bind="monstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
+                                        <label class="form-field">
+                                            Tipo
+                                            <select @bind="monstroTipo">
+                                                <option value="Outro">Outro</option>
+                                                <option value="Dragao">Dragão</option>
+                                                <option value="Fera">Fera</option>
+                                                <option value="Morto-vivo">Morto-vivo</option>
+                                            </select>
+                                        </label>
+                                        <label class="form-field">
+                                            Tamanho
+                                            <select @bind="monstroTamanho">
+                                                <option value="Médio">Médio</option>
+                                                <option value="Grande">Grande</option>
+                                                <option value="Pequeno">Pequeno</option>
+                                            </select>
+                                        </label>
+                                        <label class="form-field">Alinhamento<input @bind="monstroAlinhamento" maxlength="40" placeholder="Ex.: Caótico e mau" /></label>
+                                        <label class="form-field">Nível de desafio<input @bind="monstroNd" type="number" min="0" max="30" step="0.125" /></label>
+                                        <label class="form-field">Classe de armadura<input @bind="monstroDefesa" type="number" min="0" max="40" /></label>
+                                        <label class="form-field">Pontos de vida<input @bind="monstroVida" type="number" min="1" max="9999" /></label>
+                                        <label class="form-field">Deslocamento<input @bind="monstroDeslocamento" maxlength="50" placeholder="9 m" /></label>
+                                        <label class="form-field">Sentidos<input @bind="monstroSentidos" maxlength="80" placeholder="Visão no escuro 18 m" /></label>
+                                        <label class="form-field full-width">Resistências e imunidades<input @bind="monstroResistencias" maxlength="120" placeholder="Ex.: frio, veneno" /></label>
+                                        <label class="form-field full-width">Habilidades especiais<input @bind="monstroHabilidades" maxlength="160" placeholder="Ex.: Ataque múltiplo" /></label>
+                                        <label class="form-field full-width">Descrição<textarea @bind="monstroDescricao" rows="2" placeholder="Táticas e anotações..."></textarea></label>
                                     }
                                     else
                                     {
-                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Poção de Cura" /></label>
+                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Poção" /></label>
                                         <label class="form-field">Tipo<input @bind="itemTipo" maxlength="50" placeholder="Ex.: Consumível" /></label>
                                         <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
-                                        <label class="form-field">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico ou utilidade..."></textarea></label>
+                                        <label class="form-field">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico..."></textarea></label>
                                     }
 
-                                    @if (categoriaSelecionada != "monstro")
-                                    {
-                                        <div class="editor-actions">
-                                            <button class="save-button" type="submit">Salvar Registro</button>
-                                        </div>
-                                    }
+                                    <div class="editor-actions">
+                                        <button class="save-button" type="submit">Cadastrar e Vincular</button>
+                                    </div>
 
                                     @if (!string.IsNullOrEmpty(mensagemFeedback))
                                     {
@@ -215,7 +274,16 @@
     private string modoVisualizacao = "vinculados";
     private string categoriaSelecionada = "npc";
 
-    private string npcNome = string.Empty, npcOcupacao = string.Empty, npcAlinhamento = string.Empty, npcLocalizacao = string.Empty, npcDescricao = string.Empty;
+    // Campos do NPC
+    private string npcNome = string.Empty, npcRaca = "Humano", npcClasse = "Guerreiro", npcTendencia = "Neutra", npcAntecedente = string.Empty, npcHistoria = string.Empty;
+    private int npcNivel = 1;
+    private int npcForca = 10, npcDestreza = 10, npcConstituicao = 10, npcInteligencia = 10, npcSabedoria = 10, npcCarisma = 10;
+
+    // Campos do Monstro
+    private string monstroNome = string.Empty, monstroTipo = "Outro", monstroTamanho = "Médio", monstroAlinhamento = string.Empty, monstroDeslocamento = "9 m", monstroSentidos = string.Empty, monstroResistencias = string.Empty, monstroHabilidades = string.Empty, monstroDescricao = string.Empty;
+    private decimal monstroNd = 1; int monstroDefesa = 12, monstroVida = 15;
+
+    // Campos de Item
     private string itemNome = string.Empty, itemTipo = string.Empty, itemDescricao = string.Empty; decimal itemPreco = 0;
     private string mensagemFeedback = string.Empty;
 
@@ -244,10 +312,33 @@
         {
             if (categoriaSelecionada == "npc")
             {
-                campanhaAtual.AdicionarNpc(npcNome, npcOcupacao, npcAlinhamento, npcLocalizacao, npcDescricao);
+                campanhaAtual.AdicionarNpc(npcNome, npcClasse, npcTendencia, "Local padrão", npcHistoria);
                 var resultado = await CampanhaService.AtualizarCampanhaAsync(campanhaAtual);
-                mensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado!" : resultado.Mensagem;
-                if (resultado.Sucesso) { npcNome = npcOcupacao = npcAlinhamento = npcLocalizacao = npcDescricao = string.Empty; }
+                mensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
+                if (resultado.Sucesso) { npcNome = npcAntecedente = npcHistoria = string.Empty; }
+            }
+            else if (categoriaSelecionada == "monstro")
+            {
+                var novoMonstro = new Monstro
+                {
+                    Nome = monstroNome,
+                    TipoMonstro = monstroTipo,
+                    NivelDesafio = monstroNd,
+                    PvMaximo = monstroVida,
+                    ClasseArmadura = monstroDefesa,
+                    Tamanho = monstroTamanho,
+                    Tendencia = monstroAlinhamento,
+                    Deslocamento = monstroDeslocamento,
+                    Sentidos = monstroSentidos,
+                    Resistencias = monstroResistencias,
+                    Habilidades = monstroHabilidades,
+                    Descricao = monstroDescricao,
+                    Imagem = "img/capacampanha3.png"
+                };
+
+                var resultado = await CampanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);
+                mensagemFeedback = resultado.Mensagem;
+                if (resultado.Sucesso) { monstroNome = monstroDescricao = string.Empty; }
             }
 
             await CarregarDadosCampanhaAsync();
@@ -260,21 +351,29 @@
 
     private async Task VincularMonstro(int idMonstro)
     {
-        try
-        {
-            var resultado = await CampanhaService.AdicionarMonstroNaCampanhaAsync(IdCampanha, idMonstro);
-            mensagemFeedback = resultado.Mensagem;
-            await CarregarDadosCampanhaAsync();
-        }
-        catch (Exception ex)
-        {
-            mensagemFeedback = $"Erro ao vincular: {ex.Message}";
-        }
+        var resultado = await CampanhaService.AdicionarMonstroNaCampanhaAsync(IdCampanha, idMonstro);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+    }
+
+    private async Task DesvincularMonstro(int idMonstro)
+    {
+        var resultado = await CampanhaService.RemoverMonstroDaCampanhaAsync(IdCampanha, idMonstro);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+    }
+
+    private async Task DesvincularNpc(int idNpc)
+    {
+        var resultado = await CampanhaService.RemoverNpcDaCampanhaAsync(IdCampanha, idNpc);
+        mensagemFeedback = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
     }
 
     private void LimparFormulario()
     {
-        npcNome = npcOcupacao = npcAlinhamento = npcLocalizacao = npcDescricao = string.Empty;
+        npcNome = npcAntecedente = npcHistoria = string.Empty;
+        monstroNome = monstroSentidos = monstroResistencias = monstroHabilidades = monstroDescricao = string.Empty;
         itemNome = itemTipo = itemDescricao = string.Empty;
         mensagemFeedback = string.Empty;
     }
