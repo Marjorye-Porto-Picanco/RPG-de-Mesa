@@ -2,6 +2,7 @@
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
 
@@ -11,11 +12,16 @@ public class CampanhaService
 {
     private readonly ICampanhaRepository _campanhaRepo;
     private readonly IMonstroRepository _monstroRepo;
+    private readonly INpcRepository _npcRepo;
 
-    public CampanhaService(ICampanhaRepository campanhaRepo, IMonstroRepository monstroRepo)
+    public CampanhaService(
+        ICampanhaRepository campanhaRepo,
+        IMonstroRepository monstroRepo,
+        INpcRepository npcRepo)
     {
         _campanhaRepo = campanhaRepo;
         _monstroRepo = monstroRepo;
+        _npcRepo = npcRepo;
     }
 
     public async Task<(bool Sucesso, string Mensagem)> CriarCampanhaAsync(int idAccount, string nome, string descricao, string codigoConvite)
@@ -70,13 +76,29 @@ public class CampanhaService
                     novaCampanha.VincularPersonagem(p.IdPersonagem);
             }
 
-            if (npcs != null)
+            await _campanhaRepo.AdicionarAsync(novaCampanha);
+
+            if (npcs != null && npcs.Any())
             {
                 foreach (var npc in npcs)
-                    novaCampanha.AdicionarNpc(npc.Nome, npc.Ocupacao, npc.Alinhamento, npc.Localizacao, npc.Descricao);
+                {
+                    if (npc.IdNpc > 0)
+                    {
+                        var npcExistente = await _npcRepo.ObterPorIdAsync(npc.IdNpc);
+                        if (npcExistente != null)
+                        {
+                            npcExistente.VincularACampanha(novaCampanha.IdCampanha);
+                            await _npcRepo.AtualizarAsync(npcExistente);
+                        }
+                    }
+                    else
+                    {
+                        npc.PrepararNovoNpc(idAccount, npc.Nome, novaCampanha.IdCampanha);
+                        await _npcRepo.AdicionarAsync(npc);
+                    }
+                }
             }
 
-            await _campanhaRepo.AdicionarAsync(novaCampanha);
             return (true, "Campanha e recursos forjados com sucesso!");
         }
         catch (DomainException dex)
@@ -103,7 +125,7 @@ public class CampanhaService
         _monstroRepo.ListarPorUsuarioAsync(idAccount);
 
     public Task<List<NPC>> ObterNPCsDoUsuarioAsync(int idAccount) =>
-        _campanhaRepo.ListarTodosNpcsAsync();
+        _npcRepo.ListarPorUsuarioAsync(idAccount);
 
     public Task<List<Item>> ObterItensDoUsuarioAsync(int idAccount) =>
         _campanhaRepo.ListarTodosItensAsync();
@@ -172,6 +194,24 @@ public class CampanhaService
         }
     }
 
+    public async Task<(bool Sucesso, string Mensagem)> AdicionarNpcNaCampanhaAsync(int idCampanha, int idNpc)
+    {
+        try
+        {
+            var npc = await _npcRepo.ObterPorIdAsync(idNpc);
+            if (npc == null) return (false, "NPC não encontrado.");
+
+            npc.VincularACampanha(idCampanha);
+            await _npcRepo.AtualizarAsync(npc);
+
+            return (true, "NPC vinculado à campanha com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao vincular NPC: {ex.Message}");
+        }
+    }
+
     public async Task<(bool Sucesso, string Mensagem)> CriarE_VincularMonstroNaCampanhaAsync(int idCampanha, Monstro monstro)
     {
         try
@@ -210,6 +250,16 @@ public class CampanhaService
     {
         try
         {
+            var npc = await _npcRepo.ObterPorIdAsync(idNpc);
+            if (npc == null) return (false, "NPC não encontrado.");
+
+            if (npc.IdAccount.HasValue && npc.IdAccount.Value > 0)
+            {
+                npc.DesvincularDeCampanha();
+                await _npcRepo.AtualizarAsync(npc);
+                return (true, "NPC desvinculado da campanha com sucesso!");
+            }
+
             await _campanhaRepo.RemoverNpcAsync(idNpc);
             return (true, "NPC removido com sucesso!");
         }

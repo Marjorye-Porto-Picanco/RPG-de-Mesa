@@ -1,6 +1,7 @@
 ﻿using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
+using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Domain.Campanhas;
 

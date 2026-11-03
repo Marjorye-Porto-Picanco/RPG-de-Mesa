@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Threading.Tasks;
@@ -9,21 +10,27 @@ namespace RPGdeMesa.Presentation.ViewModel
     public class PersonagemCriarViewModel
     {
         private readonly PersonagemService _personagemService;
+        private readonly NpcService _npcService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
 
         public PersonagemCriarViewModel(
             PersonagemService personagemService,
+            NpcService npcService,
             SessaoUsuarioService sessaoUsuario,
             NavigationManager navigation)
         {
             _personagemService = personagemService;
+            _npcService = npcService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
             LimparFormulario();
         }
 
         public Personagem PersonagemAtual { get; set; } = new();
+        public string TipoSelecionado { get; set; } = "Personagem"; // Controla se é Personagem ou NPC
+        public int? IdCampanhaOpcional { get; set; } // Caso a tela seja aberta a partir de uma campanha
+
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
@@ -33,6 +40,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void LimparFormulario()
         {
+            TipoSelecionado = "Personagem";
             PersonagemAtual = new Personagem
             {
                 Nivel = 1,
@@ -56,7 +64,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             if (string.IsNullOrWhiteSpace(PersonagemAtual.Nome))
             {
                 Sucesso = false;
-                MensagemFeedback = "O nome do personagem é obrigatório!";
+                MensagemFeedback = $"O nome do {(TipoSelecionado == "NPC" ? "NPC" : "personagem")} é obrigatório!";
                 NotifyStateChanged();
                 return;
             }
@@ -73,12 +81,41 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 IsProcessing = true;
-                MensagemFeedback = "Criando aventureiro...";
+                MensagemFeedback = TipoSelecionado == "NPC" ? "Forjando NPC..." : "Criando aventureiro...";
                 NotifyStateChanged();
 
-                var resultado = await _personagemService.CriarPersonagemAsync(idUsuario, PersonagemAtual);
-                Sucesso = resultado.Sucesso;
-                MensagemFeedback = resultado.Mensagem;
+                if (TipoSelecionado == "NPC")
+                {
+                    var novoNpc = new NPC(
+                        idAccount: idUsuario,
+                        nome: PersonagemAtual.Nome,
+                        racaTexto: PersonagemAtual.RacaTexto,
+                        classeTexto: PersonagemAtual.ClasseTexto,
+                        nivel: PersonagemAtual.Nivel,
+                        antecedenteTexto: PersonagemAtual.AntecedenteTexto,
+                        tendencia: PersonagemAtual.Tendencia,
+                        forca: PersonagemAtual.Forca,
+                        destreza: PersonagemAtual.Destreza,
+                        constituicao: PersonagemAtual.Constituicao,
+                        inteligencia: PersonagemAtual.Inteligencia,
+                        sabedoria: PersonagemAtual.Sabedoria,
+                        carisma: PersonagemAtual.Carisma,
+                        historia: PersonagemAtual.Historia,
+                        imagem: PersonagemAtual.Imagem,
+                        idCampanha: IdCampanhaOpcional
+                    );
+
+                    var resultadoNpc = await _npcService.CriarNpcAsync(idUsuario, novoNpc, IdCampanhaOpcional);
+                    Sucesso = resultadoNpc.Sucesso;
+                    MensagemFeedback = resultadoNpc.Mensagem;
+                }
+                else
+                {
+                    var resultadoPj = await _personagemService.CriarPersonagemAsync(idUsuario, PersonagemAtual);
+                    Sucesso = resultadoPj.Sucesso;
+                    MensagemFeedback = resultadoPj.Mensagem;
+                }
+
                 NotifyStateChanged();
 
                 if (Sucesso)

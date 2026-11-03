@@ -1,6 +1,9 @@
 @page "/personagem-lib"
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Domain.Npcs
+@using RPGdeMesa.Domain.Personagens
 @inject PersonagemService PersonagemService
+@inject NpcService NpcService
 @inject SessaoUsuarioService SessaoUsuario
 @inject NavigationManager Navigation
 @implements IDisposable
@@ -12,57 +15,108 @@
         <div class="titulo-pagina">
             <div>
                 <p class="sobretitulo-rpg">Heróis e lendas</p>
-                <h1>Personagens</h1>
+                <h1>@(abaAtiva == "personagens" ? "Personagens" : "NPCs")</h1>
                 <p class="texto-apoio">Suas fichas reunidas em um só lugar.</p>
             </div>
-            <a class="botao-dourado" href="/personagem-criar">
-                <span aria-hidden="true">+</span> Novo personagem
+            <a class="botao-dourado" href="@(abaAtiva == "personagens" ? "/personagem-criar" : "/personagem-criar?tipo=NPC")">
+                <span aria-hidden="true">+</span> @(abaAtiva == "personagens" ? "Novo personagem" : "Novo NPC")
             </a>
         </div>
 
-        @if (personagens == null)
+        <div class="abas-navegacao">
+            <button type="button" class="botao-aba @(abaAtiva == "personagens" ? "ativo" : "")" @onclick='() => abaAtiva = "personagens"'>
+                Aventureiros (@(personagens?.Count ?? 0))
+            </button>
+            <button type="button" class="botao-aba @(abaAtiva == "npcs" ? "ativo" : "")" @onclick='() => abaAtiva = "npcs"'>
+                NPCs (@(npcs?.Count ?? 0))
+            </button>
+        </div>
+
+        @if (abaAtiva == "personagens")
         {
-            <p class="aviso-carregando">Carregando heróis...</p>
+            @if (personagens == null)
+            {
+                <p class="aviso-carregando">Carregando heróis...</p>
+            }
+            else
+            {
+                @if (!personagens.Any())
+                {
+                    <p class="aviso-vazio">Nenhum personagem encontrado na sua biblioteca pessoal.</p>
+                }
+
+                <div class="grade-personagens">
+                    @foreach (var p in personagens)
+                    {
+                        string iniciais = ObterIniciais(p.Nome);
+                        <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem" aria-label="Abrir ficha de @p.Nome">
+                            <div class="retrato-personagem">
+                                <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="Retrato de @p.Nome" />
+                                <span>@iniciais</span>
+                            </div>
+                            <div class="info-personagem">
+                                <span class="status-personagem">Aventureiro</span>
+                                <h2>@p.Nome</h2>
+                                <p>@(string.IsNullOrEmpty(p.RacaTexto) ? "Raça desconhecida" : p.RacaTexto) • @(string.IsNullOrEmpty(p.ClasseTexto) ? "Classe" : p.ClasseTexto) nível @p.Nivel</p>
+                                <small>Pronto para a aventura</small>
+                            </div>
+                        </a>
+                    }
+
+                    <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
+                        <span class="mais-adicionar" aria-hidden="true">+</span>
+                        <strong>Criar personagem</strong>
+                        <small>Escreva uma nova história</small>
+                    </a>
+                </div>
+            }
         }
         else
         {
-            @if (!personagens.Any())
+            @if (npcs == null)
             {
-                <p class="aviso-vazio">Nenhum personagem encontrado no seu bestiário pessoal.</p>
+                <p class="aviso-carregando">Carregando NPCs...</p>
             }
-
-            <div class="grade-personagens">
-            
-
-                @foreach (var p in personagens)
+            else
+            {
+                @if (!npcs.Any())
                 {
-                    string iniciais = ObterIniciais(p.Nome);
-                    <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem" aria-label="Abrir ficha de @p.Nome">
-                        <div class="retrato-personagem">
-                            <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="Retrato de @p.Nome" />
-                            <span>@iniciais</span>
-                        </div>
-                        <div class="info-personagem">
-                            <span class="status-personagem">Aventureiro</span>
-                            <h2>@p.Nome</h2>
-                            <p>@(string.IsNullOrEmpty(p.RacaTexto) ? "Raça desconhecida" : p.RacaTexto) • @(string.IsNullOrEmpty(p.ClasseTexto) ? "Classe" : p.ClasseTexto) nível @p.Nivel</p>
-                            <small>Pronto para a aventura</small>
-                        </div>
-                    </a>
+                    <p class="aviso-vazio">Nenhum NPC encontrado na sua biblioteca pessoal.</p>
                 }
-                
-                <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
-                    <span class="mais-adicionar" aria-hidden="true">+</span>
-                    <strong>Criar personagem</strong>
-                    <small>Escreva uma nova história</small>
-                </a>
-            </div>
+
+                <div class="grade-personagens">
+                    @foreach (var n in npcs)
+                    {
+                        string iniciais = ObterIniciais(n.Nome);
+                        <div class="cartao-personagem" aria-label="Ficha do NPC @n.Nome">
+                            <div class="retrato-personagem">
+                                <img src="@(string.IsNullOrEmpty(n.Imagem) ? "img/capacampanha3.png" : n.Imagem)" alt="Retrato de @n.Nome" />
+                                <span>@iniciais</span>
+                            </div>
+                            <div class="info-personagem">
+                                <span class="status-personagem">NPC</span>
+                                <h2>@n.Nome</h2>
+                                <p>@(string.IsNullOrEmpty(n.RacaTexto) ? "Raça desconhecida" : n.RacaTexto) • @(string.IsNullOrEmpty(n.ClasseTexto) ? (string.IsNullOrEmpty(n.Ocupacao) ? "Sem classe" : n.Ocupacao) : n.ClasseTexto) nível @n.Nivel</p>
+                                <small>@(string.IsNullOrEmpty(n.Tendencia) ? (string.IsNullOrEmpty(n.Alinhamento) ? "Neutro" : n.Alinhamento) : n.Tendencia)</small>
+                            </div>
+                        </div>
+                    }
+
+                    <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar?tipo=NPC">
+                        <span class="mais-adicionar" aria-hidden="true">+</span>
+                        <strong>Criar NPC</strong>
+                        <small>Adicione uma figura ao mundo</small>
+                    </a>
+                </div>
+            }
         }
     </main>
 </div>
 
 @code {
     private List<Personagem>? personagens;
+    private List<NPC>? npcs;
+    private string abaAtiva = "personagens";
 
     protected override async Task OnInitializedAsync()
     {
@@ -70,6 +124,12 @@
         if (idUsuario > 0)
         {
             personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+            npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+        }
+        else
+        {
+            personagens = new();
+            npcs = new();
         }
     }
 

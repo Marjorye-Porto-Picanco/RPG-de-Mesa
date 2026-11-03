@@ -3,6 +3,7 @@ using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Infrastructure.Persistence;
+using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Infrastructure.Repositories;
 
@@ -19,7 +20,7 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.UsuarioMestre)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
-            .Include(c => c.Npcs) // Essencial para carregar os NPCs da sessão
+            .Include(c => c.Npcs) 
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
