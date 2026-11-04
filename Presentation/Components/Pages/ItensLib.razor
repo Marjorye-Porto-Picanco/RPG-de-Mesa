@@ -1,0 +1,269 @@
+﻿@page "/ItensLib"
+@using RPGdeMesa.Presentation.Components.Layout
+@inject NavigationManager Navigation
+@inject ItemService ItemService
+@inject SessaoUsuarioService SessaoUsuario
+
+<NavMenu />
+
+<div class="app-shell">
+    <main class="app-content library-content">
+        <header class="page-heading">
+            <div>
+                <p class="page-kicker">Referência para sua mesa</p>
+                <h1 class="page-title">Biblioteca de itens</h1>
+                <p class="page-description">Itens cadastrados no banco de dados da sua aplicação.</p>
+            </div>
+        </header>
+
+        <p class="library-scope">A biblioteca exibe itens públicos e itens cadastrados pelo usuário logado.</p>
+
+        <div class="library-tabs" role="tablist" aria-label="Categorias da biblioteca">
+            @foreach (var categoria in Categorias)
+            {
+                <button class="library-tab @(CategoriaAtual == categoria.Chave ? "active" : "")"
+                        type="button"
+                        role="tab"
+                        aria-selected="@(CategoriaAtual == categoria.Chave)"
+                        @onclick="() => TrocarCategoria(categoria.Chave)">
+                    @categoria.Nome
+                </button>
+            }
+        </div>
+
+        <section class="library-panel" role="tabpanel">
+            <div class="library-toolbar" role="search">
+                <label class="search-field">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search"
+                           placeholder="Buscar por nome, tipo ou descrição"
+                           aria-label="Buscar na biblioteca"
+                           autocomplete="off"
+                           @bind="TermoBusca"
+                           @bind:event="oninput"
+                           @bind:after="ResetarPaginacao" />
+                </label>
+            </div>
+
+            <p class="library-status @(TemErro ? "is-error" : "")" aria-live="polite">@StatusMensagem</p>
+
+            <div class="library-grid" aria-live="polite">
+                @if (EntradasFiltradas.Any())
+                {
+                    @foreach (var entrada in EntradasFiltradas.Take(LimiteVisivel))
+                    {
+                        <button class="library-entry" type="button" @onclick="() => AbrirDetalhes(entrada)">
+                            <strong>@entrada.Nome</strong>
+                            <span class="entry-meta">@ObterRotuloMeta(entrada)</span>
+                            <span class="entry-arrow" aria-hidden="true">↗</span>
+                        </button>
+                    }
+                }
+                else if (!Carregando)
+                {
+                    <p class="empty-state library-empty">
+                        @(Entradas.Any() ? "Nenhuma referência encontrada para essa busca." : "Nenhum item cadastrado para este usuário.")
+                    </p>
+                }
+
+                @if (TemErro)
+                {
+                    <button class="action-secondary library-retry" type="button" @onclick="CarregarItens">
+                        Tentar novamente
+                    </button>
+                }
+            </div>
+
+            @if (EntradasFiltradas.Count() > LimiteVisivel)
+            {
+                <button class="action-secondary library-more" type="button" @onclick="MostrarMais">
+                    Mostrar mais
+                </button>
+            }
+        </section>
+
+        <footer class="library-attribution">
+            Dados carregados do banco de dados da aplicação.
+        </footer>
+    </main>
+</div>
+
+@if (ExibirModal && ItemSelecionado is not null)
+{
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-detalhes" @onclick="FecharDetalhes">
+        <div class="entry-dialog" @onclick:stopPropagation="true">
+            <div class="dialog-heading">
+                <div>
+                    <p class="page-kicker" id="tipo-detalhes">@ObterRotuloMeta(ItemSelecionado)</p>
+                    <h2 id="titulo-detalhes">@ItemSelecionado.Nome</h2>
+                </div>
+                <button class="dialog-close" type="button" aria-label="Fechar detalhes" @onclick="FecharDetalhes">×</button>
+            </div>
+
+            <div class="dialog-content">
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Tipo))
+                {
+                    <p class="detail-row"><strong>Tipo: </strong>@ItemSelecionado.Tipo</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Raridade))
+                {
+                    <p class="detail-row"><strong>Raridade: </strong>@ItemSelecionado.Raridade</p>
+                }
+                @if (ItemSelecionado.Dano is not null)
+                {
+                    <p class="detail-row"><strong>Dano: </strong>@ItemSelecionado.Dano @(string.IsNullOrWhiteSpace(ItemSelecionado.TipoDano) ? "" : $"({ItemSelecionado.TipoDano})")</p>
+                }
+                @if (ItemSelecionado.CaBonus > 0)
+                {
+                    <p class="detail-row"><strong>Bônus de CA: </strong>@ItemSelecionado.CaBonus</p>
+                }
+                @if (ItemSelecionado.Peso.HasValue)
+                {
+                    <p class="detail-row"><strong>Peso: </strong>@ItemSelecionado.Peso.Value.ToString("0.##")</p>
+                }
+                @if (ItemSelecionado.Preco.HasValue)
+                {
+                    <p class="detail-row"><strong>Preço: </strong>@ItemSelecionado.Preco.Value.ToString("0.##")</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Propriedades))
+                {
+                    <p class="detail-row"><strong>Propriedades: </strong>@ItemSelecionado.Propriedades</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Sintonizacao))
+                {
+                    <p class="detail-row"><strong>Sintonização: </strong>@ItemSelecionado.Sintonizacao</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Descricao))
+                {
+                    <section class="detail-description">
+                        <h3>Descrição</h3>
+                        <p>@ItemSelecionado.Descricao</p>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<CategoriaItem> Categorias =
+    [
+        new("itens", "Itens"),
+        new("magias", "Magias"),
+        new("armas", "Armas")
+    ];
+
+    private string CategoriaAtual { get; set; } = "itens";
+    private string TermoBusca { get; set; } = string.Empty;
+    private int LimiteVisivel { get; set; } = 30;
+    private bool Carregando { get; set; }
+    private bool TemErro { get; set; }
+    private string StatusMensagem { get; set; } = "Carregando itens...";
+    private List<Item> Entradas { get; set; } = new();
+    private Item? ItemSelecionado { get; set; }
+    private bool ExibirModal { get; set; }
+
+    private IEnumerable<Item> EntradasFiltradas => Entradas
+        .Where(item => PertenceACategoria(item, CategoriaAtual))
+        .Where(item => string.IsNullOrWhiteSpace(TermoBusca) ||
+            item.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
+            item.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            item.Descricao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarItens();
+    }
+
+    private async Task CarregarItens()
+    {
+        Carregando = true;
+        TemErro = false;
+        StatusMensagem = "Carregando itens do banco de dados...";
+        LimiteVisivel = 30;
+
+        try
+        {
+            if (!SessaoUsuario.EstaLogado)
+            {
+                Entradas.Clear();
+                StatusMensagem = "Faça login para visualizar os itens da biblioteca.";
+                return;
+            }
+
+            var itens = await ItemService.ObterItensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado);
+            Entradas = itens.OrderBy(item => item.Nome).ToList();
+            StatusMensagem = Entradas.Count == 0
+                ? "Nenhum item cadastrado para este usuário."
+                : $"{Entradas.Count} item(ns) disponíveis.";
+        }
+        catch (Exception ex)
+        {
+            Entradas.Clear();
+            TemErro = true;
+            StatusMensagem = "Não foi possível carregar os itens do banco de dados.";
+            System.Diagnostics.Debug.WriteLine($"[ItensLib] Falha ao carregar itens: {ex.Message}");
+        }
+        finally
+        {
+            Carregando = false;
+        }
+    }
+
+    private void TrocarCategoria(string categoria)
+    {
+        CategoriaAtual = categoria;
+        LimiteVisivel = 30;
+        FecharDetalhes();
+    }
+
+    private void ResetarPaginacao() => LimiteVisivel = 30;
+    private void MostrarMais() => LimiteVisivel += 30;
+    private void VoltarParaHome() => Navigation.NavigateTo("/");
+
+    private void AbrirDetalhes(Item item)
+    {
+        ItemSelecionado = item;
+        ExibirModal = true;
+    }
+
+    private void FecharDetalhes()
+    {
+        ExibirModal = false;
+        ItemSelecionado = null;
+    }
+
+    private static bool PertenceACategoria(Item item, string categoria)
+    {
+        var tipo = item.Tipo ?? string.Empty;
+        var descricao = item.Descricao ?? string.Empty;
+        var ehArma = !string.IsNullOrWhiteSpace(item.Dano) ||
+                     ContemAlgumTermo(tipo, "arma", "weapon", "armamento");
+        var ehMagia = ContemAlgumTermo(tipo, "magia", "mágica", "magico", "mágico", "feitiço", "feitico", "spell") ||
+                      ContemAlgumTermo(descricao, "magia", "mágica", "magico", "mágico", "feitiço", "feitico", "spell");
+
+        return categoria switch
+        {
+            "armas" => ehArma,
+            "magias" => ehMagia && !ehArma,
+            _ => !ehArma && !ehMagia
+        };
+    }
+
+    private static bool ContemAlgumTermo(string texto, params string[] termos)
+    {
+        return termos.Any(termo => texto.Contains(termo, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ObterRotuloMeta(Item item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.Tipo))
+        {
+            return item.Tipo;
+        }
+
+        return "Item";
+    }
+
+    private sealed record CategoriaItem(string Chave, string Nome);
+}

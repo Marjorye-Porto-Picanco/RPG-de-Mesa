@@ -47,7 +47,11 @@
                 {
                     <div class="monster-card" @onclick="() => AbrirModal(monstro)">
                         <div class="monster-art">
-                            <img src="@(string.IsNullOrEmpty(monstro.Imagem) ? "img/capacampanha3.png" : monstro.Imagem)" alt="Ilustração do monstro @monstro.Nome" />
+                            @* Só exibe a imagem quando ela realmente existe no banco. *@
+                            @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
+                            {
+                                <img src="@monstro.Imagem" alt="Ilustração do monstro @monstro.Nome" />
+                            }
                             <span class="monster-cr">ND @(monstro.Nd)</span>
                         </div>
                         <div class="monster-info">
@@ -163,7 +167,11 @@
 
                 <aside class="form-aside">
                     <div class="aside-portrait">
-                        <img src="@(string.IsNullOrEmpty(monstroSelecionado.Imagem) ? "img/capacampanha3.png" : monstroSelecionado.Imagem)" alt="Ilustração do monstro" />
+                        @* Evita criar uma imagem padrão para monstros sem foto cadastrada. *@
+                        @if (!string.IsNullOrWhiteSpace(monstroSelecionado.Imagem))
+                        {
+                            <img src="@monstroSelecionado.Imagem" alt="Ilustração do monstro" />
+                        }
                     </div>
                     <div class="aside-note">
                         <strong>Bestiário da mesa</strong>

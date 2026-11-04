@@ -36,7 +36,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 ClasseArmadura = 13,
                 PvMaximo = 24,
                 TipoMonstro = "Outro",
-                Imagem = "img/capacampanha3.png"
+                // A imagem permanece nula até o usuário informar uma imagem.
             };
             MensagemFeedback = "";
             Sucesso = false;

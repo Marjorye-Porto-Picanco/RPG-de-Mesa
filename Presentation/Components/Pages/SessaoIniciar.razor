@@ -479,7 +479,7 @@
                     Resistencias = monstroResistencias,
                     Habilidades = monstroHabilidades,
                     Descricao = monstroDescricao,
-                    Imagem = "img/capacampanha3.png"
+                    // Não atribui imagem padrão ao monstro criado na sessão.
                 };
 
                 var resultado = await CampanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);

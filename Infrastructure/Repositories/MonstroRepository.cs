@@ -20,7 +20,8 @@ public class MonstroRepository : IMonstroRepository
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Monstros
-            .Where(m => m.IdAccount == idAccount)
+            // Lista monstros públicos e monstros pertencentes à conta logada.
+            .Where(m => m.IdAccount == null || m.IdAccount == idAccount)
             .OrderByDescending(m => m.IdMonstro)
             .ToListAsync();
     }

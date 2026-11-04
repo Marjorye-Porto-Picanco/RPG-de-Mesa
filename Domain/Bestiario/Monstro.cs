@@ -7,7 +7,8 @@ namespace RPGdeMesa.Domain.Bestiario;
 public class Monstro : IAggregateRoot
 {
     public int IdMonstro { get; private set; }
-    public int IdAccount { get; private set; }
+    // Permite monstros públicos do banco quando id_account está NULL.
+    public int? IdAccount { get; private set; }
     public string Nome { get; set; } = string.Empty;
     public string? TipoMonstro { get; set; }
     public decimal? NivelDesafio { get; set; } = 1;
@@ -62,7 +63,6 @@ public class Monstro : IAggregateRoot
             throw new DomainException("O nome do monstro é obrigatório.");
 
         IdAccount = idAccount;
-        if (string.IsNullOrWhiteSpace(Imagem))
-            Imagem = "img/capacampanha3.png";
+        // A imagem não recebe valor padrão; somente uma imagem informada explicitamente será salva.
     }
 }
