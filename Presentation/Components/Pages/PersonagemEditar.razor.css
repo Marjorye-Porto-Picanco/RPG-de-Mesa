@@ -26,9 +26,9 @@ body {
 .ficha-personagem {
     position: relative;
     display: flex;
-    width: min(100%, 1120px);
+    width: min(100%, 1180px);
     flex-direction: column;
-    gap: 26px;
+    gap: 22px;
     min-width: 0;
     min-height: calc(100vh - 106px);
     padding: 34px clamp(22px, 3vw, 48px) 30px;
@@ -39,6 +39,7 @@ body {
     background-position: center;
     background-size: cover;
     box-shadow: 10px 0 28px rgba(0, 0, 0, 0.34);
+    border-radius: 10px;
 }
 
     .ficha-personagem::after {
@@ -46,13 +47,12 @@ body {
         z-index: 0;
         inset: 9px;
         border: 1px solid rgba(126, 87, 31, 0.38);
+        border-radius: 6px;
         content: "";
         pointer-events: none;
     }
 
-/* ==========================================================================
-   CABEÇALHO DA FICHA
-   ========================================================================== */
+/* CABEÇALHO DA FICHA */
 .ficha-cabecalho {
     position: relative;
     z-index: 1;
@@ -62,9 +62,6 @@ body {
     gap: 18px;
 }
 
-/* ==========================================================================
-   COLUNA DO RETRATO & UPLOAD PERSONALIZADO
-   ========================================================================== */
 .retrato-coluna {
     display: flex;
     width: 96px;
@@ -93,81 +90,38 @@ body {
         display: block;
     }
 
-.retrato-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(27, 18, 14, 0.65);
-    color: #f7e6c4;
-    font-size: 20px;
-    opacity: 0;
-    cursor: pointer;
-    transition: opacity 160ms ease;
-}
-
-.retrato:hover .retrato-overlay {
-    opacity: 1;
-}
-
-.btn-trocar-foto {
+.upload-imagem-botao {
+    position: relative;
     display: inline-flex;
+    width: 100%;
+    min-height: 30px;
     align-items: center;
     justify-content: center;
     gap: 5px;
-    width: 100%;
-    min-height: 28px;
-    padding: 4px 6px;
-    border: 1px solid #9c7333;
-    border-radius: 4px;
-    background: linear-gradient(180deg, #c59f5b 0%, #a47a2d 100%);
-    color: #2c1a0b;
-    font-family: inherit;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    text-shadow: 0 1px 0 rgba(255, 235, 190, 0.4);
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    transition: all 140ms ease;
-    user-select: none;
-}
-
-    .btn-trocar-foto:hover {
-        background: linear-gradient(180deg, #d3ad68 0%, #b28634 100%);
-        color: #1a0f05;
-        border-color: #b78a3d;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-    }
-
-    .btn-trocar-foto:active {
-        transform: translateY(0);
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-    }
-
-    .btn-trocar-foto .icone-upload {
-        font-size: 13px;
-        line-height: 1;
-    }
-
-.input-file-oculto {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    padding: 0 8px;
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background: rgba(255, 251, 239, 0.72);
+    color: #594323;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-/* ==========================================================================
-   IDENTIDADE DO PERSONAGEM
-   ========================================================================== */
+    .upload-imagem-botao:hover {
+        background: rgba(243, 224, 181, 0.95);
+    }
+
+    .upload-imagem-botao ::deep input[type="file"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
 .sobretitulo {
     margin: 0 0 4px;
     color: #936b2d;
@@ -199,14 +153,11 @@ body {
 
     .dados-personagem b {
         display: inline-block;
-        min-width: 75px;
+        min-width: 85px;
         color: #8e692f;
         font-weight: 600;
     }
 
-/* ==========================================================================
-   MARCADORES (CLASSE & NÍVEL/XP)
-   ========================================================================== */
 .marcadores {
     display: flex;
     gap: 8px;
@@ -215,13 +166,14 @@ body {
 .marcador-classe,
 .marcador-nivel {
     display: flex;
-    width: 58px;
-    min-height: 66px;
+    width: 64px;
+    min-height: 68px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
     border: 1px solid rgba(146, 102, 39, 0.7);
+    background: rgba(255, 249, 235, 0.45);
     color: #765524;
     text-align: center;
 }
@@ -242,17 +194,16 @@ body {
 
     .marcador-classe b,
     .marcador-nivel b {
-        font-size: 10px;
-        font-weight: 500;
+        font-size: 11px;
+        font-weight: 700;
     }
 
-/* ==========================================================================
-   BARRA DE ABAS
-   ========================================================================== */
+/* BARRA DE ABAS */
 .troca-ficha {
     position: relative;
     z-index: 1;
     display: inline-flex;
+    flex-wrap: wrap;
     align-self: flex-end;
     padding: 3px;
     border: 1px solid rgba(126, 87, 31, 0.5);
@@ -269,6 +220,7 @@ body {
     color: #765524;
     font: inherit;
     font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
 }
 
@@ -278,146 +230,416 @@ body {
         box-shadow: 0 2px 6px rgba(65, 43, 14, 0.2);
     }
 
-    .aba-ficha:focus-visible {
-        outline: 2px solid #704916;
-        outline-offset: 2px;
-    }
-
-/* ==========================================================================
-   RESPONSIVIDADE (MOBILE / TABLET)
-   ========================================================================== */
-@media (max-width: 620px) {
-    .ficha-personagem {
-        min-height: auto;
-        padding: 27px 20px;
-    }
-
-    .palco {
-        padding: 12px;
-    }
-
-    .troca-ficha {
-        align-self: stretch;
-    }
-
-    .aba-ficha {
-        flex: 1;
-        padding: 0 10px;
-    }
-
-    .ficha-cabecalho {
-        grid-template-columns: 74px minmax(0, 1fr);
-        gap: 12px;
-    }
-
-    .retrato,
-    .retrato-coluna {
-        width: 74px;
-        height: 74px;
-    }
-
-    .btn-trocar-foto {
-        min-height: 24px;
-        font-size: 9px;
-    }
-
-    .identidade h1 {
-        font-size: 24px;
-    }
-
-    .marcadores {
-        grid-column: 1 / -1;
-        justify-content: flex-end;
-        margin-top: -2px;
-    }
-
-    .marcador-classe,
-    .marcador-nivel {
-        width: 54px;
-        min-height: 54px;
-    }
-}
-/* CSS for Upload-imagem component */
-.upload-imagem {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.upload-imagem-preview {
-    display: block;
-    width: min(100%, 260px);
-    max-height: 190px;
-    object-fit: cover;
-    border: 1px solid rgba(137, 102, 47, 0.45);
-    background: rgba(255, 251, 239, 0.6);
-}
-
-    .upload-imagem-preview[hidden] {
-        display: none;
-    }
-
-    .upload-imagem-preview.imagem-carregada {
-        object-fit: cover;
-    }
-
-.upload-imagem-botao {
+/* CONTEÚDO DAS ABAS */
+.edicao-conteudo {
     position: relative;
-    display: inline-flex;
-    min-height: 38px;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.atributos-cards-edicao {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.atributo-box-edicao {
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    padding: 14px 8px;
+    border: 1px solid rgba(130, 91, 35, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 253, 246, 0.78);
+}
+
+    .atributo-box-edicao span {
+        color: #715025;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .atributo-box-edicao input {
+        width: 72px;
+        text-align: center;
+        padding: 5px;
+        font-size: 20px;
+        font-weight: bold;
+        border: 1px solid rgba(132, 94, 39, 0.35);
+        border-radius: 8px;
+        background: #fff;
+        color: #382819;
+    }
+
+    .atributo-box-edicao small {
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: rgba(167, 122, 50, 0.15);
+        border: 1px solid rgba(151, 108, 43, 0.3);
+        color: #6b4818;
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+.proficiencias-edicao-grid {
+    display: grid;
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.5fr);
+    gap: 14px;
+}
+
+.pericias-grupo-edicao {
+    padding: 15px;
+    border-radius: 12px;
+    background: linear-gradient(155deg, #403020, #2b2118);
+    color: #f0e1c5;
+}
+
+    .pericias-grupo-edicao h3 {
+        margin: 0 0 10px;
+        color: #f5dfb3;
+        font-size: 14px;
+        border-bottom: 1px solid rgba(227, 190, 123, 0.2);
+        padding-bottom: 6px;
+    }
+
+.opcoes-salvaguarda-edicao {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.opcoes-pericias-edicao {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 8px;
+}
+
+.opcao-proficiencia-edicao {
+    display: flex;
+    align-items: center;
     gap: 7px;
-    overflow: hidden;
-    padding: 0 13px;
-    border: 1px solid #9c783d;
-    border-radius: 4px;
-    background: rgba(255, 251, 239, 0.62);
-    color: #594323;
+    padding: 5px 7px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
     font-size: 11px;
     cursor: pointer;
 }
 
-    .upload-imagem-botao:hover {
-        background: rgba(243, 224, 181, 0.9);
-    }
-
-    .upload-imagem-botao input[type="file"] {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        opacity: 0;
+    .opcao-proficiencia-edicao input {
+        accent-color: #d1a951;
+        width: 15px;
+        height: 15px;
         cursor: pointer;
     }
 
-.upload-imagem-ajuda,
-.upload-imagem-status {
-    margin: 0;
-    color: #826b47;
-    font-size: 10px;
-    line-height: 1.45;
+/* SWITCH INTERATIVO DO DIÁRIO */
+.diario-switch-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-    .upload-imagem-status:empty {
-        display: none;
+.diario-switch-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+    .diario-switch-header h3 {
+        margin: 0;
+        color: #46331c;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
-.profile-photo-preview {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    border-radius: 50%;
-    object-fit: cover;
+.diario-tabs {
+    display: inline-flex;
+    gap: 6px;
+    background: rgba(100, 70, 31, 0.14);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
 }
 
-.session-image-preview {
-    width: min(100%, 320px);
-    max-height: 150px;
-    object-fit: cover;
+.diario-tab {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #65481f;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
+
+    .diario-tab.ativa {
+        background: #8f6720;
+        color: #fff8e7;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+/* CAMPOS E PAINÉIS DE PERSONAGEM */
+.form-grid-2-edicao {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.form-grid-4-edicao {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.campo-ficha-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 9px 12px;
+    border: 1px solid rgba(146, 102, 39, 0.38);
+    border-radius: 8px;
+    background: rgba(255, 249, 235, 0.62);
+    color: #493519;
+}
+
+    .campo-ficha-edicao span {
+        color: #805b22;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .campo-ficha-edicao input,
+    .campo-ficha-edicao select {
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid rgba(156, 120, 61, 0.4);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.85);
+        color: #392819;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+.painel-personagem-edicao {
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 10px;
+    background: linear-gradient(145deg, #956b31, #755022);
+    color: #fff1d1;
+}
+
+    .painel-personagem-edicao.tesouro {
+        background: #2d1c13;
+        border-color: #7d521b;
+    }
+
+    .painel-personagem-edicao h3 {
+        margin: 0 0 8px;
+        color: #ffe8af;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .painel-personagem-edicao textarea {
+        width: 100%;
+        padding: 9px 10px;
+        border: 1px solid rgba(255, 235, 180, 0.28);
+        border-radius: 6px;
+        background: rgba(35, 22, 12, 0.22);
+        color: #fff2d4;
+        font-size: 13px;
+        resize: vertical;
+        outline: none;
+    }
+
+/* INVENTÁRIO NA EDIÇÃO */
+.corpo-inventario-edicao {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.85fr);
+    gap: 20px;
+}
+
+.categoria-itens-edicao {
+    margin-bottom: 14px;
+    padding: 14px;
+    border: 1px solid rgba(126, 87, 31, 0.32);
+    border-radius: 10px;
+    background: rgba(255, 251, 241, 0.6);
+}
+
+.titulo-categoria-edicao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+    .titulo-categoria-edicao h3 {
+        margin: 0;
+        color: #382619;
+        font-size: 15px;
+    }
+
+.btn-add-item-edicao {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid #ae812f;
+    background: rgba(176, 128, 38, 0.15);
+    color: #593d14;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.cabecalho-linha-edicao,
+.item-linha-edicao {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) 56px 68px 76px 26px;
+    gap: 6px;
+    align-items: center;
+}
+
+.cabecalho-linha-edicao {
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #795924;
+    border-bottom: 1px solid rgba(151, 107, 39, 0.45);
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+}
+
+.item-linha-edicao {
+    margin-bottom: 6px;
+}
+
+    .item-linha-edicao input,
+    .item-linha-edicao select {
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid rgba(126, 87, 31, 0.35);
+        border-radius: 5px;
+        background: #fffdf8;
+        color: #392819;
+        font-size: 12px;
+    }
+
+.remover-item-edicao {
+    border: none;
+    background: transparent;
+    color: #933827;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.resumo-inventario-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.painel-moedas-edicao,
+.painel-carga-edicao {
+    padding: 14px;
+    border: 1px solid rgba(239, 197, 112, 0.38);
+    border-radius: 10px;
+    background: linear-gradient(155deg, #79572b, #4f371d);
+    color: #fff0ca;
+}
+
+    .painel-moedas-edicao h3,
+    .painel-carga-edicao h3 {
+        margin: 0 0 10px;
+        font-size: 11px;
+        text-align: center;
+        text-transform: uppercase;
+        color: #f7dfa4;
+    }
+
+.moedas-grade-edicao {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.moeda-edicao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.icone-moeda-edicao {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #f0c65a;
+    background: radial-gradient(circle at 35% 30%, #e8bb50, #9b661a 75%);
+    color: #352213;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+    .icone-moeda-edicao.prata {
+        border-color: #ddd8c5;
+        background: radial-gradient(circle, #f4edda, #98917e);
+    }
+
+    .icone-moeda-edicao.electrum {
+        border-color: #b7e3e2;
+        background: radial-gradient(circle, #c4eceb, #598f8e);
+    }
+
+    .icone-moeda-edicao.ouro {
+        border-color: #f7cb59;
+        background: radial-gradient(circle, #ffe37b, #aa7214);
+    }
+
+    .icone-moeda-edicao.platina {
+        border-color: #bfd2d1;
+        background: radial-gradient(circle, #e2eeee, #728d8c);
+    }
+
+.moeda-edicao input {
+    width: 100%;
+    padding: 3px;
+    text-align: center;
+    border: 1px solid rgba(247, 218, 159, 0.35);
+    border-radius: 4px;
+    background: rgba(30, 20, 12, 0.35);
+    color: #fff1d1;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.painel-carga-edicao progress {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+}
+
+/* BOTÕES DE AÇÃO E MODAL */
 .action-primary,
 .action-secondary {
     display: inline-flex;
@@ -430,38 +652,15 @@ body {
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
-    text-decoration: none;
     letter-spacing: 0.5px;
     cursor: pointer;
-    transition: all 140ms ease;
-    user-select: none;
 }
 
 .action-primary {
     border: 1px solid #9c7333;
     background: linear-gradient(180deg, #c59f5b 0%, #a47a2d 100%);
     color: #2c1a0b;
-    text-shadow: 0 1px 0 rgba(255, 235, 190, 0.4);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-
-    .action-primary:hover:not(:disabled) {
-        background: linear-gradient(180deg, #d3ad68 0%, #b28634 100%);
-        color: #1a0f05;
-        border-color: #b78a3d;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-    }
-
-    .action-primary:active:not(:disabled) {
-        transform: translateY(0);
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-    }
-
-    .action-primary:disabled {
-        opacity: 0.65;
-        cursor: not-allowed;
-    }
 
 .action-secondary {
     border: 1px solid rgba(126, 87, 31, 0.5);
@@ -469,8 +668,75 @@ body {
     color: #765524;
 }
 
-    .action-secondary:hover {
-        background: rgba(100, 70, 31, 0.22);
-        color: #392819;
-        border-color: rgba(126, 87, 31, 0.8);
+.confirm-overlay {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, .74);
+}
+
+.confirm-dialog {
+    width: min(440px, 100%);
+    padding: 28px;
+    border: 1px solid #9c783d;
+    border-radius: 6px;
+    background: #ead8b3;
+    color: #493519;
+    text-align: center;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+    .confirm-actions button {
+        min-width: 92px;
+        min-height: 40px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+.confirm-exit {
+    background: #a47a2d;
+    color: #fff2d4;
+    border: 1px solid #dfbd6b;
+}
+
+.confirm-cancel {
+    background: #555;
+    color: #fff;
+    border: none;
+}
+
+@media (max-width: 900px) {
+    .atributos-cards-edicao {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .proficiencias-edicao-grid, .corpo-inventario-edicao, .form-grid-2-edicao {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid-4-edicao {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.campo-bloqueado {
+    background: rgba(126, 87, 31, 0.14);
+    border-style: dashed;
+}
+
+    .campo-bloqueado input[disabled],
+    .campo-bloqueado input[readonly] {
+        background: rgba(235, 222, 195, 0.65);
+        color: #5c4628;
+        cursor: not-allowed;
+        border-color: rgba(126, 87, 31, 0.25);
     }

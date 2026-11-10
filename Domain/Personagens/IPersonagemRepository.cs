@@ -6,5 +6,13 @@ public interface IPersonagemRepository
     Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount);
     Task AdicionarAsync(Personagem personagem);
     Task AtualizarAsync(Personagem personagem);
+    Task SalvarFichaCompleta3FNAsync(
+        int idPersonagem,
+        IEnumerable<(string NomeClasse, int Nivel)> classes,
+        IEnumerable<string> salvaguardas,
+        IEnumerable<string> pericias,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens,
+        IEnumerable<Magia> magias);
     Task RemoverAsync(Personagem personagem);
 }

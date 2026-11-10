@@ -33,16 +33,21 @@ public class CampanhaService
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
 
-            // Vincula automaticamente todos os itens padrão já existentes na base
-            var todosItensPadrao = await _campanhaRepo.ListarTodosItensAsync();
-            foreach (var item in todosItensPadrao)
+            var todosItens = await _campanhaRepo.ListarTodosItensAsync();
+            foreach (var itemPadrao in todosItens.Where(i => i.IdAccount == null))
             {
-                novaCampanha.VincularItem(item.IdItem);
+                novaCampanha.VincularItem(itemPadrao.IdItem);
+            }
+
+            var todosMonstros = await _campanhaRepo.ListarTodosMonstrosAsync();
+            foreach (var monstroPadrao in todosMonstros.Where(m => m.IdAccount == null))
+            {
+                novaCampanha.VincularMonstro(monstroPadrao.IdMonstro);
             }
 
             await _campanhaRepo.AdicionarAsync(novaCampanha);
 
-            return (true, "Campanha forjada com sucesso com a base de itens padrão!");
+            return (true, "Campanha forjada com sucesso com a base padrão de monstros e itens!");
         }
         catch (DomainException dex)
         {
@@ -72,26 +77,34 @@ public class CampanhaService
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
 
-            // Vincula todos os itens padrão da base por padrão
-            var todosItensPadrao = await _campanhaRepo.ListarTodosItensAsync();
-            foreach (var itemPadrao in todosItensPadrao)
+            var todosItens = await _campanhaRepo.ListarTodosItensAsync();
+            foreach (var itemPadrao in todosItens.Where(i => i.IdAccount == null))
             {
                 novaCampanha.VincularItem(itemPadrao.IdItem);
             }
 
-            // Se o usuário passou itens específicos na lista que não sejam os padrões, garante o vínculo
+            var todosMonstros = await _campanhaRepo.ListarTodosMonstrosAsync();
+            foreach (var monstroPadrao in todosMonstros.Where(m => m.IdAccount == null))
+            {
+                novaCampanha.VincularMonstro(monstroPadrao.IdMonstro);
+            }
+
             if (itens != null)
             {
                 foreach (var it in itens)
                 {
-                    try { novaCampanha.VincularItem(it.IdItem); } catch { /* Evita duplicar se já veio dos padrões */ }
+                    if (!novaCampanha.ItemCampanhas.Any(ic => ic.IdItem == it.IdItem))
+                        novaCampanha.VincularItem(it.IdItem);
                 }
             }
 
             if (monstros != null)
             {
                 foreach (var m in monstros)
-                    novaCampanha.VincularMonstro(m.IdMonstro);
+                {
+                    if (!novaCampanha.MonstroCampanhas.Any(mc => mc.IdMonstro == m.IdMonstro))
+                        novaCampanha.VincularMonstro(m.IdMonstro);
+                }
             }
 
             if (personagens != null)
@@ -139,14 +152,32 @@ public class CampanhaService
     public Task<List<Campanha>> ObterCampanhasComoJogadorAsync(int idAccount) =>
         _campanhaRepo.ListarPorJogadorAsync(idAccount);
 
-    public Task<List<Monstro>> ObterMonstrosDoUsuarioAsync(int idAccount) =>
-        _monstroRepo.ListarPorUsuarioAsync(idAccount);
+    public async Task<List<Monstro>> ObterMonstrosDoUsuarioAsync(int idAccount)
+    {
+        var todos = await _campanhaRepo.ListarTodosMonstrosAsync();
+        return todos.Where(m => m.IdAccount == idAccount).ToList();
+    }
+
+    public async Task<List<Monstro>> ObterMonstrosParaSessaoAsync(int idAccount)
+    {
+        var todos = await _campanhaRepo.ListarTodosMonstrosAsync();
+        return todos.Where(m => m.IdAccount == null || m.IdAccount == idAccount).ToList();
+    }
 
     public Task<List<NPC>> ObterNPCsDoUsuarioAsync(int idAccount) =>
         _npcRepo.ListarPorUsuarioAsync(idAccount);
 
-    public Task<List<Item>> ObterItensDoUsuarioAsync(int idAccount) =>
-        _campanhaRepo.ListarTodosItensAsync();
+    public async Task<List<Item>> ObterItensDoUsuarioAsync(int idAccount)
+    {
+        var todos = await _campanhaRepo.ListarTodosItensAsync();
+        return todos.Where(i => i.IdAccount == idAccount).ToList();
+    }
+
+    public async Task<List<Item>> ObterItensParaSessaoAsync(int idAccount)
+    {
+        var todos = await _campanhaRepo.ListarTodosItensAsync();
+        return todos.Where(i => i.IdAccount == null || i.IdAccount == idAccount).ToList();
+    }
 
     public async Task<Campanha?> BuscarPorCodigoAsync(string codigoConvite)
     {
@@ -198,12 +229,7 @@ public class CampanhaService
     {
         try
         {
-            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
-            if (campanha == null) return (false, "Campanha não encontrada.");
-
-            campanha.VincularMonstro(idMonstro);
-            await _campanhaRepo.AtualizarAsync(campanha);
-
+            await _campanhaRepo.AdicionarMonstroCampanhaAsync(idCampanha, idMonstro);
             return (true, "Monstro vinculado com sucesso!");
         }
         catch (Exception ex)
@@ -216,12 +242,7 @@ public class CampanhaService
     {
         try
         {
-            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
-            if (campanha == null) return (false, "Campanha não encontrada.");
-
-            campanha.VincularNpc(idNpc);
-            await _campanhaRepo.AtualizarAsync(campanha);
-
+            await _campanhaRepo.AdicionarNpcCampanhaAsync(idCampanha, idNpc);
             return (true, "NPC vinculado à campanha com sucesso!");
         }
         catch (Exception ex)
@@ -234,12 +255,7 @@ public class CampanhaService
     {
         try
         {
-            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
-            if (campanha == null) return (false, "Campanha não encontrada.");
-
-            campanha.VincularItem(idItem);
-            await _campanhaRepo.AtualizarAsync(campanha);
-
+            await _campanhaRepo.AdicionarItemCampanhaAsync(idCampanha, idItem);
             return (true, "Item vinculado com sucesso!");
         }
         catch (Exception ex)
@@ -276,8 +292,7 @@ public class CampanhaService
             monstro.PrepararNovoMonstro(campanha.IdAccount);
             await _monstroRepo.AdicionarAsync(monstro);
 
-            campanha.VincularMonstro(monstro.IdMonstro);
-            await _campanhaRepo.AtualizarAsync(campanha);
+            await _campanhaRepo.AdicionarMonstroCampanhaAsync(idCampanha, monstro.IdMonstro);
 
             return (true, "Monstro criado e vinculado com sucesso!");
         }

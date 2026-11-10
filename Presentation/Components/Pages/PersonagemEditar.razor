@@ -1,5 +1,9 @@
 ﻿@page "/personagem-editar/{Id:int}"
+@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
 @inject PersonagemEditarViewModel ViewModel
 @inject NavigationManager Navigation
 @implements IDisposable
@@ -10,73 +14,496 @@
 <div class="mesa-edicao">
     <main class="palco">
         <section class="ficha-personagem" aria-labelledby="nome-personagem">
+            <!-- CABEÇALHO DA FICHA -->
             <div class="ficha-cabecalho">
                 <div class="retrato-coluna">
                     <div class="retrato">
-                        <img id="imagem-personagem-atual" src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)" alt="Retrato do personagem" />
+                        <img id="imagem-personagem-atual"
+                             src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)"
+                             alt="Retrato do personagem" />
                     </div>
                     <label class="upload-imagem-botao retrato-upload">
                         <span aria-hidden="true">↑</span> Foto
-                        <input id="imagem-personagem-edicao" type="file" accept="image/*" aria-label="Alterar foto do personagem" />
+                        <InputFile OnChange="CarregarFotoAsync" accept="image/*" aria-label="Alterar foto do personagem" />
                     </label>
                 </div>
+
                 <div class="identidade">
                     <p class="sobretitulo">Ficha de personagem</p>
-                    <h1 id="nome-personagem">@ViewModel.PersonagemAtual.Nome</h1>
-                    <p class="descricao-personagem">@(ViewModel.PersonagemAtual.RacaTexto ?? "Raça") • @(ViewModel.PersonagemAtual.ClasseTexto ?? "Classe") • Nível @ViewModel.PersonagemAtual.Nivel</p>
+                    <h1 id="nome-personagem">@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? "Sem Nome" : ViewModel.PersonagemAtual.Nome)</h1>
+                    <p class="descricao-personagem">@(ViewModel.PersonagemAtual.RacaTexto ?? "Raça") • @(ViewModel.PersonagemAtual.ClasseTexto ?? "Classe") • Nível Total @ViewModel.PersonagemAtual.Nivel</p>
                     <div class="dados-personagem">
                         <span><b>Raça</b> @(ViewModel.PersonagemAtual.RacaTexto ?? "Não informada")</span>
                         <span><b>Tendência</b> @(ViewModel.PersonagemAtual.Tendencia ?? "Neutra")</span>
                         <span><b>Antecedente</b> @(ViewModel.PersonagemAtual.AntecedenteTexto ?? "Não informado")</span>
                     </div>
                 </div>
+
                 <div class="marcadores">
-                    <div class="marcador-classe"><span>Classe</span><b>@(ViewModel.PersonagemAtual.ClasseTexto ?? "N/A")</b></div>
+                    <div class="marcador-classe"><span>Nível</span><b>@ViewModel.PersonagemAtual.Nivel</b></div>
                     <div class="marcador-nivel"><span>XP</span><b>@ViewModel.PersonagemAtual.ExperienciaXp.ToString("N0")</b></div>
                 </div>
             </div>
 
-            <!-- Botões de troca de abas -->
+            <!-- BOTÕES DE TROCA DE ABAS -->
             <div class="troca-ficha" role="tablist" aria-label="Visão da ficha">
                 <button class="aba-ficha @(ViewModel.AbaAtiva == "atributos" ? "ativa" : "")"
                         @onclick='() => ViewModel.MudarAba("atributos")'
                         type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "atributos")">
-                    Atributos
+                    Atributos & Diário
                 </button>
                 <button class="aba-ficha @(ViewModel.AbaAtiva == "personagem" ? "ativa" : "")"
                         @onclick='() => ViewModel.MudarAba("personagem")'
                         type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "personagem")">
-                    Personagem <span aria-hidden="true">↔</span>
+                    Personagem & Classes
                 </button>
                 <button class="aba-ficha @(ViewModel.AbaAtiva == "inventario" ? "ativa" : "")"
                         @onclick='() => ViewModel.MudarAba("inventario")'
                         type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "inventario")">
                     Inventário
                 </button>
+                <button class="aba-ficha @(ViewModel.AbaAtiva == "grimorio" ? "ativa" : "")"
+                        @onclick='() => ViewModel.MudarAba("grimorio")'
+                        type="button" role="tab" aria-selected="@(ViewModel.AbaAtiva == "grimorio")">
+                    Grimório
+                </button>
             </div>
 
-            <!-- Renderização dinâmica da aba ativa -->
-            @switch (ViewModel.AbaAtiva)
+            <!-- =========================================================================
+                 ABA 1: ATRIBUTOS, SALVAGUARDAS, PERÍCIAS E DIÁRIO (COM SWITCH FUNCIONAL)
+                 ========================================================================= -->
+            @if (ViewModel.AbaAtiva == "atributos")
             {
-                case "atributos":
-                    <FichaAtributos Personagem="@ViewModel.PersonagemAtual" />
-                    break;
-                case "personagem":
-                    <FichaDetalhes Personagem="@ViewModel.PersonagemAtual" />
-                    break;
-                case "inventario":
-                    <FichaInventario Personagem="@ViewModel.PersonagemAtual" />
-                    break;
+                <div class="edicao-conteudo">
+                    <div class="atributos-cards-edicao">
+                        <label class="atributo-box-edicao">
+                            <span>Força</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Forca" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
+                        </label>
+                        <label class="atributo-box-edicao">
+                            <span>Destreza</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Destreza" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
+                        </label>
+                        <label class="atributo-box-edicao">
+                            <span>Constituição</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Constituicao" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
+                        </label>
+                        <label class="atributo-box-edicao">
+                            <span>Inteligência</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Inteligencia" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
+                        </label>
+                        <label class="atributo-box-edicao">
+                            <span>Sabedoria</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Sabedoria" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
+                        </label>
+                        <label class="atributo-box-edicao">
+                            <span>Carisma</span>
+                            <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Carisma" @bind:event="oninput" />
+                            <small>@ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
+                        </label>
+                    </div>
+
+                    <div class="proficiencias-edicao-grid">
+                        <section class="pericias-grupo-edicao">
+                            <h3>Salvaguardas</h3>
+                            <div class="opcoes-salvaguarda-edicao">
+                                @foreach (var salv in ListaSalvaguardas)
+                                {
+                                    <label class="opcao-proficiencia-edicao">
+                                        <input type="checkbox"
+                                               checked="@ViewModel.SalvaguardasSelecionadas.Contains(salv)"
+                                               @onchange="e => ViewModel.AlternarSalvaguarda(salv, (bool)(e.Value ?? false))" />
+                                        <span>@salv</span>
+                                    </label>
+                                }
+                            </div>
+                        </section>
+
+                        <section class="pericias-grupo-edicao">
+                            <h3>Perícias</h3>
+                            <div class="opcoes-pericias-edicao">
+                                @foreach (var pericia in ListaPericias)
+                                {
+                                    <label class="opcao-proficiencia-edicao">
+                                        <input type="checkbox"
+                                               checked="@ViewModel.PericiasSelecionadas.Contains(pericia)"
+                                               @onchange="e => ViewModel.AlternarPericia(pericia, (bool)(e.Value ?? false))" />
+                                        <span>@pericia</span>
+                                    </label>
+                                }
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="form-grid-2-edicao">
+                        <div class="painel-personagem-edicao">
+                            <h3>Traços de Personalidade</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.TracosPersonalidade" placeholder="Ex.: Observo tudo antes de agir."></textarea>
+                        </div>
+                        <div class="painel-personagem-edicao">
+                            <h3>Ponto de Vista Atual</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.PontoDeVista" placeholder="Ex.: Nem toda trilha segura leva ao destino certo."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- SEÇÕES DO DIÁRIO COM SWITCH INTERATIVO -->
+                    <div class="diario-switch-container">
+                        <div class="diario-switch-header">
+                            <h3>Seções do Diário</h3>
+                            <div class="diario-tabs" role="tablist">
+                                <button type="button" class="diario-tab @(ViewModel.SecaoDiarioAtiva == "ideais" ? "ativa" : "")" @onclick='() => ViewModel.MudarSecaoDiario("ideais")'>Ideais</button>
+                                <button type="button" class="diario-tab @(ViewModel.SecaoDiarioAtiva == "ligacoes" ? "ativa" : "")" @onclick='() => ViewModel.MudarSecaoDiario("ligacoes")'>Ligações</button>
+                                <button type="button" class="diario-tab @(ViewModel.SecaoDiarioAtiva == "defeitos" ? "ativa" : "")" @onclick='() => ViewModel.MudarSecaoDiario("defeitos")'>Defeitos</button>
+                                <button type="button" class="diario-tab @(ViewModel.SecaoDiarioAtiva == "idiomas" ? "ativa" : "")" @onclick='() => ViewModel.MudarSecaoDiario("idiomas")'>Idiomas</button>
+                            </div>
+                        </div>
+
+                        <div class="painel-personagem-edicao">
+                            @if (ViewModel.SecaoDiarioAtiva == "ideais")
+                            {
+                                <h3>Ideais do Personagem</h3>
+                                <textarea rows="4" @bind="ViewModel.PersonagemAtual.Ideais" @bind:event="oninput" placeholder="Ex.: Proteger os caminhos antigos é proteger quem ainda virá."></textarea>
+                            }
+                            else if (ViewModel.SecaoDiarioAtiva == "ligacoes")
+                            {
+                                <h3>Ligações Importantes</h3>
+                                <textarea rows="4" @bind="ViewModel.PersonagemAtual.Ligacoes" @bind:event="oninput" placeholder="Pessoas, lugares ou relíquias importantes..."></textarea>
+                            }
+                            else if (ViewModel.SecaoDiarioAtiva == "defeitos")
+                            {
+                                <h3>Defeitos e Fraquezas</h3>
+                                <textarea rows="4" @bind="ViewModel.PersonagemAtual.Defeitos" @bind:event="oninput" placeholder="Fraquezas, vícios ou medos do personagem..."></textarea>
+                            }
+                            else if (ViewModel.SecaoDiarioAtiva == "idiomas")
+                            {
+                                <h3>Idiomas Conhecidos</h3>
+                                <textarea rows="4" @bind="ViewModel.PersonagemAtual.Idiomas" @bind:event="oninput" placeholder="Ex.: Comum, Élfico, Silvestre..."></textarea>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- =========================================================================
+                 ABA 2: IDENTIDADE (CAMPOS FIXOS BLOQUEADOS), MULTICLASSE E HISTÓRIA
+                 ========================================================================= -->
+            @if (ViewModel.AbaAtiva == "personagem")
+            {
+                <div class="edicao-conteudo">
+                    <div class="form-grid-2-edicao">
+                        <!-- NOME BLOQUEADO (SOMENTE LEITURA) -->
+                        <label class="campo-ficha-edicao full-width campo-bloqueado">
+                            <span>Nome do Personagem (Fixo)</span>
+                            <input type="text" value="@ViewModel.PersonagemAtual.Nome" readonly disabled />
+                        </label>
+
+                        <!-- RAÇA BLOQUEADA (SOMENTE LEITURA) -->
+                        <label class="campo-ficha-edicao campo-bloqueado">
+                            <span>Raça (Fixo)</span>
+                            <input type="text" value="@ViewModel.PersonagemAtual.RacaTexto" readonly disabled />
+                        </label>
+
+                        <!-- ANTECEDENTE BLOQUEADO (SOMENTE LEITURA) -->
+                        <label class="campo-ficha-edicao campo-bloqueado">
+                            <span>Antecedente (Fixo)</span>
+                            <input type="text" value="@ViewModel.PersonagemAtual.AntecedenteTexto" readonly disabled />
+                        </label>
+
+                        <!-- TENDÊNCIA (EDITÁVEL) -->
+                        <label class="campo-ficha-edicao">
+                            <span>Tendência</span>
+                            <select @bind="ViewModel.PersonagemAtual.Tendencia">
+                                <option value="Neutra">Neutra</option>
+                                <option value="Leal e boa">Leal e boa</option>
+                                <option value="Neutra e boa">Neutra e boa</option>
+                                <option value="Caótica e boa">Caótica e boa</option>
+                                <option value="Leal e neutra">Leal e neutra</option>
+                                <option value="Caótica e neutra">Caótica e neutra</option>
+                                <option value="Leal e má">Leal e má</option>
+                                <option value="Neutra e má">Neutra e má</option>
+                                <option value="Caótica e má">Caótica e má</option>
+                            </select>
+                        </label>
+
+                        <!-- EXPERIÊNCIA XP (EDITÁVEL) -->
+                        <label class="campo-ficha-edicao">
+                            <span>Experiência (XP)</span>
+                            <input type="number" @bind="ViewModel.PersonagemAtual.ExperienciaXp" min="0" max="999999" step="10" />
+                        </label>
+
+                        <!-- MULTICLASSE (EDITÁVEL) -->
+                        <div class="categoria-itens-edicao full-width" style="margin-bottom: 4px;">
+                            <div class="titulo-categoria-edicao">
+                                <h3>⌁ Classes do Personagem (Nível Total: @ViewModel.PersonagemAtual.Nivel)</h3>
+                                <button type="button" class="btn-add-item-edicao" title="Adicionar outra classe (Multiclasse)" @onclick="ViewModel.AdicionarClasse">+</button>
+                            </div>
+                            <div class="cabecalho-linha-edicao" style="grid-template-columns: 1fr 110px 32px;">
+                                <span>Classe</span>
+                                <span>Nível na Classe</span>
+                                <span></span>
+                            </div>
+                            @foreach (var cl in ViewModel.ClassesSelecionadas)
+                            {
+                                <div class="item-linha-edicao" style="grid-template-columns: 1fr 110px 32px;">
+                                    <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasse(cl, e)">
+                                        @foreach (var op in ListaOpcoesClasses)
+                                        {
+                                            <option value="@op">@op</option>
+                                        }
+                                    </select>
+                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasse(cl, e)" />
+                                    @if (ViewModel.ClassesSelecionadas.Count > 1)
+                                    {
+                                        <button type="button" class="remover-item-edicao" title="Remover classe" @onclick="() => ViewModel.RemoverClasse(cl)">×</button>
+                                    }
+                                    else
+                                    {
+                                        <span></span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-grid-4-edicao full-width">
+                            <!-- IDADE (EDITÁVEL) -->
+                            <label class="campo-ficha-edicao">
+                                <span>Idade (Anos)</span>
+                                <input type="number" @bind="ViewModel.IdadeNumero" min="1" max="10000" step="1" />
+                            </label>
+
+                            <!-- GÊNERO BLOQUEADO (SOMENTE LEITURA) -->
+                            <label class="campo-ficha-edicao campo-bloqueado">
+                                <span>Gênero (Fixo)</span>
+                                <input type="text" value="@ViewModel.PersonagemAtual.Genero" readonly disabled />
+                            </label>
+
+                            <!-- ALTURA BLOQUEADA (SOMENTE LEITURA) -->
+                            <label class="campo-ficha-edicao campo-bloqueado">
+                                <span>Altura (Fixo)</span>
+                                <input type="text" value="@ViewModel.PersonagemAtual.Altura" readonly disabled />
+                            </label>
+
+                            <!-- PESO (EDITÁVEL) -->
+                            <label class="campo-ficha-edicao">
+                                <span>Peso (kg)</span>
+                                <input type="number" @bind="ViewModel.PesoKg" min="1" max="1000" step="0.5" />
+                            </label>
+                        </div>
+
+                        <div class="painel-personagem-edicao">
+                            <h3>Aparência</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.Aparencia" placeholder="Descreva a aparência física, cicatrizes e vestimentas..."></textarea>
+                        </div>
+                        <div class="painel-personagem-edicao">
+                            <h3>Aliados e Organizações</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.Aliados" placeholder="Descreva aliados, guildas e facções..."></textarea>
+                        </div>
+                        <div class="painel-personagem-edicao full-width">
+                            <h3>História do Personagem</h3>
+                            <textarea rows="4" @bind="ViewModel.PersonagemAtual.Historia" placeholder="De onde veio? O que busca? O que não consegue esquecer?"></textarea>
+                        </div>
+                        <div class="painel-personagem-edicao">
+                            <h3>Características e Habilidades</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.Caracteristicas" placeholder="Talentos raciais, habilidades de classe..."></textarea>
+                        </div>
+                        <div class="painel-personagem-edicao tesouro">
+                            <h3>Tesouro Pessoal</h3>
+                            <textarea rows="3" @bind="ViewModel.PersonagemAtual.Tesouro" placeholder="Relíquias ou riquezas pessoais..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- =========================================================================
+                 ABA 3: INVENTÁRIO, MOEDAS E CAPACIDADE DE CARGA
+                 ========================================================================= -->
+            @if (ViewModel.AbaAtiva == "inventario")
+            {
+                <div class="edicao-conteudo">
+                    <div class="corpo-inventario-edicao">
+                        <div>
+                            <!-- Armas -->
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>⌁ Armas</h3>
+                                    <button type="button" class="btn-add-item-edicao" @onclick='() => ViewModel.AdicionarSlotItem("Armas")'>+</button>
+                                </div>
+                                <div class="cabecalho-linha-edicao"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Armas"))
+                                {
+                                    <div class="item-linha-edicao">
+                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                            <option value="0">Selecione uma arma...</option>
+                                            @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Armas"))
+                                            {
+                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                        <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Armaduras e Escudos -->
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>⌁ Armaduras e Escudos</h3>
+                                    <button type="button" class="btn-add-item-edicao" @onclick='() => ViewModel.AdicionarSlotItem("Armaduras")'>+</button>
+                                </div>
+                                <div class="cabecalho-linha-edicao"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Armaduras"))
+                                {
+                                    <div class="item-linha-edicao">
+                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                            <option value="0">Selecione uma armadura...</option>
+                                            @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Armaduras"))
+                                            {
+                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                        <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Poções e Consumíveis -->
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>⌁ Poções e Consumíveis</h3>
+                                    <button type="button" class="btn-add-item-edicao" @onclick='() => ViewModel.AdicionarSlotItem("Consumiveis")'>+</button>
+                                </div>
+                                <div class="cabecalho-linha-edicao"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Consumiveis"))
+                                {
+                                    <div class="item-linha-edicao">
+                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                            <option value="0">Selecione um consumível...</option>
+                                            @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Consumiveis"))
+                                            {
+                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                        <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Materiais e Outros -->
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>⌁ Materiais e Outros</h3>
+                                    <button type="button" class="btn-add-item-edicao" @onclick='() => ViewModel.AdicionarSlotItem("Outros")'>+</button>
+                                </div>
+                                <div class="cabecalho-linha-edicao"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Outros"))
+                                {
+                                    <div class="item-linha-edicao">
+                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                            <option value="0">Selecione um item...</option>
+                                            @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Outros"))
+                                            {
+                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                        <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <aside class="resumo-inventario-edicao">
+                            <section class="painel-moedas-edicao">
+                                <h3>Moedas</h3>
+                                <div class="moedas-grade-edicao">
+                                    <label class="moeda-edicao"><span class="icone-moeda-edicao">PC</span><input type="number" min="0" @bind="ViewModel.MoedasPC" /></label>
+                                    <label class="moeda-edicao"><span class="icone-moeda-edicao prata">PP</span><input type="number" min="0" @bind="ViewModel.MoedasPP" /></label>
+                                    <label class="moeda-edicao"><span class="icone-moeda-edicao electrum">PE</span><input type="number" min="0" @bind="ViewModel.MoedasPE" /></label>
+                                    <label class="moeda-edicao"><span class="icone-moeda-edicao ouro">PO</span><input type="number" min="0" @bind="ViewModel.MoedasPO" /></label>
+                                    <label class="moeda-edicao"><span class="icone-moeda-edicao platina">PL</span><input type="number" min="0" @bind="ViewModel.MoedasPL" /></label>
+                                </div>
+                            </section>
+
+                            <section class="painel-carga-edicao">
+                                <h3>Capacidade de Carga</h3>
+                                <p style="text-align:center; margin:0 0 8px;">
+                                    <strong>@ViewModel.PesoTotalInventario.ToString("0.0") kg</strong> / @ViewModel.CapacidadeCargaMaxima.ToString("0.0") kg
+                                </p>
+                                <progress max="@((double)ViewModel.CapacidadeCargaMaxima)" value="@((double)Math.Min(ViewModel.PesoTotalInventario, ViewModel.CapacidadeCargaMaxima))"></progress>
+                            </section>
+
+                            <div class="painel-personagem-edicao tesouro">
+                                <h3>Notas do Inventário</h3>
+                                <textarea rows="4" @bind="ViewModel.NotasInventario" placeholder="Anote detalhes, origem ou efeitos dos itens..."></textarea>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            }
+
+            <!-- =========================================================================
+                 ABA 4: GRIMÓRIO E MAGIAS
+                 ========================================================================= -->
+            @if (ViewModel.AbaAtiva == "grimorio")
+            {
+                <div class="edicao-conteudo">
+                    <div class="categoria-itens-edicao">
+                        <div class="titulo-categoria-edicao">
+                            <h3>⌁ Magias Conhecidas / Preparadas</h3>
+                            <button type="button" class="btn-add-item-edicao" @onclick="ViewModel.AdicionarMagia">+</button>
+                        </div>
+                        <div class="cabecalho-linha-edicao" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
+                            <span>Nome da Magia</span>
+                            <span>Círculo</span>
+                            <span>Dano / Efeito</span>
+                            <span>Alcance / Notas</span>
+                            <span></span>
+                        </div>
+                        @foreach (var magia in ViewModel.Magias)
+                        {
+                            <div class="item-linha-edicao" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
+                                <input type="text" @bind="magia.Nome" placeholder="Ex.: Mísseis Mágicos" />
+                                <select @bind="magia.Circulo">
+                                    <option value="Truque">Truque</option>
+                                    <option value="1º Círculo">1º Círculo</option>
+                                    <option value="2º Círculo">2º Círculo</option>
+                                    <option value="3º Círculo">3º Círculo</option>
+                                    <option value="4º Círculo">4º Círculo</option>
+                                    <option value="5º Círculo">5º Círculo</option>
+                                </select>
+                                <input type="text" @bind="magia.Efeito" placeholder="Ex.: 3d4+3 Energia" />
+                                <input type="text" @bind="magia.AlcanceNotas" placeholder="Ex.: 36m · Ação" />
+                                <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverMagia(magia)">×</button>
+                            </div>
+                        }
+                    </div>
+                </div>
             }
 
             @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
             {
-                <div style="padding: 10px; margin-top: 15px; text-align: center; color: @(ViewModel.Sucesso ? "#28a745" : "#dc3545"); font-weight: bold;">
+                <div style="position: relative; z-index: 1; padding: 10px; margin-top: 10px; text-align: center; color: @(ViewModel.Sucesso ? "#236b35" : "#a12720"); font-weight: bold;">
                     @ViewModel.MensagemFeedback
                 </div>
             }
 
-            <div style="padding: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <div style="position: relative; z-index: 1; padding-top: 16px; border-top: 1px solid rgba(126, 87, 31, 0.35); display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="action-secondary" type="button" @onclick="AbrirAvisoSaida">Cancelar</button>
                 <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@ViewModel.IsProcessing">
                     @(ViewModel.IsProcessing ? "Salvando..." : "Salvar Alterações")
@@ -104,6 +531,26 @@
     [Parameter]
     public int Id { get; set; }
 
+    private const long LimiteImagemBytes = 2 * 1024 * 1024;
+
+    private readonly string[] ListaOpcoesClasses =
+    {
+        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
+    };
+
+    private readonly string[] ListaSalvaguardas =
+    {
+        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
+    };
+
+    private readonly string[] ListaPericias =
+    {
+        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
+        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
+        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
+    };
+
     private bool ExibirAvisoSaida { get; set; }
     private bool LiberarProximaNavegacao { get; set; }
     private string? DestinoPendente { get; set; }
@@ -119,11 +566,58 @@
         ViewModel.OnChange -= StateHasChanged;
     }
 
+    private void AlterarNomeClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
+    {
+        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
+        ViewModel.SincronizarClassesENivel();
+    }
+
+    private void AlterarNivelClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int nv))
+        {
+            cl.Nivel = Math.Clamp(nv, 1, 20);
+            ViewModel.SincronizarClassesENivel();
+        }
+    }
+
+    private void AlterarItemSlot(ItemInventarioVinculado slot, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int idItem))
+        {
+            ViewModel.SelecionarItemExistente(slot, idItem);
+        }
+    }
+
+    private static string ObterModificador(int valor)
+    {
+        var modificador = (int)Math.Floor((valor - 10) / 2.0);
+        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
+    }
+
+    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+    {
+        var arquivo = evento.File;
+        if (arquivo.Size > LimiteImagemBytes) return;
+        if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return;
+
+        try
+        {
+            await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
+            using var memoria = new MemoryStream();
+            await origem.CopyToAsync(memoria);
+
+            ViewModel.PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            ViewModel.NotifyStateChanged();
+        }
+        catch { }
+    }
+
     private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
 
     private void ConfirmarNavegacao(LocationChangingContext contexto)
     {
-        if (LiberarProximaNavegacao)
+        if (ViewModel.Sucesso || LiberarProximaNavegacao)
         {
             LiberarProximaNavegacao = false;
             return;

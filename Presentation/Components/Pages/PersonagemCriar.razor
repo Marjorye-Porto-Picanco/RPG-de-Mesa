@@ -1,6 +1,9 @@
 ﻿@page "/personagem-criar"
+@using System.IO
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
 @inject PersonagemCriarViewModel ViewModel
 @inject NavigationManager Navigation
 @implements IDisposable
@@ -16,8 +19,8 @@
         <header class="top-bar">
             <div class="top-bar-copy">
                 <p class="page-kicker">Compêndio de Heróis</p>
-                <h1 class="page-title">Criar personagem completo</h1>
-                <p class="page-description">Preencha as etapas e monte a ficha do seu herói.</p>
+                <h1 class="page-title">Criar Personagem Completo</h1>
+                <p class="page-description">Preencha todas as etapas para gerar a ficha completa já com atributos, história, inventário e magias.</p>
             </div>
         </header>
 
@@ -40,10 +43,10 @@
                     }
                 </div>
                 <div class="aside-summary">
-                    <strong>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? $"Novo {ViewModel.TipoSelecionado}" : ViewModel.PersonagemAtual.Nome)</strong>
-                    <span>@(ViewModel.PersonagemAtual.RacaTexto ?? "Raça") • @(ViewModel.PersonagemAtual.ClasseTexto ?? "Classe") • Nível @ViewModel.PersonagemAtual.Nivel</span>
-                    <hr />
-                    <small>Os dados salvos serão os campos compatíveis com a ficha atual do projeto.</small>
+                    <strong>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? "Novo Personagem" : ViewModel.PersonagemAtual.Nome)</strong>
+                    <span>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.RacaTexto) ? "Raça" : ViewModel.PersonagemAtual.RacaTexto) • @(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.ClasseTexto) ? "Classe" : ViewModel.PersonagemAtual.ClasseTexto) • Nível Total @ViewModel.PersonagemAtual.Nivel</span>
+                    <hr style="border:0; border-top:1px solid rgba(215,180,109,0.25); margin:8px 0;" />
+                    <small style="color:#c5b79d;">Os dados preenchidos nas cinco etapas irão compor as abas Atributos, Personagem, Inventário e Grimório da ficha final.</small>
                 </div>
             </div>
         </aside>
@@ -54,10 +57,10 @@
                     <span>Progresso da criação</span>
                     <strong>Etapa @EtapaAtual de @TotalEtapas</strong>
                 </div>
-                <p aria-live="polite">@(EtapaAtual == TotalEtapas ? "Última etapa — revise a ficha" : $"{TotalEtapas - EtapaAtual} etapas restantes")</p>
+                <p aria-live="polite">@(EtapaAtual == TotalEtapas ? "Última etapa — falta concluir esta ficha" : $"{TotalEtapas - EtapaAtual} {(TotalEtapas - EtapaAtual == 1 ? "etapa restante" : "etapas restantes")}")</p>
             </div>
-            <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="@TotalEtapas" aria-valuenow="@EtapaAtual" aria-label="Progresso da criação da ficha">
-                <div class="progress-fill" style="width: @((EtapaAtual * 100) / TotalEtapas)%"></div>
+            <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="@TotalEtapas" aria-valuenow="@EtapaAtual" aria-label="Progresso das etapas">
+                <div class="progress-fill" style="width: @(((EtapaAtual - 1) * 100) / (TotalEtapas - 1))%"></div>
             </div>
 
             <nav class="wizard-steps" aria-label="Etapas da criação">
@@ -80,62 +83,62 @@
             </nav>
         </section>
 
-        @* A prévia e o assistente seguem a estrutura do HTML de referência. *@
-
         <form id="form-wizard" class="wizard-layout" @onsubmit="ViewModel.SalvarPersonagemAsync" @onsubmit:preventDefault="true">
             <section class="ficha-pergaminho">
+
                 @if (EtapaAtual == 1)
                 {
                     <div class="step-panel active">
-                        <h2 class="section-title">1. Identidade, raça, classe e biografia física</h2>
+                        <h2 class="section-title">1. Identidade, Raça, Classes e Biografia Física</h2>
 
                         <div class="form-grid-2">
                             <label class="campo-ficha full-width">
-                                <span>Nome do personagem</span>
-                                <input @bind="ViewModel.PersonagemAtual.Nome"
+                                <span>Nome do Personagem</span>
+                                <input type="text"
+                                       @bind="ViewModel.PersonagemAtual.Nome"
+                                       @bind:event="oninput"
                                        maxlength="60"
                                        placeholder="Ex.: Lyra Ventobrasa"
                                        autocomplete="off"
                                        required />
                             </label>
 
-                           <!-- <label class="campo-ficha">
-                                <span>Tipo da ficha</span>
-                                <select @bind="ViewModel.TipoSelecionado">
-                                    <option value="Personagem">Personagem</option>
-                                    <option value="NPC">NPC</option>
-                                </select> -->
-
                             <label class="campo-ficha">
                                 <span>Raça</span>
                                 <select @bind="ViewModel.PersonagemAtual.RacaTexto" required>
-                                    <option value="">Escolha uma raça</option>
+                                    <option value="">Escolha uma raça...</option>
                                     <option value="Humano">Humano</option>
                                     <option value="Elfo">Elfo</option>
                                     <option value="Anão">Anão</option>
                                     <option value="Halfling">Halfling</option>
                                     <option value="Meio-elfo">Meio-elfo</option>
+                                    <option value="Meio-orc">Meio-orc</option>
                                     <option value="Tiefling">Tiefling</option>
+                                    <option value="Draconato">Draconato</option>
+                                    <option value="Gnomo">Gnomo</option>
                                     <option value="Orc">Orc</option>
                                     <option value="Outra">Outra</option>
                                 </select>
                             </label>
 
                             <label class="campo-ficha">
-                                <span>Classe</span>
-                                <select @bind="ViewModel.PersonagemAtual.ClasseTexto" required>
-                                    <option value="">Escolha uma classe</option>
-                                    <option value="Bárbaro">Bárbaro</option>
-                                    <option value="Bardo">Bardo</option>
-                                    <option value="Clérigo">Clérigo</option>
-                                    <option value="Druida">Druida</option>
-                                    <option value="Guerreiro">Guerreiro</option>
-                                    <option value="Ladino">Ladino</option>
-                                    <option value="Mago">Mago</option>
-                                    <option value="Paladino">Paladino</option>
-                                    <option value="Patrulheiro">Patrulheiro</option>
-                                    <option value="Bruxo">Bruxo</option>
-                                    <option value="Outra">Outra</option>
+                                <span>Antecedente</span>
+                                <select @bind="ViewModel.PersonagemAtual.AntecedenteTexto" required>
+                                    <option value="">Escolha um antecedente...</option>
+                                    <option value="Acólito">Acólito</option>
+                                    <option value="Artesão de Guilda">Artesão de Guilda</option>
+                                    <option value="Artista">Artista</option>
+                                    <option value="Batedor">Batedor</option>
+                                    <option value="Charlatão">Charlatão</option>
+                                    <option value="Criminoso">Criminoso</option>
+                                    <option value="Eremita">Eremita</option>
+                                    <option value="Forasteiro">Forasteiro</option>
+                                    <option value="Herói do Povo">Herói do Povo</option>
+                                    <option value="Marinheiro">Marinheiro</option>
+                                    <option value="Nobre">Nobre</option>
+                                    <option value="Órfão">Órfão</option>
+                                    <option value="Sábio">Sábio</option>
+                                    <option value="Soldado">Soldado</option>
                                 </select>
                             </label>
 
@@ -155,26 +158,70 @@
                             </label>
 
                             <label class="campo-ficha">
-                                <span>Nível inicial</span>
-                                <input @bind="ViewModel.PersonagemAtual.Nivel" type="number" min="1" max="20" required />
-                            </label>
-
-                            <label class="campo-ficha">
                                 <span>Experiência (XP)</span>
-                                <input @bind="ViewModel.PersonagemAtual.ExperienciaXp" type="number" min="0" />
+                                <input type="number" @bind="ViewModel.PersonagemAtual.ExperienciaXp" min="0" max="999999" step="10" required />
                             </label>
 
-                            <label class="campo-ficha">
-                                <span>Antecedente</span>
-                                <input @bind="ViewModel.PersonagemAtual.AntecedenteTexto" maxlength="50" placeholder="Ex.: Batedora" />
-                            </label>
+                            <!-- SEÇÃO DE CLASSES (SUPORTE A MULTICLASSE) -->
+                            <div class="categoria-itens full-width" style="margin-bottom: 4px;">
+                                <div class="titulo-categoria">
+                                    <h3>⌁ Classes do Personagem (Nível Total: @ViewModel.PersonagemAtual.Nivel)</h3>
+                                    <button type="button" class="btn-add-item" title="Adicionar outra classe (Multiclasse)" @onclick="ViewModel.AdicionarClasse">+</button>
+                                </div>
+                                <div class="cabecalho-linha" style="grid-template-columns: 1fr 110px 32px;">
+                                    <span>Classe</span>
+                                    <span>Nível na Classe</span>
+                                    <span></span>
+                                </div>
+                                @foreach (var cl in ViewModel.ClassesSelecionadas)
+                                {
+                                    <div class="item-linha" style="grid-template-columns: 1fr 110px 32px;">
+                                        <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasse(cl, e)">
+                                            @foreach (var op in ListaOpcoesClasses)
+                                            {
+                                                <option value="@op">@op</option>
+                                            }
+                                        </select>
+                                        <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasse(cl, e)" />
+                                        @if (ViewModel.ClassesSelecionadas.Count > 1)
+                                        {
+                                            <button type="button" class="remover-item" title="Remover classe" @onclick="() => ViewModel.RemoverClasse(cl)">×</button>
+                                        }
+                                        else
+                                        {
+                                            <span></span>
+                                        }
+                                    </div>
+                                }
+                            </div>
 
-                            <div class="form-divider">Características físicas</div>
+                            <div class="form-divider">Características Físicas (Aba Personagem)</div>
+
                             <div class="form-grid-4 full-width">
-                                <label class="campo-ficha"><span>Idade</span><input @bind="ViewModel.PersonagemAtual.Idade" placeholder="Ex.: 128 anos" /></label>
-                                <label class="campo-ficha"><span>Gênero</span><input @bind="ViewModel.PersonagemAtual.Genero" placeholder="Ex.: Feminino" /></label>
-                                <label class="campo-ficha"><span>Altura</span><input @bind="ViewModel.PersonagemAtual.Altura" placeholder="Ex.: 1,72 m" /></label>
-                                <label class="campo-ficha"><span>Peso</span><input @bind="ViewModel.PersonagemAtual.Peso" placeholder="Ex.: 64 kg" /></label>
+                                <label class="campo-ficha">
+                                    <span>Idade (Anos)</span>
+                                    <input type="number" @bind="ViewModel.IdadeNumero" min="1" max="10000" step="1" required />
+                                </label>
+
+                                <label class="campo-ficha">
+                                    <span>Gênero</span>
+                                    <select @bind="ViewModel.PersonagemAtual.Genero" required>
+                                        <option value="Masculino">Masculino</option>
+                                        <option value="Feminino">Feminino</option>
+                                        <option value="Não-binário">Não-binário</option>
+                                        <option value="Outro">Outro</option>
+                                    </select>
+                                </label>
+
+                                <label class="campo-ficha">
+                                    <span>Altura (cm)</span>
+                                    <input type="number" @bind="ViewModel.AlturaCm" min="30" max="400" step="1" required />
+                                </label>
+
+                                <label class="campo-ficha">
+                                    <span>Peso (kg)</span>
+                                    <input type="number" @bind="ViewModel.PesoKg" min="1" max="1000" step="0.5" required />
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -182,72 +229,332 @@
                 else if (EtapaAtual == 2)
                 {
                     <div class="step-panel active step-panel-attributes">
-                        <h2 class="section-title">2. Atributos e pontos de vida</h2>
-                        <p class="step-intro">Defina as capacidades do personagem. Os modificadores são calculados automaticamente.</p>
+                        <h2 class="section-title">2. Atributos, Salvaguardas e Perícias</h2>
+                        <p class="step-intro">Defina as capacidades do personagem e marque as competências em que ele é proficiente.</p>
+
                         <section class="atributos-area" aria-labelledby="titulo-atributos-criacao">
                             <div class="stage-heading">
                                 <span class="stage-index">01</span>
-                                <div><h3 id="titulo-atributos-criacao">Atributos principais</h3><p>Informe os valores de cada atributo.</p></div>
+                                <div>
+                                    <h3 id="titulo-atributos-criacao">Atributos principais</h3>
+                                    <p>Informe os valores de cada atributo. O modificador é calculado automaticamente.</p>
+                                </div>
                             </div>
                             <div class="atributos-cards">
-                                <label class="atributo-box"><span>Força</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Forca" /><small>@ObterModificador(ViewModel.PersonagemAtual.Forca)</small></label>
-                                <label class="atributo-box"><span>Destreza</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Destreza" /><small>@ObterModificador(ViewModel.PersonagemAtual.Destreza)</small></label>
-                                <label class="atributo-box"><span>Constituição</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Constituicao" /><small>@ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small></label>
-                                <label class="atributo-box"><span>Inteligência</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Inteligencia" /><small>@ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small></label>
-                                <label class="atributo-box"><span>Sabedoria</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Sabedoria" /><small>@ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small></label>
-                                <label class="atributo-box"><span>Carisma</span><input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Carisma" /><small>@ObterModificador(ViewModel.PersonagemAtual.Carisma)</small></label>
+                                <label class="atributo-box">
+                                    <span>Força</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Forca" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
+                                </label>
+                                <label class="atributo-box">
+                                    <span>Destreza</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Destreza" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
+                                </label>
+                                <label class="atributo-box">
+                                    <span>Constituição</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Constituicao" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
+                                </label>
+                                <label class="atributo-box">
+                                    <span>Inteligência</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Inteligencia" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
+                                </label>
+                                <label class="atributo-box">
+                                    <span>Sabedoria</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Sabedoria" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
+                                </label>
+                                <label class="atributo-box">
+                                    <span>Carisma</span>
+                                    <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Carisma" @bind:event="oninput" />
+                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
+                                </label>
                             </div>
                         </section>
 
-                        <!--<section class="pv-banner" aria-label="Pontos de vida">
-                            <div class="pv-intro"><span class="pv-symbol">♥</span><div><strong>Pontos de vida</strong><small>Vida inicial do personagem</small></div></div>
-                            <div class="pv-fields">
-                                <label>PV atuais<input type="number" min="0" @bind="ViewModel.PersonagemAtual.PvAtual" /></label>
-                                <label>PV máximos<input type="number" min="1" @bind="ViewModel.PersonagemAtual.PvMaximo" /></label>
-                            </div>
-                        </section>-->
-                        <!--por os campos de perica aqui em baixo-->
-                        <p class="integration-notice" role="note">Salvaguardas e perícias ainda não têm campos no modelo persistido do personagem.</p>
+                        <div class="proficiencias-area">
+                            <section class="pericias-grupo salvaguardas-grupo" aria-labelledby="titulo-salvaguardas">
+                                <div class="grupo-heading">
+                                    <div>
+                                        <span class="grupo-kicker">Resistência</span>
+                                        <h3 id="titulo-salvaguardas">Salvaguardas</h3>
+                                    </div>
+                                    <p>Marque os atributos em que possui proficiência.</p>
+                                </div>
+                                <div class="opcoes-salvaguarda">
+                                    @foreach (var salv in ListaSalvaguardas)
+                                    {
+                                        <label class="opcao-proficiencia">
+                                            <input type="checkbox"
+                                                   checked="@ViewModel.SalvaguardasSelecionadas.Contains(salv)"
+                                                   @onchange="e => ViewModel.AlternarSalvaguarda(salv, (bool)(e.Value ?? false))" />
+                                            <span>@salv</span>
+                                        </label>
+                                    }
+                                </div>
+                            </section>
+
+                            <section class="pericias-grupo lista-pericias-grupo" aria-labelledby="titulo-pericias">
+                                <div class="grupo-heading">
+                                    <div>
+                                        <span class="grupo-kicker">Conhecimento e prática</span>
+                                        <h3 id="titulo-pericias">Perícias</h3>
+                                    </div>
+                                    <p>Selecione todas as perícias nas quais o personagem é treinado.</p>
+                                </div>
+                                <div class="opcoes-pericias">
+                                    @foreach (var pericia in ListaPericias)
+                                    {
+                                        <label class="opcao-proficiencia">
+                                            <input type="checkbox"
+                                                   checked="@ViewModel.PericiasSelecionadas.Contains(pericia)"
+                                                   @onchange="e => ViewModel.AlternarPericia(pericia, (bool)(e.Value ?? false))" />
+                                            <span>@pericia</span>
+                                        </label>
+                                    }
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 }
                 else if (EtapaAtual == 3)
                 {
                     <div class="step-panel active">
-                        <h2 class="section-title">3. Identidade física e história</h2>
-                        <p class="section-description">Complete os detalhes pessoais e narrativos usando o componente da aba Personagem.</p>
-                        <FichaDetalhes Personagem="@ViewModel.PersonagemAtual" />
+                        <h2 class="section-title">3. Personalidade, Diário, Aparência e História</h2>
+                        <div class="form-grid-2">
+                            <div class="painel-personagem">
+                                <h3>Traços de Personalidade</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.TracosPersonalidade" placeholder="Ex.: Observo tudo antes de agir. A floresta sempre avisa."></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Ponto de Vista Atual</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.PontoDeVista" placeholder="Ex.: Nem toda trilha segura leva ao destino certo."></textarea>
+                            </div>
+
+                            <div class="form-divider">Seções do Diário (Aba Atributos)</div>
+
+                            <div class="painel-personagem">
+                                <h3>Ideais</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Ideais" placeholder="Ex.: Proteger os caminhos antigos é proteger quem ainda virá."></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Ligações</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Ligacoes" placeholder="Pessoas, lugares ou relíquias importantes..."></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Defeitos</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Defeitos" placeholder="Fraquezas, vícios ou medos do personagem..."></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Idiomas Conhecidos</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Idiomas" placeholder="Ex.: Comum, Élfico, Silvestre..."></textarea>
+                            </div>
+
+                            <div class="form-divider">Detalhes Narrativos (Aba Personagem)</div>
+
+                            <div class="painel-personagem">
+                                <h3>Aparência</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Aparencia" placeholder="Descreva a aparência física, cicatrizes e vestimentas..."></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Aliados e Organizações</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Aliados" placeholder="Descreva aliados, guildas e facções..."></textarea>
+                            </div>
+                            <div class="painel-personagem full-width">
+                                <h3>História do Personagem</h3>
+                                <textarea rows="4" @bind="ViewModel.PersonagemAtual.Historia" placeholder="De onde veio? O que busca? O que não consegue esquecer?"></textarea>
+                            </div>
+                            <div class="painel-personagem">
+                                <h3>Características e Habilidades</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Caracteristicas" placeholder="Talentos raciais, habilidades de classe..."></textarea>
+                            </div>
+                            <div class="painel-personagem tesouro">
+                                <h3>Tesouro Pessoal</h3>
+                                <textarea @bind="ViewModel.PersonagemAtual.Tesouro" placeholder="Relíquias ou riquezas pessoais..."></textarea>
+                            </div>
+                        </div>
                     </div>
                 }
                 else if (EtapaAtual == 4)
                 {
                     <div class="step-panel active">
-                        <h2 class="section-title">4. Armas e inventário</h2>
-                        <p class="section-description">Cadastre equipamentos, itens e moedas no mesmo componente utilizado pela aba Inventário.</p>
-                        <FichaInventario Personagem="@ViewModel.PersonagemAtual" />
+                        <h2 class="section-title">4. Equipar Armas, Armaduras, Consumíveis e Moedas</h2>
+                        <div class="corpo-inventario">
+                            <div>
+                                <!-- Armas -->
+                                <div class="categoria-itens">
+                                    <div class="titulo-categoria">
+                                        <h3>⌁ Armas</h3>
+                                        <button type="button" class="btn-add-item" title="Vincular arma existente" @onclick='() => ViewModel.AdicionarSlotItem("Armas")'>+</button>
+                                    </div>
+                                    <div class="cabecalho-linha"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                    <div id="lista-armas">
+                                        @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Armas"))
+                                        {
+                                            <div class="item-linha">
+                                                <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                    <option value="0">Selecione uma arma...</option>
+                                                    @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Armas"))
+                                                    {
+                                                        <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                    }
+                                                </select>
+                                                <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                <button type="button" class="remover-item" title="Desvincular item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Armaduras e Escudos -->
+                                <div class="categoria-itens">
+                                    <div class="titulo-categoria">
+                                        <h3>⌁ Armaduras e Escudos</h3>
+                                        <button type="button" class="btn-add-item" title="Vincular armadura existente" @onclick='() => ViewModel.AdicionarSlotItem("Armaduras")'>+</button>
+                                    </div>
+                                    <div class="cabecalho-linha"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                    <div id="lista-armaduras">
+                                        @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Armaduras"))
+                                        {
+                                            <div class="item-linha">
+                                                <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                    <option value="0">Selecione uma armadura...</option>
+                                                    @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Armaduras"))
+                                                    {
+                                                        <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                    }
+                                                </select>
+                                                <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                <button type="button" class="remover-item" title="Desvincular item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Poções e Consumíveis -->
+                                <div class="categoria-itens">
+                                    <div class="titulo-categoria">
+                                        <h3>⌁ Poções e Consumíveis</h3>
+                                        <button type="button" class="btn-add-item" title="Vincular consumível existente" @onclick='() => ViewModel.AdicionarSlotItem("Consumiveis")'>+</button>
+                                    </div>
+                                    <div class="cabecalho-linha"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                    <div id="lista-pocoes">
+                                        @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Consumiveis"))
+                                        {
+                                            <div class="item-linha">
+                                                <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                    <option value="0">Selecione um consumível...</option>
+                                                    @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Consumiveis"))
+                                                    {
+                                                        <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                    }
+                                                </select>
+                                                <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                <button type="button" class="remover-item" title="Desvincular item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Materiais e Outros -->
+                                <div class="categoria-itens">
+                                    <div class="titulo-categoria">
+                                        <h3>⌁ Materiais e Outros</h3>
+                                        <button type="button" class="btn-add-item" title="Vincular item existente" @onclick='() => ViewModel.AdicionarSlotItem("Outros")'>+</button>
+                                    </div>
+                                    <div class="cabecalho-linha"><span>Item Existente</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                    <div id="lista-outros">
+                                        @foreach (var slot in ViewModel.ItensInventario.Where(i => i.Categoria == "Outros"))
+                                        {
+                                            <div class="item-linha">
+                                                <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                    <option value="0">Selecione um item...</option>
+                                                    @foreach (var itemOpcao in ViewModel.ObterItensPorCategoria("Outros"))
+                                                    {
+                                                        <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                    }
+                                                </select>
+                                                <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                <button type="button" class="remover-item" title="Desvincular item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside class="resumo-inventario">
+                                <section class="painel-moedas">
+                                    <h3>Moedas Iniciais</h3>
+                                    <div class="moedas-grade">
+                                        <label class="moeda"><span class="icone-moeda">PC</span><input type="number" min="0" @bind="ViewModel.MoedasPC" /></label>
+                                        <label class="moeda"><span class="icone-moeda prata">PP</span><input type="number" min="0" @bind="ViewModel.MoedasPP" /></label>
+                                        <label class="moeda"><span class="icone-moeda electrum">PE</span><input type="number" min="0" @bind="ViewModel.MoedasPE" /></label>
+                                        <label class="moeda"><span class="icone-moeda ouro">PO</span><input type="number" min="0" @bind="ViewModel.MoedasPO" /></label>
+                                        <label class="moeda"><span class="icone-moeda platina">PL</span><input type="number" min="0" @bind="ViewModel.MoedasPL" /></label>
+                                    </div>
+                                </section>
+
+                                <section class="painel-carga">
+                                    <h3>Capacidade de Carga</h3>
+                                    <p style="text-align:center; margin:0 0 8px;">
+                                        <strong>@ViewModel.PesoTotalInventario.ToString("0.0") kg</strong> / @ViewModel.CapacidadeCargaMaxima.ToString("0.0") kg
+                                    </p>
+                                    <progress max="@((double)ViewModel.CapacidadeCargaMaxima)" value="@((double)Math.Min(ViewModel.PesoTotalInventario, ViewModel.CapacidadeCargaMaxima))"></progress>
+                                </section>
+
+                                <div class="painel-personagem tesouro">
+                                    <h3>Notas do Inventário</h3>
+                                    <textarea rows="4" @bind="ViewModel.NotasInventario" placeholder="Anote detalhes, origem ou efeitos dos itens..."></textarea>
+                                </div>
+                            </aside>
+                        </div>
                     </div>
                 }
                 else if (EtapaAtual == 5)
                 {
                     <div class="step-panel active">
-                        <h2 class="section-title">5. Grimório e magias</h2>
-                        <p class="section-description">Confira os dados antes de criar a ficha.</p>
-
-                        <div class="integration-notice" role="note">
-                            <strong>Grimório</strong>
-                            <p>O cadastro de magias ainda não está ligado ao modelo do banco. Os campos de identidade, atributos e história preenchidos nas etapas anteriores seguem o fluxo de salvamento atual.</p>
-                        </div>
-
-                        <div class="review-card">
-                            <h3>Resumo do personagem</h3>
-                            <dl class="review-list">
-                                <div><dt>Nome</dt><dd>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? "Não informado" : ViewModel.PersonagemAtual.Nome)</dd></div>
-                                <div><dt>Tipo</dt><dd>@ViewModel.TipoSelecionado</dd></div>
-                                <div><dt>Raça</dt><dd>@(ViewModel.PersonagemAtual.RacaTexto ?? "Não informada")</dd></div>
-                                <div><dt>Classe</dt><dd>@(ViewModel.PersonagemAtual.ClasseTexto ?? "Não informada")</dd></div>
-                                <div><dt>Nível</dt><dd>@ViewModel.PersonagemAtual.Nivel</dd></div>
-                                <div><dt>Experiência</dt><dd>@ViewModel.PersonagemAtual.ExperienciaXp.ToString("N0") XP</dd></div>
-                                <div><dt>Antecedente</dt><dd>@(ViewModel.PersonagemAtual.AntecedenteTexto ?? "Não informado")</dd></div>
-                            </dl>
+                        <h2 class="section-title">5. Equipar Magias e Truques do Grimório</h2>
+                        <div class="categoria-itens">
+                            <div class="titulo-categoria">
+                                <h3>⌁ Magias Conhecidas / Preparadas</h3>
+                                <button type="button" class="btn-add-item" @onclick="ViewModel.AdicionarMagia">+</button>
+                            </div>
+                            <div class="cabecalho-linha" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
+                                <span>Nome da Magia</span>
+                                <span>Círculo</span>
+                                <span>Dano / Efeito</span>
+                                <span>Alcance / Notas</span>
+                                <span></span>
+                            </div>
+                            <div id="lista-magias">
+                                @foreach (var magia in ViewModel.Magias)
+                                {
+                                    <div class="item-linha" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
+                                        <input type="text" @bind="magia.Nome" placeholder="Ex.: Mísseis Mágicos" />
+                                        <select @bind="magia.Circulo">
+                                            <option value="Truque">Truque</option>
+                                            <option value="1º Círculo">1º Círculo</option>
+                                            <option value="2º Círculo">2º Círculo</option>
+                                            <option value="3º Círculo">3º Círculo</option>
+                                            <option value="4º Círculo">4º Círculo</option>
+                                            <option value="5º Círculo">5º Círculo</option>
+                                        </select>
+                                        <input type="text" @bind="magia.Efeito" placeholder="Ex.: 3d4+3 Energia" />
+                                        <input type="text" @bind="magia.AlcanceNotas" placeholder="Ex.: 36m · Ação" />
+                                        <button type="button" class="remover-item" @onclick="() => ViewModel.RemoverMagia(magia)">×</button>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
@@ -255,21 +562,22 @@
                 <footer class="wizard-footer">
                     <button class="action-secondary"
                             type="button"
+                            style="visibility: @(EtapaAtual == 1 ? "hidden" : "visible")"
                             @onclick="VoltarEtapa"
                             disabled="@(EtapaAtual == 1 || ViewModel.IsProcessing)">
-                        ← Etapa anterior
+                        ← Etapa Anterior
                     </button>
 
                     @if (EtapaAtual < TotalEtapas)
                     {
                         <button class="action-primary" type="button" @onclick="AvancarEtapa" disabled="@ViewModel.IsProcessing">
-                            Próxima etapa →
+                            Próxima Etapa →
                         </button>
                     }
                     else
                     {
                         <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
-                            @(ViewModel.IsProcessing ? "Criando ficha..." : $"Criar {ViewModel.TipoSelecionado}") <span aria-hidden="true">✓</span>
+                            @(ViewModel.IsProcessing ? "Criando ficha..." : "✓ Finalizar e Criar Ficha")
                         </button>
                     }
                 </footer>
@@ -308,11 +616,9 @@
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaId { get; set; }
 
-    [SupplyParameterFromQuery(Name = "tipo")]
-    public string? TipoInicial { get; set; }
-
     private const int TotalEtapas = 5;
     private const long LimiteImagemBytes = 2 * 1024 * 1024;
+
     private readonly string[] Etapas =
     {
         "Identidade & Físico",
@@ -322,6 +628,24 @@
         "Grimório & Magias"
     };
 
+    private readonly string[] ListaOpcoesClasses =
+    {
+        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
+    };
+
+    private readonly string[] ListaSalvaguardas =
+    {
+        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
+    };
+
+    private readonly string[] ListaPericias =
+    {
+        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
+        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
+        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
+    };
+
     private int EtapaAtual { get; set; } = 1;
     private string? ErroEtapa { get; set; }
     private string? ErroImagem { get; set; }
@@ -329,18 +653,13 @@
     private bool LiberarProximaNavegacao { get; set; }
     private string? DestinoPendente { get; set; }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         ViewModel.LimparFormulario();
         ViewModel.IdCampanhaOpcional = CampanhaId;
 
-        if (!string.IsNullOrWhiteSpace(TipoInicial) &&
-            (TipoInicial.Equals("NPC", StringComparison.OrdinalIgnoreCase) || TipoInicial.Equals("Personagem", StringComparison.OrdinalIgnoreCase)))
-        {
-            ViewModel.TipoSelecionado = TipoInicial.Equals("NPC", StringComparison.OrdinalIgnoreCase) ? "NPC" : "Personagem";
-        }
-
         ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarDadosIniciaisAsync();
     }
 
     public void Dispose()
@@ -348,13 +667,37 @@
         ViewModel.OnChange -= StateHasChanged;
     }
 
-    // Só permite avançar depois de preencher os campos obrigatórios da primeira etapa.
+    private void AlterarNomeClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
+    {
+        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
+        ViewModel.SincronizarClassesENivel();
+    }
+
+    private void AlterarNivelClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int nv))
+        {
+            cl.Nivel = Math.Clamp(nv, 1, 20);
+            ViewModel.SincronizarClassesENivel();
+        }
+    }
+
+    private void AlterarItemSlot(ItemInventarioVinculado slot, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int idItem))
+        {
+            ViewModel.SelecionarItemExistente(slot, idItem);
+        }
+    }
+
     private void AvancarEtapa()
     {
         ErroEtapa = null;
 
         if (EtapaAtual == 1)
         {
+            ViewModel.SincronizarClassesENivel();
+
             if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome))
             {
                 ErroEtapa = "Informe o nome do personagem para continuar.";
@@ -367,17 +710,32 @@
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.ClasseTexto))
+            if (!ViewModel.ClassesSelecionadas.Any() || ViewModel.ClassesSelecionadas.Any(c => string.IsNullOrWhiteSpace(c.NomeClasse)))
             {
-                ErroEtapa = "Selecione a classe do personagem para continuar.";
+                ErroEtapa = "Selecione pelo menos uma classe válida.";
                 return;
             }
 
-            if (ViewModel.PersonagemAtual.Nivel < 1 || ViewModel.PersonagemAtual.Nivel > 20)
+            if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.AntecedenteTexto))
             {
-                ErroEtapa = "O nível deve estar entre 1 e 20.";
+                ErroEtapa = "Selecione o antecedente do personagem para continuar.";
                 return;
             }
+
+            int somaNiveis = ViewModel.ClassesSelecionadas.Sum(c => c.Nivel);
+            if (somaNiveis < 1 || somaNiveis > 20)
+            {
+                ErroEtapa = "A soma dos níveis das classes deve estar entre 1 e 20.";
+                return;
+            }
+
+            if (ViewModel.IdadeNumero <= 0 || ViewModel.AlturaCm <= 0 || ViewModel.PesoKg <= 0)
+            {
+                ErroEtapa = "Preencha idade, altura e peso com valores numéricos válidos.";
+                return;
+            }
+
+            ViewModel.SincronizarMedidasFisicas();
         }
 
         if (EtapaAtual < TotalEtapas)
@@ -389,11 +747,7 @@
     private void VoltarEtapa()
     {
         ErroEtapa = null;
-
-        if (EtapaAtual > 1)
-        {
-            EtapaAtual--;
-        }
+        if (EtapaAtual > 1) EtapaAtual--;
     }
 
     private void IrParaEtapa(int etapa)
@@ -411,7 +765,6 @@
         return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
     }
 
-    // Lê a imagem e a converte para uma string que pode ser guardada na propriedade Imagem.
     private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
     {
         ErroImagem = null;
@@ -447,7 +800,7 @@
 
     private void ConfirmarNavegacao(LocationChangingContext contexto)
     {
-        if (LiberarProximaNavegacao)
+        if (ViewModel.Sucesso || LiberarProximaNavegacao)
         {
             LiberarProximaNavegacao = false;
             return;

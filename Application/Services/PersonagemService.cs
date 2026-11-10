@@ -28,6 +28,28 @@ public class PersonagemService
         }
     }
 
+    public async Task<(bool Sucesso, string Mensagem)> SalvarComplementos3FNAsync(
+        int idPersonagem,
+        IEnumerable<(string NomeClasse, int Nivel)> classes,
+        IEnumerable<string> salvaguardas,
+        IEnumerable<string> pericias,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens,
+        IEnumerable<Magia> magias)
+    {
+        try
+        {
+            await _personagemRepo.SalvarFichaCompleta3FNAsync(
+                idPersonagem, classes, salvaguardas, pericias, dadosInventario, itens, magias);
+            return (true, "Dados da ficha salvos com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao salvar detalhes da ficha: {erroDetalhado}");
+        }
+    }
+
     public Task<List<Personagem>> ObterPersonagensPorUsuarioAsync(int idAccount) =>
         _personagemRepo.ListarPorUsuarioAsync(idAccount);
 

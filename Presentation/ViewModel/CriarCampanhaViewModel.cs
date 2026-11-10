@@ -5,11 +5,12 @@ using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using RPGdeMesa.Domain.Npcs;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -33,6 +34,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             CodigoConvite = GerarCodigoConvite();
         }
+
         public string Nome { get; set; } = "";
         public string Notas { get; set; } = "";
         public string CodigoConvite { get; set; } = "";
@@ -72,9 +74,16 @@ namespace RPGdeMesa.Presentation.ViewModel
             int idUsuario = _sessaoUsuario.IdUsuarioLogado;
             if (idUsuario > 0)
             {
-                MonstrosDisponiblesBiblioteca = await _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
-                NPCsDisponiveisBiblioteca = await _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
-                ItensDisponiveisBiblioteca = await _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
+                // Filtra estritamente pelos criados pelo próprio usuário (não exibe os públicos id_account == null no modal)
+                var monstros = await _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
+                MonstrosDisponiblesBiblioteca = monstros.Where(m => m.IdAccount == idUsuario).ToList();
+
+                var npcs = await _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
+                NPCsDisponiveisBiblioteca = npcs.Where(n => n.IdAccount == idUsuario).ToList();
+
+                var itens = await _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
+                ItensDisponiveisBiblioteca = itens.Where(i => i.IdAccount == idUsuario).ToList();
+
                 NotifyStateChanged();
             }
         }
@@ -95,7 +104,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void AdicionarMonstroDaBiblioteca(Monstro monstro)
         {
-            if (monstro != null && !ListaMonstros.Contains(monstro))
+            if (monstro != null && !ListaMonstros.Any(m => m.IdMonstro == monstro.IdMonstro))
             {
                 ListaMonstros.Add(monstro);
                 FecharModalSelecionarMonstro();
@@ -136,7 +145,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void AdicionarNPCDaBiblioteca(NPC npc)
         {
-            if (npc != null && !ListaNPCs.Contains(npc))
+            if (npc != null && !ListaNPCs.Any(n => n.IdNpc == npc.IdNpc))
             {
                 ListaNPCs.Add(npc);
                 FecharModalSelecionarNPC();
@@ -177,7 +186,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void AdicionarItemDaBiblioteca(Item item)
         {
-            if (item != null && !ListaItensCampanha.Contains(item))
+            if (item != null && !ListaItensCampanha.Any(i => i.IdItem == item.IdItem))
             {
                 ListaItensCampanha.Add(item);
                 FecharModalSelecionarItem();
