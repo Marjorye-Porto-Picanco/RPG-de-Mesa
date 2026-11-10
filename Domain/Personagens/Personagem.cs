@@ -9,6 +9,9 @@ public class Personagem : IAggregateRoot
 {
     public int IdPersonagem { get; private set; }
     public int IdAccount { get; private set; }
+    public int? IdRaca { get; set; }
+    public int? IdAntecedente { get; set; }
+
     public string Nome { get; set; } = string.Empty;
     public int Nivel { get; set; } = 1;
     public int ExperienciaXp { get; set; } = 0;
@@ -39,10 +42,26 @@ public class Personagem : IAggregateRoot
     public string? Caracteristicas { get; set; }
     public string? Tesouro { get; set; }
 
+    public string? TracosPersonalidade { get; set; }
+    public string? PontoDeVista { get; set; }
+    public string? Ideais { get; set; }
+    public string? Ligacoes { get; set; }
+    public string? Defeitos { get; set; }
+    public string? Idiomas { get; set; }
+
     public virtual Usuario Usuario { get; private set; } = null!;
+    public virtual Raca? Raca { get; set; }
+    public virtual Antecedente? Antecedente { get; set; }
 
     private readonly List<PersonagemCampanha> _personagemCampanhas = new();
     public virtual IReadOnlyCollection<PersonagemCampanha> PersonagemCampanhas => _personagemCampanhas.AsReadOnly();
+
+    // Relações 3FN
+    public virtual Inventario? Inventario { get; set; }
+    public virtual ICollection<PersonagemClasse> PersonagemClasses { get; set; } = new List<PersonagemClasse>();
+    public virtual ICollection<PersonagemSalvaguarda> Salvaguardas { get; set; } = new List<PersonagemSalvaguarda>();
+    public virtual ICollection<PersonagemPericia> Pericias { get; set; } = new List<PersonagemPericia>();
+    public virtual ICollection<PersonagemMagia> PersonagemMagias { get; set; } = new List<PersonagemMagia>();
 
     public Personagem() { }
 
@@ -56,7 +75,6 @@ public class Personagem : IAggregateRoot
         PvAtual = PvMaximo;
     }
 
-    // Regra de Domínio chamada pelo PersonagemService antes de salvar
     public void PrepararNovoPersonagem(int idAccount)
     {
         VincularContaEValidar(idAccount);
@@ -64,7 +82,7 @@ public class Personagem : IAggregateRoot
             throw new DomainException("O nome do personagem é obrigatório.");
 
         if (PvMaximo <= 0) PvMaximo = 10;
-        PvAtual = PvMaximo;
+        if (PvAtual <= 0) PvAtual = PvMaximo;
     }
 
     public void VincularContaEValidar(int idAccount)

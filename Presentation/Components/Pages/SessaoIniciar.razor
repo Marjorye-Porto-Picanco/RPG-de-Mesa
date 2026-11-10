@@ -238,7 +238,7 @@
                                         <label class="form-field">Nome da criatura<input @bind="monstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
                                         <label class="form-field">
                                             Tipo
-                                            <select @bind="monstroTipo"  style="color: white;">
+                                            <select @bind="monstroTipo" style="color: white;">
                                                 <option value="Outro">Outro</option>
                                                 <option value="Dragao">Dragão</option>
                                                 <option value="Fera">Fera</option>
@@ -247,7 +247,7 @@
                                         </label>
                                         <label class="form-field">
                                             Tamanho
-                                            <select @bind="monstroTamanho"  style="color: white;">
+                                            <select @bind="monstroTamanho" style="color: white;">
                                                 <option value="Médio">Médio</option>
                                                 <option value="Grande">Grande</option>
                                                 <option value="Pequeno">Pequeno</option>
@@ -267,7 +267,8 @@
                                     {
                                         <!-- CAMPOS COMPLETOS DA TABELA DE ITENS -->
                                         <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
-                                        <label class="form-field">Tipo
+                                        <label class="form-field">
+                                            Tipo
                                             <select @bind="itemTipo" style="color: white;">
                                                 <option value="">Selecionar...</option>
                                                 <option value="Anéis">Anéis</option>
@@ -279,8 +280,7 @@
                                                 <option value="pergaminhos">pergaminhos</option>
                                                 <option value="poções">poções</option>
                                                 <option value="varinhas">varinhas</option>
-                                            </select> 
-                                            <!-- <input @bind="itemTipo" maxlength="50" placeholder="Ex.: Arma / Poção" /> -->
+                                            </select>
                                         </label>
                                         <label class="form-field">Peso (kg)<input @bind="itemPeso" type="number" step="0.1" min="0" /></label>
                                         <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
@@ -432,17 +432,20 @@
             campanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
             if (campanhaAtual != null)
             {
-                var todosMonstrosUsuario = await CampanhaService.ObterMonstrosDoUsuarioAsync(campanhaAtual.IdAccount);
+                // Busca monstros padrão (IdAccount == null) + monstros criados pelo mestre
+                var todosMonstros = await CampanhaService.ObterMonstrosParaSessaoAsync(campanhaAtual.IdAccount);
                 var idsMonstrosVinculados = campanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
-                monstrosDisponiveis = todosMonstrosUsuario.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
+                monstrosDisponiveis = todosMonstros.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
 
+                // Busca NPCs criados pelo mestre
                 var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
                 var idsNpcsVinculados = campanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
                 npcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
 
-                var todosItensUsuario = await ItemService.ObterItensPorUsuarioAsync(campanhaAtual.IdAccount);
+                // Busca itens padrão (IdAccount == null) + itens criados pelo mestre
+                var todosItens = await CampanhaService.ObterItensParaSessaoAsync(campanhaAtual.IdAccount);
                 var idsItensVinculados = campanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
-                itensDisponiveis = todosItensUsuario.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
+                itensDisponiveis = todosItens.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
             }
         }
     }
@@ -492,8 +495,7 @@
                     Sentidos = monstroSentidos,
                     Resistencias = monstroResistencias,
                     Habilidades = monstroHabilidades,
-                    Descricao = monstroDescricao,
-                    // Não atribui imagem padrão ao monstro criado na sessão.
+                    Descricao = monstroDescricao
                 };
 
                 var resultado = await CampanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);
@@ -503,7 +505,7 @@
             else if (categoriaSelecionada == "item")
             {
                 var novoItem = new Item(
-                    idAccount: campanhaAtual.IdAccount, // Associa à conta do usuário logado
+                    idAccount: campanhaAtual.IdAccount,
                     nome: itemNome,
                     tipo: itemTipo,
                     peso: itemPeso,
@@ -520,7 +522,6 @@
                 var resultadoCriacao = await ItemService.CriarItemAsync(campanhaAtual.IdAccount, novoItem);
                 if (resultadoCriacao.Sucesso)
                 {
-                    // Vincula automaticamente o item criado à campanha ativa
                     if (resultadoCriacao.IdItemCriado > 0)
                     {
                         await CampanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, resultadoCriacao.IdItemCriado);

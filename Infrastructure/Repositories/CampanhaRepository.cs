@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
@@ -17,11 +18,12 @@ public class CampanhaRepository : ICampanhaRepository
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Campanhas
+            .AsSplitQuery() // Evita Explosão Cartesiana e travamento no SQL Server
             .Include(c => c.UsuarioMestre)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
-            .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item) // <- Inclui os itens vinculados à campanha
+            .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
@@ -88,8 +90,9 @@ public class CampanhaRepository : ICampanhaRepository
         }
     }
 
-    public async Task<List<NPC>> ListarTodosNpcsAsync() => await _contexto.Npcs.ToListAsync();
-    public async Task<List<Item>> ListarTodosItensAsync() => await _contexto.Itens.ToListAsync();
+    public async Task<List<NPC>> ListarTodosNpcsAsync() => await _contexto.Npcs.AsNoTracking().ToListAsync();
+    public async Task<List<Item>> ListarTodosItensAsync() => await _contexto.Itens.AsNoTracking().ToListAsync();
+    public async Task<List<Monstro>> ListarTodosMonstrosAsync() => await _contexto.Monstros.AsNoTracking().ToListAsync();
 
     public async Task AdicionarAsync(Campanha campanha)
     {
@@ -103,8 +106,51 @@ public class CampanhaRepository : ICampanhaRepository
         await _contexto.SaveChangesAsync();
     }
 
+    public async Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro)
+    {
+        _contexto.ChangeTracker.Clear();
+        bool jaExiste = await _contexto.MonstroCampanhas
+            .AsNoTracking()
+            .AnyAsync(mc => mc.IdCampanha == idCampanha && mc.IdMonstro == idMonstro);
+
+        if (!jaExiste)
+        {
+            await _contexto.MonstroCampanhas.AddAsync(new MonstroCampanha(idCampanha, idMonstro));
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc)
+    {
+        _contexto.ChangeTracker.Clear();
+        bool jaExiste = await _contexto.NpcCampanhas
+            .AsNoTracking()
+            .AnyAsync(nc => nc.IdCampanha == idCampanha && nc.IdNpc == idNpc);
+
+        if (!jaExiste)
+        {
+            await _contexto.NpcCampanhas.AddAsync(new NpcCampanha(idCampanha, idNpc));
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task AdicionarItemCampanhaAsync(int idCampanha, int idItem)
+    {
+        _contexto.ChangeTracker.Clear();
+        bool jaExiste = await _contexto.ItemCampanhas
+            .AsNoTracking()
+            .AnyAsync(ic => ic.IdCampanha == idCampanha && ic.IdItem == idItem);
+
+        if (!jaExiste)
+        {
+            await _contexto.ItemCampanhas.AddAsync(new ItemCampanha(idCampanha, idItem));
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
     public async Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro)
     {
+        _contexto.ChangeTracker.Clear();
         var vinculo = await _contexto.MonstroCampanhas
             .FirstOrDefaultAsync(mc => mc.IdCampanha == idCampanha && mc.IdMonstro == idMonstro);
 
@@ -117,6 +163,7 @@ public class CampanhaRepository : ICampanhaRepository
 
     public async Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc)
     {
+        _contexto.ChangeTracker.Clear();
         var vinculo = await _contexto.NpcCampanhas
             .FirstOrDefaultAsync(nc => nc.IdCampanha == idCampanha && nc.IdNpc == idNpc);
 
@@ -129,6 +176,7 @@ public class CampanhaRepository : ICampanhaRepository
 
     public async Task RemoverItemCampanhaAsync(int idCampanha, int idItem)
     {
+        _contexto.ChangeTracker.Clear();
         var vinculo = await _contexto.ItemCampanhas
             .FirstOrDefaultAsync(ic => ic.IdCampanha == idCampanha && ic.IdItem == idItem);
 
@@ -141,6 +189,7 @@ public class CampanhaRepository : ICampanhaRepository
 
     public async Task RemoverNpcAsync(int idNpc)
     {
+        _contexto.ChangeTracker.Clear();
         var npc = await _contexto.Npcs.FirstOrDefaultAsync(n => n.IdNpc == idNpc);
         if (npc != null)
         {

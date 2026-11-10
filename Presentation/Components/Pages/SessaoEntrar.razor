@@ -1,0 +1,237 @@
+@page "/sessao-entrar"
+@using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Domain.Campanhas
+@using RPGdeMesa.Domain.Itens
+@using RPGdeMesa.Domain.Personagens
+@inject CampanhaService CampanhaService
+@inject PersonagemService PersonagemService
+@inject ItemService ItemService
+@inject SessaoUsuarioService SessaoUsuario
+@inject NavigationManager Navigation
+
+<NavMenu />
+
+<div class="app-shell join-shell">
+    <main class="app-content join-content">
+        <header class="page-heading join-page-heading">
+            <div>
+                <p class="page-kicker">Aventureiros, a mesa está aberta</p>
+                <h1 class="page-title">Entrar em sessão</h1>
+                <p class="page-description">Informe o código do mestre, prepare seu personagem e entre na sala.</p>
+            </div>
+            <button class="botao-voltar" type="button" @onclick="VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
+        </header>
+
+        <ol class="join-progress" aria-label="Etapas para entrar na sessão">
+            <li class="@(EtapaAtual == 1 ? "ativa" : EtapaAtual > 1 ? "concluida" : "")" data-progresso="1">
+                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 1 ? "step" : null)" @onclick="() => IrParaEtapa(1)"><span>1</span><strong>Código</strong></button>
+            </li>
+            <li class="@(EtapaAtual == 2 ? "ativa" : EtapaAtual > 2 ? "concluida" : "")" data-progresso="2">
+                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 2 ? "step" : null)" disabled="@(!PodeAcessarEtapa(2))" @onclick="() => IrParaEtapa(2)"><span>2</span><strong>Personagem e equipamentos</strong></button>
+            </li>
+            <li class="@(EtapaAtual == 3 ? "ativa" : "")" data-progresso="3">
+                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 3 ? "step" : null)" disabled="@(!PodeAcessarEtapa(3))" @onclick="() => IrParaEtapa(3)"><span>3</span><strong>Entrar na sala</strong></button>
+            </li>
+        </ol>
+
+        @if (EtapaAtual == 1)
+        {
+            <section class="join-step join-card" id="etapa-codigo" aria-labelledby="titulo-codigo">
+                <p class="page-kicker">Etapa 1</p>
+                <h2 id="titulo-codigo">Código da sessão</h2>
+                <form class="join-code-form" @onsubmit="ValidarCodigo" @onsubmit:preventDefault="true">
+                    <label class="form-field">
+                        Código fornecido pelo mestre
+                        <input @bind="CodigoConvite" minlength="6" maxlength="8" required autocomplete="off" autocapitalize="characters" placeholder="Ex.: 7KQ2MX" />
+                    </label>
+                    <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                    <button class="action-primary" type="submit" disabled="@Carregando">@(Carregando ? "Validando..." : "Continuar") <span aria-hidden="true">→</span></button>
+                </form>
+            </section>
+        }
+        else if (EtapaAtual == 2)
+        {
+            <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
+                <p class="page-kicker">Etapa 2</p>
+                <h2 id="titulo-personagem">Escolha seu personagem</h2>
+                <p class="join-limit-summary">@(CampanhaAtual?.Nome ?? "Campanha")</p>
+                <form @onsubmit="RevisarSelecao" @onsubmit:preventDefault="true">
+                    <fieldset class="character-picker">
+                        <legend>Personagem</legend>
+                        @if (PersonagensDisponiveis.Any())
+                        {
+                            <div class="character-options" id="opcoes-personagens">
+                                @foreach (var personagem in PersonagensDisponiveis)
+                                {
+                                    <label class="character-option @(PersonagemSelecionadoId == personagem.IdPersonagem ? "selecionado" : "")">
+                                        <input type="radio" name="personagem" value="@personagem.IdPersonagem" @onchange="() => SelecionarPersonagem(personagem.IdPersonagem)" checked="@(PersonagemSelecionadoId == personagem.IdPersonagem)" />
+                                        <span class="character-option-copy"><strong>@personagem.Nome</strong><small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") nível @personagem.Nivel</small></span>
+                                    </label>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="join-status">Você ainda não possui personagens cadastrados.</p>
+                        }
+                    </fieldset>
+
+                    <div class="loadout-grid">
+                        <section class="loadout-section" aria-labelledby="titulo-armas">
+                            <div class="loadout-heading"><h3 id="titulo-armas">Armas</h3><span>@ItensDisponiveis.Count(item => ItensSelecionados.Contains(item.IdItem) && EhArma(item)) selecionada(s)</span></div>
+                            <div class="loadout-slots" id="selecao-armas">
+                                @foreach (var item in ItensDisponiveis.Where(EhArma))
+                                {
+                                    <label class="loadout-option"><input type="checkbox" checked="@ItensSelecionados.Contains(item.IdItem)" @onchange="e => AlterarItem(item.IdItem, e)" /> <span>@item.Nome</span></label>
+                                }
+                            </div>
+                        </section>
+                        <section class="loadout-section" aria-labelledby="titulo-itens">
+                            <div class="loadout-heading"><h3 id="titulo-itens">Itens</h3><span>@ItensDisponiveis.Count(item => ItensSelecionados.Contains(item.IdItem) && !EhArma(item)) selecionado(s)</span></div>
+                            <div class="loadout-slots" id="selecao-itens">
+                                @foreach (var item in ItensDisponiveis.Where(i => !EhArma(i)))
+                                {
+                                    <label class="loadout-option"><input type="checkbox" checked="@ItensSelecionados.Contains(item.IdItem)" @onchange="e => AlterarItem(item.IdItem, e)" /> <span>@item.Nome</span></label>
+                                }
+                            </div>
+                        </section>
+                    </div>
+
+                    <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                    <div class="join-actions"><button class="action-secondary" type="button" @onclick="VoltarParaCodigo">Voltar</button><button class="action-primary" type="submit">Revisar seleção <span aria-hidden="true">→</span></button></div>
+                </form>
+            </section>
+        }
+        else
+        {
+            <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
+                <p class="page-kicker">Etapa 3</p>
+                <h2 id="titulo-confirmacao">Tudo pronto para entrar</h2>
+                <p class="join-session-name">@(CampanhaAtual?.Nome ?? "Campanha")</p>
+                <dl class="join-review"><dt>Personagem</dt><dd>@(PersonagemSelecionado?.Nome ?? "Não selecionado")</dd><dt>Equipamentos</dt><dd>@ItensSelecionados.Count item(ns) selecionado(s)</dd></dl>
+                <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                <div class="join-actions"><button class="action-secondary" type="button" @onclick="VoltarParaPersonagem">Editar seleção</button><button class="action-primary" type="button" @onclick="EntrarNaSala">Entrar na sala <span aria-hidden="true">→</span></button></div>
+            </section>
+        }
+
+        <p class="join-local-note">Os dados da sessão são persistidos no banco da aplicação.</p>
+    </main>
+</div>
+
+@code {
+    private int EtapaAtual { get; set; } = 1;
+    private string CodigoConvite { get; set; } = string.Empty;
+    private string Mensagem { get; set; } = string.Empty;
+    private bool TemErro { get; set; }
+    private bool Carregando { get; set; }
+    private Campanha? CampanhaAtual { get; set; }
+    private List<Personagem> PersonagensDisponiveis { get; set; } = new();
+    private List<Item> ItensDisponiveis { get; set; } = new();
+    private int PersonagemSelecionadoId { get; set; }
+    private Personagem? PersonagemSelecionado => PersonagensDisponiveis.FirstOrDefault(p => p.IdPersonagem == PersonagemSelecionadoId);
+    private HashSet<int> ItensSelecionados { get; } = new();
+    private bool SelecaoRevisada { get; set; }
+
+    private async Task ValidarCodigo()
+    {
+        Mensagem = string.Empty;
+        TemErro = false;
+        Carregando = true;
+        try
+        {
+            if (!SessaoUsuario.EstaLogado)
+            {
+                DefinirErro("Faça login antes de entrar em uma sessão.");
+                return;
+            }
+
+            CampanhaAtual = await CampanhaService.BuscarPorCodigoAsync(CodigoConvite);
+            if (CampanhaAtual is null)
+            {
+                DefinirErro("Nenhuma campanha foi encontrada com esse código.");
+                return;
+            }
+
+            var resultadoEntrada = await CampanhaService.EntrarNaCampanhaPorCodigoAsync(SessaoUsuario.IdUsuarioLogado, CodigoConvite);
+            if (!resultadoEntrada.Sucesso && !resultadoEntrada.Mensagem.Contains("já está participando", StringComparison.OrdinalIgnoreCase))
+            {
+                DefinirErro(resultadoEntrada.Mensagem);
+                return;
+            }
+
+            PersonagensDisponiveis = await PersonagemService.ObterPersonagensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado);
+            ItensDisponiveis = (await ItemService.ObterItensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado)).ToList();
+            Mensagem = string.Empty;
+            SelecaoRevisada = false;
+            EtapaAtual = 2;
+        }
+        catch (Exception ex)
+        {
+            DefinirErro($"Não foi possível entrar na sessão: {ex.Message}");
+        }
+        finally { Carregando = false; }
+    }
+
+    private async Task RevisarSelecao()
+    {
+        TemErro = false;
+        if (PersonagemSelecionado is null)
+        {
+            DefinirErro("Selecione um personagem para continuar.");
+            return;
+        }
+
+        var resultado = await CampanhaService.AdicionarPersonagemNaCampanhaAsync(CampanhaAtual!.IdCampanha, PersonagemSelecionado.IdPersonagem);
+        if (!resultado.Sucesso && !resultado.Mensagem.Contains("já está vinculado", StringComparison.OrdinalIgnoreCase))
+        {
+            DefinirErro(resultado.Mensagem);
+            return;
+        }
+
+        foreach (var idItem in ItensSelecionados)
+        {
+            var vinculo = await CampanhaService.AdicionarItemNaCampanhaAsync(CampanhaAtual.IdCampanha, idItem);
+            if (!vinculo.Sucesso && !vinculo.Mensagem.Contains("já está vinculado", StringComparison.OrdinalIgnoreCase))
+            {
+                DefinirErro(vinculo.Mensagem);
+                return;
+            }
+        }
+
+        Mensagem = "Seleção salva no banco. Revise os dados antes de entrar.";
+        SelecaoRevisada = true;
+        EtapaAtual = 3;
+    }
+
+    private void AlterarItem(int idItem, ChangeEventArgs evento)
+    {
+        if (evento.Value is true || string.Equals(evento.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase)) ItensSelecionados.Add(idItem);
+        else ItensSelecionados.Remove(idItem);
+    }
+
+    private void SelecionarPersonagem(int idPersonagem) => PersonagemSelecionadoId = idPersonagem;
+    private void VoltarParaCodigo() { EtapaAtual = 1; Mensagem = string.Empty; TemErro = false; }
+    private void VoltarParaPersonagem() { EtapaAtual = 2; Mensagem = string.Empty; TemErro = false; }
+    private bool PodeAcessarEtapa(int etapa) => etapa switch
+    {
+        1 => true,
+        2 => CampanhaAtual is not null,
+        3 => CampanhaAtual is not null && SelecaoRevisada,
+        _ => false
+    };
+
+    private void IrParaEtapa(int etapa)
+    {
+        if (PodeAcessarEtapa(etapa))
+        {
+            EtapaAtual = etapa;
+            Mensagem = string.Empty;
+            TemErro = false;
+        }
+    }
+
+    private void VoltarParaHome() => Navigation.NavigateTo("/campanhas");
+    private void EntrarNaSala() => Navigation.NavigateTo("/saladojogo");
+    private void DefinirErro(string mensagem) { TemErro = true; Mensagem = mensagem; }
+    private static bool EhArma(Item item) => !string.IsNullOrWhiteSpace(item.Dano) || item.Tipo?.Contains("arma", StringComparison.OrdinalIgnoreCase) == true;
+}

@@ -1,4 +1,5 @@
-﻿using RPGdeMesa.Domain.Itens;
+﻿using RPGdeMesa.Domain.Bestiario;
+using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Usuarios;
 
@@ -15,11 +16,14 @@ public interface ICampanhaRepository
     Task AdicionarUsuarioNaCampanhaAsync(UsuarioCampanha vinculo);
     Task<List<NPC>> ListarTodosNpcsAsync();
     Task<List<Item>> ListarTodosItensAsync();
+    Task<List<Monstro>> ListarTodosMonstrosAsync();
     Task AdicionarAsync(Campanha campanha);
     Task AtualizarAsync(Campanha campanha);
+    Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro);
+    Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc);
+    Task AdicionarItemCampanhaAsync(int idCampanha, int idItem);
     Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc);
-    Task RemoverNpcAsync(int idNpc);
-
     Task RemoverItemCampanhaAsync(int idCampanha, int idItem);
+    Task RemoverNpcAsync(int idNpc);
 }
