@@ -2,12 +2,12 @@
 <div class="ficha-corpo visao-ficha" id="visao-atributos" role="tabpanel" aria-labelledby="aba-atributos">
     <aside class="atributos" aria-label="Atributos">
         <h2>Atributos</h2>
-        <div class="atributo"><span>Força</span><b>@Personagem.Forca</b><small>@ObterModificador(Personagem.Forca)</small></div>
-        <div class="atributo destaque"><span>Destreza</span><b>@Personagem.Destreza</b><small>@ObterModificador(Personagem.Destreza)</small></div>
-        <div class="atributo"><span>Constituição</span><b>@Personagem.Constituicao</b><small>@ObterModificador(Personagem.Constituicao)</small></div>
-        <div class="atributo"><span>Inteligência</span><b>@Personagem.Inteligencia</b><small>@ObterModificador(Personagem.Inteligencia)</small></div>
-        <div class="atributo"><span>Sabedoria</span><b>@Personagem.Sabedoria</b><small>@ObterModificador(Personagem.Sabedoria)</small></div>
-        <div class="atributo"><span>Carisma</span><b>@Personagem.Carisma</b><small>@ObterModificador(Personagem.Carisma)</small></div>
+        <label class="atributo"><span>Força</span><input type="number" min="1" max="30" @bind="Personagem.Forca" aria-label="Força" /><small>@ObterModificador(Personagem.Forca)</small></label>
+        <label class="atributo destaque"><span>Destreza</span><input type="number" min="1" max="30" @bind="Personagem.Destreza" aria-label="Destreza" /><small>@ObterModificador(Personagem.Destreza)</small></label>
+        <label class="atributo"><span>Constituição</span><input type="number" min="1" max="30" @bind="Personagem.Constituicao" aria-label="Constituição" /><small>@ObterModificador(Personagem.Constituicao)</small></label>
+        <label class="atributo"><span>Inteligência</span><input type="number" min="1" max="30" @bind="Personagem.Inteligencia" aria-label="Inteligência" /><small>@ObterModificador(Personagem.Inteligencia)</small></label>
+        <label class="atributo"><span>Sabedoria</span><input type="number" min="1" max="30" @bind="Personagem.Sabedoria" aria-label="Sabedoria" /><small>@ObterModificador(Personagem.Sabedoria)</small></label>
+        <label class="atributo"><span>Carisma</span><input type="number" min="1" max="30" @bind="Personagem.Carisma" aria-label="Carisma" /><small>@ObterModificador(Personagem.Carisma)</small></label>
     </aside>
 
     <div class="anotacoes">

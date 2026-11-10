@@ -248,6 +248,24 @@ public class CampanhaService
         }
     }
 
+    public async Task<(bool Sucesso, string Mensagem)> AdicionarPersonagemNaCampanhaAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha == null) return (false, "Campanha não encontrada.");
+
+            campanha.VincularPersonagem(idPersonagem);
+            await _campanhaRepo.AtualizarAsync(campanha);
+
+            return (true, "Personagem vinculado à campanha com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao vincular personagem: {ex.Message}");
+        }
+    }
+
     public async Task<(bool Sucesso, string Mensagem)> CriarE_VincularMonstroNaCampanhaAsync(int idCampanha, Monstro monstro)
     {
         try

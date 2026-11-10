@@ -7,7 +7,8 @@
     box-sizing: border-box;
 }
 
-:root {
+/* Variáveis da mesa de jogo precisam ficar no elemento raiz do componente isolado. */
+.sala-jogo {
     color-scheme: dark;
     font-family: Cambria, Georgia, "Times New Roman", serif;
     --game-bg: #171a15;

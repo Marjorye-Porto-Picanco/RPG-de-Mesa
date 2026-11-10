@@ -203,6 +203,19 @@
     gap: 9px;
 }
 
+.home-campaign-row[hidden],
+.home-campaign-empty[hidden],
+#resumo-mesa-home[hidden] {
+    display: none;
+}
+
+.home-campaign-empty {
+    margin: 0;
+    padding: 14px 0;
+    color: #aa9a7d;
+    font-size: 11px;
+}
+
 .home-campaign-row {
     display: grid;
     grid-template-columns: 48px minmax(0, 1fr) auto;
@@ -302,7 +315,8 @@
     box-sizing: border-box;
 }
 
-:root {
+/* Os tokens ficam no contêiner da página porque :root não é alcançado pela CSS isolation. */
+.app-shell {
     color-scheme: dark;
     --ink: #241a14;
     --ink-soft: #37271d;

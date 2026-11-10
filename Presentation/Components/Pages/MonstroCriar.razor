@@ -3,10 +3,12 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
+<NavigationLock OnBeforeInternalNavigation="ConfirmarNavegacao" />
+
 <div class="app-shell page-monstro-criar">
     <main class="app-content">
-        <a class="text-link" href="/monstros-lib">← Voltar à biblioteca</a>
-        
+        <button class="text-link exit-prompt-link" type="button" @onclick="AbrirAvisoSaida">← Voltar à biblioteca</button>
+
         <div class="page-heading" style="margin-top: 16px">
             <div>
                 <p class="page-kicker">Acrescente uma ameaça ao bestiário</p>
@@ -123,7 +125,7 @@
                         </p>
                     }
                     <div>
-                        <a class="action-secondary" href="/monstros-lib">Cancelar</a>
+                        <button class="action-secondary" type="button" @onclick="AbrirAvisoSaida">Cancelar</button>
                         <button class="action-primary" type="submit">Salvar monstro <span aria-hidden="true">→</span></button>
                     </div>
                 </div>
@@ -142,7 +144,25 @@
     </main>
 </div>
 
+@if (ExibirAvisoSaida)
+{
+    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-monstro" aria-describedby="mensagem-aviso-monstro" @onclick:stopPropagation="true">
+            <h2 id="titulo-aviso-monstro">Sair sem salvar?</h2>
+            <p id="mensagem-aviso-monstro">Você tem certeza que quer sair? Vai perder tudo se não salvar.</p>
+            <div class="confirm-actions">
+                <button class="confirm-exit" type="button" @onclick="SairDaCriacao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+            </div>
+        </section>
+    </div>
+}
+
 @code {
+    private bool ExibirAvisoSaida { get; set; }
+    private bool LiberarProximaNavegacao { get; set; }
+    private string? DestinoPendente { get; set; }
+
     protected override void OnInitialized()
     {
         ViewModel.LimparFormulario();
@@ -152,5 +172,32 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
+    }
+
+    private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
+
+    private void ConfirmarNavegacao(LocationChangingContext contexto)
+    {
+        if (LiberarProximaNavegacao)
+        {
+            LiberarProximaNavegacao = false;
+            return;
+        }
+
+        contexto.PreventNavigation();
+        DestinoPendente = contexto.TargetLocation;
+        ExibirAvisoSaida = true;
+    }
+
+    private void FecharAvisoSaida()
+    {
+        ExibirAvisoSaida = false;
+        DestinoPendente = null;
+    }
+
+    private void SairDaCriacao()
+    {
+        LiberarProximaNavegacao = true;
+        Navigation.NavigateTo(DestinoPendente ?? "/monstros-lib");
     }
 }

@@ -50,8 +50,7 @@
 
                 @foreach (var campanha in campanhasMestre)
                 {
-                    <!-- Redireciona para a página de sessão com o ID da campanha -->
-                    <a class="cartao-campanha" href="/sessao-iniciar/@campanha.IdCampanha" aria-label="Abrir campanha @campanha.Nome">
+                    <a class="cartao-campanha" href="@($"/sessao-iniciar/{campanha.IdCampanha}")" aria-label="Abrir painel da campanha @campanha.Nome">
                         <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
                         <span class="estado-campanha tag-mestre">Mestre</span>
                         <div class="info-campanha">
@@ -73,8 +72,7 @@
             <div class="grade-campanhas">
                 @foreach (var campanha in campanhasJogador)
                 {
-                    <!-- Redireciona para a página de sessão com o ID da campanha -->
-                    <a class="cartao-campanha" href="/sessao-iniciar/@campanha.IdCampanha" aria-label="Abrir campanha @campanha.Nome">
+                    <a class="cartao-campanha" href="/sessao-entrar" aria-label="Entrar na campanha @campanha.Nome">
                         <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
                         <span class="estado-campanha tag-jogador">Jogador</span>
                         <div class="info-campanha">

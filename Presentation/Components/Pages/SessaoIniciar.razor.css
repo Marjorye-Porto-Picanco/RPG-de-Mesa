@@ -1,7 +1,6 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
-
 :root {
     color-scheme: dark;
     --wood: #1b120e;
@@ -14,6 +13,21 @@ button, a, input, select, textarea {
     font: inherit;
     -webkit-tap-highlight-color: transparent;
 }
+select {
+    background-color: rgba(13, 20, 34, 0.85);
+    color: #f5eedf;
+    border: 1px solid rgba(151, 168, 195, 0.28);
+}
+
+    select option {
+        background-color: #161b26;
+        color: #ffffff;
+    }
+
+        select option:checked {
+            background-color: #3b4252;
+            color: #d1a951;
+        }
 
 .app-shell {
     min-height: 100vh;
@@ -459,7 +473,8 @@ button, a, input, select, textarea {
     }
 
         .form-field select option {
-            color: #30271d;
+            background-color: #131a29;
+            color: #f5eedf;
         }
 
     .form-field textarea {
@@ -591,7 +606,8 @@ button, a, input, select, textarea {
 }
 
     .history-fields-row select option {
-        color: #30271d;
+        background-color: #131a29;
+        color: #f5eedf;
     }
 
 .history-actions {

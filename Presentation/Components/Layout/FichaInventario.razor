@@ -1,6 +1,6 @@
 ﻿
 <div class="visao-ficha visao-inventario" id="visao-inventario" role="tabpanel" aria-labelledby="aba-inventario">
-    <form id="form-inventario" class="inventario-aba" @onsubmit="SalvarInventario" @onsubmit:preventDefault="true">
+    <div id="form-inventario" class="inventario-aba">
         <div class="corpo-inventario">
             <div class="listas-itens">
                 <!-- Seção: Armas -->
@@ -152,7 +152,7 @@
         </div>
 
         
-    </form>
+    </div>
 </div>
 
 @code {
@@ -168,27 +168,18 @@
         public string Categoria { get; set; } = "Outros";
     }
 
-    private List<ItemInventario> Itens = new()
-    {
-        new ItemInventario { Nome = "Arco longo", Quantidade = 1, Peso = 1.0, Valor = "50 po", Categoria = "Armas" },
-        new ItemInventario { Nome = "Adaga de caça", Quantidade = 2, Peso = 0.5, Valor = "2 po", Categoria = "Armas" },
-        new ItemInventario { Nome = "Couro batido", Quantidade = 1, Peso = 6.5, Valor = "45 po", Categoria = "Armaduras" },
-        new ItemInventario { Nome = "Poção de cura", Quantidade = 3, Peso = 0.5, Valor = "50 po", Categoria = "Consumiveis" },
-        new ItemInventario { Nome = "Ração de viagem", Quantidade = 5, Peso = 1.0, Valor = "5 pp", Categoria = "Consumiveis" },
-        new ItemInventario { Nome = "Amuleto de âmbar", Quantidade = 1, Peso = 0.2, Valor = "25 po", Categoria = "Outros" }
-    };
+    private List<ItemInventario> Itens = new();
 
     private int MoedasPC = 0;
     private int MoedasPP = 0;
     private int MoedasPE = 0;
-    private int MoedasPO = 12;
+    private int MoedasPO = 0;
     private int MoedasPL = 0;
 
     private double LimiteCarga = 76.3;
     private double PesoTotal => Itens.Sum(i => i.Peso * i.Quantidade);
 
-    private string Notas = "O amuleto de âmbar pertenceu à avó de Lyra.";
-    private string StatusMensagem = "As alterações ficam salvas neste dispositivo.";
+    private string Notas = "";
 
     private void AdicionarItem(string categoria)
     {
@@ -207,8 +198,4 @@
         Itens.Remove(item);
     }
 
-    private void SalvarInventario()
-    {
-        StatusMensagem = "Inventário salvo com sucesso!";
-    }
 }

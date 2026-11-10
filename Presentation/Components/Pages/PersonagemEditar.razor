@@ -5,6 +5,7 @@
 @implements IDisposable
 
 <NavMenu />
+<NavigationLock OnBeforeInternalNavigation="ConfirmarNavegacao" />
 
 <div class="mesa-edicao">
     <main class="palco">
@@ -76,7 +77,7 @@
             }
 
             <div style="padding: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                <a class="action-secondary" href="/personagem-lib">Cancelar</a>
+                <button class="action-secondary" type="button" @onclick="AbrirAvisoSaida">Cancelar</button>
                 <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@ViewModel.IsProcessing">
                     @(ViewModel.IsProcessing ? "Salvando..." : "Salvar Alterações")
                 </button>
@@ -85,9 +86,27 @@
     </main>
 </div>
 
+@if (ExibirAvisoSaida)
+{
+    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-personagem-edicao" aria-describedby="mensagem-aviso-personagem-edicao" @onclick:stopPropagation="true">
+            <h2 id="titulo-aviso-personagem-edicao">Sair sem salvar?</h2>
+            <p id="mensagem-aviso-personagem-edicao">Você tem certeza que quer sair? Vai perder tudo o que mudou.</p>
+            <div class="confirm-actions">
+                <button class="confirm-exit" type="button" @onclick="SairDaEdicao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+            </div>
+        </section>
+    </div>
+}
+
 @code {
     [Parameter]
     public int Id { get; set; }
+
+    private bool ExibirAvisoSaida { get; set; }
+    private bool LiberarProximaNavegacao { get; set; }
+    private string? DestinoPendente { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,5 +117,32 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
+    }
+
+    private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
+
+    private void ConfirmarNavegacao(LocationChangingContext contexto)
+    {
+        if (LiberarProximaNavegacao)
+        {
+            LiberarProximaNavegacao = false;
+            return;
+        }
+
+        contexto.PreventNavigation();
+        DestinoPendente = contexto.TargetLocation;
+        ExibirAvisoSaida = true;
+    }
+
+    private void FecharAvisoSaida()
+    {
+        ExibirAvisoSaida = false;
+        DestinoPendente = null;
+    }
+
+    private void SairDaEdicao()
+    {
+        LiberarProximaNavegacao = true;
+        Navigation.NavigateTo(DestinoPendente ?? "/personagem-lib");
     }
 }

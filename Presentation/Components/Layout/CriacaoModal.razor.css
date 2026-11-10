@@ -1,0 +1,48 @@
+/* CSS for CriacaoModal component */
+<style >
+.modal-criacao {
+    background-color: rgba(0, 0, 0, 0.352);
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    font-family: sans-serif;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    border: 3px solid #000000;
+    border-radius: 8px;
+    width: 200px;
+    height: 340px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .modal-content:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-content h2 {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.5rem;
+        color: #111;
+    }
+
+    .modal-content i {
+        font-size: 3rem;
+    }
+
+</style >

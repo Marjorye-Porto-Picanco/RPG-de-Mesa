@@ -53,6 +53,7 @@ namespace RPGdeMesa
 
             // 3. CAMADA DE PRESENTATION / UI (Auth Nativo MAUI e ViewModels)
             builder.Services.AddTransient<AuthService>();
+            builder.Services.AddScoped<SessaoCampanhaStorageService>();
             builder.Services.AddTransient<CriarCampanhaViewModel>();
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();

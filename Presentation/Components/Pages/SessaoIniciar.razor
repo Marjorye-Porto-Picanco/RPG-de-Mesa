@@ -238,7 +238,7 @@
                                         <label class="form-field">Nome da criatura<input @bind="monstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
                                         <label class="form-field">
                                             Tipo
-                                            <select @bind="monstroTipo">
+                                            <select @bind="monstroTipo"  style="color: white;">
                                                 <option value="Outro">Outro</option>
                                                 <option value="Dragao">Dragão</option>
                                                 <option value="Fera">Fera</option>
@@ -247,7 +247,7 @@
                                         </label>
                                         <label class="form-field">
                                             Tamanho
-                                            <select @bind="monstroTamanho">
+                                            <select @bind="monstroTamanho"  style="color: white;">
                                                 <option value="Médio">Médio</option>
                                                 <option value="Grande">Grande</option>
                                                 <option value="Pequeno">Pequeno</option>
@@ -267,7 +267,21 @@
                                     {
                                         <!-- CAMPOS COMPLETOS DA TABELA DE ITENS -->
                                         <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
-                                        <label class="form-field">Tipo<input @bind="itemTipo" maxlength="50" placeholder="Ex.: Arma / Poção" /></label>
+                                        <label class="form-field">Tipo
+                                            <select @bind="itemTipo" style="color: white;">
+                                                <option value="">Selecionar...</option>
+                                                <option value="Anéis">Anéis</option>
+                                                <option value="Armadura">Armadura</option>
+                                                <option value="armas">armas</option>
+                                                <option value="Bastões">Bastões</option>
+                                                <option value="cajados">cajados</option>
+                                                <option value="itens maravilhosos">itens maravilhosos</option>
+                                                <option value="pergaminhos">pergaminhos</option>
+                                                <option value="poções">poções</option>
+                                                <option value="varinhas">varinhas</option>
+                                            </select> 
+                                            <!-- <input @bind="itemTipo" maxlength="50" placeholder="Ex.: Arma / Poção" /> -->
+                                        </label>
                                         <label class="form-field">Peso (kg)<input @bind="itemPeso" type="number" step="0.1" min="0" /></label>
                                         <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
                                         <label class="form-field">Dano<input @bind="itemDano" maxlength="20" placeholder="Ex.: 1d8" /></label>

@@ -1,8 +1,13 @@
 ﻿@page "/ItensLib"
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Domain.Npcs
+@inject NpcService NpcService
 @inject NavigationManager Navigation
 @inject ItemService ItemService
+@inject MonstroService MonstroService
 @inject SessaoUsuarioService SessaoUsuario
+
+
 
 <NavMenu />
 
@@ -10,14 +15,18 @@
     <main class="app-content library-content">
         <header class="page-heading">
             <div>
-                <p class="page-kicker">Referência para sua mesa</p>
-                <h1 class="page-title">Biblioteca de itens</h1>
-                <p class="page-description">Itens cadastrados no banco de dados da sua aplicação.</p>
+                <p class="page-kicker">Compêndio e Bestiário</p>
+                <h1 class="page-title">Biblioteca Geral</h1>
+                <p class="page-description">Consulte itens, magias, armas e criaturas para suas campanhas.</p>
             </div>
+
+                <a class="action-primary" @onclick = "ModalCriacaoA"><span aria-hidden="true">+</span> Criar conteúdo</a>
+            
         </header>
 
-        <p class="library-scope">A biblioteca exibe itens públicos e itens cadastrados pelo usuário logado.</p>
+        <p class="library-scope">Exibindo registros cadastrados para a sua conta.</p>
 
+        <!-- ABAS DA BIBLIOTECA GERAL -->
         <div class="library-tabs" role="tablist" aria-label="Categorias da biblioteca">
             @foreach (var categoria in Categorias)
             {
@@ -36,7 +45,7 @@
                 <label class="search-field">
                     <span aria-hidden="true">⌕</span>
                     <input type="search"
-                           placeholder="Buscar por nome, tipo ou descrição"
+                           placeholder="Buscar por nome, tipo ou descrição..."
                            aria-label="Buscar na biblioteca"
                            autocomplete="off"
                            @bind="TermoBusca"
@@ -47,37 +56,114 @@
 
             <p class="library-status @(TemErro ? "is-error" : "")" aria-live="polite">@StatusMensagem</p>
 
-            <div class="library-grid" aria-live="polite">
-                @if (EntradasFiltradas.Any())
-                {
-                    @foreach (var entrada in EntradasFiltradas.Take(LimiteVisivel))
+           <!-- CONTEÚDO: MONSTROS -->
+            @if (CategoriaAtual == "monstros")
+            {
+                <div class="monster-grid" aria-live="polite">
+                    @if (Carregando)
                     {
-                        <button class="library-entry" type="button" @onclick="() => AbrirDetalhes(entrada)">
-                            <strong>@entrada.Nome</strong>
-                            <span class="entry-meta">@ObterRotuloMeta(entrada)</span>
-                            <span class="entry-arrow" aria-hidden="true">↗</span>
-                        </button>
+                        <p class="empty-state library-empty">Carregando monstros...</p>
                     }
-                }
-                else if (!Carregando)
-                {
-                    <p class="empty-state library-empty">
-                        @(Entradas.Any() ? "Nenhuma referência encontrada para essa busca." : "Nenhum item cadastrado para este usuário.")
-                    </p>
-                }
+                    else if (MonstrosFiltrados.Any())
+                    {
+                        @foreach (var monstro in MonstrosFiltrados.Take(LimiteVisivel))
+                        {
+                            <div class="monster-card" @onclick="() => AbrirModalMonstro(monstro)">
+                                <div class="monster-art">
+                                    @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
+                                    {
+                                        <img src="@monstro.Imagem" alt="Ilustração do monstro @monstro.Nome" />
+                                    }
+                                    <span class="monster-cr">ND @(monstro.Nd)</span>
+                                </div>
+                                <div class="monster-info">
+                                    <h2>@monstro.Nome</h2>
+                                    <p>@(monstro.Tipo ?? "Criatura") @(monstro.Tamanho?.ToLower() ?? "médio") · @(monstro.Tendencia ?? "Neutro")</p>
+                                    @if (!string.IsNullOrEmpty(monstro.Habilidades))
+                                    {
+                                        <div class="monster-tags">
+                                            @foreach (var hab in monstro.Habilidades.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                            {
+                                                <span>@hab.Trim()</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (!Carregando)
+                    {
+                        <p class="empty-state library-empty">Nenhum monstro encontrado.</p>
+                    }
+                </div>
+            }
+            else if (CategoriaAtual == "npcs")
+            {
+                <div class="npc-grid" aria-live="polite">
+                    @if (Carregando)
+                    {
+                        <p class="empty-state library-empty">Carregando NPCs...</p>
+                    }
+                    else if (NpcsFiltrados.Any())
+                    {
+                        @foreach (var npc in NpcsFiltrados.Take(LimiteVisivel))
+                        {
+                            <button class="npc-card" type="button" @onclick="() => AbrirModalNpc(npc)">
+                                <span class="npc-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant())</span>
+                                <span class="npc-info">
+                                    <strong>@npc.Nome</strong>
+                                    <small>@(npc.RacaTexto ?? "Aventureiro") · @(npc.ClasseTexto ?? npc.Ocupacao ?? "Civil")</small>
+                                    <small>@(npc.Localizacao ?? npc.AntecedenteTexto ?? "Localização não informada")</small>
+                                </span>
+                                <span class="entry-arrow" aria-hidden="true">↗</span>
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <p class="empty-state library-empty">Nenhum NPC encontrado.</p>
+                    }
+                </div>
+            }
+            else
+            {
+                @* CONTEÚDO: ITENS, MAGIAS E ARMAS *@
+                <div class="library-grid" aria-live="polite">
+                    @if (Carregando)
+                    {
+                        <p class="empty-state library-empty">Carregando itens...</p>
+                    }
+                    else if (ItensFiltrados.Any())
+                    {
+                        @foreach (var entrada in ItensFiltrados.Take(LimiteVisivel))
+                        {
+                            <button class="library-entry" type="button" @onclick="() => AbrirModalItem(entrada)">
+                                <strong>@entrada.Nome</strong>
+                                <span class="entry-meta">@ObterRotuloMeta(entrada)</span>
+                                <span class="entry-arrow" aria-hidden="true">↗</span>
+                            </button>
+                        }
+                    }
+                    else if (!Carregando)
+                    {
+                        <p class="empty-state library-empty">Nenhum registro encontrado nesta categoria.</p>
+                    }
+                </div>
+            }
 
-                @if (TemErro)
-                {
-                    <button class="action-secondary library-retry" type="button" @onclick="CarregarItens">
-                        Tentar novamente
-                    </button>
-                }
-            </div>
-
-            @if (EntradasFiltradas.Count() > LimiteVisivel)
+            @* Botão Carregar Mais *@
+            @if (PodeMostrarMais)
             {
                 <button class="action-secondary library-more" type="button" @onclick="MostrarMais">
                     Mostrar mais
+                </button>
+            }
+
+            @if (TemErro)
+            {
+                <button class="action-secondary library-retry" type="button" @onclick="CarregarDados">
+                    Tentar novamente
                 </button>
             }
         </section>
@@ -88,16 +174,17 @@
     </main>
 </div>
 
-@if (ExibirModal && ItemSelecionado is not null)
+<!-- MODAL: ITENS / ARMAS / MAGIAS -->
+@if (ExibirModalItem && ItemSelecionado is not null)
 {
-    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-detalhes" @onclick="FecharDetalhes">
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" @onclick="FecharModalItem">
         <div class="entry-dialog" @onclick:stopPropagation="true">
             <div class="dialog-heading">
                 <div>
-                    <p class="page-kicker" id="tipo-detalhes">@ObterRotuloMeta(ItemSelecionado)</p>
-                    <h2 id="titulo-detalhes">@ItemSelecionado.Nome</h2>
+                    <p class="page-kicker">@ObterRotuloMeta(ItemSelecionado)</p>
+                    <h2>@ItemSelecionado.Nome</h2>
                 </div>
-                <button class="dialog-close" type="button" aria-label="Fechar detalhes" @onclick="FecharDetalhes">×</button>
+                <button class="dialog-close" type="button" aria-label="Fechar" @onclick="FecharModalItem">×</button>
             </div>
 
             <div class="dialog-content">
@@ -129,10 +216,6 @@
                 {
                     <p class="detail-row"><strong>Propriedades: </strong>@ItemSelecionado.Propriedades</p>
                 }
-                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Sintonizacao))
-                {
-                    <p class="detail-row"><strong>Sintonização: </strong>@ItemSelecionado.Sintonizacao</p>
-                }
                 @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Descricao))
                 {
                     <section class="detail-description">
@@ -145,12 +228,200 @@
     </div>
 }
 
+<!-- MODAL: MONSTROS -->
+@if (ExibirModalMonstro && MonstroSelecionado is not null)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="FecharModalMonstro">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <button class="modal-close-btn" type="button" @onclick="FecharModalMonstro">×</button>
+
+            <div class="page-heading cabecalho-modal">
+                <div>
+                    <p class="page-kicker">Visualizar criatura</p>
+                    <h1 class="page-title titulo-modal">@MonstroSelecionado.Nome</h1>
+                    <p class="page-description">ND @MonstroSelecionado.Nd · @(MonstroSelecionado.Tipo ?? "Criatura")</p>
+                </div>
+            </div>
+
+            <div class="form-layout">
+                <section class="form-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <span class="field-label-title">Classe de armadura</span>
+                            <div class="field-value-box">@MonstroSelecionado.Defesa</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Pontos de vida</span>
+                            <div class="field-value-box">@MonstroSelecionado.Vida</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Deslocamento</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Deslocamento ?? "Não informado")</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Sentidos</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Sentidos ?? "Não informado")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Resistências</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Resistencias ?? "Nenhuma")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Habilidades especiais</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Habilidades ?? "Nenhuma")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Descrição</span>
+                            <div class="field-value-box caixa-descricao">@(MonstroSelecionado.Descricao ?? "Sem descrição.")</div>
+                        </div>
+                    </div>
+                    <div class="form-footer rodape-modal">
+                        <button type="button" class="action-secondary" @onclick="FecharModalMonstro">Fechar</button>
+                    </div>
+                </section>
+                <aside class="form-aside">
+                    <div class="aside-portrait">
+                        @if (!string.IsNullOrWhiteSpace(MonstroSelecionado.Imagem))
+                        {
+                            <img src="@MonstroSelecionado.Imagem" alt="Ilustração do monstro" />
+                        }
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL: NPCS -->
+@if (ExibirModalNpc && NpcSelecionado is not null)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="FecharModalNpc">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <button class="modal-close-btn" type="button" @onclick="FecharModalNpc">×</button>
+
+            <div class="page-heading cabecalho-modal">
+                <div>
+                    <p class="page-kicker">Ficha de Personagem Não Jogador</p>
+                    <h1 class="page-title titulo-modal">@NpcSelecionado.Nome</h1>
+                    <p class="page-description">@(NpcSelecionado.RacaTexto ?? "Humano") · @(NpcSelecionado.ClasseTexto ?? "Civil") (Nível @NpcSelecionado.Nivel) · @(NpcSelecionado.Tendencia ?? "Neutra")</p>
+                </div>
+            </div>
+
+            <div class="form-layout">
+                <section class="form-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <span class="field-label-title">Ocupação / Cargo</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.Ocupacao) ? "Não informado" : NpcSelecionado.Ocupacao)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Localização</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.Localizacao) ? "Desconhecida" : NpcSelecionado.Localizacao)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Antecedente</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.AntecedenteTexto) ? "Não informado" : NpcSelecionado.AntecedenteTexto)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Alinhamento</span>
+                            <div class="field-value-box">@(NpcSelecionado.Alinhamento ?? NpcSelecionado.Tendencia ?? "Neutro")</div>
+                        </div>
+
+                        <div class="form-divider">Atributos</div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">FOR</span>
+                            <div class="field-value-box">@NpcSelecionado.Forca</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">DES</span>
+                            <div class="field-value-box">@NpcSelecionado.Destreza</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">CON</span>
+                            <div class="field-value-box">@NpcSelecionado.Constituicao</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">INT</span>
+                            <div class="field-value-box">@NpcSelecionado.Inteligencia</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">SAB</span>
+                            <div class="field-value-box">@NpcSelecionado.Sabedoria</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">CAR</span>
+                            <div class="field-value-box">@NpcSelecionado.Carisma</div>
+                        </div>
+
+                        <div class="form-divider">História e Detalhes</div>
+
+                        <div class="form-field full-width">
+                            <span class="field-label-title">História / Descrição</span>
+                            <div class="field-value-box caixa-descricao">@(string.IsNullOrWhiteSpace(NpcSelecionado.Historia) ? (NpcSelecionado.Descricao ?? "Sem histórico registrado.") : NpcSelecionado.Historia)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-footer rodape-modal">
+                        <button type="button" class="action-secondary" @onclick="FecharModalNpc">Fechar</button>
+                    </div>
+                </section>
+
+                <aside class="form-aside">
+                    <div class="aside-portrait">
+                        @if (!string.IsNullOrWhiteSpace(NpcSelecionado.Imagem))
+                        {
+                            <img src="@NpcSelecionado.Imagem" alt="Retrato de @NpcSelecionado.Nome" />
+                        }
+                    </div>
+                    <div class="aside-note">
+                        <strong>NPC Registrado</strong>
+                        Pronto para interações, diálogos e gerenciamento em suas campanhas.
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
+
+@if (Criacao){
+<section class="modal-criacao" @onclick="ModalCriacaoF">
+        <div class="modal-content" @onclick:stopPropagation="true" href="">
+            <h2><i class="ph ph-cube"></i> Item</h2>
+        </div>
+        <div class="modal-content" @onclick:stopPropagation="true" href="">
+            <h2><i class="ph ph-sparkle"></i> Magia</h2>
+        </div>
+        <div class="modal-content" @onclick:stopPropagation="true" href="">
+            <h2><i class="ph ph-skull"></i> Monstro</h2>
+        </div>
+        <div class="modal-content" @onclick:stopPropagation="true" href="">
+            <h2><i class="ph ph-user-gear"></i> NPC</h2>
+        </div>
+    </section>
+}
+
+
 @code {
+    private bool Criacao = false;
+
+    private void ModalCriacaoA()
+    {
+        Criacao = true;
+    }
+
+    private void ModalCriacaoF()
+    {
+        Criacao = false;
+    }
+
     private readonly List<CategoriaItem> Categorias =
     [
         new("itens", "Itens"),
+        new("armas", "Armas"),
         new("magias", "Magias"),
-        new("armas", "Armas")
+        new("monstros", "Monstros"),
+        new("npcs", "NPCs")
     ];
 
     private string CategoriaAtual { get; set; } = "itens";
@@ -158,51 +429,64 @@
     private int LimiteVisivel { get; set; } = 30;
     private bool Carregando { get; set; }
     private bool TemErro { get; set; }
-    private string StatusMensagem { get; set; } = "Carregando itens...";
-    private List<Item> Entradas { get; set; } = new();
-    private Item? ItemSelecionado { get; set; }
-    private bool ExibirModal { get; set; }
+    private string StatusMensagem { get; set; } = "Carregando biblioteca...";
 
-    private IEnumerable<Item> EntradasFiltradas => Entradas
-        .Where(item => PertenceACategoria(item, CategoriaAtual))
-        .Where(item => string.IsNullOrWhiteSpace(TermoBusca) ||
-            item.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
-            item.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
-            item.Descricao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+    // Coleções carregadas do banco
+    private List<Item> EntradasItens { get; set; } = new();
+    private List<Monstro> EntradasMonstros { get; set; } = new();
+    private List<NPC> EntradasNpcs { get; set; } = new();
+
+    // Modais
+    private Item? ItemSelecionado { get; set; }
+    private bool ExibirModalItem { get; set; }
+
+    private Monstro? MonstroSelecionado { get; set; }
+    private bool ExibirModalMonstro { get; set; }
+
+    private NPC? NpcSelecionado { get; set; }
+    private bool ExibirModalNpc { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        await CarregarItens();
+        await CarregarDados();
     }
 
-    private async Task CarregarItens()
+    private async Task CarregarDados()
     {
         Carregando = true;
         TemErro = false;
-        StatusMensagem = "Carregando itens do banco de dados...";
+        StatusMensagem = "Carregando registros do banco de dados...";
         LimiteVisivel = 30;
 
         try
         {
             if (!SessaoUsuario.EstaLogado)
             {
-                Entradas.Clear();
-                StatusMensagem = "Faça login para visualizar os itens da biblioteca.";
+                EntradasItens.Clear();
+                EntradasMonstros.Clear();
+                EntradasNpcs.Clear();
+                StatusMensagem = "Faça login para visualizar a biblioteca.";
                 return;
             }
 
-            var itens = await ItemService.ObterItensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado);
-            Entradas = itens.OrderBy(item => item.Nome).ToList();
-            StatusMensagem = Entradas.Count == 0
-                ? "Nenhum item cadastrado para este usuário."
-                : $"{Entradas.Count} item(ns) disponíveis.";
+            int idUsuario = SessaoUsuario.IdUsuarioLogado;
+
+            // Consultas sequenciais para prevenir concorrência com o DbContext
+            var itens = await ItemService.ObterItensPorUsuarioAsync(idUsuario);
+            var monstros = await MonstroService.ObterMonstrosPorUsuarioAsync(idUsuario);
+            var npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+
+            EntradasItens = itens.OrderBy(i => i.Nome).ToList();
+            EntradasMonstros = monstros.OrderBy(m => m.Nome).ToList();
+            EntradasNpcs = npcs.OrderBy(n => n.Nome).ToList();
+
+            AtualizarMensagemStatus();
         }
         catch (Exception ex)
         {
-            Entradas.Clear();
             TemErro = true;
-            StatusMensagem = "Não foi possível carregar os itens do banco de dados.";
-            System.Diagnostics.Debug.WriteLine($"[ItensLib] Falha ao carregar itens: {ex.Message}");
+            StatusMensagem = "Não foi possível carregar os registros da biblioteca.";
+            System.Diagnostics.Debug.WriteLine($"[Biblioteca] Erro: {ex.Message}");
         }
         finally
         {
@@ -213,34 +497,87 @@
     private void TrocarCategoria(string categoria)
     {
         CategoriaAtual = categoria;
-        LimiteVisivel = 30;
-        FecharDetalhes();
+        ResetarPaginacao();
+        FecharModalItem();
+        FecharModalMonstro();
+        FecharModalNpc();
+        AtualizarMensagemStatus();
+    }
+
+    private void AtualizarMensagemStatus()
+    {
+        if (CategoriaAtual == "monstros")
+        {
+            StatusMensagem = $"{EntradasMonstros.Count} monstro(s) cadastrado(s).";
+        }
+        else if (CategoriaAtual == "npcs")
+        {
+            StatusMensagem = $"{EntradasNpcs.Count} NPC(s) cadastrado(s).";
+        }
+        else
+        {
+            StatusMensagem = $"{EntradasItens.Count} item(ns) cadastrado(s).";
+        }
     }
 
     private void ResetarPaginacao() => LimiteVisivel = 30;
     private void MostrarMais() => LimiteVisivel += 30;
-    private void VoltarParaHome() => Navigation.NavigateTo("/");
 
-    private void AbrirDetalhes(Item item)
-    {
-        ItemSelecionado = item;
-        ExibirModal = true;
-    }
+    // Métodos Modal Item
+    private void AbrirModalItem(Item item) { ItemSelecionado = item; ExibirModalItem = true; }
+    private void FecharModalItem() { ExibirModalItem = false; ItemSelecionado = null; }
 
-    private void FecharDetalhes()
+    // Métodos Modal Monstro
+    private void AbrirModalMonstro(Monstro monstro) { MonstroSelecionado = monstro; ExibirModalMonstro = true; }
+    private void FecharModalMonstro() { ExibirModalMonstro = false; MonstroSelecionado = null; }
+
+    // Métodos Modal NPC
+    private void AbrirModalNpc(NPC npc) { NpcSelecionado = npc; ExibirModalNpc = true; }
+    private void FecharModalNpc() { ExibirModalNpc = false; NpcSelecionado = null; }
+
+    // Filtros de Itens/Armas/Magias
+    private IEnumerable<Item> ItensFiltrados => EntradasItens
+        .Where(item => PertenceACategoria(item, CategoriaAtual))
+        .Where(item => string.IsNullOrWhiteSpace(TermoBusca) ||
+            item.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
+            item.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            item.Descricao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+
+    // Filtros de Monstros
+    private IEnumerable<Monstro> MonstrosFiltrados => EntradasMonstros
+        .Where(m => string.IsNullOrWhiteSpace(TermoBusca) ||
+            m.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
+            m.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            m.Tendencia?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+
+    // Filtros de NPCs
+    private IEnumerable<NPC> NpcsFiltrados => EntradasNpcs
+        .Where(n => string.IsNullOrWhiteSpace(TermoBusca) ||
+            n.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
+            n.ClasseTexto?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            n.RacaTexto?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            n.Ocupacao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            n.Historia?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+
+    private bool PodeMostrarMais
     {
-        ExibirModal = false;
-        ItemSelecionado = null;
+        get
+        {
+            return CategoriaAtual switch
+            {
+                "monstros" => MonstrosFiltrados.Count() > LimiteVisivel,
+                "npcs" => NpcsFiltrados.Count() > LimiteVisivel,
+                _ => ItensFiltrados.Count() > LimiteVisivel
+            };
+        }
     }
 
     private static bool PertenceACategoria(Item item, string categoria)
     {
         var tipo = item.Tipo ?? string.Empty;
         var descricao = item.Descricao ?? string.Empty;
-        var ehArma = !string.IsNullOrWhiteSpace(item.Dano) ||
-                     ContemAlgumTermo(tipo, "arma", "weapon", "armamento");
-        var ehMagia = ContemAlgumTermo(tipo, "magia", "mágica", "magico", "mágico", "feitiço", "feitico", "spell") ||
-                      ContemAlgumTermo(descricao, "magia", "mágica", "magico", "mágico", "feitiço", "feitico", "spell");
+        var ehArma = !string.IsNullOrWhiteSpace(item.Dano) || ContemTermo(tipo, "arma", "weapon", "armamento");
+        var ehMagia = ContemTermo(tipo, "magia", "mágica", "spell") || ContemTermo(descricao, "magia", "mágica", "spell");
 
         return categoria switch
         {
@@ -250,20 +587,11 @@
         };
     }
 
-    private static bool ContemAlgumTermo(string texto, params string[] termos)
-    {
-        return termos.Any(termo => texto.Contains(termo, StringComparison.OrdinalIgnoreCase));
-    }
+    private static bool ContemTermo(string texto, params string[] termos) =>
+        termos.Any(t => texto.Contains(t, StringComparison.OrdinalIgnoreCase));
 
-    private static string ObterRotuloMeta(Item item)
-    {
-        if (!string.IsNullOrWhiteSpace(item.Tipo))
-        {
-            return item.Tipo;
-        }
-
-        return "Item";
-    }
+    private static string ObterRotuloMeta(Item item) =>
+        !string.IsNullOrWhiteSpace(item.Tipo) ? item.Tipo : "Item";
 
     private sealed record CategoriaItem(string Chave, string Nome);
 }

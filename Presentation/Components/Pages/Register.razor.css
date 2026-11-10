@@ -13,29 +13,77 @@
     justify-content: center;
     background: radial-gradient(circle at 30% 35%, rgba(140,58,43,0.55), transparent 55%), linear-gradient(180deg, #1a1310 0%, #241914 45%, #3a2117 100%);
     overflow: auto;
-    padding: 32px 0;
-    font-family: sans-serif;
+    padding: 28px 16px;
+    background: linear-gradient(rgba(16, 11, 8, 0.78), rgba(16, 11, 8, 0.86)), url("img/fundodemadeira.png.jpg") center / cover fixed;
+    color: #382718;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
 }
 
 .formes {
     border-radius: 17px;
     padding: 35px;
-    width: 45%;
-    max-width: 450px;
+    width: min(100%, 440px);
+    max-width: 440px;
     background-color: rgba(255, 255, 255, 0.95);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    gap: 15px;
+    gap: 0;
     color: #241914;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 22px 65px rgba(0, 0, 0, 0.58), 0 0 0 5px rgba(30, 20, 13, 0.72);
+}
+
+.formes.auth-card {
+    padding: clamp(26px, 5vw, 42px);
+    border: 1px solid rgba(151, 113, 52, 0.82);
+    border-radius: 4px;
+    background-color: #ead8b3;
+    background-image: linear-gradient(rgba(248, 233, 199, 0.92), rgba(226, 205, 163, 0.95)), url("img/papelantigo.png");
+    color: #493519;
+    animation: auth-arrive 360ms ease-out both;
+}
+
+.auth-emblem {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    place-items: center;
+    border: 1px solid #a77c36;
+    border-radius: 50%;
+    background: rgba(148, 112, 47, 0.12);
+    color: #8d672a;
+    font-size: 23px;
+}
+
+.auth-eyebrow {
+    margin: 0 0 7px;
+    color: #8d672a;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.auth-card h1 {
+    margin: 0;
+    color: #382718;
+    font-family: Cinzel, Cambria, Georgia, serif;
+    font-size: 28px;
 }
 
 .selo-login {
     font-size: 2.5rem;
     margin-bottom: -10px;
+}
+
+.auth-card .subtitulo-login {
+    max-width: 300px;
+    margin: 8px 0 18px;
+    color: #766044;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .subtitulo-login {
@@ -53,26 +101,40 @@
     text-align: left;
 }
 
-    .campos p {
+    .campos span {
         font-weight: bold;
         font-size: 0.9rem;
     }
 
     .campos input {
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
+        padding: 10px 12px;
+        border: 1px solid rgba(117, 86, 43, 0.38);
+        border-radius: 3px;
         width: 100%;
+        min-height: 44px;
+        background: rgba(255, 251, 239, 0.72);
+        color: #382718;
+        font: inherit;
     }
 
-button {
+.auth-card .campos {
+    max-width: none;
+    gap: 7px;
+    margin-top: 13px;
+    color: #5d4527;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.auth-card .auth-submit {
     padding: 12px 20px;
     border-radius: 6px;
     border: none;
-    background-color: #3a2117;
-    font-weight: bold;
+    border: 1px solid #7d5c2b;
+    background: #76572b;
+    color: #fff3d4;
     width: 100%;
-    max-width: 300px;
+    max-width: none;
     transition: background 0.2s;
     cursor: pointer;
     margin-top: 5px;
@@ -110,7 +172,6 @@ button {
     gap: 8px;
     font-size: 0.9rem;
     cursor: pointer;
-    margin: 5px 0;
 }
 
     .termo-box input {
@@ -129,8 +190,7 @@ button {
         }
 
 .rodape-link {
-    font-size: 0.9rem;
-    margin-top: 10px;
+    display: none;
 }
 
 

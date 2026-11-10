@@ -1,9 +1,10 @@
+/* Tema do perfil e cartão de confirmação de saída; overlay comum definido em app.css. */
 /* CSS for Perfil component */
 * {
     box-sizing: border-box;
 }
 
-:root {
+.app-shell {
     color-scheme: dark;
     --ink: #241a14;
     --ink-soft: #37271d;
@@ -45,6 +46,67 @@ textarea {
 .app-shell {
     min-height: 100vh;
     background: #20150f;
+}
+
+.confirm-dialog {
+    width: min(440px, 100%);
+    padding: 28px clamp(20px, 6vw, 36px);
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background-color: #ead8b3;
+    background-image: linear-gradient(rgba(248, 233, 199, 0.91), rgba(226, 205, 163, 0.94)), url("img/papelantigo.png");
+    color: #493519;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.48);
+    text-align: center;
+}
+
+    .confirm-dialog h2 {
+        margin: 0;
+        color: #553d20;
+        font-size: 23px;
+        font-weight: 500;
+    }
+
+    .confirm-dialog p {
+        margin: 14px 0 24px;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+    .confirm-actions button {
+        min-width: 92px;
+        min-height: 40px;
+        padding: 0 18px;
+        border: 1px solid #8e6c35;
+        border-radius: 3px;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+.confirm-exit {
+    background: #94702f;
+    color: #fff2d4;
+}
+
+.confirm-cancel {
+    background: rgba(255, 251, 239, 0.66);
+    color: #493519;
+}
+
+.confirm-actions button:hover {
+    filter: brightness(1.08);
+}
+
+.confirm-actions button:focus-visible {
+    outline: 2px solid #6c4a1f;
+    outline-offset: 3px;
 }
 
 .app-content {

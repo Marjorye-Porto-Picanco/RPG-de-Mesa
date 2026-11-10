@@ -5,24 +5,26 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject SessaoUsuarioService SessaoUsuario
+@implements IDisposable
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="login">
-    <div class="formes">
-        
+    <div class="formes auth-card">
+        <div class="auth-emblem" aria-hidden="true"><i class="bi bi-dice-5"></i></div>
+        <p class="auth-eyebrow">A sua mesa de aventuras</p>
         <h1>Salão da Mesa</h1>
         <p class="subtitulo-login">Sua campanha, seus dados, seu tabuleiro — conectados.</p>
 
-        <div class="campos">
-            <p>Email ou Usuário</p>
+        <label class="campos" for="email">
+            <span>Email ou usuário</span>
             <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
-        </div>
+        </label>
 
-        <div class="campos">
-            <p>Senha</p>
+        <label class="campos" for="senha">
+            <span>Senha</span>
             <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
-        </div>
+        </label>
 
         @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
         {
@@ -31,17 +33,17 @@
             </p>
         }
 
-        <button style="color: white;" type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
+        <button class="auth-submit" type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
             @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
         </button>
 
-        <div class="icons">
+        <!--<div class="icons">
             <a href="#" @onclick="viewModel.LoginComGoogleAsync" @onclick:preventDefault aria-label="Entrar com Google"><i class="bi bi-google"></i></a>
             <a href="#" @onclick="viewModel.LoginComFacebookAsync" @onclick:preventDefault aria-label="Entrar com Facebook"><i class="bi bi-facebook"></i></a>
-        </div>
+        </div>-->
 
         <label class="termo">
-            <span>Não possui conta? <a href="/home">Cadastre-se</a></span>
+            <span>Não possui conta? <a class="auth-create-link" href="/cadastro">Criar conta</a></span>
         </label>
     </div>
 </section>

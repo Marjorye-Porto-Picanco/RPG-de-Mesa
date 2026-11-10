@@ -67,6 +67,80 @@ h1:focus {
         content: "An error has occurred."
     }
 
+.confirm-overlay {
+    position: fixed;
+    z-index: 2000;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(12, 8, 6, 0.68);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.confirm-dialog {
+    width: min(440px, 100%);
+    padding: 28px clamp(20px, 6vw, 36px);
+    border: 1px solid #9c783d;
+    border-radius: 4px;
+    background: linear-gradient(rgba(248, 233, 199, 0.96), rgba(226, 205, 163, 0.98)), url("img/papelantigo.png") center / cover;
+    color: #493519;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.48);
+    text-align: center;
+}
+
+.confirm-dialog h2 {
+    margin: 0;
+    color: #553d20;
+    font-size: 23px;
+    font-weight: 500;
+}
+
+.confirm-dialog p {
+    margin: 14px 0 24px;
+    color: #493519;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.confirm-actions button {
+    min-width: 92px;
+    min-height: 40px;
+    padding: 0 18px;
+    border: 1px solid #8e6c35;
+    border-radius: 3px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.confirm-exit {
+    background: #94702f;
+    color: #fff2d4;
+}
+
+.confirm-cancel {
+    background: rgba(255, 251, 239, 0.66);
+    color: #493519;
+}
+
+.confirm-actions button:hover {
+    filter: brightness(1.08);
+}
+
+.confirm-actions button:focus-visible {
+    outline: 2px solid #6c4a1f;
+    outline-offset: 3px;
+}
+
 .darker-border-checkbox.form-check-input {
     border-color: #929292;
 }

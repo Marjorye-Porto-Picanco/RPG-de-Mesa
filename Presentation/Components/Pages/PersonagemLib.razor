@@ -5,9 +5,7 @@
 @inject PersonagemService PersonagemService
 @inject NpcService NpcService
 @inject SessaoUsuarioService SessaoUsuario
-@inject NavigationManager Navigation
 @implements IDisposable
-
 
 <NavMenu />
 
@@ -16,7 +14,7 @@
         <div class="titulo-pagina">
             <div>
                 <p class="sobretitulo-rpg">Heróis e lendas</p>
-                <h1>@(abaAtiva == "personagens" ? "Personagens" : "NPCs")</h1>
+                <h1>Herós</h1>
                 <p class="texto-apoio">Suas fichas reunidas em um só lugar.</p>
             </div>
             <a class="botao-dourado" href="@(abaAtiva == "personagens" ? "/personagem-criar" : "/personagem-criar?tipo=NPC")">
@@ -24,14 +22,7 @@
             </a>
         </div>
 
-        <div class="abas-navegacao">
-            <button type="button" class="botao-aba @(abaAtiva == "personagens" ? "ativo" : "")" @onclick='() => abaAtiva = "personagens"'>
-                Aventureiros (@(personagens?.Count ?? 0))
-            </button>
-            <button type="button" class="botao-aba @(abaAtiva == "npcs" ? "ativo" : "")" @onclick='() => abaAtiva = "npcs"'>
-                NPCs (@(npcs?.Count ?? 0))
-            </button>
-        </div>
+       
 
         @if (abaAtiva == "personagens")
         {
@@ -47,18 +38,18 @@
                 }
 
                 <div class="grade-personagens">
-                    @foreach (var p in personagens)
+                    @foreach (var personagem in personagens)
                     {
-                        string iniciais = ObterIniciais(p.Nome);
-                        <a class="cartao-personagem" href="/personagem-editar/@p.IdPersonagem" aria-label="Abrir ficha de @p.Nome">
+                        string iniciais = ObterIniciais(personagem.Nome);
+                        <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
                             <div class="retrato-personagem">
-                                <img src="@(string.IsNullOrEmpty(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)" alt="Retrato de @p.Nome" />
+                                <img src="@(string.IsNullOrEmpty(personagem.Imagem) ? "img/armaduraprata.png" : personagem.Imagem)" alt="Retrato de @personagem.Nome" />
                                 <span>@iniciais</span>
                             </div>
                             <div class="info-personagem">
                                 <span class="status-personagem">Aventureiro</span>
-                                <h2>@p.Nome</h2>
-                                <p>@(string.IsNullOrEmpty(p.RacaTexto) ? "Raça desconhecida" : p.RacaTexto) • @(string.IsNullOrEmpty(p.ClasseTexto) ? "Classe" : p.ClasseTexto) nível @p.Nivel</p>
+                                <h2>@personagem.Nome</h2>
+                                <p>@(string.IsNullOrEmpty(personagem.RacaTexto) ? "Raça desconhecida" : personagem.RacaTexto) • @(string.IsNullOrEmpty(personagem.ClasseTexto) ? "Classe" : personagem.ClasseTexto) nível @personagem.Nivel</p>
                                 <small>Pronto para a aventura</small>
                             </div>
                         </a>
@@ -86,19 +77,19 @@
                 }
 
                 <div class="grade-personagens">
-                    @foreach (var n in npcs)
+                    @foreach (var npc in npcs)
                     {
-                        string iniciais = ObterIniciais(n.Nome);
-                        <div class="cartao-personagem" aria-label="Ficha do NPC @n.Nome">
+                        string iniciais = ObterIniciais(npc.Nome);
+                        <div class="cartao-personagem" aria-label="Ficha do NPC @npc.Nome">
                             <div class="retrato-personagem">
-                                <img src="@(string.IsNullOrEmpty(n.Imagem) ? "img/capacampanha3.png" : n.Imagem)" alt="Retrato de @n.Nome" />
+                                <img src="@(string.IsNullOrEmpty(npc.Imagem) ? "img/capacampanha3.png" : npc.Imagem)" alt="Retrato de @npc.Nome" />
                                 <span>@iniciais</span>
                             </div>
                             <div class="info-personagem">
                                 <span class="status-personagem">NPC</span>
-                                <h2>@n.Nome</h2>
-                                <p>@(string.IsNullOrEmpty(n.RacaTexto) ? "Raça desconhecida" : n.RacaTexto) • @(string.IsNullOrEmpty(n.ClasseTexto) ? (string.IsNullOrEmpty(n.Ocupacao) ? "Sem classe" : n.Ocupacao) : n.ClasseTexto) nível @n.Nivel</p>
-                                <small>@(string.IsNullOrEmpty(n.Tendencia) ? (string.IsNullOrEmpty(n.Alinhamento) ? "Neutro" : n.Alinhamento) : n.Tendencia)</small>
+                                <h2>@npc.Nome</h2>
+                                <p>@(string.IsNullOrEmpty(npc.RacaTexto) ? "Raça desconhecida" : npc.RacaTexto) • @(string.IsNullOrEmpty(npc.ClasseTexto) ? (string.IsNullOrEmpty(npc.Ocupacao) ? "Sem classe" : npc.Ocupacao) : npc.ClasseTexto) nível @npc.Nivel</p>
+                                <small>@(string.IsNullOrEmpty(npc.Tendencia) ? (string.IsNullOrEmpty(npc.Alinhamento) ? "Neutro" : npc.Alinhamento) : npc.Tendencia)</small>
                             </div>
                         </div>
                     }
@@ -137,10 +128,12 @@
     private string ObterIniciais(string nome)
     {
         if (string.IsNullOrWhiteSpace(nome)) return "HP";
+
         var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (partes.Length >= 2)
             return $"{char.ToUpper(partes[0][0])}{char.ToUpper(partes[1][0])}";
-        return nome.Substring(0, Math.Min(2, nome.Length)).ToUpper();
+
+        return nome[..Math.Min(2, nome.Length)].ToUpper();
     }
 
     public void Dispose()

@@ -1,5 +1,6 @@
 ﻿@page "/perfil"
 @using RPGdeMesa.Presentation.Components.Layout
+@inject NavigationManager Navigation
 <NavMenu />
 <div class="app-shell">
 
@@ -46,6 +47,8 @@
 
                 <div class="form-footer">
                     <p id="status-perfil" class="form-status" role="status" aria-live="polite">As informações deste perfil ficam salvas neste navegador.</p>
+                    @* O cancelamento pede confirmação antes de abandonar as alterações do perfil. *@
+                    <button class="action-secondary" type="button" @onclick="() => ExibirAvisoSaida = true">Cancelar</button>
                     <button class="action-primary" type="submit">Salvar perfil</button>
                 </div>
             </form>
@@ -53,6 +56,28 @@
     </main>
 </div>
 
-@code {
+@* Mostra o aviso somente enquanto a confirmação de saída está ativa. *@
+@if (ExibirAvisoSaida)
+{
+    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-perfil" aria-describedby="mensagem-aviso-perfil" @onclick:stopPropagation="true">
+            <h2 id="titulo-aviso-perfil">Sair sem salvar?</h2>
+            <p id="mensagem-aviso-perfil">As alterações feitas no perfil serão perdidas.</p>
+            <div class="confirm-actions">
+                <button class="confirm-exit" type="button" @onclick="SairDoPerfil">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+            </div>
+        </section>
+    </div>
+}
 
+@code {
+    // Estado de visibilidade do aviso de alterações não salvas.
+    private bool ExibirAvisoSaida { get; set; }
+
+    // Fecha o aviso sem sair, permitindo continuar editando o perfil.
+    private void FecharAvisoSaida() => ExibirAvisoSaida = false;
+
+    // Confirma a saída e volta à página inicial.
+    private void SairDoPerfil() => Navigation.NavigateTo("/home");
 }

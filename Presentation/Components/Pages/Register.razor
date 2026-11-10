@@ -6,33 +6,35 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="login">
-    <div class="formes">
+    <div class="formes auth-card">
+        <div class="auth-emblem" aria-hidden="true"><i class="bi bi-dice-5"></i></div>
+        <p class="auth-eyebrow">A sua mesa de aventuras</p>
         <h1>Cadastro</h1>
         <p class="subtitulo-login">Junte-se à mesa e forje sua lenda.</p>
 
-        <div class="campos">
-            <p>Utilizador</p>
+        <label class="campos" for="usuario">
+            <span>Utilizador</span>
             <input type="text" id="usuario" @bind="viewModel.Usuario" autocomplete="username" />
-        </div>
+        </label>
 
-        <div class="campos">
-            <p>Email</p>
+        <label class="campos" for="email">
+            <span>Email</span>
             <input type="email" id="email" @bind="viewModel.Email" autocomplete="email" />
-        </div>
+        </label>
 
-        <div class="campos">
-            <p>Senha</p>
+        <label class="campos" for="senha">
+            <span>Senha</span>
             <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="new-password" />
-        </div>
+        </label>
 
-        <div class="campos">
-            <p>Confirmar Senha</p>
+        <label class="campos" for="confirmar-senha">
+            <span>Confirmar senha</span>
             <input type="password" id="confirmar-senha" @bind="viewModel.ConfirmarSenha" autocomplete="new-password" />
-        </div>
+        </label>
 
         @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
         {
-            <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 8px 0; font-weight: bold;">
+            <p class="auth-feedback @(viewModel.Sucesso ? "is-success" : "is-error")" role="status" aria-live="polite">
                 @viewModel.MensagemFeedback
             </p>
         }
@@ -42,19 +44,16 @@
             <span>Concordar com os <a href="#" @onclick="viewModel.AbrirModal" @onclick:preventDefault>termos de uso</a></span>
         </label>
 
-        <button style="color: white;" type="button" @onclick="viewModel.RealizarCadastroAsync" disabled="@viewModel.IsProcessing">
+        <button class="auth-submit" type="button" @onclick="viewModel.RealizarCadastroAsync" disabled="@viewModel.IsProcessing">
             @(viewModel.IsProcessing ? "Cadastrando..." : "Cadastrar")
         </button>
 
         <div class="icons">
-            <a href="#" @onclick="viewModel.RegistrarComGoogleAsync" @onclick:preventDefault aria-label="Cadastrar com Google"><i class="bi bi-google"></i></a>
-            <a href="#" @onclick="viewModel.RegistrarComFacebookAsync" @onclick:preventDefault aria-label="Cadastrar com Facebook"><i class="bi bi-facebook"></i></a>
+            <a class="social-link social-google" href="#" @onclick="viewModel.RegistrarComGoogleAsync" @onclick:preventDefault aria-label="Cadastrar com Google" title="Cadastrar com Google"><i class="bi bi-google" aria-hidden="true"></i></a>
+            <a class="social-link social-facebook" href="#" @onclick="viewModel.RegistrarComFacebookAsync" @onclick:preventDefault aria-label="Cadastrar com Facebook" title="Cadastrar com Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>
         </div>
 
-        <!-- Botão/Link de voltar ao login -->
-        <label class="rodape-link">
-            <span>Já possui conta? <a href="/login" class="link-formulario">Voltar para o Login</a></span>
-        </label>
+        <p class="auth-account-prompt">Já possui conta? <a href="/login" class="auth-create-link">Voltar para o login</a></p>
     </div>
 </section>
 
