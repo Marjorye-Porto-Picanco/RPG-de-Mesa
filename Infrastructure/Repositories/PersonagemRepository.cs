@@ -12,8 +12,8 @@ public class PersonagemRepository : IPersonagemRepository
 
     public async Task<Personagem?> ObterPorIdAsync(int idPersonagem)
     {
-        _contexto.ChangeTracker.Clear();
         var personagem = await _contexto.Personagens
+            .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
@@ -26,7 +26,6 @@ public class PersonagemRepository : IPersonagemRepository
 
         if (personagem != null)
         {
-            // Sincroniza o texto caso venha apenas da relação 3FN
             if (personagem.Raca != null)
                 personagem.RacaTexto = personagem.Raca.Nome;
 
@@ -36,7 +35,6 @@ public class PersonagemRepository : IPersonagemRepository
 
         return personagem;
     }
-
     public async Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount)
     {
         _contexto.ChangeTracker.Clear();

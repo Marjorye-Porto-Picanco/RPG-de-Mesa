@@ -110,7 +110,7 @@ public class CampanhaService
             if (personagens != null)
             {
                 foreach (var p in personagens)
-                    novaCampanha.VincularPersonagem(p.IdPersonagem);
+                    novaCampanha.VincularPersonagem(p.IdPersonagem, "Aceita");
             }
 
             if (npcs != null)
@@ -242,7 +242,7 @@ public class CampanhaService
             var novoVinculo = new UsuarioCampanha(idAccount, campanha.IdCampanha);
             await _campanhaRepo.AdicionarUsuarioNaCampanhaAsync(novoVinculo);
 
-            return (true, $"Você entrou na campanha '{campanha.Nome}' com sucesso! Agora você pode criar ou vincular seu personagem dentro dela.");
+            return (true, $"Você entrou na campanha '{campanha.Nome}' com sucesso! Agora você pode enviar sua ficha para o Mestre.");
         }
         catch (Exception ex)
         {
@@ -308,17 +308,64 @@ public class CampanhaService
     {
         try
         {
-            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
-            if (campanha == null) return (false, "Campanha não encontrada.");
-
-            campanha.VincularPersonagem(idPersonagem);
-            await _campanhaRepo.AtualizarAsync(campanha);
-
+            await _campanhaRepo.EnviarFichaCampanhaAsync(idCampanha, idPersonagem, "Aceita");
             return (true, "Personagem vinculado à campanha com sucesso!");
         }
         catch (Exception ex)
         {
             return (false, $"Erro ao vincular personagem: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> EnviarFichaParaAvaliacaoAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            await _campanhaRepo.EnviarFichaCampanhaAsync(idCampanha, idPersonagem, "Pendente");
+            return (true, "Ficha enviada para avaliação do Mestre!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao enviar ficha: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> AprovarFichaCampanhaAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            await _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, "Aceita");
+            return (true, "Ficha aprovada com sucesso! O aventureiro agora faz parte da mesa.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao aprovar ficha: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RecusarFichaCampanhaAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            await _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, "Recusada");
+            return (true, "Ficha recusada. O jogador poderá enviar outra ficha.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao recusar ficha: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverPersonagemDaCampanhaAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            await _campanhaRepo.RemoverPersonagemCampanhaAsync(idCampanha, idPersonagem);
+            return (true, "Ficha desvinculada da campanha.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao remover ficha: {ex.Message}");
         }
     }
 
