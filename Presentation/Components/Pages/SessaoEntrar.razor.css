@@ -720,3 +720,192 @@
             margin-top: 0;
         }
 }
+/* ============================================================
+   Construtor de Inventário da Campanha em sessao-entrar
+   ============================================================ */
+.corpo-inventario-campanha {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.85fr);
+    gap: 18px;
+}
+
+.categoria-itens-campanha {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid rgba(126, 87, 31, 0.32);
+    border-radius: 8px;
+    background: rgba(255, 251, 241, 0.65);
+}
+
+.titulo-categoria-campanha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+    .titulo-categoria-campanha h4 {
+        margin: 0;
+        color: #382619;
+        font-size: 14px;
+    }
+
+.btn-add-item-campanha {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #ae812f;
+    background: rgba(176, 128, 38, 0.18);
+    color: #593d14;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.cabecalho-linha-campanha,
+.item-linha-campanha {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) 52px 64px 72px 26px;
+    gap: 6px;
+    align-items: center;
+}
+
+.cabecalho-linha-campanha {
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #795924;
+    border-bottom: 1px solid rgba(151, 107, 39, 0.4);
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+}
+
+.item-linha-campanha {
+    margin-bottom: 6px;
+}
+
+    .item-linha-campanha input,
+    .item-linha-campanha select {
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid rgba(126, 87, 31, 0.35);
+        border-radius: 4px;
+        background: #fffdf8;
+        color: #392819;
+        font-size: 12px;
+    }
+
+.remover-item-campanha {
+    border: none;
+    background: transparent;
+    color: #933827;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.resumo-inventario-campanha {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.painel-moedas-campanha,
+.painel-carga-campanha,
+.notas-inventario-campanha {
+    padding: 12px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 8px;
+    background: linear-gradient(155deg, #79572b, #4f371d);
+    color: #fff0ca;
+}
+
+    .painel-moedas-campanha h4,
+    .painel-carga-campanha h4,
+    .notas-inventario-campanha h4 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        text-align: center;
+        text-transform: uppercase;
+        color: #f7dfa4;
+    }
+
+.moedas-grade-campanha {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.moeda-campanha {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.icone-moeda-campanha {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid #f0c65a;
+    background: radial-gradient(circle at 35% 30%, #e8bb50, #9b661a 75%);
+    color: #352213;
+    font-size: 9px;
+    font-weight: bold;
+}
+
+    .icone-moeda-campanha.prata {
+        border-color: #ddd8c5;
+        background: radial-gradient(circle, #f4edda, #98917e);
+    }
+
+    .icone-moeda-campanha.electrum {
+        border-color: #b7e3e2;
+        background: radial-gradient(circle, #c4eceb, #598f8e);
+    }
+
+    .icone-moeda-campanha.ouro {
+        border-color: #f7cb59;
+        background: radial-gradient(circle, #ffe37b, #aa7214);
+    }
+
+    .icone-moeda-campanha.platina {
+        border-color: #bfd2d1;
+        background: radial-gradient(circle, #e2eeee, #728d8c);
+    }
+
+.moeda-campanha input {
+    width: 100%;
+    padding: 3px;
+    text-align: center;
+    border: 1px solid rgba(247, 218, 159, 0.35);
+    border-radius: 4px;
+    background: rgba(30, 20, 12, 0.35);
+    color: #fff1d1;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.painel-carga-campanha progress {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+}
+
+.notas-inventario-campanha textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid rgba(255, 235, 180, 0.3);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff2d4;
+    font-size: 12px;
+    resize: vertical;
+}
+
+@media (max-width: 700px) {
+    .corpo-inventario-campanha {
+        grid-template-columns: 1fr;
+    }
+}

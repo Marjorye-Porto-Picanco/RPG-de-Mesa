@@ -38,7 +38,7 @@
                         {
                             @foreach (var p in campanhaAtual.Personagens)
                             {
-                                <div class="player-option" style="cursor:pointer;" title="Clique para inspecionar a ficha" @onclick="() => InspecionarFichaNaAbaAsync(p.IdPersonagem)">
+                                <div class="player-option" style="cursor:pointer;" title="Clique para inspecionar a ficha e o inventário" @onclick="() => InspecionarFichaNaAbaAsync(p.IdPersonagem)">
                                     <span>@p.Nome<span>@(p.RacaTexto ?? "Aventureiro") · @(p.ClasseTexto ?? "Geral") (Nv. @p.Nivel)</span></span>
                                 </div>
                             }
@@ -344,15 +344,15 @@
                 }
 
                 @* =========================================================================
-                   NOVA ABA DO MESTRE: FICHAS DOS JOGADORES (ACEITAR / RECUSAR E VER FICHA ABAIXO)
+                   ABA DO MESTRE: FICHAS DOS JOGADORES E VALIDAÇÃO DE INVENTÁRIO DA CAMPANHA
                    ========================================================================= *@
                 @if (abaMenu == "fichas")
                 {
                     <header class="page-heading">
                         <div>
                             <p class="page-kicker">Controle do Mestre</p>
-                            <h1>Fichas dos Jogadores</h1>
-                            <p class="page-description">Inspecione as fichas enviadas pelos jogadores, aceite ou recuse a entrada na mesa.</p>
+                            <h1>Fichas e Equipamentos dos Jogadores</h1>
+                            <p class="page-description">Inspecione as fichas e os itens da campanha escolhidos pelos jogadores antes de aceitar na mesa.</p>
                         </div>
                     </header>
 
@@ -379,15 +379,16 @@
                                     @foreach (var pc in FichasPendentes)
                                     {
                                         var p = pc.Personagem!;
+                                        int qtdItens = p.Inventario?.Itens?.Sum(i => i.Quantidade) ?? 0;
                                         <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome</strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
-                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}")</small>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) selecionado(s) na campanha</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
                                                 <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
-                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha Aberta Abaixo" : "👁 Inspecionar Ficha")
+                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Inspecionar Ficha e Itens")
                                                 </button>
                                                 <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(p.IdPersonagem)">✓ Aceitar</button>
                                                 <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">✕ Recusar</button>
@@ -407,15 +408,16 @@
                                     @foreach (var pc in FichasAceitas)
                                     {
                                         var p = pc.Personagem!;
+                                        int qtdItens = p.Inventario?.Itens?.Sum(i => i.Quantidade) ?? 0;
                                         <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome <span class="tag-aceita">✓ Aceita</span></strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
-                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}")</small>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) equipado(s)</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
                                                 <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
-                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha Aberta Abaixo" : "👁 Visualizar Ficha")
+                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Visualizar Ficha e Itens")
                                                 </button>
                                                 <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">Revogar</button>
                                             </div>
@@ -430,17 +432,17 @@
                         </div>
 
                         <!-- =========================================================================
-                             PAINEL DE INSPEÇÃO COMPLETA DA FICHA LOGO ABAIXO (ESTILO PERGAMINHO)
+                             PAINEL DE INSPEÇÃO COMPLETA DA FICHA + ITENS DA CAMPANHA LOGO ABAIXO
                              ========================================================================= -->
                         @if (fichaInspecionada != null)
                         {
                             <section class="ficha-pergaminho-inspecao" aria-label="Inspeção completa da ficha">
                                 <div class="inspecao-top-bar">
-                                    <span>Inspecionando ficha de <strong>@fichaInspecionada.Nome</strong></span>
+                                    <span>Inspecionando ficha e equipamentos de <strong>@fichaInspecionada.Nome</strong></span>
                                     <div style="display:flex; gap:8px;">
                                         @if (StatusDaFichaInspecionada == "Pendente")
                                         {
-                                            <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha na Mesa</button>
+                                            <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha e Itens</button>
                                             <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
                                         }
                                         <button type="button" class="btn-fechar-inspecao" @onclick="() => fichaInspecionada = null">Fechar ✕</button>
@@ -467,7 +469,6 @@
                                 <div class="troca-ficha-inspecao" role="tablist">
                                     <button type="button" class="aba-inspecao @(abaInspecao == "atributos" ? "ativa" : "")" @onclick='() => abaInspecao = "atributos"'>Atributos & Diário</button>
                                     <button type="button" class="aba-inspecao @(abaInspecao == "personagem" ? "ativa" : "")" @onclick='() => abaInspecao = "personagem"'>Personagem & Classes</button>
-                                    <button type="button" class="aba-inspecao @(abaInspecao == "inventario" ? "ativa" : "")" @onclick='() => abaInspecao = "inventario"'>Inventário</button>
                                     <button type="button" class="aba-inspecao @(abaInspecao == "grimorio" ? "ativa" : "")" @onclick='() => abaInspecao = "grimorio"'>Grimório</button>
                                 </div>
 
@@ -505,7 +506,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- SWITCH DO DIÁRIO NA INSPEÇÃO DO MESTRE -->
                                         <div class="diario-inspecao-switch">
                                             <div class="diario-inspecao-tabs">
                                                 <button type="button" class="@(secaoDiarioInspecao == "ideais" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "ideais"'>Ideais</button>
@@ -565,50 +565,6 @@
                                         </div>
                                     </div>
                                 }
-                                else if (abaInspecao == "inventario")
-                                {
-                                    <div class="inspecao-corpo">
-                                        @if (fichaInspecionada.Inventario != null)
-                                        {
-                                            <div class="grid-4-inspecao" style="grid-template-columns: repeat(5, 1fr);">
-                                                <div class="campo-leitura-inspecao"><span>PC</span><strong>@fichaInspecionada.Inventario.MoedasPC</strong></div>
-                                                <div class="campo-leitura-inspecao"><span>PP</span><strong>@fichaInspecionada.Inventario.MoedasPP</strong></div>
-                                                <div class="campo-leitura-inspecao"><span>PE</span><strong>@fichaInspecionada.Inventario.MoedasPE</strong></div>
-                                                <div class="campo-leitura-inspecao"><span>PO</span><strong>@fichaInspecionada.Inventario.MoedasPO</strong></div>
-                                                <div class="campo-leitura-inspecao"><span>PL</span><strong>@fichaInspecionada.Inventario.MoedasPL</strong></div>
-                                            </div>
-
-                                            <div class="painel-marrom-inspecao">
-                                                <h4>Itens no Inventário (Peso Atual: @(fichaInspecionada.Inventario.PesoAtual ?? 0) kg / @(fichaInspecionada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
-                                                @if (fichaInspecionada.Inventario.Itens != null && fichaInspecionada.Inventario.Itens.Any())
-                                                {
-                                                    <ul style="margin: 0; padding-left: 18px;">
-                                                        @foreach (var ii in fichaInspecionada.Inventario.Itens)
-                                                        {
-                                                            <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> — @(ii.Item?.Tipo ?? "Geral") (@(ii.Item?.Peso ?? 0) kg, @(ii.Item?.Preco ?? 0) po)</li>
-                                                        }
-                                                    </ul>
-                                                }
-                                                else
-                                                {
-                                                    <p>Nenhum item equipado.</p>
-                                                }
-                                            </div>
-
-                                            @if (!string.IsNullOrWhiteSpace(fichaInspecionada.Inventario.Notas))
-                                            {
-                                                <div class="painel-marrom-inspecao">
-                                                    <h4>Notas do Inventário</h4>
-                                                    <p>@fichaInspecionada.Inventario.Notas</p>
-                                                </div>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <p>Inventário vazio.</p>
-                                        }
-                                    </div>
-                                }
                                 else if (abaInspecao == "grimorio")
                                 {
                                     <div class="inspecao-corpo">
@@ -633,6 +589,61 @@
                                         </div>
                                     </div>
                                 }
+
+                                <!-- =========================================================================
+                                     SEÇÃO FIXA ABAIXO DA FICHA: ITENS DA CAMPANHA ENVIADOS PELO JOGADOR
+                                     ========================================================================= -->
+                                <div style="margin-top: 22px; padding-top: 18px; border-top: 2px dashed rgba(126, 87, 31, 0.45);">
+                                    <h3 style="margin: 0 0 12px; color: #392819; font-size: 18px;">
+                                        🎒 Itens da Campanha e Moedas Selecionados pelo Jogador
+                                    </h3>
+
+                                    @if (fichaInspecionada.Inventario != null)
+                                    {
+                                        <div class="grid-4-inspecao" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 12px;">
+                                            <div class="campo-leitura-inspecao"><span>PC</span><strong>@fichaInspecionada.Inventario.MoedasPC</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>PP</span><strong>@fichaInspecionada.Inventario.MoedasPP</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>PE</span><strong>@fichaInspecionada.Inventario.MoedasPE</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>PO</span><strong>@fichaInspecionada.Inventario.MoedasPO</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>PL</span><strong>@fichaInspecionada.Inventario.MoedasPL</strong></div>
+                                        </div>
+
+                                        <div class="painel-marrom-inspecao">
+                                            <h4>Equipamentos Vinculados (Carga Total: @(fichaInspecionada.Inventario.PesoAtual ?? 0) kg / @(fichaInspecionada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
+                                            @if (fichaInspecionada.Inventario.Itens != null && fichaInspecionada.Inventario.Itens.Any())
+                                            {
+                                                <ul style="margin: 0; padding-left: 18px;">
+                                                    @foreach (var ii in fichaInspecionada.Inventario.Itens)
+                                                    {
+                                                        <li>
+                                                            <strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong>
+                                                            — @(ii.Item?.Tipo ?? "Geral")
+                                                            (Peso unit.: @(ii.Item?.Peso ?? 0) kg | Valor unit.: @(ii.Item?.Preco ?? 0) po)
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <p>O jogador não selecionou nenhum item da campanha.</p>
+                                            }
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(fichaInspecionada.Inventario.Notas))
+                                        {
+                                            <div class="painel-marrom-inspecao" style="margin-top: 10px;">
+                                                <h4>Notas do Inventário do Jogador</h4>
+                                                <p>@fichaInspecionada.Inventario.Notas</p>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="painel-marrom-inspecao">
+                                            <p>Nenhum inventário enviado para esta ficha.</p>
+                                        </div>
+                                    }
+                                </div>
                             </section>
                         }
                     </div>
@@ -661,7 +672,7 @@
     private List<Item> itensDisponiveis = new();
     private string termoBusca = string.Empty;
 
-    private string abaMenu = "iniciar"; // "iniciar", "config", "fichas", "hist"
+    private string abaMenu = "iniciar";
     private string categoriaAtiva = "todos";
     private string modoVisualizacao = "vinculados";
     private string categoriaSelecionada = "npc";

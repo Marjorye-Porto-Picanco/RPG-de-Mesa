@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
-using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Collections.Generic;
@@ -14,20 +13,10 @@ namespace RPGdeMesa.Presentation.ViewModel
     public class PersonagemEditarViewModel
     {
         private readonly PersonagemService _personagemService;
-        private readonly CampanhaService _campanhaService;
-        private readonly SessaoUsuarioService _sessaoUsuario;
-        private readonly NavigationManager _navigation;
 
-        public PersonagemEditarViewModel(
-            PersonagemService personagemService,
-            CampanhaService campanhaService,
-            SessaoUsuarioService sessaoUsuario,
-            NavigationManager navigation)
+        public PersonagemEditarViewModel(PersonagemService personagemService)
         {
             _personagemService = personagemService;
-            _campanhaService = campanhaService;
-            _sessaoUsuario = sessaoUsuario;
-            _navigation = navigation;
         }
 
         public Personagem PersonagemAtual { get; set; } = new();
@@ -45,24 +34,8 @@ namespace RPGdeMesa.Presentation.ViewModel
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
 
-        // 3FN: Inventário e Moedas
-        public List<Item> ItensDisponiveis { get; set; } = new();
-        public List<ItemInventarioVinculado> ItensInventario { get; set; } = new();
-        public int MoedasPC { get; set; } = 0;
-        public int MoedasPP { get; set; } = 0;
-        public int MoedasPE { get; set; } = 0;
-        public int MoedasPO { get; set; } = 0;
-        public int MoedasPL { get; set; } = 0;
-        public string NotasInventario { get; set; } = string.Empty;
-
         // 3FN: Grimório
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
-
-        public decimal PesoTotalInventario =>
-            ItensInventario.Where(i => i.IdItem > 0).Sum(i => i.PesoUnitario * Math.Max(1, i.Quantidade));
-
-        public decimal CapacidadeCargaMaxima =>
-            Math.Round(Math.Max(1, PersonagemAtual.Forca) * 7.5m, 1);
 
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
@@ -129,17 +102,12 @@ namespace RPGdeMesa.Presentation.ViewModel
                 MensagemFeedback = "";
                 NotifyStateChanged();
 
-                int idUsuario = _sessaoUsuario.IdUsuarioLogado;
-                var catalogoItens = await _campanhaService.ObterItensParaSessaoAsync(idUsuario);
-                ItensDisponiveis = catalogoItens.OrderBy(i => i.Nome).ToList();
-
                 var encontrado = await _personagemService.ObterPorIdAsync(idPersonagem);
                 if (encontrado != null)
                 {
                     PersonagemAtual = encontrado;
                     ExtrairMedidasFisicas();
 
-                    // Carrega Classes (3FN) ou faz fallback para ClasseTexto se for ficha antiga
                     ClassesSelecionadas.Clear();
                     if (encontrado.PersonagemClasses != null && encontrado.PersonagemClasses.Any())
                     {
@@ -169,34 +137,6 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                     SalvaguardasSelecionadas = encontrado.Salvaguardas.Select(s => s.Atributo).ToHashSet();
                     PericiasSelecionadas = encontrado.Pericias.Select(p => p.NomePericia).ToHashSet();
-
-                    ItensInventario.Clear();
-                    if (encontrado.Inventario != null)
-                    {
-                        MoedasPC = encontrado.Inventario.MoedasPC;
-                        MoedasPP = encontrado.Inventario.MoedasPP;
-                        MoedasPE = encontrado.Inventario.MoedasPE;
-                        MoedasPO = encontrado.Inventario.MoedasPO;
-                        MoedasPL = encontrado.Inventario.MoedasPL;
-                        NotasInventario = encontrado.Inventario.Notas ?? string.Empty;
-
-                        foreach (var ii in encontrado.Inventario.Itens)
-                        {
-                            var itemRef = ii.Item ?? ItensDisponiveis.FirstOrDefault(x => x.IdItem == ii.IdItem);
-                            if (itemRef != null)
-                            {
-                                ItensInventario.Add(new ItemInventarioVinculado
-                                {
-                                    Categoria = PersonagemCriarViewModel.ClassificarCategoriaItem(itemRef),
-                                    IdItem = itemRef.IdItem,
-                                    Nome = itemRef.Nome,
-                                    Quantidade = ii.Quantidade,
-                                    PesoUnitario = itemRef.Peso ?? 0m,
-                                    PrecoUnitario = itemRef.Preco ?? 0m
-                                });
-                            }
-                        }
-                    }
 
                     Magias.Clear();
                     foreach (var pm in encontrado.PersonagemMagias)
@@ -258,48 +198,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemAtual.Peso = $"{PesoKg.ToString("0.#", new CultureInfo("pt-BR"))} kg";
         }
 
-        public IEnumerable<Item> ObterItensPorCategoria(string categoria)
-        {
-            if (!ItensDisponiveis.Any()) return Enumerable.Empty<Item>();
-            var filtrados = ItensDisponiveis.Where(i => PersonagemCriarViewModel.ClassificarCategoriaItem(i) == categoria);
-            return filtrados.Any() ? filtrados : ItensDisponiveis;
-        }
-
-        public void AdicionarSlotItem(string categoria)
-        {
-            ItensInventario.Add(new ItemInventarioVinculado
-            {
-                Categoria = categoria,
-                Quantidade = 1
-            });
-            NotifyStateChanged();
-        }
-
-        public void SelecionarItemExistente(ItemInventarioVinculado slot, int idItem)
-        {
-            slot.IdItem = idItem;
-            var itemBanco = ItensDisponiveis.FirstOrDefault(i => i.IdItem == idItem);
-            if (itemBanco != null)
-            {
-                slot.Nome = itemBanco.Nome;
-                slot.PesoUnitario = itemBanco.Peso ?? 0m;
-                slot.PrecoUnitario = itemBanco.Preco ?? 0m;
-            }
-            else
-            {
-                slot.Nome = string.Empty;
-                slot.PesoUnitario = 0m;
-                slot.PrecoUnitario = 0m;
-            }
-            NotifyStateChanged();
-        }
-
-        public void RemoverSlotItem(ItemInventarioVinculado slot)
-        {
-            ItensInventario.Remove(slot);
-            NotifyStateChanged();
-        }
-
         public void AlternarSalvaguarda(string nome, bool marcado)
         {
             if (marcado) SalvaguardasSelecionadas.Add(nome);
@@ -354,28 +252,9 @@ namespace RPGdeMesa.Presentation.ViewModel
                     return;
                 }
 
-                var dadosInventario = new Inventario
-                {
-                    IdPersonagem = PersonagemAtual.IdPersonagem,
-                    CapacidadeCarga = CapacidadeCargaMaxima,
-                    PesoAtual = PesoTotalInventario,
-                    Dinheiro = MoedasPO,
-                    MoedasPC = MoedasPC,
-                    MoedasPP = MoedasPP,
-                    MoedasPE = MoedasPE,
-                    MoedasPO = MoedasPO,
-                    MoedasPL = MoedasPL,
-                    Notas = NotasInventario
-                };
-
                 var listaClasses = ClassesSelecionadas
                     .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
                     .Select(c => (c.NomeClasse, Math.Clamp(c.Nivel, 1, 20)))
-                    .ToList();
-
-                var listaItens = ItensInventario
-                    .Where(i => i.IdItem > 0)
-                    .Select(i => (i.IdItem, i.Quantidade))
                     .ToList();
 
                 var listaMagias = Magias
@@ -389,17 +268,18 @@ namespace RPGdeMesa.Presentation.ViewModel
                     })
                     .ToList();
 
+                // Passa null para dadosInventario e itens para preservar o inventário da campanha intacto
                 var resultado3FN = await _personagemService.SalvarComplementos3FNAsync(
                     PersonagemAtual.IdPersonagem,
                     listaClasses,
                     SalvaguardasSelecionadas,
                     PericiasSelecionadas,
-                    dadosInventario,
-                    listaItens,
+                    dadosInventario: null,
+                    itens: null,
                     listaMagias);
 
                 Sucesso = resultado3FN.Sucesso;
-                MensagemFeedback = Sucesso ? "Ficha completa atualizada com sucesso!" : resultado3FN.Mensagem;
+                MensagemFeedback = Sucesso ? "Ficha atualizada com sucesso!" : resultado3FN.Mensagem;
                 NotifyStateChanged();
             }
             catch (Exception ex)
