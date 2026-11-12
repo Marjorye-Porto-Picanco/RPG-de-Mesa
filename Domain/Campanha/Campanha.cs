@@ -31,9 +31,21 @@ public class Campanha : IAggregateRoot
 
     public virtual ICollection<UsuarioCampanha> UsuarioCampanhas { get; private set; } = new List<UsuarioCampanha>();
 
+    // Retorna apenas os personagens já aceitos pelo mestre para a mesa ativa
     public IEnumerable<Personagem> Personagens => _personagemCampanhas
-        .Where(pc => pc.Personagem != null)
+        .Where(pc => pc.Personagem != null &&
+                    (string.IsNullOrEmpty(pc.StatusAprovacao) ||
+                     pc.StatusAprovacao.Equals("Aceita", StringComparison.OrdinalIgnoreCase)))
         .Select(pc => pc.Personagem!);
+
+    public IEnumerable<PersonagemCampanha> FichasPendentes => _personagemCampanhas
+        .Where(pc => pc.Personagem != null &&
+                     string.Equals(pc.StatusAprovacao, "Pendente", StringComparison.OrdinalIgnoreCase));
+
+    public IEnumerable<PersonagemCampanha> FichasAceitas => _personagemCampanhas
+        .Where(pc => pc.Personagem != null &&
+                    (string.IsNullOrEmpty(pc.StatusAprovacao) ||
+                     string.Equals(pc.StatusAprovacao, "Aceita", StringComparison.OrdinalIgnoreCase)));
 
     public IEnumerable<NPC> Npcs => _npcCampanhas
         .Where(nc => nc.Npc != null)
@@ -70,12 +82,12 @@ public class Campanha : IAggregateRoot
         Descricao = descricao;
     }
 
-    public void VincularPersonagem(int idPersonagem)
+    public void VincularPersonagem(int idPersonagem, string statusAprovacao = "Aceita")
     {
         if (_personagemCampanhas.Any(pc => pc.IdPersonagem == idPersonagem))
             throw new DomainException("Este personagem já faz parte da campanha.");
 
-        _personagemCampanhas.Add(new PersonagemCampanha(idPersonagem, IdCampanha));
+        _personagemCampanhas.Add(new PersonagemCampanha(idPersonagem, IdCampanha, statusAprovacao));
     }
 
     public void RemoverPersonagem(int idPersonagem)

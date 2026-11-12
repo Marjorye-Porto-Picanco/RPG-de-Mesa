@@ -1,5 +1,6 @@
 @page "/campanhas"
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Domain.Campanhas
 @inject CampanhaService CampanhaService
 @inject SessaoUsuarioService SessaoUsuario
 @inject NavigationManager Navigation
@@ -62,7 +63,9 @@
                         </a>
                         <button class="campanha-remover" type="button" title="Excluir campanha"
                                 aria-label="Excluir campanha @campanha.Nome"
-                                @onclick="() => PedirRemocaoCampanha(campanha, false)">Excluir</button>
+                                @onclick="() => PedirRemocaoCampanha(campanha, false)">
+                            Excluir
+                        </button>
                     </div>
                 }
             </div>
@@ -78,7 +81,7 @@
                 @foreach (var campanha in campanhasJogador)
                 {
                     <div class="cartao-campanha-wrap">
-                        <a class="cartao-campanha" href="/sessao-entrar" aria-label="Entrar na campanha @campanha.Nome">
+                        <a class="cartao-campanha" href="@($"/sessao-entrar/{campanha.IdCampanha}")" aria-label="Entrar na campanha @campanha.Nome">
                             <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
                             <span class="estado-campanha tag-jogador">Jogador</span>
                             <div class="info-campanha">
@@ -89,7 +92,9 @@
                         </a>
                         <button class="campanha-remover" type="button" title="Sair da campanha"
                                 aria-label="Sair da campanha @campanha.Nome"
-                                @onclick="() => PedirRemocaoCampanha(campanha, true)">Sair</button>
+                                @onclick="() => PedirRemocaoCampanha(campanha, true)">
+                            Sair
+                        </button>
                     </div>
                 }
                 

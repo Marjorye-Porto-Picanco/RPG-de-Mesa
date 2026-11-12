@@ -11,17 +11,23 @@
 .join-content {
     width: min(860px, 100%);
     margin: 0 auto;
-    padding-top: 28px;
+    padding: 28px 16px 48px;
 }
 
+/* ============================================================
+   CABEÇALHO DA PÁGINA
+   ============================================================ */
 .join-page-heading {
-    min-height: 94px;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    min-height: 94px;
     margin-bottom: 20px;
 }
 
     .join-page-heading .page-kicker {
-        margin-bottom: 7px;
+        margin: 0 0 7px;
         color: #d3ac60;
         font-size: 10px;
         text-transform: uppercase;
@@ -49,16 +55,66 @@
         background: rgba(24, 16, 12, 0.72);
         color: #dfc995;
         font-size: 10px;
+        cursor: pointer;
     }
 
-.join-progress {
-    gap: 5px;
-    margin-bottom: 19px;
+        .join-page-heading .botao-voltar:hover {
+            background: rgba(50, 36, 26, 0.85);
+        }
+
+/* ============================================================
+   SELETOR DE CAMPANHA ATIVA (CASO PARTICIPE DE MAIS DE UMA)
+   ============================================================ */
+.join-campaign-switcher {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border: 1px solid rgba(217, 184, 120, 0.3);
+    background: rgba(34, 24, 18, 0.85);
 }
 
-    .join-progress li {
-        padding: 7px 10px 9px;
+    .join-campaign-switcher label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #dfc995;
+        font-size: 12px;
     }
+
+    .join-campaign-switcher select {
+        flex: 1;
+        min-height: 36px;
+        padding: 0 10px;
+        border: 1px solid rgba(217, 184, 120, 0.4);
+        background: #18110c;
+        color: #f3e7ce;
+    }
+
+/* ============================================================
+   BARRA DE PROGRESSO (2 ETAPAS INDEPENDENTES)
+   ============================================================ */
+.join-progress {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 22px;
+    padding: 0;
+    list-style: none;
+}
+
+.join-progress-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.join-progress li {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 12px;
+    border-bottom: 1px solid rgba(217, 184, 120, 0.22);
+    color: #998b73;
+    font-size: 11px;
+}
 
 .join-step-link {
     display: flex;
@@ -85,161 +141,65 @@
     }
 
 .join-progress li > .join-step-link > span {
-    width: 23px;
-    height: 23px;
-}
-
-.join-progress li.ativa > .join-step-link > span {
-    background: transparent;
-}
-
-.join-card {
-    min-height: 264px;
-    padding: 27px 29px 30px;
-    border: 1px solid rgba(207, 174, 109, 0.35);
-    border-top: 3px solid #d1a951;
-    background: rgba(38, 28, 20, 0.94);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
-}
-
-    .join-card > .page-kicker {
-        margin: 0 0 5px;
-        color: #d1a951;
-        font-size: 9px;
-        text-transform: uppercase;
-    }
-
-    .join-card h2 {
-        margin: 0 0 17px;
-        color: #f0e5d1;
-        font-size: 19px;
-    }
-
-.join-code-form {
-    width: min(468px, 100%);
-    gap: 11px;
-}
-
-.join-card .form-field {
-    gap: 2px;
-    color: #cdbb9d;
-    font-size: 12px;
-    text-decoration: underline;
-    text-decoration-color: rgba(205, 187, 157, 0.45);
-    text-underline-offset: 3px;
-}
-
-.join-code-form input {
-    min-height: 44px;
-    padding: 0 12px;
-    border-color: rgba(205, 167, 95, 0.42);
-    background: rgba(19, 14, 10, 0.88);
-    font-size: 13px;
-    letter-spacing: 1.5px;
-}
-
-    .join-code-form input::placeholder {
-        font-size: 11px;
-    }
-
-.join-code-form .action-primary {
-    min-height: 37px;
-    margin-top: 20px;
-    padding: 0 14px;
-    border: 1px solid #d4b364;
-    border-radius: 3px;
-    background: #947333;
-    color: #fff0cf;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid rgba(217, 184, 120, 0.34);
+    border-radius: 50%;
+    color: inherit;
+    font-family: "Trebuchet MS", sans-serif;
     font-size: 10px;
 }
 
-    .join-code-form .action-primary:hover:not(:disabled) {
-        background: #aa8540;
+.join-progress li strong {
+    overflow-wrap: anywhere;
+    font-weight: 500;
+}
+
+.join-progress li.ativa {
+    border-bottom-color: #d1a951;
+    color: #f0dfb8;
+}
+
+    .join-progress li.ativa > .join-step-link > span {
+        border-color: #d1a951;
+        background: rgba(209, 169, 81, 0.16);
+        color: #f3d37e;
     }
 
-.join-status {
-    color: #b6a486;
+.join-progress li.concluida {
+    border-bottom-color: rgba(209, 169, 81, 0.72);
+    color: #d9c28d;
 }
 
-.join-card .action-secondary,
-.join-card .action-primary {
-    border-radius: 3px;
-}
-
-.join-local-note {
-    margin-top: 13px;
-    color: #9c896e;
-    font-size: 9px;
-}
-
-.join-progress {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0 0 22px;
-    padding: 0;
-    list-style: none;
-}
-
-    .join-progress li {
-        display: flex;
-        min-width: 0;
-        align-items: center;
-        gap: 9px;
-        padding: 11px 12px;
-        border-bottom: 1px solid rgba(217, 184, 120, 0.22);
-        color: #998b73;
-        font-size: 11px;
+    .join-progress li.concluida > .join-step-link > span {
+        border-color: rgba(209, 169, 81, 0.72);
+        color: #d9c28d;
     }
 
-        .join-progress li > span {
-            display: grid;
-            width: 25px;
-            height: 25px;
-            flex: 0 0 auto;
-            place-items: center;
-            border: 1px solid rgba(217, 184, 120, 0.34);
-            border-radius: 50%;
-            color: inherit;
-            font-family: "Trebuchet MS", sans-serif;
-            font-size: 10px;
-        }
-
-        .join-progress li strong {
-            overflow-wrap: anywhere;
-            font-weight: 500;
-        }
-
-        .join-progress li.ativa {
-            border-bottom-color: #d1a951;
-            color: #f0dfb8;
-        }
-
-            .join-progress li.ativa > span {
-                border-color: #d1a951;
-                background: rgba(209, 169, 81, 0.16);
-                color: #f3d37e;
-            }
-
-        .join-progress li.concluida {
-            border-bottom-color: rgba(209, 169, 81, 0.72);
-            color: #d9c28d;
-        }
-
-            .join-progress li.concluida > span {
-                border-color: rgba(209, 169, 81, 0.72);
-                color: #d9c28d;
-            }
-
+/* ============================================================
+   CARD PRINCIPAL DAS ETAPAS
+   ============================================================ */
 .join-card {
+    min-height: 264px;
     padding: clamp(20px, 3.2vw, 34px);
     border: 1px solid rgba(207, 174, 109, 0.42);
     border-top: 3px solid #d1a951;
-    background: rgba(39, 29, 22, 0.92);
+    background: rgba(39, 29, 22, 0.94);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
 }
 
     .join-card[hidden] {
         display: none;
+    }
+
+    .join-card .page-kicker {
+        margin: 0 0 5px;
+        color: #d1a951;
+        font-size: 9px;
+        text-transform: uppercase;
     }
 
     .join-card h2 {
@@ -249,72 +209,79 @@
         font-weight: 500;
     }
 
-    .join-code-form,
     .join-card form {
         display: grid;
         gap: 13px;
     }
 
-.join-code-form {
-    width: min(540px, 100%);
+.step-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
-.join-card .form-field {
-    display: grid;
-    gap: 7px;
-    color: #d2c2a2;
-    font-size: 12px;
-}
-
-.join-code-form input {
-    width: 100%;
-    min-height: 51px;
-    padding: 0 14px;
-    border: 1px solid rgba(217, 184, 120, 0.43);
-    border-radius: 3px;
-    background: rgba(20, 15, 11, 0.8);
-    color: #f6e8ca;
-    font-family: "Trebuchet MS", sans-serif;
-    font-size: 19px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-    .join-code-form input::placeholder {
-        color: #746956;
-        font-size: 15px;
-        letter-spacing: 1px;
-    }
-
-.join-code-form .action-primary {
-    justify-self: start;
-    border: 1px solid #d4b364;
-    cursor: pointer;
-}
-
-    .join-code-form .action-primary:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
-.join-status {
-    min-height: 17px;
-    margin: 0;
-    color: #d0bd90;
+/* ============================================================
+   BADGES E ALERTAS DE STATUS DA FICHA
+   ============================================================ */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
     font-size: 11px;
+    font-weight: 700;
 }
 
-    .join-status.erro {
-        color: #e8a58d;
+.status-aceita {
+    border: 1px solid rgba(120, 190, 130, 0.6);
+    background: rgba(28, 65, 36, 0.85);
+    color: #b9e6c0;
+}
+
+.status-pendente {
+    border: 1px solid rgba(224, 184, 95, 0.6);
+    background: rgba(80, 60, 20, 0.85);
+    color: #f5dfa0;
+}
+
+.status-recusada {
+    border: 1px solid rgba(214, 96, 80, 0.6);
+    background: rgba(75, 24, 18, 0.85);
+    color: #f5b9b0;
+}
+
+.ficha-alert {
+    padding: 12px 15px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+    .ficha-alert.pendente {
+        border-left: 4px solid #d1a951;
+        background: rgba(209, 169, 81, 0.12);
+        color: #f0dfb8;
     }
 
-.join-limit-summary {
-    margin: -7px 0 20px;
-    color: #cfb66f;
-    font-size: 12px;
-}
+    .ficha-alert.aceita {
+        border-left: 4px solid #5cb85c;
+        background: rgba(92, 184, 92, 0.12);
+        color: #d8f3d8;
+    }
 
+    .ficha-alert.recusada {
+        border-left: 4px solid #d9534f;
+        background: rgba(217, 83, 79, 0.15);
+        color: #f7d6d5;
+    }
+
+/* ============================================================
+   SELEÇÃO DE PERSONAGEM
+   ============================================================ */
 .character-picker {
     min-width: 0;
     margin: 0;
@@ -381,73 +348,211 @@
         font-size: 10px;
     }
 
-.loadout-grid {
+/* ============================================================
+   PERGAMINHO DE VISUALIZAÇÃO DA FICHA (QUANDO ENVIADA/ACEITA)
+   ============================================================ */
+.ficha-preview-pergaminho {
+    padding: 22px;
+    border: 1px solid #9c783d;
+    border-radius: 8px;
+    background: linear-gradient(rgba(248, 229, 188, 0.94), rgba(226, 198, 143, 0.96));
+    color: #392819;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.ficha-cabecalho-preview {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(126, 87, 31, 0.35);
+}
+
+.retrato-preview {
+    width: 84px;
+    height: 84px;
+    border: 2px solid #946c2d;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #251912;
+}
+
+    .retrato-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.sobretitulo-preview {
+    margin: 0 0 3px;
+    color: #8e692f;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}
+
+.identidade-preview h3 {
+    margin: 0;
+    color: #392819;
+    font-size: 22px;
+}
+
+.subtitulo-preview {
+    margin: 4px 0 8px;
+    color: #6b4e23;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.dados-rapidos-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 11px;
+    color: #59411e;
+}
+
+.abas-ficha-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 14px 0;
+}
+
+.aba-btn {
+    padding: 6px 14px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 18px;
+    background: rgba(100, 70, 31, 0.12);
+    color: #65481f;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+    .aba-btn.ativa {
+        background: #a47a2d;
+        color: #fff2d4;
+        border-color: #805b22;
+    }
+
+.preview-tab-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.atributos-grid-preview {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.attr-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 6px;
+    border: 1px solid rgba(130, 91, 35, 0.35);
+    border-radius: 8px;
+    background: rgba(255, 253, 246, 0.8);
+}
+
+    .attr-card span {
+        font-size: 10px;
+        font-weight: 700;
+        color: #715025;
+    }
+
+    .attr-card strong {
+        font-size: 18px;
+        color: #382819;
+    }
+
+    .attr-card small {
+        padding: 2px 8px;
+        border-radius: 99px;
+        background: rgba(167, 122, 50, 0.18);
+        color: #6b4818;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+.tags-row-preview,
+.diario-grid-preview {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 25px;
-}
-
-.loadout-section {
-    min-width: 0;
-    padding-top: 14px;
-    border-top: 1px solid rgba(217, 184, 120, 0.2);
-}
-
-.loadout-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 10px;
-    margin-bottom: 10px;
 }
 
-    .loadout-heading h3 {
-        margin: 0;
-        color: #eddfc2;
-        font-size: 13px;
-        font-weight: 500;
+    .tags-row-preview > div,
+    .box-texto-preview {
+        padding: 10px 12px;
+        border: 1px solid rgba(126, 87, 31, 0.3);
+        border-radius: 6px;
+        background: rgba(255, 249, 235, 0.65);
     }
 
-    .loadout-heading span {
-        color: #c5b16b;
-        font-size: 10px;
-    }
+        .box-texto-preview.full-span {
+            grid-column: 1 / -1;
+        }
 
-.loadout-slots {
+        .tags-row-preview h4,
+        .box-texto-preview h4 {
+            margin: 0 0 5px;
+            color: #7a5621;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .tags-row-preview p,
+        .box-texto-preview p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+
+.dados-fisicos-grid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 8px;
-    color: #b7a78c;
-    font-size: 10px;
 }
 
-.loadout-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #ead9b9;
-    font-size: 11px;
-}
-
-    .loadout-option input {
-        accent-color: #c3a254;
+    .dados-fisicos-grid > div {
+        padding: 8px 10px;
+        border: 1px solid rgba(126, 87, 31, 0.3);
+        border-radius: 6px;
+        background: rgba(255, 249, 235, 0.7);
+        text-align: center;
     }
 
-.join-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(217, 184, 120, 0.2);
-}
-
-    .join-actions button {
-        min-height: 42px;
-        border: 1px solid #d4b364;
-        cursor: pointer;
+    .dados-fisicos-grid span {
+        display: block;
+        font-size: 10px;
+        color: #7a5621;
+        text-transform: uppercase;
     }
 
+    .dados-fisicos-grid strong {
+        font-size: 13px;
+        color: #392819;
+    }
+
+.lista-itens-preview {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+}
+
+    .lista-itens-preview li {
+        margin-bottom: 4px;
+    }
+
+/* ============================================================
+   ETAPA 2: RESUMO E BOTÕES DE AÇÃO
+   ============================================================ */
 .join-session-name {
     margin: -6px 0 20px;
     color: #c7b27a;
@@ -482,12 +587,67 @@
         line-height: 1.55;
     }
 
-.join-local-note {
-    margin: 17px 0 0;
-    color: #93866f;
-    font-size: 10px;
-    line-height: 1.5;
+.join-status {
+    min-height: 17px;
+    margin: 12px 0 0;
+    color: #d0bd90;
+    font-size: 11px;
 }
+
+    .join-status.erro {
+        color: #e8a58d;
+    }
+
+.join-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(217, 184, 120, 0.2);
+}
+
+.join-card .action-primary,
+.join-card .action-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.join-card .action-primary {
+    border: 1px solid #d4b364;
+    background: #947333;
+    color: #fff0cf;
+}
+
+    .join-card .action-primary:hover:not(:disabled) {
+        background: #aa8540;
+    }
+
+.join-card .action-secondary {
+    border: 1px solid rgba(217, 184, 120, 0.38);
+    background: rgba(26, 20, 15, 0.65);
+    color: #dfc995;
+}
+
+    .join-card .action-secondary:hover:not(:disabled) {
+        background: rgba(55, 40, 28, 0.8);
+    }
+
+    .join-card .action-primary:disabled,
+    .join-card .action-secondary:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
 
 .join-shell a:focus-visible,
 .join-shell button:focus-visible,
@@ -497,6 +657,9 @@
     outline-offset: 2px;
 }
 
+/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
 @media (max-width: 700px) {
     .join-content {
         padding: 20px 16px 30px;
@@ -527,20 +690,14 @@
     }
 
     .character-options,
-    .loadout-grid,
-    .join-review {
+    .join-review,
+    .tags-row-preview,
+    .diario-grid-preview {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    @media (max-width: 420px) {
-        .join-page-heading {
-            flex-direction: column;
-        }
-
-            .join-page-heading .botao-voltar {
-                align-self: flex-end;
-                margin-top: 0;
-            }
+    .atributos-grid-preview {
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .join-actions {
@@ -548,8 +705,18 @@
         flex-direction: column-reverse;
     }
 
-        .join-actions button,
-        .join-code-form .action-primary {
+        .join-actions button {
             width: 100%;
+        }
+}
+
+@media (max-width: 420px) {
+    .join-page-heading {
+        flex-direction: column;
+    }
+
+        .join-page-heading .botao-voltar {
+            align-self: flex-end;
+            margin-top: 0;
         }
 }

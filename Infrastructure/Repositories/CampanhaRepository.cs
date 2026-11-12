@@ -18,9 +18,14 @@ public class CampanhaRepository : ICampanhaRepository
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Campanhas
-            .AsSplitQuery() // Evita Explosão Cartesiana e travamento no SQL Server
+            .AsSplitQuery()
             .Include(c => c.UsuarioMestre)
-            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Usuario)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.PersonagemClasses).ThenInclude(pcl => pcl.Classe)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Salvaguardas)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Pericias)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Inventario).ThenInclude(inv => inv!.Itens).ThenInclude(ii => ii.Item)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.PersonagemMagias).ThenInclude(pm => pm.Magia)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
             .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
@@ -143,6 +148,67 @@ public class CampanhaRepository : ICampanhaRepository
         _contexto.UsuariosCampanha.RemoveRange(vinculoUsuario);
         _contexto.PersonagensCampanha.RemoveRange(vinculosPersonagens);
         await _contexto.SaveChangesAsync();
+    }
+
+    public async Task EnviarFichaCampanhaAsync(int idCampanha, int idPersonagem, string statusInicial = "Pendente")
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var personagemEscolhido = await _contexto.Personagens
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.IdPersonagem == idPersonagem);
+
+        if (personagemEscolhido == null) return;
+
+        var vinculoExistente = await _contexto.PersonagensCampanha
+            .FirstOrDefaultAsync(pc => pc.IdCampanha == idCampanha && pc.IdPersonagem == idPersonagem);
+
+        if (vinculoExistente == null)
+        {
+            await _contexto.PersonagensCampanha.AddAsync(new PersonagemCampanha(idPersonagem, idCampanha, statusInicial));
+        }
+        else
+        {
+            if (statusInicial.Equals("Aceita", StringComparison.OrdinalIgnoreCase))
+                vinculoExistente.AprovarFicha();
+            else if (statusInicial.Equals("Recusada", StringComparison.OrdinalIgnoreCase))
+                vinculoExistente.RecusarFicha();
+            else if (!string.Equals(vinculoExistente.StatusAprovacao, "Aceita", StringComparison.OrdinalIgnoreCase))
+                vinculoExistente.ReenviarFicha();
+        }
+
+        await _contexto.SaveChangesAsync();
+    }
+    public async Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus)
+    {
+        _contexto.ChangeTracker.Clear();
+        var vinculo = await _contexto.PersonagensCampanha
+            .FirstOrDefaultAsync(pc => pc.IdCampanha == idCampanha && pc.IdPersonagem == idPersonagem);
+
+        if (vinculo != null)
+        {
+            if (novoStatus.Equals("Aceita", StringComparison.OrdinalIgnoreCase))
+                vinculo.AprovarFicha();
+            else if (novoStatus.Equals("Recusada", StringComparison.OrdinalIgnoreCase))
+                vinculo.RecusarFicha();
+            else
+                vinculo.ReenviarFicha();
+
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoverPersonagemCampanhaAsync(int idCampanha, int idPersonagem)
+    {
+        _contexto.ChangeTracker.Clear();
+        var vinculo = await _contexto.PersonagensCampanha
+            .FirstOrDefaultAsync(pc => pc.IdCampanha == idCampanha && pc.IdPersonagem == idPersonagem);
+
+        if (vinculo != null)
+        {
+            _contexto.PersonagensCampanha.Remove(vinculo);
+            await _contexto.SaveChangesAsync();
+        }
     }
 
     public async Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro)

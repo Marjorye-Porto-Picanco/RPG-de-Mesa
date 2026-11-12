@@ -21,6 +21,9 @@ public interface ICampanhaRepository
     Task AtualizarAsync(Campanha campanha);
     Task RemoverCampanhaAsync(int idCampanha);
     Task RemoverUsuarioDaCampanhaAsync(int idAccount, int idCampanha);
+    Task EnviarFichaCampanhaAsync(int idCampanha, int idPersonagem, string statusInicial = "Pendente");
+    Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus);
+    Task RemoverPersonagemCampanhaAsync(int idCampanha, int idPersonagem);
     Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc);
     Task AdicionarItemCampanhaAsync(int idCampanha, int idItem);

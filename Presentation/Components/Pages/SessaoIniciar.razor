@@ -4,7 +4,9 @@
 @using RPGdeMesa.Domain.Bestiario
 @using RPGdeMesa.Domain.Itens
 @using RPGdeMesa.Domain.Npcs
+@using RPGdeMesa.Domain.Personagens
 @inject CampanhaService CampanhaService
+@inject PersonagemService PersonagemService
 @inject NpcService NpcService
 @inject ItemService ItemService
 @inject NavigationManager Navigation
@@ -17,26 +19,33 @@
             <!-- Sidebar: Navegação e Jogadores -->
             <aside class="session-sidebar">
                 <nav class="session-nav" aria-label="Páginas da sessão">
-                    <a class="session-nav-link @(iniciar ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirIniciar">Iniciar sessão</a>
-                    <a class="session-nav-link @(config ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirConfig">Configurações</a>
-                    <a class="session-nav-link @(hist ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirHist">Histórico</a>
+                    <a class="session-nav-link @(abaMenu == "iniciar" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirIniciar">Iniciar sessão</a>
+                    <a class="session-nav-link @(abaMenu == "config" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirConfig">Configurações</a>
+                    <a class="session-nav-link @(abaMenu == "fichas" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirFichas" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Fichas dos Jogadores</span>
+                        @if (FichasPendentes.Any())
+                        {
+                            <span class="badge-pendentes">@FichasPendentes.Count()</span>
+                        }
+                    </a>
+                    <a class="session-nav-link @(abaMenu == "hist" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirHist">Histórico</a>
                 </nav>
 
                 <section class="session-players-panel" aria-labelledby="titulo-jogadores">
-                    <h2 id="titulo-jogadores">Jogadores na Mesa</h2>
+                    <h2 id="titulo-jogadores">Jogadores Aceitos na Mesa</h2>
                     <div class="session-players">
                         @if (campanhaAtual?.Personagens != null && campanhaAtual.Personagens.Any())
                         {
                             @foreach (var p in campanhaAtual.Personagens)
                             {
-                                <div class="player-option">
-                                    <span>@p.Nome<span>@(p.RacaTexto ?? "Aventureiro") · @(p.ClasseTexto ?? "Geral")</span></span>
+                                <div class="player-option" style="cursor:pointer;" title="Clique para inspecionar a ficha" @onclick="() => InspecionarFichaNaAbaAsync(p.IdPersonagem)">
+                                    <span>@p.Nome<span>@(p.RacaTexto ?? "Aventureiro") · @(p.ClasseTexto ?? "Geral") (Nv. @p.Nivel)</span></span>
                                 </div>
                             }
                         }
                         else
                         {
-                            <p class="aviso-vazio" style="font-size: 0.85rem; padding: 10px; color: #888;">Nenhum personagem vinculado.</p>
+                            <p class="aviso-vazio" style="font-size: 0.85rem; padding: 10px; color: #888;">Nenhuma ficha aceita ainda.</p>
                         }
                     </div>
                 </section>
@@ -44,7 +53,7 @@
 
             <!-- Conteúdo Principal -->
             <section class="preview-content">
-                @if (iniciar)
+                @if (abaMenu == "iniciar")
                 {
                     <header class="page-heading">
                         <div>
@@ -60,13 +69,23 @@
                         <dl class="summary-details">
                             <div><dt>Código</dt><dd>@(campanhaAtual?.CodigoConvite ?? "---")</dd></div>
                             <div><dt>Criação</dt><dd>@campanhaAtual?.DataCriacao.ToString("dd/MM/yyyy")</dd></div>
-                            <div><dt>Aventureiros</dt><dd>@(campanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
+                            <div><dt>Aventureiros Aceitos</dt><dd>@(campanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
+                            <div><dt>Fichas Pendentes</dt><dd>@FichasPendentes.Count() aguardando avaliação</dd></div>
                         </dl>
-                        <a class="action-primary" href="/campanhas">Voltar para campanhas <span aria-hidden="true">→</span></a>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <a class="action-primary" href="/saladojogo">Abrir Sala de Jogo <span aria-hidden="true">→</span></a>
+                            @if (FichasPendentes.Any())
+                            {
+                                <button type="button" class="action-primary" style="background:#6f5296; border-color:#a28acb;" @onclick="AbrirFichas">
+                                    Avaliar @FichasPendentes.Count() Ficha(s) Pendente(s)
+                                </button>
+                            }
+                            <a class="action-primary" style="background:transparent; border-color:rgba(217,184,120,0.4);" href="/campanhas">Voltar para campanhas</a>
+                        </div>
                     </section>
                 }
 
-                @if (config)
+                @if (abaMenu == "config")
                 {
                     <header class="page-heading">
                         <div>
@@ -264,7 +283,6 @@
                                     }
                                     else
                                     {
-                                        <!-- CAMPOS COMPLETOS DA TABELA DE ITENS -->
                                         <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
                                         <label class="form-field">
                                             Tipo
@@ -325,7 +343,302 @@
                     </div>
                 }
 
-                @if (hist)
+                @* =========================================================================
+                   NOVA ABA DO MESTRE: FICHAS DOS JOGADORES (ACEITAR / RECUSAR E VER FICHA ABAIXO)
+                   ========================================================================= *@
+                @if (abaMenu == "fichas")
+                {
+                    <header class="page-heading">
+                        <div>
+                            <p class="page-kicker">Controle do Mestre</p>
+                            <h1>Fichas dos Jogadores</h1>
+                            <p class="page-description">Inspecione as fichas enviadas pelos jogadores, aceite ou recuse a entrada na mesa.</p>
+                        </div>
+                    </header>
+
+                    <div class="session-page-content">
+                        <div class="link-tabs" role="tablist" style="max-width: 480px; margin-bottom: 16px;">
+                            <button class="link-tab @(filtroFichasMestre == "pendentes" ? "ativa" : "")" @onclick='() => filtroFichasMestre = "pendentes"'>
+                                Fichas para Validar <span>@FichasPendentes.Count()</span>
+                            </button>
+                            <button class="link-tab @(filtroFichasMestre == "aceitas" ? "ativa" : "")" @onclick='() => filtroFichasMestre = "aceitas"'>
+                                Fichas Aceitas <span>@FichasAceitas.Count()</span>
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(mensagemFeedbackFichas))
+                        {
+                            <p class="save-status" style="margin-bottom: 14px; font-size: 12px; color: #d4af37; font-weight: bold;">@mensagemFeedbackFichas</p>
+                        }
+
+                        <div class="fichas-mestre-lista">
+                            @if (filtroFichasMestre == "pendentes")
+                            {
+                                @if (FichasPendentes.Any())
+                                {
+                                    @foreach (var pc in FichasPendentes)
+                                    {
+                                        var p = pc.Personagem!;
+                                        <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
+                                            <div class="ficha-mestre-info">
+                                                <strong>@p.Nome</strong>
+                                                <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}")</small>
+                                            </div>
+                                            <div class="ficha-mestre-acoes">
+                                                <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
+                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha Aberta Abaixo" : "👁 Inspecionar Ficha")
+                                                </button>
+                                                <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(p.IdPersonagem)">✓ Aceitar</button>
+                                                <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">✕ Recusar</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="empty-message">Nenhuma ficha pendente de validação no momento.</p>
+                                }
+                            }
+                            else
+                            {
+                                @if (FichasAceitas.Any())
+                                {
+                                    @foreach (var pc in FichasAceitas)
+                                    {
+                                        var p = pc.Personagem!;
+                                        <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
+                                            <div class="ficha-mestre-info">
+                                                <strong>@p.Nome <span class="tag-aceita">✓ Aceita</span></strong>
+                                                <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}")</small>
+                                            </div>
+                                            <div class="ficha-mestre-acoes">
+                                                <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
+                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha Aberta Abaixo" : "👁 Visualizar Ficha")
+                                                </button>
+                                                <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">Revogar</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="empty-message">Nenhuma ficha aceita nesta campanha ainda.</p>
+                                }
+                            }
+                        </div>
+
+                        <!-- =========================================================================
+                             PAINEL DE INSPEÇÃO COMPLETA DA FICHA LOGO ABAIXO (ESTILO PERGAMINHO)
+                             ========================================================================= -->
+                        @if (fichaInspecionada != null)
+                        {
+                            <section class="ficha-pergaminho-inspecao" aria-label="Inspeção completa da ficha">
+                                <div class="inspecao-top-bar">
+                                    <span>Inspecionando ficha de <strong>@fichaInspecionada.Nome</strong></span>
+                                    <div style="display:flex; gap:8px;">
+                                        @if (StatusDaFichaInspecionada == "Pendente")
+                                        {
+                                            <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha na Mesa</button>
+                                            <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
+                                        }
+                                        <button type="button" class="btn-fechar-inspecao" @onclick="() => fichaInspecionada = null">Fechar ✕</button>
+                                    </div>
+                                </div>
+
+                                <div class="ficha-cabecalho-inspecao">
+                                    <div class="retrato-inspecao">
+                                        <img src="@(string.IsNullOrEmpty(fichaInspecionada.Imagem) ? "img/armaduraprata.png" : fichaInspecionada.Imagem)" alt="Retrato do personagem" />
+                                    </div>
+                                    <div class="identidade-inspecao">
+                                        <p class="sobretitulo-inspecao">Ficha de Personagem (@StatusDaFichaInspecionada)</p>
+                                        <h2>@fichaInspecionada.Nome</h2>
+                                        <p class="descricao-inspecao">@(fichaInspecionada.RacaTexto ?? "Raça") • @(fichaInspecionada.ClasseTexto ?? "Classe") • Nível Total @fichaInspecionada.Nivel</p>
+                                        <div class="dados-inspecao">
+                                            <span><b>Raça:</b> @(fichaInspecionada.RacaTexto ?? "Não informada")</span>
+                                            <span><b>Tendência:</b> @(fichaInspecionada.Tendencia ?? "Neutra")</span>
+                                            <span><b>Antecedente:</b> @(fichaInspecionada.AntecedenteTexto ?? "Não informado")</span>
+                                            <span><b>Experiência:</b> @fichaInspecionada.ExperienciaXp.ToString("N0") XP</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="troca-ficha-inspecao" role="tablist">
+                                    <button type="button" class="aba-inspecao @(abaInspecao == "atributos" ? "ativa" : "")" @onclick='() => abaInspecao = "atributos"'>Atributos & Diário</button>
+                                    <button type="button" class="aba-inspecao @(abaInspecao == "personagem" ? "ativa" : "")" @onclick='() => abaInspecao = "personagem"'>Personagem & Classes</button>
+                                    <button type="button" class="aba-inspecao @(abaInspecao == "inventario" ? "ativa" : "")" @onclick='() => abaInspecao = "inventario"'>Inventário</button>
+                                    <button type="button" class="aba-inspecao @(abaInspecao == "grimorio" ? "ativa" : "")" @onclick='() => abaInspecao = "grimorio"'>Grimório</button>
+                                </div>
+
+                                @if (abaInspecao == "atributos")
+                                {
+                                    <div class="inspecao-corpo">
+                                        <div class="atributos-grid-inspecao">
+                                            <div class="box-attr-inspecao"><span>Força</span><strong>@fichaInspecionada.Forca</strong><small>@ObterModificador(fichaInspecionada.Forca)</small></div>
+                                            <div class="box-attr-inspecao"><span>Destreza</span><strong>@fichaInspecionada.Destreza</strong><small>@ObterModificador(fichaInspecionada.Destreza)</small></div>
+                                            <div class="box-attr-inspecao"><span>Constituição</span><strong>@fichaInspecionada.Constituicao</strong><small>@ObterModificador(fichaInspecionada.Constituicao)</small></div>
+                                            <div class="box-attr-inspecao"><span>Inteligência</span><strong>@fichaInspecionada.Inteligencia</strong><small>@ObterModificador(fichaInspecionada.Inteligencia)</small></div>
+                                            <div class="box-attr-inspecao"><span>Sabedoria</span><strong>@fichaInspecionada.Sabedoria</strong><small>@ObterModificador(fichaInspecionada.Sabedoria)</small></div>
+                                            <div class="box-attr-inspecao"><span>Carisma</span><strong>@fichaInspecionada.Carisma</strong><small>@ObterModificador(fichaInspecionada.Carisma)</small></div>
+                                        </div>
+
+                                        <div class="grid-2-inspecao">
+                                            <div class="painel-escuro-inspecao">
+                                                <h4>Salvaguardas Marcadas</h4>
+                                                <p>@(fichaInspecionada.Salvaguardas.Any() ? string.Join(", ", fichaInspecionada.Salvaguardas.Select(s => s.Atributo)) : "Nenhuma salvaguarda marcada.")</p>
+                                            </div>
+                                            <div class="painel-escuro-inspecao">
+                                                <h4>Perícias Treinadas</h4>
+                                                <p>@(fichaInspecionada.Pericias.Any() ? string.Join(", ", fichaInspecionada.Pericias.Select(p => p.NomePericia)) : "Nenhuma perícia marcada.")</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid-2-inspecao">
+                                            <div class="painel-marrom-inspecao">
+                                                <h4>Traços de Personalidade</h4>
+                                                <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.TracosPersonalidade) ? "Não informado." : fichaInspecionada.TracosPersonalidade)</p>
+                                            </div>
+                                            <div class="painel-marrom-inspecao">
+                                                <h4>Ponto de Vista Atual</h4>
+                                                <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.PontoDeVista) ? "Não informado." : fichaInspecionada.PontoDeVista)</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- SWITCH DO DIÁRIO NA INSPEÇÃO DO MESTRE -->
+                                        <div class="diario-inspecao-switch">
+                                            <div class="diario-inspecao-tabs">
+                                                <button type="button" class="@(secaoDiarioInspecao == "ideais" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "ideais"'>Ideais</button>
+                                                <button type="button" class="@(secaoDiarioInspecao == "ligacoes" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "ligacoes"'>Ligações</button>
+                                                <button type="button" class="@(secaoDiarioInspecao == "defeitos" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "defeitos"'>Defeitos</button>
+                                                <button type="button" class="@(secaoDiarioInspecao == "idiomas" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "idiomas"'>Idiomas</button>
+                                            </div>
+                                            <div class="painel-marrom-inspecao">
+                                                @if (secaoDiarioInspecao == "ideais")
+                                                {
+                                                    <h4>Ideais</h4>
+                                                    <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Ideais) ? "Não informado." : fichaInspecionada.Ideais)</p>
+                                                }
+                                                else if (secaoDiarioInspecao == "ligacoes")
+                                                {
+                                                    <h4>Ligações</h4>
+                                                    <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Ligacoes) ? "Não informado." : fichaInspecionada.Ligacoes)</p>
+                                                }
+                                                else if (secaoDiarioInspecao == "defeitos")
+                                                {
+                                                    <h4>Defeitos</h4>
+                                                    <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Defeitos) ? "Não informado." : fichaInspecionada.Defeitos)</p>
+                                                }
+                                                else
+                                                {
+                                                    <h4>Idiomas Conhecidos</h4>
+                                                    <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Idiomas) ? "Não informado." : fichaInspecionada.Idiomas)</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (abaInspecao == "personagem")
+                                {
+                                    <div class="inspecao-corpo">
+                                        <div class="grid-4-inspecao">
+                                            <div class="campo-leitura-inspecao"><span>Idade</span><strong>@(fichaInspecionada.Idade ?? "—")</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>Gênero</span><strong>@(fichaInspecionada.Genero ?? "—")</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>Altura</span><strong>@(fichaInspecionada.Altura ?? "—")</strong></div>
+                                            <div class="campo-leitura-inspecao"><span>Peso</span><strong>@(fichaInspecionada.Peso ?? "—")</strong></div>
+                                        </div>
+
+                                        @if (fichaInspecionada.PersonagemClasses != null && fichaInspecionada.PersonagemClasses.Any())
+                                        {
+                                            <div class="painel-marrom-inspecao">
+                                                <h4>Classes (Multiclasse)</h4>
+                                                <p>@string.Join(" / ", fichaInspecionada.PersonagemClasses.Where(c => c.Classe != null).Select(c => $"{c.Classe!.Nome} (Nível {c.NivelNaClasse})"))</p>
+                                            </div>
+                                        }
+
+                                        <div class="grid-2-inspecao">
+                                            <div class="painel-marrom-inspecao"><h4>Aparência</h4><p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Aparencia) ? "—" : fichaInspecionada.Aparencia)</p></div>
+                                            <div class="painel-marrom-inspecao"><h4>Aliados e Organizações</h4><p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Aliados) ? "—" : fichaInspecionada.Aliados)</p></div>
+                                            <div class="painel-marrom-inspecao full-col"><h4>História do Personagem</h4><p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Historia) ? "—" : fichaInspecionada.Historia)</p></div>
+                                            <div class="painel-marrom-inspecao"><h4>Características e Habilidades</h4><p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Caracteristicas) ? "—" : fichaInspecionada.Caracteristicas)</p></div>
+                                            <div class="painel-marrom-inspecao"><h4>Tesouro Pessoal</h4><p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Tesouro) ? "—" : fichaInspecionada.Tesouro)</p></div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (abaInspecao == "inventario")
+                                {
+                                    <div class="inspecao-corpo">
+                                        @if (fichaInspecionada.Inventario != null)
+                                        {
+                                            <div class="grid-4-inspecao" style="grid-template-columns: repeat(5, 1fr);">
+                                                <div class="campo-leitura-inspecao"><span>PC</span><strong>@fichaInspecionada.Inventario.MoedasPC</strong></div>
+                                                <div class="campo-leitura-inspecao"><span>PP</span><strong>@fichaInspecionada.Inventario.MoedasPP</strong></div>
+                                                <div class="campo-leitura-inspecao"><span>PE</span><strong>@fichaInspecionada.Inventario.MoedasPE</strong></div>
+                                                <div class="campo-leitura-inspecao"><span>PO</span><strong>@fichaInspecionada.Inventario.MoedasPO</strong></div>
+                                                <div class="campo-leitura-inspecao"><span>PL</span><strong>@fichaInspecionada.Inventario.MoedasPL</strong></div>
+                                            </div>
+
+                                            <div class="painel-marrom-inspecao">
+                                                <h4>Itens no Inventário (Peso Atual: @(fichaInspecionada.Inventario.PesoAtual ?? 0) kg / @(fichaInspecionada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
+                                                @if (fichaInspecionada.Inventario.Itens != null && fichaInspecionada.Inventario.Itens.Any())
+                                                {
+                                                    <ul style="margin: 0; padding-left: 18px;">
+                                                        @foreach (var ii in fichaInspecionada.Inventario.Itens)
+                                                        {
+                                                            <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> — @(ii.Item?.Tipo ?? "Geral") (@(ii.Item?.Peso ?? 0) kg, @(ii.Item?.Preco ?? 0) po)</li>
+                                                        }
+                                                    </ul>
+                                                }
+                                                else
+                                                {
+                                                    <p>Nenhum item equipado.</p>
+                                                }
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(fichaInspecionada.Inventario.Notas))
+                                            {
+                                                <div class="painel-marrom-inspecao">
+                                                    <h4>Notas do Inventário</h4>
+                                                    <p>@fichaInspecionada.Inventario.Notas</p>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <p>Inventário vazio.</p>
+                                        }
+                                    </div>
+                                }
+                                else if (abaInspecao == "grimorio")
+                                {
+                                    <div class="inspecao-corpo">
+                                        <div class="painel-marrom-inspecao">
+                                            <h4>Magias Conhecidas / Preparadas</h4>
+                                            @if (fichaInspecionada.PersonagemMagias != null && fichaInspecionada.PersonagemMagias.Any())
+                                            {
+                                                <ul style="margin: 0; padding-left: 18px;">
+                                                    @foreach (var pm in fichaInspecionada.PersonagemMagias)
+                                                    {
+                                                        if (pm.Magia != null)
+                                                        {
+                                                            <li><strong>@pm.Magia.Nome</strong> — Círculo @pm.Magia.CirculoNivel | Efeito: @(pm.Magia.DanoEfeito ?? "—") | Alcance: @(pm.Magia.Alcance ?? "—")</li>
+                                                        }
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <p>Nenhuma magia registrada no grimório.</p>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </section>
+                        }
+                    </div>
+                }
+
+                @if (abaMenu == "hist")
                 {
                     <header class="page-heading">
                         <div><p class="page-kicker">Memória da campanha</p><h1>Histórico das sessões</h1><p class="page-description">Acompanhe os registros desta mesa.</p></div>
@@ -348,12 +661,27 @@
     private List<Item> itensDisponiveis = new();
     private string termoBusca = string.Empty;
 
-    private bool config = false;
-    private bool iniciar = true;
-    private bool hist = false;
+    private string abaMenu = "iniciar"; // "iniciar", "config", "fichas", "hist"
     private string categoriaAtiva = "todos";
     private string modoVisualizacao = "vinculados";
     private string categoriaSelecionada = "npc";
+
+    // Estado da Aba de Fichas do Mestre
+    private string filtroFichasMestre = "pendentes";
+    private Personagem? fichaInspecionada;
+    private string abaInspecao = "atributos";
+    private string secaoDiarioInspecao = "ideais";
+    private string mensagemFeedbackFichas = string.Empty;
+
+    private IEnumerable<PersonagemCampanha> FichasPendentes =>
+        campanhaAtual?.FichasPendentes ?? Enumerable.Empty<PersonagemCampanha>();
+
+    private IEnumerable<PersonagemCampanha> FichasAceitas =>
+        campanhaAtual?.FichasAceitas ?? Enumerable.Empty<PersonagemCampanha>();
+
+    private string StatusDaFichaInspecionada =>
+        campanhaAtual?.PersonagemCampanhas
+            .FirstOrDefault(pc => pc.IdPersonagem == fichaInspecionada?.IdPersonagem)?.StatusAprovacao ?? "Pendente";
 
     private IEnumerable<NPC> NpcsVinculadosFiltrados =>
         (campanhaAtual?.Npcs ?? Array.Empty<NPC>()).Where(n =>
@@ -431,22 +759,55 @@
             campanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
             if (campanhaAtual != null)
             {
-                // Busca monstros padrão (IdAccount == null) + monstros criados pelo mestre
                 var todosMonstros = await CampanhaService.ObterMonstrosParaSessaoAsync(campanhaAtual.IdAccount);
                 var idsMonstrosVinculados = campanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
                 monstrosDisponiveis = todosMonstros.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
 
-                // Busca NPCs criados pelo mestre
                 var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
                 var idsNpcsVinculados = campanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
                 npcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
 
-                // Busca itens padrão (IdAccount == null) + itens criados pelo mestre
                 var todosItens = await CampanhaService.ObterItensParaSessaoAsync(campanhaAtual.IdAccount);
                 var idsItensVinculados = campanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
                 itensDisponiveis = todosItens.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
             }
         }
+    }
+
+    private async Task InspecionarFichaNaAbaAsync(int idPersonagem)
+    {
+        abaMenu = "fichas";
+        filtroFichasMestre = "aceitas";
+        await CarregarFichaParaInspecaoAsync(idPersonagem);
+    }
+
+    private async Task CarregarFichaParaInspecaoAsync(int idPersonagem)
+    {
+        fichaInspecionada = await PersonagemService.ObterPorIdAsync(idPersonagem);
+        abaInspecao = "atributos";
+        secaoDiarioInspecao = "ideais";
+    }
+
+    private async Task AprovarFichaJogadorAsync(int idPersonagem)
+    {
+        var resultado = await CampanhaService.AprovarFichaCampanhaAsync(IdCampanha, idPersonagem);
+        mensagemFeedbackFichas = resultado.Mensagem;
+        await CarregarDadosCampanhaAsync();
+        if (fichaInspecionada?.IdPersonagem == idPersonagem)
+        {
+            fichaInspecionada = await PersonagemService.ObterPorIdAsync(idPersonagem);
+        }
+    }
+
+    private async Task RecusarFichaJogadorAsync(int idPersonagem)
+    {
+        var resultado = await CampanhaService.RecusarFichaCampanhaAsync(IdCampanha, idPersonagem);
+        mensagemFeedbackFichas = resultado.Mensagem;
+        if (fichaInspecionada?.IdPersonagem == idPersonagem)
+        {
+            fichaInspecionada = null;
+        }
+        await CarregarDadosCampanhaAsync();
     }
 
     private async Task SalvarRegistroAsync()
@@ -591,7 +952,18 @@
         await CarregarDadosCampanhaAsync();
     }
 
-    void AbrirIniciar() { iniciar = true; config = false; hist = false; }
-    void AbrirConfig() { iniciar = false; config = true; hist = false; }
-    void AbrirHist() { iniciar = false; config = false; hist = true; }
+    private static string ObterModificador(int valor)
+    {
+        var modificador = (int)Math.Floor((valor - 10) / 2.0);
+        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
+    }
+
+    void AbrirIniciar() { abaMenu = "iniciar"; }
+    void AbrirConfig() { abaMenu = "config"; }
+    void AbrirFichas()
+    {
+        abaMenu = "fichas";
+        filtroFichasMestre = FichasPendentes.Any() ? "pendentes" : "aceitas";
+    }
+    void AbrirHist() { abaMenu = "hist"; }
 }

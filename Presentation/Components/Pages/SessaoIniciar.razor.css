@@ -822,3 +822,392 @@ textarea:focus-visible {
             max-height: 60vh;
         }
 }
+/* ============================================================
+   Aba Fichas dos Jogadores & Inspeção Completa (Mestre)
+   ============================================================ */
+.badge-pendentes {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #d1a951;
+    color: #1b120e;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.fichas-mestre-lista {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.ficha-mestre-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid rgba(217, 184, 120, 0.28);
+    background: rgba(44, 33, 25, 0.82);
+}
+
+    .ficha-mestre-card.selecionada {
+        border-color: #d1a951;
+        background: rgba(75, 55, 32, 0.9);
+    }
+
+.ficha-mestre-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+    .ficha-mestre-info strong {
+        font-size: 15px;
+        color: #f3e7ce;
+    }
+
+    .ficha-mestre-info span {
+        font-size: 12px;
+        color: #d1a951;
+    }
+
+    .ficha-mestre-info small {
+        font-size: 11px;
+        color: #b7a78c;
+    }
+
+.tag-aceita {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(46, 125, 50, 0.35);
+    border: 1px solid rgba(129, 199, 132, 0.5);
+    color: #b9e6c0;
+    font-size: 10px;
+}
+
+.ficha-mestre-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-inspecionar,
+.btn-aprovar-ficha,
+.btn-recusar-ficha,
+.btn-fechar-inspecao {
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-inspecionar {
+    border: 1px solid rgba(217, 184, 120, 0.45);
+    background: rgba(25, 17, 13, 0.7);
+    color: #ead8b3;
+}
+
+.btn-aprovar-ficha {
+    border: 1px solid rgba(120, 190, 130, 0.6);
+    background: rgba(28, 65, 36, 0.9);
+    color: #b9e6c0;
+}
+
+    .btn-aprovar-ficha:hover {
+        background: #2f7a3d;
+        color: #fff;
+    }
+
+.btn-recusar-ficha {
+    border: 1px solid rgba(214, 96, 80, 0.6);
+    background: rgba(75, 24, 18, 0.9);
+    color: #f2b5a8;
+}
+
+    .btn-recusar-ficha:hover {
+        background: #8c2f22;
+        color: #fff;
+    }
+
+.btn-fechar-inspecao {
+    border: 1px solid rgba(126, 87, 31, 0.5);
+    background: rgba(57, 40, 25, 0.15);
+    color: #493519;
+}
+
+/* Pergaminho de Inspeção da Ficha (Abre Abaixo da Lista) */
+.ficha-pergaminho-inspecao {
+    position: relative;
+    padding: 26px clamp(18px, 2.5vw, 36px);
+    border: 2px solid #9c783d;
+    border-radius: 10px;
+    background-color: #dfc38d;
+    background-image: linear-gradient(rgba(248, 229, 188, 0.92), rgba(226, 198, 143, 0.95));
+    color: #493519;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+}
+
+.inspecao-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px dashed rgba(126, 87, 31, 0.45);
+    font-size: 13px;
+}
+
+.ficha-cabecalho-inspecao {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.retrato-inspecao {
+    width: 92px;
+    height: 92px;
+    border: 2px solid #946c2d;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #251912;
+}
+
+    .retrato-inspecao img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.sobretitulo-inspecao {
+    margin: 0 0 4px;
+    color: #936b2d;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.3px;
+}
+
+.identidade-inspecao h2 {
+    margin: 0;
+    color: #392819;
+    font-size: 26px;
+}
+
+.descricao-inspecao {
+    margin: 4px 0 10px;
+    color: #775b32;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dados-inspecao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 12px;
+    color: #654a27;
+}
+
+.troca-ficha-inspecao {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 24px;
+    background: rgba(100, 70, 31, 0.12);
+}
+
+.aba-inspecao {
+    min-height: 32px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: #765524;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+    .aba-inspecao.ativa {
+        background: #a47a2d;
+        color: #fff2d4;
+    }
+
+.inspecao-corpo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.atributos-grid-inspecao {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.box-attr-inspecao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    border: 1px solid rgba(130, 91, 35, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 253, 246, 0.82);
+}
+
+    .box-attr-inspecao span {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #715025;
+    }
+
+    .box-attr-inspecao strong {
+        font-size: 20px;
+        color: #382819;
+    }
+
+    .box-attr-inspecao small {
+        padding: 2px 9px;
+        border-radius: 99px;
+        background: rgba(167, 122, 50, 0.16);
+        color: #6b4818;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+.grid-2-inspecao {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.grid-4-inspecao {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.campo-leitura-inspecao {
+    padding: 10px 12px;
+    border: 1px solid rgba(146, 102, 39, 0.38);
+    border-radius: 8px;
+    background: rgba(255, 249, 235, 0.7);
+    text-align: center;
+}
+
+    .campo-leitura-inspecao span {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #805b22;
+    }
+
+    .campo-leitura-inspecao strong {
+        font-size: 14px;
+        color: #392819;
+    }
+
+.painel-escuro-inspecao {
+    padding: 14px;
+    border-radius: 10px;
+    background: linear-gradient(155deg, #403020, #2b2118);
+    color: #f0e1c5;
+}
+
+    .painel-escuro-inspecao h4 {
+        margin: 0 0 6px;
+        color: #f5dfb3;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .painel-escuro-inspecao p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+.painel-marrom-inspecao {
+    padding: 14px;
+    border: 1px solid rgba(126, 87, 31, 0.45);
+    border-radius: 10px;
+    background: linear-gradient(145deg, #956b31, #755022);
+    color: #fff1d1;
+}
+
+    .painel-marrom-inspecao.full-col {
+        grid-column: 1 / -1;
+    }
+
+    .painel-marrom-inspecao h4 {
+        margin: 0 0 6px;
+        color: #ffe8af;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+
+    .painel-marrom-inspecao p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+    }
+
+.diario-inspecao-switch {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.diario-inspecao-tabs {
+    display: inline-flex;
+    gap: 6px;
+    align-self: flex-start;
+    padding: 4px;
+    border-radius: 8px;
+    background: rgba(100, 70, 31, 0.16);
+}
+
+    .diario-inspecao-tabs button {
+        padding: 5px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #65481f;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .diario-inspecao-tabs button.ativa {
+            background: #8f6720;
+            color: #fff8e7;
+        }
+
+@media (max-width: 760px) {
+    .atributos-grid-inspecao {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-2-inspecao, .grid-4-inspecao {
+        grid-template-columns: 1fr;
+    }
+}

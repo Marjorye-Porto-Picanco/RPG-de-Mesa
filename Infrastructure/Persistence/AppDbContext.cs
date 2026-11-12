@@ -133,6 +133,8 @@ public class AppDbContext : DbContext
              .HasForeignKey(uc => uc.IdCampanha);
 
             e.Ignore(c => c.Personagens);
+            e.Ignore(c => c.FichasPendentes);
+            e.Ignore(c => c.FichasAceitas);
             e.Ignore(c => c.Npcs);
             e.Ignore(c => c.Itens);
         });
@@ -465,6 +467,7 @@ public class AppDbContext : DbContext
             e.HasKey(pc => new { pc.IdPersonagem, pc.IdCampanha });
             e.Property(pc => pc.IdPersonagem).HasColumnName("id_personagem");
             e.Property(pc => pc.IdCampanha).HasColumnName("id_campanha");
+            e.Property(pc => pc.StatusAprovacao).HasColumnName("status_aprovacao").HasMaxLength(20);
 
             e.HasOne(pc => pc.Personagem)
              .WithMany(p => p.PersonagemCampanhas)

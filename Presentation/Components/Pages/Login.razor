@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="login">
-    <div class="formes auth-card">
+    <form class="formes auth-card" @onsubmit="HandleSubmit" @onsubmit:preventDefault>
         <div class="auth-emblem" aria-hidden="true"><i class="bi bi-dice-5"></i></div>
         <p class="auth-eyebrow">A sua mesa de aventuras</p>
         <h1>Salão da Mesa</h1>
@@ -18,12 +18,12 @@
 
         <label class="campos" for="email">
             <span>Email ou usuário</span>
-            <input type="text" id="email" @bind="viewModel.LoginOuEmail" @bind:event="oninput" @onkeydown="AoPressionarTecla" autocomplete="username" />
+            <input type="text" id="email" @bind="viewModel.LoginOuEmail" @bind:event="oninput" autocomplete="username" />
         </label>
 
         <label class="campos" for="senha">
             <span>Senha</span>
-            <input type="password" id="senha" @bind="viewModel.Senha" @bind:event="oninput" @onkeydown="AoPressionarTecla" autocomplete="current-password" />
+            <input type="password" id="senha" @bind="viewModel.Senha" @bind:event="oninput" autocomplete="current-password" />
         </label>
 
         @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
@@ -32,8 +32,7 @@
                 @viewModel.MensagemFeedback
             </p>
         }
-
-        <button class="auth-submit" type="button" @onclick="viewModel.EntrarAsync" disabled="@viewModel.IsProcessing">
+        <button class="auth-submit" type="submit" disabled="@viewModel.IsProcessing">
             @(viewModel.IsProcessing ? "Entrando..." : "Entrar")
         </button>
 
@@ -45,7 +44,7 @@
         <label class="termo">
             <span>Não possui conta? <a class="auth-create-link" href="/cadastro">Criar conta</a></span>
         </label>
-    </div>
+    </form>
 </section>
 
 @code {
@@ -57,10 +56,9 @@
         viewModel.OnChange += StateHasChanged;
     }
 
-    private async Task AoPressionarTecla(KeyboardEventArgs e)
+    private async Task HandleSubmit()
     {
-        if (e.Key == "Enter" || e.Key == "NumpadEnter")
-            await viewModel.EntrarAsync();
+        await viewModel.EntrarAsync();
     }
 
     public void Dispose()

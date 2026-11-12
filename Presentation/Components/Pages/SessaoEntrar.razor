@@ -1,11 +1,11 @@
 @page "/sessao-entrar"
+@page "/sessao-entrar/{IdCampanha:int}"
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Domain.Campanhas
 @using RPGdeMesa.Domain.Itens
 @using RPGdeMesa.Domain.Personagens
 @inject CampanhaService CampanhaService
 @inject PersonagemService PersonagemService
-@inject ItemService ItemService
 @inject SessaoUsuarioService SessaoUsuario
 @inject NavigationManager Navigation
 
@@ -16,296 +16,670 @@
         <header class="page-heading join-page-heading">
             <div>
                 <p class="page-kicker">Aventureiros, a mesa está aberta</p>
-                <h1 class="page-title">Entrar em sessão</h1>
-                <p class="page-description">Informe o código do mestre, prepare seu personagem e entre na sala.</p>
+                <h1 class="page-title">@(CampanhaAtual?.Nome ?? "Entrar em sessão")</h1>
+                <p class="page-description">Gerencie suas fichas na campanha, escolha com qual jogar e conecte-se na sala da sessão.</p>
             </div>
             <button class="botao-voltar" type="button" @onclick="VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
         </header>
 
-        <ol class="join-progress" aria-label="Etapas para entrar na sessão">
-            <li class="@(EtapaAtual == 1 ? "ativa" : EtapaAtual > 1 ? "concluida" : "")" data-progresso="1">
-                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 1 ? "step" : null)" @onclick="() => IrParaEtapa(1)"><span>1</span><strong>Código</strong></button>
+        <!-- 2 ETAPAS INDEPENDENTES -->
+        <ol class="join-progress join-progress-2" aria-label="Etapas para entrar na sessão">
+            <li class="@(EtapaAtual == 1 ? "ativa" : PossuiAlgumaFichaAceita ? "concluida" : "")">
+                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 1 ? "step" : null)" @onclick="() => IrParaEtapa(1)">
+                    <span>@(PossuiAlgumaFichaAceita ? "✓" : "1")</span>
+                    <strong>1. Fichas na Campanha (@VinculosDoJogador.Count)</strong>
+                </button>
             </li>
-            <li class="@(EtapaAtual == 2 ? "ativa" : EtapaAtual > 2 ? "concluida" : "")" data-progresso="2">
-                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 2 ? "step" : null)" disabled="@(!PodeAcessarEtapa(2))" @onclick="() => IrParaEtapa(2)"><span>2</span><strong>Personagem e equipamentos</strong></button>
-            </li>
-            <li class="@(EtapaAtual == 3 ? "ativa" : "")" data-progresso="3">
-                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 3 ? "step" : null)" disabled="@(!PodeAcessarEtapa(3))" @onclick="() => IrParaEtapa(3)"><span>3</span><strong>Entrar na sala</strong></button>
+            <li class="@(EtapaAtual == 2 ? "ativa" : "")">
+                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 2 ? "step" : null)" @onclick="() => IrParaEtapa(2)">
+                    <span>2</span>
+                    <strong>2. Conectar na Sessão</strong>
+                </button>
             </li>
         </ol>
 
-        @if (EtapaAtual == 1)
+        @if (CampanhaAtual is null)
         {
-            <section class="join-step join-card" id="etapa-codigo" aria-labelledby="titulo-codigo">
-                <p class="page-kicker">Etapa 1</p>
-                <h2 id="titulo-codigo">Código da sessão</h2>
-                <form class="join-code-form" @onsubmit="ValidarCodigo" @onsubmit:preventDefault="true">
-                    <label class="form-field">
-                        Código fornecido pelo mestre
-                        <input @bind="CodigoConvite" @bind:event="oninput" minlength="6" maxlength="8" required autocomplete="off" autocapitalize="characters" placeholder="Ex.: 7KQ2MX" />
-                    </label>
+            <section class="join-step join-card">
+                <p class="page-kicker">Aviso</p>
+                <h2>Campanha não localizada</h2>
+                <p class="join-status">Selecione uma campanha válida na sua biblioteca de Campanhas para configurar sua ficha e entrar na sessão.</p>
+                <div class="join-actions">
+                    <button class="action-primary" type="button" @onclick="VoltarParaHome">Voltar para Campanhas →</button>
+                </div>
+            </section>
+        }
+        else if (EtapaAtual == 1)
+        {
+            <!-- =========================================================================
+                 ETAPA 1: GERENCIAR MÚLTIPLAS FICHAS NA CAMPANHA E ENVIAR NOVAS AO MESTRE
+                 ========================================================================= -->
+            <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
+                <div class="step-header-row">
+                    <div>
+                        <p class="page-kicker">Etapa 1 · Preparação dos Heróis</p>
+                        <h2 id="titulo-personagem">Suas Fichas em @(CampanhaAtual.Nome)</h2>
+                    </div>
+
+                    @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha)
+                    {
+                        <button type="button" class="action-secondary" style="min-height:34px; font-size:11px;" @onclick="AbrirModoEnviarNovaFicha">
+                            + Enviar outra ficha para o Mestre
+                        </button>
+                    }
+                </div>
+
+                @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha)
+                {
+                    <!-- SELETOR DAS FICHAS JÁ VINCULADAS PELO JOGADOR NESTA CAMPANHA -->
+                    <fieldset class="character-picker" style="margin-bottom: 18px;">
+                        <legend>Selecione uma das suas fichas vinculadas a esta campanha para visualizar ou jogar:</legend>
+                        <div class="character-options">
+                            @foreach (var vinculo in VinculosDoJogador)
+                            {
+                                var p = vinculo.Personagem!;
+                                bool estaSelecionada = VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
+                                <label class="character-option @(estaSelecionada ? "selecionado" : "")" @onclick="() => SelecionarVinculoExistenteAsync(vinculo)">
+                                    <input type="radio"
+                                           name="vinculo-ativo"
+                                           checked="@estaSelecionada"
+                                           @onchange="() => SelecionarVinculoExistenteAsync(vinculo)" />
+                                    <span class="character-option-copy" style="flex:1;">
+                                        <strong>@p.Nome</strong>
+                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
+                                    </span>
+                                    <span class="status-badge status-@vinculo.StatusAprovacao.ToLowerInvariant()" style="font-size:10px; padding:3px 8px;">
+                                        @(vinculo.StatusAprovacao == "Aceita" ? "✓ Aceita" :
+                                          vinculo.StatusAprovacao == "Pendente" ? "⏳ Pendente" : "✕ Recusada")
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
+
+                    @if (VinculoSelecionado != null && FichaCompletaVinculada != null)
+                    {
+                        @if (StatusFichaAtual == "Pendente")
+                        {
+                            <div class="ficha-alert pendente">
+                                <strong>Ficha em avaliação!</strong> O mestre está analisando a ficha de <b>@FichaCompletaVinculada.Nome</b>. Você já pode enviar outras fichas ou usar qualquer outra ficha sua que já esteja <b>Aceita</b>.
+                            </div>
+                        }
+                        else if (StatusFichaAtual == "Aceita")
+                        {
+                            <div class="ficha-alert aceita">
+                                <strong>Ficha aprovada pelo Mestre!</strong> O personagem <b>@FichaCompletaVinculada.Nome</b> está liberado para entrar na partida.
+                            </div>
+                        }
+                        else if (StatusFichaAtual == "Recusada")
+                        {
+                            <div class="ficha-alert recusada" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Você pode reenviá-la após editá-la na biblioteca ou escolher outra ficha sua.</span>
+                                <button type="button" class="action-secondary" style="min-height:32px; font-size:11px;" @onclick="() => ReenviarFichaRecusadaAsync(FichaCompletaVinculada.IdPersonagem)">
+                                    ↻ Reenviar para avaliação
+                                </button>
+                            </div>
+                        }
+
+                        <!-- VISUALIZAÇÃO COMPLETA DA FICHA SELECIONADA (ESTILO PERGAMINHO) -->
+                        <div class="ficha-preview-pergaminho">
+                            <div class="ficha-cabecalho-preview">
+                                <div class="retrato-preview">
+                                    <img src="@(string.IsNullOrEmpty(FichaCompletaVinculada.Imagem) ? "img/armaduraprata.png" : FichaCompletaVinculada.Imagem)" alt="Retrato do personagem" />
+                                </div>
+                                <div class="identidade-preview">
+                                    <p class="sobretitulo-preview">Ficha Selecionada (@StatusFichaAtual)</p>
+                                    <h3>@FichaCompletaVinculada.Nome</h3>
+                                    <p class="subtitulo-preview">@(FichaCompletaVinculada.RacaTexto ?? "Raça") • @(FichaCompletaVinculada.ClasseTexto ?? "Classe") • Nível Total @FichaCompletaVinculada.Nivel</p>
+                                    <div class="dados-rapidos-preview">
+                                        <span><b>Tendência:</b> @(FichaCompletaVinculada.Tendencia ?? "Neutra")</span>
+                                        <span><b>Antecedente:</b> @(FichaCompletaVinculada.AntecedenteTexto ?? "Não informado")</span>
+                                        <span><b>XP:</b> @FichaCompletaVinculada.ExperienciaXp.ToString("N0")</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="abas-ficha-preview" role="tablist">
+                                <button type="button" class="aba-btn @(AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "atributos"'>Atributos & Diário</button>
+                                <button type="button" class="aba-btn @(AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "personagem"'>Personagem & Classes</button>
+                                <button type="button" class="aba-btn @(AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "inventario"'>Inventário</button>
+                                <button type="button" class="aba-btn @(AbaFichaPreview == "grimorio" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "grimorio"'>Grimório</button>
+                            </div>
+
+                            @if (AbaFichaPreview == "atributos")
+                            {
+                                <div class="preview-tab-body">
+                                    <div class="atributos-grid-preview">
+                                        <div class="attr-card"><span>FOR</span><strong>@FichaCompletaVinculada.Forca</strong><small>@ObterModificador(FichaCompletaVinculada.Forca)</small></div>
+                                        <div class="attr-card"><span>DES</span><strong>@FichaCompletaVinculada.Destreza</strong><small>@ObterModificador(FichaCompletaVinculada.Destreza)</small></div>
+                                        <div class="attr-card"><span>CON</span><strong>@FichaCompletaVinculada.Constituicao</strong><small>@ObterModificador(FichaCompletaVinculada.Constituicao)</small></div>
+                                        <div class="attr-card"><span>INT</span><strong>@FichaCompletaVinculada.Inteligencia</strong><small>@ObterModificador(FichaCompletaVinculada.Inteligencia)</small></div>
+                                        <div class="attr-card"><span>SAB</span><strong>@FichaCompletaVinculada.Sabedoria</strong><small>@ObterModificador(FichaCompletaVinculada.Sabedoria)</small></div>
+                                        <div class="attr-card"><span>CAR</span><strong>@FichaCompletaVinculada.Carisma</strong><small>@ObterModificador(FichaCompletaVinculada.Carisma)</small></div>
+                                    </div>
+
+                                    <div class="tags-row-preview">
+                                        <div>
+                                            <h4>Salvaguardas Proficientes</h4>
+                                            <p>@(FichaCompletaVinculada.Salvaguardas.Any() ? string.Join(", ", FichaCompletaVinculada.Salvaguardas.Select(s => s.Atributo)) : "Nenhuma marcada")</p>
+                                        </div>
+                                        <div>
+                                            <h4>Perícias Treinadas</h4>
+                                            <p>@(FichaCompletaVinculada.Pericias.Any() ? string.Join(", ", FichaCompletaVinculada.Pericias.Select(p => p.NomePericia)) : "Nenhuma marcada")</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="diario-grid-preview">
+                                        <div class="box-texto-preview"><h4>Traços de Personalidade</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.TracosPersonalidade) ? "—" : FichaCompletaVinculada.TracosPersonalidade)</p></div>
+                                        <div class="box-texto-preview"><h4>Ponto de Vista</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.PontoDeVista) ? "—" : FichaCompletaVinculada.PontoDeVista)</p></div>
+                                        <div class="box-texto-preview"><h4>Ideais</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Ideais) ? "—" : FichaCompletaVinculada.Ideais)</p></div>
+                                        <div class="box-texto-preview"><h4>Ligações</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Ligacoes) ? "—" : FichaCompletaVinculada.Ligacoes)</p></div>
+                                        <div class="box-texto-preview"><h4>Defeitos</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Defeitos) ? "—" : FichaCompletaVinculada.Defeitos)</p></div>
+                                        <div class="box-texto-preview"><h4>Idiomas</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Idiomas) ? "—" : FichaCompletaVinculada.Idiomas)</p></div>
+                                    </div>
+                                </div>
+                            }
+                            else if (AbaFichaPreview == "personagem")
+                            {
+                                <div class="preview-tab-body">
+                                    <div class="dados-fisicos-grid">
+                                        <div><span>Idade</span><strong>@(FichaCompletaVinculada.Idade ?? "—")</strong></div>
+                                        <div><span>Gênero</span><strong>@(FichaCompletaVinculada.Genero ?? "—")</strong></div>
+                                        <div><span>Altura</span><strong>@(FichaCompletaVinculada.Altura ?? "—")</strong></div>
+                                        <div><span>Peso</span><strong>@(FichaCompletaVinculada.Peso ?? "—")</strong></div>
+                                    </div>
+
+                                    <div class="diario-grid-preview">
+                                        <div class="box-texto-preview"><h4>Aparência</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Aparencia) ? "—" : FichaCompletaVinculada.Aparencia)</p></div>
+                                        <div class="box-texto-preview"><h4>Aliados e Organizações</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Aliados) ? "—" : FichaCompletaVinculada.Aliados)</p></div>
+                                        <div class="box-texto-preview full-span"><h4>História do Personagem</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Historia) ? "—" : FichaCompletaVinculada.Historia)</p></div>
+                                        <div class="box-texto-preview"><h4>Características e Habilidades</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Caracteristicas) ? "—" : FichaCompletaVinculada.Caracteristicas)</p></div>
+                                        <div class="box-texto-preview"><h4>Tesouro Pessoal</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Tesouro) ? "—" : FichaCompletaVinculada.Tesouro)</p></div>
+                                    </div>
+                                </div>
+                            }
+                            else if (AbaFichaPreview == "inventario")
+                            {
+                                <div class="preview-tab-body">
+                                    @if (FichaCompletaVinculada.Inventario != null)
+                                    {
+                                        <div class="dados-fisicos-grid">
+                                            <div><span>PC</span><strong>@FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
+                                            <div><span>PP</span><strong>@FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
+                                            <div><span>PE</span><strong>@FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
+                                            <div><span>PO</span><strong>@FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
+                                            <div><span>PL</span><strong>@FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
+                                        </div>
+
+                                        <div class="box-texto-preview full-span" style="margin-top: 12px;">
+                                            <h4>Itens Equipados na Ficha</h4>
+                                            @if (FichaCompletaVinculada.Inventario.Itens != null && FichaCompletaVinculada.Inventario.Itens.Any())
+                                            {
+                                                <ul class="lista-itens-preview">
+                                                    @foreach (var ii in FichaCompletaVinculada.Inventario.Itens)
+                                                    {
+                                                        <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · Peso unit.: @(ii.Item?.Peso ?? 0) kg)</span></li>
+                                                    }
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <p>Nenhum item registrado no inventário.</p>
+                                            }
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(FichaCompletaVinculada.Inventario.Notas))
+                                        {
+                                            <div class="box-texto-preview full-span" style="margin-top: 10px;">
+                                                <h4>Notas do Inventário</h4>
+                                                <p>@FichaCompletaVinculada.Inventario.Notas</p>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p>Nenhum inventário registrado para esta ficha.</p>
+                                    }
+                                </div>
+                            }
+                            else if (AbaFichaPreview == "grimorio")
+                            {
+                                <div class="preview-tab-body">
+                                    @if (FichaCompletaVinculada.PersonagemMagias != null && FichaCompletaVinculada.PersonagemMagias.Any())
+                                    {
+                                        <ul class="lista-itens-preview">
+                                            @foreach (var pm in FichaCompletaVinculada.PersonagemMagias)
+                                            {
+                                                if (pm.Magia != null)
+                                                {
+                                                    <li>
+                                                        <strong>@pm.Magia.Nome</strong>
+                                                        <span>(Círculo @pm.Magia.CirculoNivel · Efeito: @(pm.Magia.DanoEfeito ?? "—") · Alcance: @(pm.Magia.Alcance ?? "—"))</span>
+                                                    </li>
+                                                }
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p>Nenhuma magia cadastrada no grimório.</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
                     <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
-                    <button class="action-primary" type="submit" disabled="@Carregando">@(Carregando ? "Validando..." : "Continuar") <span aria-hidden="true">→</span></button>
-                </form>
+
+                    <div class="join-actions">
+                        <button class="action-secondary" type="button" @onclick="AbrirModoEnviarNovaFicha">
+                            + Enviar outra ficha para esta campanha
+                        </button>
+                        <button class="action-primary" type="button" @onclick="() => IrParaEtapa(2)">
+                            Ir para Etapa 2: Conectar com @(FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- FORMULÁRIO PARA ENVIAR UMA NOVA FICHA SEM APAGAR AS ANTERIORES -->
+                    <form @onsubmit="EnviarFichaAoMestreAsync" @onsubmit:preventDefault="true">
+                        <fieldset class="character-picker">
+                            <legend>Escolha um personagem da sua biblioteca para enviar ao Mestre desta campanha:</legend>
+                            @if (PersonagensNaoEnviados.Any())
+                            {
+                                <div class="character-options" id="opcoes-personagens">
+                                    @foreach (var personagem in PersonagensNaoEnviados)
+                                    {
+                                        <label class="character-option @(NovoPersonagemParaEnviarId == personagem.IdPersonagem ? "selecionado" : "")">
+                                            <input type="radio"
+                                                   name="novo-personagem"
+                                                   value="@personagem.IdPersonagem"
+                                                   @onchange="() => NovoPersonagemParaEnviarId = personagem.IdPersonagem"
+                                                   checked="@(NovoPersonagemParaEnviarId == personagem.IdPersonagem)" />
+                                            <span class="character-option-copy">
+                                                <strong>@personagem.Nome</strong>
+                                                <small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") · Nível @personagem.Nivel</small>
+                                            </span>
+                                        </label>
+                                    }
+                                </div>
+                            }
+                            else if (PersonagensDisponiveis.Any())
+                            {
+                                <p class="join-status">Todos os seus personagens cadastrados já foram enviados para esta campanha!</p>
+                            }
+                            else
+                            {
+                                <p class="join-status">Você ainda não possui personagens cadastrados. Crie um personagem primeiro!</p>
+                            }
+                        </fieldset>
+
+                        <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+
+                        <div class="join-actions">
+                            @if (VinculosDoJogador.Any())
+                            {
+                                <button class="action-secondary" type="button" @onclick="() => ModoAdicionarNovaFicha = false">
+                                    ← Voltar para minhas fichas na campanha
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="action-secondary" type="button" @onclick="VoltarParaHome">Voltar</button>
+                            }
+
+                            <button class="action-primary" type="submit" disabled="@(Carregando || !PersonagensNaoEnviados.Any())">
+                                @(Carregando ? "Enviando ficha..." : "Enviar Ficha para o Mestre →")
+                            </button>
+                        </div>
+                    </form>
+                }
             </section>
         }
         else if (EtapaAtual == 2)
         {
-            <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
-                <p class="page-kicker">Etapa 2</p>
-                <h2 id="titulo-personagem">Escolha seu personagem</h2>
-                <p class="join-limit-summary">@(CampanhaAtual?.Nome ?? "Campanha")</p>
-                <form @onsubmit="RevisarSelecao" @onsubmit:preventDefault="true">
-                    <fieldset class="character-picker">
-                        <legend>Personagem</legend>
-                        @if (PersonagensDisponiveis.Any())
-                        {
-                            <div class="character-options" id="opcoes-personagens">
-                                @foreach (var personagem in PersonagensDisponiveis)
-                                {
-                                    <label class="character-option @(PersonagemSelecionadoId == personagem.IdPersonagem ? "selecionado" : "")">
-                                        <input type="radio" name="personagem" value="@personagem.IdPersonagem" @onchange="() => SelecionarPersonagem(personagem.IdPersonagem)" checked="@(PersonagemSelecionadoId == personagem.IdPersonagem)" />
-                                        <span class="character-option-copy"><strong>@personagem.Nome</strong><small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") nível @personagem.Nivel</small></span>
-                                    </label>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="join-status">Você ainda não possui personagens cadastrados.</p>
-                        }
-                    </fieldset>
-
-                    <div class="loadout-grid">
-                        <section class="loadout-section" aria-labelledby="titulo-armas">
-                            <div class="loadout-heading"><h3 id="titulo-armas">Armas</h3><span>@ItensDisponiveis.Count(item => ItensSelecionados.Contains(item.IdItem) && EhArma(item)) selecionada(s)</span></div>
-                            <div class="loadout-slots" id="selecao-armas">
-                                @foreach (var item in ItensDisponiveis.Where(EhArma))
-                                {
-                                    <label class="loadout-option"><input type="checkbox" checked="@ItensSelecionados.Contains(item.IdItem)" @onchange="e => AlterarItem(item.IdItem, e)" /> <span>@item.Nome</span></label>
-                                }
-                            </div>
-                        </section>
-                        <section class="loadout-section" aria-labelledby="titulo-itens">
-                            <div class="loadout-heading"><h3 id="titulo-itens">Itens</h3><span>@ItensDisponiveis.Count(item => ItensSelecionados.Contains(item.IdItem) && !EhArma(item)) selecionado(s)</span></div>
-                            <div class="loadout-slots" id="selecao-itens">
-                                @foreach (var item in ItensDisponiveis.Where(i => !EhArma(i)))
-                                {
-                                    <label class="loadout-option"><input type="checkbox" checked="@ItensSelecionados.Contains(item.IdItem)" @onchange="e => AlterarItem(item.IdItem, e)" /> <span>@item.Nome</span></label>
-                                }
-                            </div>
-                        </section>
-                    </div>
-
-                    <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
-                    <div class="join-actions"><button class="action-secondary" type="button" @onclick="VoltarParaCodigo">Voltar</button><button class="action-primary" type="submit">Revisar seleção <span aria-hidden="true">→</span></button></div>
-                </form>
-            </section>
-        }
-        else
-        {
+            <!-- =========================================================================
+                 ETAPA 2: ESCOLHER ENTRE AS FICHAS ACEITAS E CONECTAR NA SESSÃO
+                 ========================================================================= -->
             <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
-                <p class="page-kicker">Etapa 3</p>
-                <h2 id="titulo-confirmacao">Tudo pronto para entrar</h2>
-                <p class="join-session-name">@(CampanhaAtual?.Nome ?? "Campanha")</p>
-                <dl class="join-review"><dt>Personagem</dt><dd>@(PersonagemSelecionado?.Nome ?? "Não selecionado")</dd><dt>Equipamentos</dt><dd>@ItensSelecionados.Count item(ns) selecionado(s)</dd></dl>
+                <p class="page-kicker">Etapa 2 · Sala de Jogo</p>
+                <h2 id="titulo-confirmacao">Conectar na Sessão</h2>
+                <p class="join-session-name">Campanha: <strong>@(CampanhaAtual.Nome)</strong></p>
+
+                @if (FichasAceitasDoJogador.Count > 1)
+                {
+                    <fieldset class="character-picker" style="margin-bottom: 18px;">
+                        <legend>Você possui <strong>@FichasAceitasDoJogador.Count fichas aceitas</strong> nesta campanha. Escolha com qual vai jogar agora:</legend>
+                        <div class="character-options">
+                            @foreach (var vinculoAceito in FichasAceitasDoJogador)
+                            {
+                                var p = vinculoAceito.Personagem!;
+                                bool selecionada = VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
+                                <label class="character-option @(selecionada ? "selecionado" : "")" @onclick="() => SelecionarVinculoExistenteAsync(vinculoAceito)">
+                                    <input type="radio"
+                                           name="ficha-conectar"
+                                           checked="@selecionada"
+                                           @onchange="() => SelecionarVinculoExistenteAsync(vinculoAceito)" />
+                                    <span class="character-option-copy">
+                                        <strong>@p.Nome</strong>
+                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
+                }
+
+                <dl class="join-review">
+                    <div>
+                        <dt>Personagem Escolhido</dt>
+                        <dd>@(FichaCompletaVinculada?.Nome ?? "Nenhuma ficha selecionada")</dd>
+                    </div>
+                    <div>
+                        <dt>Raça & Classe</dt>
+                        <dd>@(FichaCompletaVinculada != null ? $"{FichaCompletaVinculada.RacaTexto} · {FichaCompletaVinculada.ClasseTexto} (Nv. {FichaCompletaVinculada.Nivel})" : "—")</dd>
+                    </div>
+                    <div>
+                        <dt>Status de Aprovação</dt>
+                        <dd>
+                            @if (StatusFichaAtual == "Aceita")
+                            {
+                                <strong style="color: #78be82;">✓ Aceita pelo Mestre</strong>
+                            }
+                            else if (StatusFichaAtual == "Pendente")
+                            {
+                                <strong style="color: #e6c665;">⏳ Aguardando Mestre</strong>
+                            }
+                            else if (StatusFichaAtual == "Recusada")
+                            {
+                                <strong style="color: #e88d8d;">✕ Recusada pelo Mestre</strong>
+                            }
+                            else
+                            {
+                                <span>Não enviada</span>
+                            }
+                        </dd>
+                    </div>
+                </dl>
+
+                @if (StatusFichaAtual != "Aceita")
+                {
+                    <div class="ficha-alert pendente" style="margin-top: 16px;">
+                        Para entrar na sala de jogo, selecione uma ficha que esteja <strong>Aceita pelo Mestre</strong> (na Etapa 1) ou clique em "Atualizar Status".
+                    </div>
+                }
+
                 <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
-                <div class="join-actions"><button class="action-secondary" type="button" disabled="@Carregando" @onclick="VoltarParaPersonagem">Editar seleção</button><button class="action-primary" type="button" disabled="@Carregando" @onclick="EntrarNaSala">@(Carregando ? "Entrando..." : "Entrar na sala") <span aria-hidden="true">→</span></button></div>
+
+                <div class="join-actions">
+                    <button class="action-secondary" type="button" disabled="@Carregando" @onclick="() => IrParaEtapa(1)">
+                        ← Gerenciar / Escolher Ficha (Etapa 1)
+                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-secondary" type="button" disabled="@Carregando" @onclick="RecarregarStatusAsync">
+                            ↻ Atualizar Status
+                        </button>
+                        <button class="action-primary"
+                                type="button"
+                                disabled="@(Carregando || StatusFichaAtual != "Aceita")"
+                                @onclick="ConectarNaSala">
+                            @(Carregando ? "Conectando..." : $"Conectar com {(FichaCompletaVinculada?.Nome ?? "Ficha")} →")
+                        </button>
+                    </div>
+                </div>
             </section>
         }
-
-        <p class="join-local-note">Você só passa a fazer parte da mesa ao confirmar a última etapa.</p>
     </main>
 </div>
 
 @code {
+    [Parameter] public int IdCampanha { get; set; }
+
+    [SupplyParameterFromQuery(Name = "campanhaId")]
+    public int? CampanhaIdQuery { get; set; }
+
     private int EtapaAtual { get; set; } = 1;
-    private string CodigoConvite { get; set; } = string.Empty;
     private string Mensagem { get; set; } = string.Empty;
     private bool TemErro { get; set; }
     private bool Carregando { get; set; }
+    private bool ModoAdicionarNovaFicha { get; set; }
+
     private Campanha? CampanhaAtual { get; set; }
     private List<Personagem> PersonagensDisponiveis { get; set; } = new();
-    private List<Item> ItensDisponiveis { get; set; } = new();
-    private int PersonagemSelecionadoId { get; set; }
-    private Personagem? PersonagemSelecionado => PersonagensDisponiveis.FirstOrDefault(p => p.IdPersonagem == PersonagemSelecionadoId);
-    private HashSet<int> ItensSelecionados { get; } = new();
-    private bool SelecaoRevisada { get; set; }
 
-    protected override void OnInitialized()
+    // Lista de TODAS as fichas que o jogador enviou para esta campanha
+    private List<PersonagemCampanha> VinculosDoJogador { get; set; } = new();
+
+    private List<PersonagemCampanha> FichasAceitasDoJogador =>
+        VinculosDoJogador
+            .Where(v => string.IsNullOrEmpty(v.StatusAprovacao) ||
+                        v.StatusAprovacao.Equals("Aceita", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private bool PossuiAlgumaFichaAceita => FichasAceitasDoJogador.Any();
+
+    // Personagens da conta do usuário que ainda não foram enviados para esta campanha
+    private List<Personagem> PersonagensNaoEnviados =>
+        PersonagensDisponiveis
+            .Where(p => !VinculosDoJogador.Any(v => v.IdPersonagem == p.IdPersonagem))
+            .ToList();
+
+    private PersonagemCampanha? VinculoSelecionado { get; set; }
+    private Personagem? FichaCompletaVinculada { get; set; }
+    private int NovoPersonagemParaEnviarId { get; set; }
+    private string StatusFichaAtual => VinculoSelecionado?.StatusAprovacao ?? string.Empty;
+    private string AbaFichaPreview { get; set; } = "atributos";
+
+    protected override async Task OnParametersSetAsync()
     {
-        // Sem login não há como entrar em uma mesa: leva direto para a tela de login.
         if (!SessaoUsuario.EstaLogado)
+        {
             Navigation.NavigateTo("/login");
-    }
-
-    // Etapa 1: apenas valida o código. Ninguém é vinculado à campanha ainda.
-    private async Task ValidarCodigo()
-    {
-        LimparMensagem();
-        Carregando = true;
-        try
-        {
-            if (!SessaoUsuario.EstaLogado)
-            {
-                DefinirErro("Faça login antes de entrar em uma sessão.");
-                return;
-            }
-
-            var codigo = (CodigoConvite ?? string.Empty).Trim().ToUpperInvariant();
-            CodigoConvite = codigo;
-
-            if (codigo.Length < 6)
-            {
-                DefinirErro("O código tem de 6 a 8 caracteres.");
-                return;
-            }
-
-            var campanha = await CampanhaService.BuscarPorCodigoAsync(codigo);
-            if (campanha is null)
-            {
-                DefinirErro("Nenhuma campanha foi encontrada com esse código.");
-                return;
-            }
-
-            if (campanha.IdAccount == SessaoUsuario.IdUsuarioLogado)
-            {
-                DefinirErro("Você é o mestre desta campanha. Use \"Iniciar sessão\" na tela de campanhas.");
-                return;
-            }
-
-            // Trocou de campanha: descarta a seleção anterior.
-            if (CampanhaAtual?.IdCampanha != campanha.IdCampanha)
-            {
-                PersonagemSelecionadoId = 0;
-                ItensSelecionados.Clear();
-                SelecaoRevisada = false;
-            }
-
-            CampanhaAtual = campanha;
-            PersonagensDisponiveis = await PersonagemService.ObterPersonagensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado);
-            ItensDisponiveis = (await ItemService.ObterItensPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado))
-                .OrderBy(i => i.Nome)
-                .ToList();
-
-            // Com um único personagem não há o que escolher.
-            if (PersonagemSelecionado is null && PersonagensDisponiveis.Count == 1)
-                PersonagemSelecionadoId = PersonagensDisponiveis[0].IdPersonagem;
-
-            EtapaAtual = 2;
-        }
-        catch (Exception ex)
-        {
-            DefinirErro($"Não foi possível validar o código: {ex.Message}");
-        }
-        finally { Carregando = false; }
-    }
-
-    // Etapa 2: confere a escolha localmente. Nada é gravado até a confirmação final.
-    private void RevisarSelecao()
-    {
-        LimparMensagem();
-        if (PersonagemSelecionado is null)
-        {
-            DefinirErro("Selecione um personagem para continuar.");
             return;
         }
 
-        SelecaoRevisada = true;
-        EtapaAtual = 3;
+        await CarregarContextoJogadorAsync();
     }
 
-    // Etapa 3: grava tudo de uma vez (participação, personagem e equipamentos) e abre a sala.
-    private async Task EntrarNaSala()
+    private async Task CarregarContextoJogadorAsync()
     {
-        if (Carregando) return;
-        if (CampanhaAtual is null || PersonagemSelecionado is null)
-        {
-            DefinirErro("Selecione um personagem antes de entrar na sala.");
-            return;
-        }
-
-        LimparMensagem();
         Carregando = true;
+        LimparMensagem();
         try
         {
-            var idCampanha = CampanhaAtual.IdCampanha;
+            int idUsuario = SessaoUsuario.IdUsuarioLogado;
+            PersonagensDisponiveis = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
 
-            var participacao = await CampanhaService.EntrarNaCampanhaPorCodigoAsync(SessaoUsuario.IdUsuarioLogado, CodigoConvite);
-            if (!participacao.Sucesso && !JaVinculado(participacao.Mensagem))
+            int idAlvo = IdCampanha > 0 ? IdCampanha : (CampanhaIdQuery ?? 0);
+            if (idAlvo <= 0)
             {
-                DefinirErro(participacao.Mensagem);
-                return;
+                var campanhasDoJogador = await CampanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+                if (campanhasDoJogador.Any())
+                    idAlvo = campanhasDoJogador[0].IdCampanha;
             }
 
-            var personagem = await CampanhaService.AdicionarPersonagemNaCampanhaAsync(idCampanha, PersonagemSelecionado.IdPersonagem);
-            if (!personagem.Sucesso && !JaVinculado(personagem.Mensagem))
+            if (idAlvo > 0)
             {
-                DefinirErro(personagem.Mensagem);
-                return;
+                CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(idAlvo);
+                await SincronizarVinculosDoJogadorAsync();
             }
-
-            foreach (var idItem in ItensSelecionados)
-            {
-                var vinculo = await CampanhaService.AdicionarItemNaCampanhaAsync(idCampanha, idItem);
-                if (!vinculo.Sucesso && !JaVinculado(vinculo.Mensagem))
-                {
-                    DefinirErro(vinculo.Mensagem);
-                    return;
-                }
-            }
-
-            Navigation.NavigateTo("/saladojogo");
         }
         catch (Exception ex)
         {
-            DefinirErro($"Não foi possível entrar na sala: {ex.Message}");
+            DefinirErro($"Erro ao carregar dados da sessão: {ex.Message}");
         }
-        finally { Carregando = false; }
+        finally
+        {
+            Carregando = false;
+        }
     }
 
-    private void AlterarItem(int idItem, ChangeEventArgs evento)
+    private async Task SincronizarVinculosDoJogadorAsync(int? idPersonagemPreferencial = null)
     {
-        if (evento.Value is true || string.Equals(evento.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase)) ItensSelecionados.Add(idItem);
-        else ItensSelecionados.Remove(idItem);
+        VinculosDoJogador.Clear();
+        VinculoSelecionado = null;
+        FichaCompletaVinculada = null;
+
+        if (CampanhaAtual is null) return;
+
+        int idUsuario = SessaoUsuario.IdUsuarioLogado;
+        VinculosDoJogador = CampanhaAtual.PersonagemCampanhas
+            .Where(pc => pc.Personagem != null && pc.Personagem.IdAccount == idUsuario)
+            .OrderByDescending(pc => pc.StatusAprovacao == "Aceita")
+            .ThenByDescending(pc => pc.StatusAprovacao == "Pendente")
+            .ToList();
+
+        if (VinculosDoJogador.Any())
+        {
+            var escolhido = (idPersonagemPreferencial.HasValue
+                ? VinculosDoJogador.FirstOrDefault(v => v.IdPersonagem == idPersonagemPreferencial.Value)
+                : null)
+                ?? FichasAceitasDoJogador.FirstOrDefault()
+                ?? VinculosDoJogador.First();
+
+            await SelecionarVinculoExistenteAsync(escolhido);
+        }
+        else if (PersonagensNaoEnviados.Count == 1)
+        {
+            NovoPersonagemParaEnviarId = PersonagensNaoEnviados[0].IdPersonagem;
+        }
     }
 
-    private void SelecionarPersonagem(int idPersonagem)
+    private async Task SelecionarVinculoExistenteAsync(PersonagemCampanha vinculo)
     {
-        PersonagemSelecionadoId = idPersonagem;
-        SelecaoRevisada = false;
+        if (Carregando) return; // Evita cliques concorrentes enquanto carrega
+        Carregando = true;
+        try
+        {
+            VinculoSelecionado = vinculo;
+            StateHasChanged(); // Atualiza a UI imediatamente mostrando a seleção
+
+            // Carrega a ficha completa de forma isolada
+            FichaCompletaVinculada = await PersonagemService.ObterPorIdAsync(vinculo.IdPersonagem) ?? vinculo.Personagem;
+        }
+        finally
+        {
+            Carregando = false;
+            StateHasChanged();
+        }
+    }
+    private void AbrirModoEnviarNovaFicha()
+    {
+        LimparMensagem();
+        ModoAdicionarNovaFicha = true;
+        NovoPersonagemParaEnviarId = PersonagensNaoEnviados.FirstOrDefault()?.IdPersonagem ?? 0;
     }
 
-    private void VoltarParaCodigo() { EtapaAtual = 1; LimparMensagem(); }
-    private void VoltarParaPersonagem() { EtapaAtual = 2; LimparMensagem(); }
-
-    private bool PodeAcessarEtapa(int etapa) => etapa switch
+    private async Task EnviarFichaAoMestreAsync()
     {
-        1 => true,
-        2 => CampanhaAtual is not null,
-        3 => CampanhaAtual is not null && SelecaoRevisada && PersonagemSelecionado is not null,
-        _ => false
-    };
+        if (CampanhaAtual is null) return;
+        if (NovoPersonagemParaEnviarId <= 0)
+        {
+            DefinirErro("Selecione um personagem para enviar ao Mestre.");
+            return;
+        }
+
+        Carregando = true;
+        LimparMensagem();
+        try
+        {
+            int idEnviado = NovoPersonagemParaEnviarId;
+            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idEnviado);
+            if (!resultado.Sucesso)
+            {
+                DefinirErro(resultado.Mensagem);
+                return;
+            }
+
+            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
+            ModoAdicionarNovaFicha = false;
+            await SincronizarVinculosDoJogadorAsync(idEnviado);
+            Mensagem = resultado.Mensagem;
+        }
+        catch (Exception ex)
+        {
+            DefinirErro($"Erro ao enviar ficha: {ex.Message}");
+        }
+        finally
+        {
+            Carregando = false;
+        }
+    }
+
+    private async Task ReenviarFichaRecusadaAsync(int idPersonagem)
+    {
+        if (CampanhaAtual is null) return;
+        Carregando = true;
+        LimparMensagem();
+        try
+        {
+            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idPersonagem);
+            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
+            await SincronizarVinculosDoJogadorAsync(idPersonagem);
+            Mensagem = resultado.Mensagem;
+        }
+        finally
+        {
+            Carregando = false;
+        }
+    }
+
+    private async Task RecarregarStatusAsync()
+    {
+        if (CampanhaAtual is null) return;
+        Carregando = true;
+        LimparMensagem();
+        try
+        {
+            int? idAtual = VinculoSelecionado?.IdPersonagem;
+            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
+            await SincronizarVinculosDoJogadorAsync(idAtual);
+            Mensagem = StatusFichaAtual == "Aceita"
+                ? "Ficha aprovada! Você já pode conectar na sessão."
+                : "Status atualizado.";
+        }
+        finally
+        {
+            Carregando = false;
+        }
+    }
+
+    private void ConectarNaSala()
+    {
+        if (StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
+        {
+            VinculoSelecionado = FichasAceitasDoJogador.First();
+            FichaCompletaVinculada = VinculoSelecionado.Personagem;
+        }
+
+        if (StatusFichaAtual != "Aceita")
+        {
+            DefinirErro("Selecione uma ficha aprovada pelo Mestre antes de conectar na sessão.");
+            return;
+        }
+
+        Navigation.NavigateTo("/saladojogo");
+    }
 
     private void IrParaEtapa(int etapa)
     {
-        if (PodeAcessarEtapa(etapa))
+        if (etapa == 2 && StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
         {
-            EtapaAtual = etapa;
-            LimparMensagem();
+            _ = SelecionarVinculoExistenteAsync(FichasAceitasDoJogador.First());
         }
+
+        EtapaAtual = etapa;
+        LimparMensagem();
+    }
+
+    private static string ObterModificador(int valor)
+    {
+        var modificador = (int)Math.Floor((valor - 10) / 2.0);
+        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
     }
 
     private void VoltarParaHome() => Navigation.NavigateTo("/campanhas");
     private void LimparMensagem() { Mensagem = string.Empty; TemErro = false; }
     private void DefinirErro(string mensagem) { TemErro = true; Mensagem = mensagem; }
-
-    // Os serviços devolvem "já faz parte", "já está participando" ou "já está vinculado" quando o vínculo existe;
-    // nesses casos não há erro, o jogador só está voltando para a mesa.
-    private static bool JaVinculado(string mensagem) =>
-        mensagem.Contains("já faz parte", StringComparison.OrdinalIgnoreCase) ||
-        mensagem.Contains("já está participando", StringComparison.OrdinalIgnoreCase) ||
-        mensagem.Contains("já está vinculado", StringComparison.OrdinalIgnoreCase);
-
-    private static bool EhArma(Item item) => !string.IsNullOrWhiteSpace(item.Dano) || item.Tipo?.Contains("arma", StringComparison.OrdinalIgnoreCase) == true;
 }
