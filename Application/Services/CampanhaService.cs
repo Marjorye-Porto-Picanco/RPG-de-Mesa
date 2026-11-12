@@ -427,4 +427,6 @@ public class CampanhaService
             return (false, $"Erro ao desvincular item: {ex.Message}");
         }
     }
+
+    public Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string status) => _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, status);
 }

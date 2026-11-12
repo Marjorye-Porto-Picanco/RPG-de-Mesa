@@ -33,8 +33,8 @@ public class PersonagemService
         IEnumerable<(string NomeClasse, int Nivel)> classes,
         IEnumerable<string> salvaguardas,
         IEnumerable<string> pericias,
-        Inventario dadosInventario,
-        IEnumerable<(int IdItem, int Quantidade)> itens,
+        Inventario? dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)>? itens,
         IEnumerable<Magia> magias)
     {
         try
@@ -47,6 +47,23 @@ public class PersonagemService
         {
             string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
             return (false, $"Erro ao salvar detalhes da ficha: {erroDetalhado}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> SalvarInventarioCampanhaAsync(
+        int idPersonagem,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
+        try
+        {
+            await _personagemRepo.SalvarInventarioPersonagem3FNAsync(idPersonagem, dadosInventario, itens);
+            return (true, "Inventário da campanha vinculado ao personagem com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao salvar inventário: {erroDetalhado}");
         }
     }
 

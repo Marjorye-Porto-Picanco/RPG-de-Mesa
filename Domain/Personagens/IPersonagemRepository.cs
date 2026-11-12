@@ -11,8 +11,12 @@ public interface IPersonagemRepository
         IEnumerable<(string NomeClasse, int Nivel)> classes,
         IEnumerable<string> salvaguardas,
         IEnumerable<string> pericias,
-        Inventario dadosInventario,
-        IEnumerable<(int IdItem, int Quantidade)> itens,
+        Inventario? dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)>? itens,
         IEnumerable<Magia> magias);
+    Task SalvarInventarioPersonagem3FNAsync(
+        int idPersonagem,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens);
     Task RemoverAsync(Personagem personagem);
 }

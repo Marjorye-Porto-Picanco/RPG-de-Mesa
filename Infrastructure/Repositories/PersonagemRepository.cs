@@ -35,6 +35,7 @@ public class PersonagemRepository : IPersonagemRepository
 
         return personagem;
     }
+
     public async Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount)
     {
         _contexto.ChangeTracker.Clear();
@@ -58,7 +59,6 @@ public class PersonagemRepository : IPersonagemRepository
         var existente = await _contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
         if (existente != null)
         {
-            // Preserva os campos imutáveis definidos na criação (Nome, Raça, Antecedente, Altura e Gênero)
             string nomeOriginal = existente.Nome;
             int? idRacaOriginal = existente.IdRaca;
             string? racaOriginal = existente.RacaTexto;
@@ -83,7 +83,6 @@ public class PersonagemRepository : IPersonagemRepository
 
     private async Task VincularRacaEAntecedente3FNAsync(Personagem personagem)
     {
-        // 1. Resolve a chave estrangeira id_raca na tabela Raca
         if (!string.IsNullOrWhiteSpace(personagem.RacaTexto))
         {
             string nomeRaca = personagem.RacaTexto.Trim();
@@ -108,7 +107,6 @@ public class PersonagemRepository : IPersonagemRepository
             personagem.Deslocamento = racaBanco.DeslocamentoBase;
         }
 
-        // 2. Resolve a chave estrangeira id_antecedente na tabela Antecedentes
         if (!string.IsNullOrWhiteSpace(personagem.AntecedenteTexto))
         {
             string nomeAntecedente = personagem.AntecedenteTexto.Trim();
@@ -135,8 +133,8 @@ public class PersonagemRepository : IPersonagemRepository
         IEnumerable<(string NomeClasse, int Nivel)> classes,
         IEnumerable<string> salvaguardas,
         IEnumerable<string> pericias,
-        Inventario dadosInventario,
-        IEnumerable<(int IdItem, int Quantidade)> itens,
+        Inventario? dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)>? itens,
         IEnumerable<Magia> magias)
     {
         _contexto.ChangeTracker.Clear();
@@ -193,7 +191,54 @@ public class PersonagemRepository : IPersonagemRepository
             await _contexto.PersonagemPericias.AddAsync(new PersonagemPericia(idPersonagem, p.Trim()));
         }
 
-        // 3. Atualiza Inventário e Itens Vinculados (3FN)
+        // 3. Atualiza Inventário apenas se foi fornecido (preserva o inventário da campanha ao editar a ficha)
+        if (dadosInventario != null && itens != null)
+        {
+            await SalvarInventarioInternoAsync(idPersonagem, dadosInventario, itens);
+        }
+
+        // 4. Atualiza Grimório / Magias (3FN)
+        var magiasAntigas = await _contexto.PersonagemMagias.Where(pm => pm.IdPersonagem == idPersonagem).ToListAsync();
+        _contexto.PersonagemMagias.RemoveRange(magiasAntigas);
+        await _contexto.SaveChangesAsync();
+
+        foreach (var m in magias.Where(x => !string.IsNullOrWhiteSpace(x.Nome)))
+        {
+            var novaMagia = new Magia
+            {
+                Nome = m.Nome.Trim(),
+                CirculoNivel = m.CirculoNivel,
+                DanoEfeito = m.DanoEfeito,
+                Alcance = m.Alcance
+            };
+            await _contexto.Magias.AddAsync(novaMagia);
+            await _contexto.SaveChangesAsync();
+
+            await _contexto.PersonagemMagias.AddAsync(new PersonagemMagia
+            {
+                IdPersonagem = idPersonagem,
+                IdMagia = novaMagia.IdMagia
+            });
+        }
+
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task SalvarInventarioPersonagem3FNAsync(
+        int idPersonagem,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
+        _contexto.ChangeTracker.Clear();
+        await SalvarInventarioInternoAsync(idPersonagem, dadosInventario, itens);
+        await _contexto.SaveChangesAsync();
+    }
+
+    private async Task SalvarInventarioInternoAsync(
+        int idPersonagem,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
         var inv = await _contexto.Inventarios
             .Include(i => i.Itens)
             .FirstOrDefaultAsync(i => i.IdPersonagem == idPersonagem);
@@ -243,32 +288,6 @@ public class PersonagemRepository : IPersonagemRepository
             });
 
         await _contexto.InventarioItens.AddRangeAsync(itensAgrupados);
-
-        // 4. Atualiza Grimório / Magias (3FN)
-        var magiasAntigas = await _contexto.PersonagemMagias.Where(pm => pm.IdPersonagem == idPersonagem).ToListAsync();
-        _contexto.PersonagemMagias.RemoveRange(magiasAntigas);
-        await _contexto.SaveChangesAsync();
-
-        foreach (var m in magias.Where(x => !string.IsNullOrWhiteSpace(x.Nome)))
-        {
-            var novaMagia = new Magia
-            {
-                Nome = m.Nome.Trim(),
-                CirculoNivel = m.CirculoNivel,
-                DanoEfeito = m.DanoEfeito,
-                Alcance = m.Alcance
-            };
-            await _contexto.Magias.AddAsync(novaMagia);
-            await _contexto.SaveChangesAsync();
-
-            await _contexto.PersonagemMagias.AddAsync(new PersonagemMagia
-            {
-                IdPersonagem = idPersonagem,
-                IdMagia = novaMagia.IdMagia
-            });
-        }
-
-        await _contexto.SaveChangesAsync();
     }
 
     public async Task RemoverAsync(Personagem personagem)

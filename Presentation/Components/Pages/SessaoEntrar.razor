@@ -1,6 +1,7 @@
 @page "/sessao-entrar"
 @page "/sessao-entrar/{IdCampanha:int}"
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
 @using RPGdeMesa.Domain.Campanhas
 @using RPGdeMesa.Domain.Itens
 @using RPGdeMesa.Domain.Personagens
@@ -17,7 +18,7 @@
             <div>
                 <p class="page-kicker">Aventureiros, a mesa está aberta</p>
                 <h1 class="page-title">@(CampanhaAtual?.Nome ?? "Entrar em sessão")</h1>
-                <p class="page-description">Gerencie suas fichas na campanha, escolha com qual jogar e conecte-se na sala da sessão.</p>
+                <p class="page-description">Escolha sua ficha, monte seu inventário inicial da campanha e conecte-se na sala.</p>
             </div>
             <button class="botao-voltar" type="button" @onclick="VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
         </header>
@@ -27,7 +28,7 @@
             <li class="@(EtapaAtual == 1 ? "ativa" : PossuiAlgumaFichaAceita ? "concluida" : "")">
                 <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 1 ? "step" : null)" @onclick="() => IrParaEtapa(1)">
                     <span>@(PossuiAlgumaFichaAceita ? "✓" : "1")</span>
-                    <strong>1. Fichas na Campanha (@VinculosDoJogador.Count)</strong>
+                    <strong>1. Ficha e Inventário na Campanha (@VinculosDoJogador.Count)</strong>
                 </button>
             </li>
             <li class="@(EtapaAtual == 2 ? "ativa" : "")">
@@ -52,24 +53,24 @@
         else if (EtapaAtual == 1)
         {
             <!-- =========================================================================
-                 ETAPA 1: GERENCIAR MÚLTIPLAS FICHAS NA CAMPANHA E ENVIAR NOVAS AO MESTRE
+                 ETAPA 1: VISUALIZAR FICHAS ENVIADAS OU ENVIAR NOVA FICHA COM INVENTÁRIO
                  ========================================================================= -->
             <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
                 <div class="step-header-row">
                     <div>
                         <p class="page-kicker">Etapa 1 · Preparação dos Heróis</p>
-                        <h2 id="titulo-personagem">Suas Fichas em @(CampanhaAtual.Nome)</h2>
+                        <h2 id="titulo-personagem">Suas Fichas e Equipamentos em @(CampanhaAtual.Nome)</h2>
                     </div>
 
-                    @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha)
+                    @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha && !ModoReenviarRecusada && PersonagensNaoEnviados.Any())
                     {
                         <button type="button" class="action-secondary" style="min-height:34px; font-size:11px;" @onclick="AbrirModoEnviarNovaFicha">
-                            + Enviar outra ficha para o Mestre
+                            + Enviar outra ficha
                         </button>
                     }
                 </div>
 
-                @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha)
+                @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha && !ModoReenviarRecusada)
                 {
                     <!-- SELETOR DAS FICHAS JÁ VINCULADAS PELO JOGADOR NESTA CAMPANHA -->
                     <fieldset class="character-picker" style="margin-bottom: 18px;">
@@ -102,26 +103,26 @@
                         @if (StatusFichaAtual == "Pendente")
                         {
                             <div class="ficha-alert pendente">
-                                <strong>Ficha em avaliação!</strong> O mestre está analisando a ficha de <b>@FichaCompletaVinculada.Nome</b>. Você já pode enviar outras fichas ou usar qualquer outra ficha sua que já esteja <b>Aceita</b>.
+                                <strong>Ficha e equipamentos em avaliação!</strong> O mestre está analisando a ficha e os itens escolhidos para <b>@FichaCompletaVinculada.Nome</b>. Os itens não podem ser alterados após o envio.
                             </div>
                         }
                         else if (StatusFichaAtual == "Aceita")
                         {
                             <div class="ficha-alert aceita">
-                                <strong>Ficha aprovada pelo Mestre!</strong> O personagem <b>@FichaCompletaVinculada.Nome</b> está liberado para entrar na partida.
+                                <strong>Ficha e equipamentos aprovados pelo Mestre!</strong> O personagem <b>@FichaCompletaVinculada.Nome</b> e seu inventário inicial já foram validados e estão prontos para a partida.
                             </div>
                         }
                         else if (StatusFichaAtual == "Recusada")
                         {
                             <div class="ficha-alert recusada" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-                                <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Você pode reenviá-la após editá-la na biblioteca ou escolher outra ficha sua.</span>
-                                <button type="button" class="action-secondary" style="min-height:32px; font-size:11px;" @onclick="() => ReenviarFichaRecusadaAsync(FichaCompletaVinculada.IdPersonagem)">
-                                    ↻ Reenviar para avaliação
+                                <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Você pode ajustar os itens escolhidos e enviá-la novamente para avaliação.</span>
+                                <button type="button" class="action-secondary" style="min-height:32px; font-size:11px;" @onclick="AbrirReenvioDeFichaRecusada">
+                                    ↻ Ajustar Itens e Reenviar ao Mestre
                                 </button>
                             </div>
                         }
 
-                        <!-- VISUALIZAÇÃO COMPLETA DA FICHA SELECIONADA (ESTILO PERGAMINHO) -->
+                        <!-- VISUALIZAÇÃO SOMENTE LEITURA DA FICHA E DO INVENTÁRIO ENVIADO -->
                         <div class="ficha-preview-pergaminho">
                             <div class="ficha-cabecalho-preview">
                                 <div class="retrato-preview">
@@ -142,7 +143,7 @@
                             <div class="abas-ficha-preview" role="tablist">
                                 <button type="button" class="aba-btn @(AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "atributos"'>Atributos & Diário</button>
                                 <button type="button" class="aba-btn @(AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "personagem"'>Personagem & Classes</button>
-                                <button type="button" class="aba-btn @(AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "inventario"'>Inventário</button>
+                                <button type="button" class="aba-btn @(AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "inventario"'>Inventário da Campanha</button>
                                 <button type="button" class="aba-btn @(AbaFichaPreview == "grimorio" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "grimorio"'>Grimório</button>
                             </div>
 
@@ -212,13 +213,13 @@
                                         </div>
 
                                         <div class="box-texto-preview full-span" style="margin-top: 12px;">
-                                            <h4>Itens Equipados na Ficha</h4>
+                                            <h4>Itens Vinculados na Campanha (Carga: @(FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
                                             @if (FichaCompletaVinculada.Inventario.Itens != null && FichaCompletaVinculada.Inventario.Itens.Any())
                                             {
                                                 <ul class="lista-itens-preview">
                                                     @foreach (var ii in FichaCompletaVinculada.Inventario.Itens)
                                                     {
-                                                        <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · Peso unit.: @(ii.Item?.Peso ?? 0) kg)</span></li>
+                                                        <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · Peso unit.: @(ii.Item?.Peso ?? 0) kg · Valor: @(ii.Item?.Preco ?? 0) po)</span></li>
                                                     }
                                                 </ul>
                                             }
@@ -272,9 +273,16 @@
                     <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
 
                     <div class="join-actions">
-                        <button class="action-secondary" type="button" @onclick="AbrirModoEnviarNovaFicha">
-                            + Enviar outra ficha para esta campanha
-                        </button>
+                        @if (PersonagensNaoEnviados.Any())
+                        {
+                            <button class="action-secondary" type="button" @onclick="AbrirModoEnviarNovaFicha">
+                                + Enviar outra ficha para esta campanha
+                            </button>
+                        }
+                        else
+                        {
+                            <span></span>
+                        }
                         <button class="action-primary" type="button" @onclick="() => IrParaEtapa(2)">
                             Ir para Etapa 2: Conectar com @(FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
                         </button>
@@ -282,46 +290,200 @@
                 }
                 else
                 {
-                    <!-- FORMULÁRIO PARA ENVIAR UMA NOVA FICHA SEM APAGAR AS ANTERIORES -->
-                    <form @onsubmit="EnviarFichaAoMestreAsync" @onsubmit:preventDefault="true">
-                        <fieldset class="character-picker">
-                            <legend>Escolha um personagem da sua biblioteca para enviar ao Mestre desta campanha:</legend>
-                            @if (PersonagensNaoEnviados.Any())
-                            {
-                                <div class="character-options" id="opcoes-personagens">
-                                    @foreach (var personagem in PersonagensNaoEnviados)
-                                    {
-                                        <label class="character-option @(NovoPersonagemParaEnviarId == personagem.IdPersonagem ? "selecionado" : "")">
-                                            <input type="radio"
-                                                   name="novo-personagem"
-                                                   value="@personagem.IdPersonagem"
-                                                   @onchange="() => NovoPersonagemParaEnviarId = personagem.IdPersonagem"
-                                                   checked="@(NovoPersonagemParaEnviarId == personagem.IdPersonagem)" />
-                                            <span class="character-option-copy">
-                                                <strong>@personagem.Nome</strong>
-                                                <small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") · Nível @personagem.Nivel</small>
-                                            </span>
-                                        </label>
-                                    }
+                    <!-- =====================================================================
+                         FORMULÁRIO DE ESCOLHA DA FICHA + MONTAGEM DO INVENTÁRIO (ANTES DE ENVIAR)
+                         ===================================================================== -->
+                    <form @onsubmit="EnviarFichaComInventarioAoMestreAsync" @onsubmit:preventDefault="true">
+                        @if (!ModoReenviarRecusada)
+                        {
+                            <fieldset class="character-picker">
+                                <legend>1. Escolha um personagem da sua biblioteca para enviar ao Mestre desta campanha:</legend>
+                                @if (PersonagensNaoEnviados.Any())
+                                {
+                                    <div class="character-options" id="opcoes-personagens">
+                                        @foreach (var personagem in PersonagensNaoEnviados)
+                                        {
+                                            <label class="character-option @(NovoPersonagemParaEnviarId == personagem.IdPersonagem ? "selecionado" : "")">
+                                                <input type="radio"
+                                                       name="novo-personagem"
+                                                       value="@personagem.IdPersonagem"
+                                                       @onchange="() => AoEscolherPersonagemParaEnviarAsync(personagem.IdPersonagem)"
+                                                       checked="@(NovoPersonagemParaEnviarId == personagem.IdPersonagem)" />
+                                                <span class="character-option-copy">
+                                                    <strong>@personagem.Nome</strong>
+                                                    <small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") · Nível @personagem.Nivel</small>
+                                                </span>
+                                            </label>
+                                        }
+                                    </div>
+                                }
+                                else if (PersonagensDisponiveis.Any())
+                                {
+                                    <p class="join-status">Todos os seus personagens cadastrados já foram enviados para esta campanha!</p>
+                                }
+                                else
+                                {
+                                    <p class="join-status">Você ainda não possui personagens cadastrados. Crie um personagem primeiro!</p>
+                                }
+                            </fieldset>
+                        }
+                        else
+                        {
+                            <div class="ficha-alert recusada">
+                                Ajustando os itens iniciais de <strong>@(PersonagemEmPreparacao?.Nome)</strong> para reenviar ao Mestre da campanha <strong>@(CampanhaAtual.Nome)</strong>.
+                            </div>
+                        }
+
+                        @* ASSIM QUE O JOGADOR ESCOLHE A FICHA PARA ENVIAR, APARECE O INVENTÁRIO DA CAMPANHA ABAIXO *@
+                        @if (PersonagemEmPreparacao != null)
+                        {
+                            <div class="ficha-preview-pergaminho" style="margin-top: 14px;">
+                                <h3 style="margin: 0 0 6px; color: #392819; font-size: 18px;">
+                                    2. Equipar Itens da Campanha em @PersonagemEmPreparacao.Nome (Antes de Enviar)
+                                </h3>
+                                <p style="margin: 0 0 16px; font-size: 12px; color: #6b4e23;">
+                                    Escolha com atenção as armas, armaduras, poções e materiais disponíveis nesta campanha (@ItensDaCampanha.Count itens liberados pelo Mestre). Após enviar para o Mestre, os itens ficarão travados para validação.
+                                </p>
+
+                                <div class="corpo-inventario-campanha">
+                                    <div>
+                                        <!-- Armas -->
+                                        <div class="categoria-itens-campanha">
+                                            <div class="titulo-categoria-campanha">
+                                                <h4>⌁ Armas</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar arma da campanha" @onclick='() => AdicionarSlotItem("Armas")'>+</button>
+                                            </div>
+                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armas"))
+                                            {
+                                                <div class="item-linha-campanha">
+                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <option value="0">Selecione uma arma...</option>
+                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armas"))
+                                                        {
+                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                        }
+                                                    </select>
+                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <!-- Armaduras e Escudos -->
+                                        <div class="categoria-itens-campanha">
+                                            <div class="titulo-categoria-campanha">
+                                                <h4>⌁ Armaduras e Escudos</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar armadura da campanha" @onclick='() => AdicionarSlotItem("Armaduras")'>+</button>
+                                            </div>
+                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armaduras"))
+                                            {
+                                                <div class="item-linha-campanha">
+                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <option value="0">Selecione uma armadura...</option>
+                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armaduras"))
+                                                        {
+                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                        }
+                                                    </select>
+                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <!-- Poções e Consumíveis -->
+                                        <div class="categoria-itens-campanha">
+                                            <div class="titulo-categoria-campanha">
+                                                <h4>⌁ Poções e Consumíveis</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar consumível da campanha" @onclick='() => AdicionarSlotItem("Consumiveis")'>+</button>
+                                            </div>
+                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Consumiveis"))
+                                            {
+                                                <div class="item-linha-campanha">
+                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <option value="0">Selecione um consumível...</option>
+                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Consumiveis"))
+                                                        {
+                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                        }
+                                                    </select>
+                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <!-- Materiais e Outros -->
+                                        <div class="categoria-itens-campanha">
+                                            <div class="titulo-categoria-campanha">
+                                                <h4>⌁ Materiais e Outros</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar item da campanha" @onclick='() => AdicionarSlotItem("Outros")'>+</button>
+                                            </div>
+                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Outros"))
+                                            {
+                                                <div class="item-linha-campanha">
+                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <option value="0">Selecione um item...</option>
+                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Outros"))
+                                                        {
+                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                        }
+                                                    </select>
+                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <aside class="resumo-inventario-campanha">
+                                        <section class="painel-moedas-campanha">
+                                            <h4>Moedas Iniciais</h4>
+                                            <div class="moedas-grade-campanha">
+                                                <label class="moeda-campanha"><span class="icone-moeda-campanha">PC</span><input type="number" min="0" @bind="MoedasPC" /></label>
+                                                <label class="moeda-campanha"><span class="icone-moeda-campanha prata">PP</span><input type="number" min="0" @bind="MoedasPP" /></label>
+                                                <label class="moeda-campanha"><span class="icone-moeda-campanha electrum">PE</span><input type="number" min="0" @bind="MoedasPE" /></label>
+                                                <label class="moeda-campanha"><span class="icone-moeda-campanha ouro">PO</span><input type="number" min="0" @bind="MoedasPO" /></label>
+                                                <label class="moeda-campanha"><span class="icone-moeda-campanha platina">PL</span><input type="number" min="0" @bind="MoedasPL" /></label>
+                                            </div>
+                                        </section>
+
+                                        <section class="painel-carga-campanha">
+                                            <h4>Capacidade de Carga</h4>
+                                            <p style="text-align:center; margin:0 0 8px; font-size:12px;">
+                                                <strong>@PesoTotalEdicao.ToString("0.0") kg</strong> / @CapacidadeCargaMaximaEdicao.ToString("0.0") kg
+                                            </p>
+                                            <progress max="@((double)CapacidadeCargaMaximaEdicao)" value="@((double)Math.Min(PesoTotalEdicao, CapacidadeCargaMaximaEdicao))"></progress>
+                                        </section>
+
+                                        <div class="notas-inventario-campanha">
+                                            <h4>Notas do Inventário</h4>
+                                            <textarea rows="3" @bind="NotasInventario" placeholder="Anote detalhes dos equipamentos escolhidos..."></textarea>
+                                        </div>
+                                    </aside>
                                 </div>
-                            }
-                            else if (PersonagensDisponiveis.Any())
-                            {
-                                <p class="join-status">Todos os seus personagens cadastrados já foram enviados para esta campanha!</p>
-                            }
-                            else
-                            {
-                                <p class="join-status">Você ainda não possui personagens cadastrados. Crie um personagem primeiro!</p>
-                            }
-                        </fieldset>
+                            </div>
+                        }
 
                         <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
 
                         <div class="join-actions">
                             @if (VinculosDoJogador.Any())
                             {
-                                <button class="action-secondary" type="button" @onclick="() => ModoAdicionarNovaFicha = false">
-                                    ← Voltar para minhas fichas na campanha
+                                <button class="action-secondary" type="button" @onclick="CancelarModoEdicaoOuAdicao">
+                                    ← Cancelar e voltar para minhas fichas
                                 </button>
                             }
                             else
@@ -329,8 +491,8 @@
                                 <button class="action-secondary" type="button" @onclick="VoltarParaHome">Voltar</button>
                             }
 
-                            <button class="action-primary" type="submit" disabled="@(Carregando || !PersonagensNaoEnviados.Any())">
-                                @(Carregando ? "Enviando ficha..." : "Enviar Ficha para o Mestre →")
+                            <button class="action-primary" type="submit" disabled="@(Carregando || PersonagemEmPreparacao == null)">
+                                @(Carregando ? "Salvando e enviando..." : "Vincular Inventário e Enviar Ficha ao Mestre →")
                             </button>
                         </div>
                     </form>
@@ -340,7 +502,7 @@
         else if (EtapaAtual == 2)
         {
             <!-- =========================================================================
-                 ETAPA 2: ESCOLHER ENTRE AS FICHAS ACEITAS E CONECTAR NA SESSÃO
+                 ETAPA 2: ESCOLHER ENTRE AS FICHAS ACEITAS (EXIBE INVENTÁRIO) E CONECTAR
                  ========================================================================= -->
             <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
                 <p class="page-kicker">Etapa 2 · Sala de Jogo</p>
@@ -403,6 +565,37 @@
                     </div>
                 </dl>
 
+                <!-- EXIBE O INVENTÁRIO VINCULADO DO PERSONAGEM NA ETAPA DE CONECTAR -->
+                @if (FichaCompletaVinculada?.Inventario != null)
+                {
+                    <div class="ficha-preview-pergaminho" style="margin-top: 16px;">
+                        <h4 style="margin: 0 0 10px; color: #392819; font-size: 14px; text-transform: uppercase;">
+                            🎒 Inventário de @FichaCompletaVinculada.Nome na Sessão (Carga: @(FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)
+                        </h4>
+                        <div class="dados-fisicos-grid" style="margin-bottom: 10px;">
+                            <div><span>PC</span><strong>@FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
+                            <div><span>PP</span><strong>@FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
+                            <div><span>PE</span><strong>@FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
+                            <div><span>PO</span><strong>@FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
+                            <div><span>PL</span><strong>@FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
+                        </div>
+
+                        @if (FichaCompletaVinculada.Inventario.Itens != null && FichaCompletaVinculada.Inventario.Itens.Any())
+                        {
+                            <ul class="lista-itens-preview">
+                                @foreach (var ii in FichaCompletaVinculada.Inventario.Itens)
+                                {
+                                    <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · @(ii.Item?.Peso ?? 0) kg)</span></li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p style="margin:0; font-size:12px;">Nenhum item equipado.</p>
+                        }
+                    </div>
+                }
+
                 @if (StatusFichaAtual != "Aceita")
                 {
                     <div class="ficha-alert pendente" style="margin-top: 16px;">
@@ -414,7 +607,7 @@
 
                 <div class="join-actions">
                     <button class="action-secondary" type="button" disabled="@Carregando" @onclick="() => IrParaEtapa(1)">
-                        ← Gerenciar / Escolher Ficha (Etapa 1)
+                        ← Voltar para Fichas (Etapa 1)
                     </button>
                     <div style="display: flex; gap: 10px;">
                         <button class="action-secondary" type="button" disabled="@Carregando" @onclick="RecarregarStatusAsync">
@@ -444,12 +637,14 @@
     private bool TemErro { get; set; }
     private bool Carregando { get; set; }
     private bool ModoAdicionarNovaFicha { get; set; }
+    private bool ModoReenviarRecusada { get; set; }
 
     private Campanha? CampanhaAtual { get; set; }
     private List<Personagem> PersonagensDisponiveis { get; set; } = new();
-
-    // Lista de TODAS as fichas que o jogador enviou para esta campanha
     private List<PersonagemCampanha> VinculosDoJogador { get; set; } = new();
+
+    private List<Item> ItensDaCampanha =>
+        CampanhaAtual?.Itens.OrderBy(i => i.Nome).ToList() ?? new List<Item>();
 
     private List<PersonagemCampanha> FichasAceitasDoJogador =>
         VinculosDoJogador
@@ -459,7 +654,6 @@
 
     private bool PossuiAlgumaFichaAceita => FichasAceitasDoJogador.Any();
 
-    // Personagens da conta do usuário que ainda não foram enviados para esta campanha
     private List<Personagem> PersonagensNaoEnviados =>
         PersonagensDisponiveis
             .Where(p => !VinculosDoJogador.Any(v => v.IdPersonagem == p.IdPersonagem))
@@ -468,8 +662,24 @@
     private PersonagemCampanha? VinculoSelecionado { get; set; }
     private Personagem? FichaCompletaVinculada { get; set; }
     private int NovoPersonagemParaEnviarId { get; set; }
+    private Personagem? PersonagemEmPreparacao { get; set; }
     private string StatusFichaAtual => VinculoSelecionado?.StatusAprovacao ?? string.Empty;
     private string AbaFichaPreview { get; set; } = "atributos";
+
+    // Estado do Construtor de Inventário da Campanha
+    private List<ItemInventarioVinculado> ItensInventarioEdicao { get; set; } = new();
+    private int MoedasPC { get; set; } = 0;
+    private int MoedasPP { get; set; } = 0;
+    private int MoedasPE { get; set; } = 0;
+    private int MoedasPO { get; set; } = 10;
+    private int MoedasPL { get; set; } = 0;
+    private string NotasInventario { get; set; } = string.Empty;
+
+    private decimal PesoTotalEdicao =>
+        ItensInventarioEdicao.Where(i => i.IdItem > 0).Sum(i => i.PesoUnitario * Math.Max(1, i.Quantidade));
+
+    private decimal CapacidadeCargaMaximaEdicao =>
+        Math.Round(Math.Max(1, PersonagemEmPreparacao?.Forca ?? 10) * 7.5m, 1);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -538,25 +748,21 @@
                 ?? FichasAceitasDoJogador.FirstOrDefault()
                 ?? VinculosDoJogador.First();
 
-            await SelecionarVinculoExistenteAsync(escolhido);
+            await CarregarVinculoSelecionadoInternoAsync(escolhido);
         }
         else if (PersonagensNaoEnviados.Count == 1)
         {
-            NovoPersonagemParaEnviarId = PersonagensNaoEnviados[0].IdPersonagem;
+            await AoEscolherPersonagemParaEnviarAsync(PersonagensNaoEnviados[0].IdPersonagem);
         }
     }
 
     private async Task SelecionarVinculoExistenteAsync(PersonagemCampanha vinculo)
     {
-        if (Carregando) return; // Evita cliques concorrentes enquanto carrega
+        if (Carregando) return;
         Carregando = true;
         try
         {
-            VinculoSelecionado = vinculo;
-            StateHasChanged(); // Atualiza a UI imediatamente mostrando a seleção
-
-            // Carrega a ficha completa de forma isolada
-            FichaCompletaVinculada = await PersonagemService.ObterPorIdAsync(vinculo.IdPersonagem) ?? vinculo.Personagem;
+            await CarregarVinculoSelecionadoInternoAsync(vinculo);
         }
         finally
         {
@@ -564,19 +770,151 @@
             StateHasChanged();
         }
     }
-    private void AbrirModoEnviarNovaFicha()
+
+    private async Task CarregarVinculoSelecionadoInternoAsync(PersonagemCampanha vinculo)
     {
-        LimparMensagem();
-        ModoAdicionarNovaFicha = true;
-        NovoPersonagemParaEnviarId = PersonagensNaoEnviados.FirstOrDefault()?.IdPersonagem ?? 0;
+        VinculoSelecionado = vinculo;
+        FichaCompletaVinculada = await PersonagemService.ObterPorIdAsync(vinculo.IdPersonagem) ?? vinculo.Personagem;
     }
 
-    private async Task EnviarFichaAoMestreAsync()
+    private async Task AoEscolherPersonagemParaEnviarAsync(int idPersonagem)
     {
-        if (CampanhaAtual is null) return;
-        if (NovoPersonagemParaEnviarId <= 0)
+        NovoPersonagemParaEnviarId = idPersonagem;
+        PersonagemEmPreparacao = await PersonagemService.ObterPorIdAsync(idPersonagem)
+                                 ?? PersonagensDisponiveis.FirstOrDefault(p => p.IdPersonagem == idPersonagem);
+        PreencherEditorInventarioComDadosDoPersonagem(PersonagemEmPreparacao);
+    }
+
+    private void PreencherEditorInventarioComDadosDoPersonagem(Personagem? p)
+    {
+        ItensInventarioEdicao.Clear();
+        MoedasPC = 0;
+        MoedasPP = 0;
+        MoedasPE = 0;
+        MoedasPO = 10;
+        MoedasPL = 0;
+        NotasInventario = string.Empty;
+
+        if (p?.Inventario == null) return;
+
+        MoedasPC = p.Inventario.MoedasPC;
+        MoedasPP = p.Inventario.MoedasPP;
+        MoedasPE = p.Inventario.MoedasPE;
+        MoedasPO = p.Inventario.MoedasPO;
+        MoedasPL = p.Inventario.MoedasPL;
+        NotasInventario = p.Inventario.Notas ?? string.Empty;
+
+        var idsPermitidosNaCampanha = ItensDaCampanha.Select(i => i.IdItem).ToHashSet();
+
+        foreach (var ii in p.Inventario.Itens)
+        {
+            if (!idsPermitidosNaCampanha.Contains(ii.IdItem)) continue;
+
+            var itemRef = ItensDaCampanha.FirstOrDefault(x => x.IdItem == ii.IdItem) ?? ii.Item;
+            if (itemRef != null)
+            {
+                ItensInventarioEdicao.Add(new ItemInventarioVinculado
+                {
+                    Categoria = PersonagemCriarViewModel.ClassificarCategoriaItem(itemRef),
+                    IdItem = itemRef.IdItem,
+                    Nome = itemRef.Nome,
+                    Quantidade = ii.Quantidade,
+                    PesoUnitario = itemRef.Peso ?? 0m,
+                    PrecoUnitario = itemRef.Preco ?? 0m
+                });
+            }
+        }
+    }
+
+    private async Task AbrirModoEnviarNovaFicha()
+    {
+        LimparMensagem();
+        ModoReenviarRecusada = false;
+        ModoAdicionarNovaFicha = true;
+        int idInicial = PersonagensNaoEnviados.FirstOrDefault()?.IdPersonagem ?? 0;
+        if (idInicial > 0)
+            await AoEscolherPersonagemParaEnviarAsync(idInicial);
+        else
+            PersonagemEmPreparacao = null;
+    }
+
+    private void AbrirReenvioDeFichaRecusada()
+    {
+        // Só permite abrir se a ficha tiver sido Recusada pelo Mestre
+        if (FichaCompletaVinculada == null || StatusFichaAtual != "Recusada") return;
+        LimparMensagem();
+        ModoAdicionarNovaFicha = false;
+        ModoReenviarRecusada = true;
+        NovoPersonagemParaEnviarId = FichaCompletaVinculada.IdPersonagem;
+        PersonagemEmPreparacao = FichaCompletaVinculada;
+        PreencherEditorInventarioComDadosDoPersonagem(FichaCompletaVinculada);
+    }
+
+    private void CancelarModoEdicaoOuAdicao()
+    {
+        ModoAdicionarNovaFicha = false;
+        ModoReenviarRecusada = false;
+        PersonagemEmPreparacao = null;
+        LimparMensagem();
+    }
+
+    private IEnumerable<Item> ObterItensCampanhaPorCategoria(string categoria)
+    {
+        if (!ItensDaCampanha.Any()) return Enumerable.Empty<Item>();
+        var filtrados = ItensDaCampanha.Where(i => PersonagemCriarViewModel.ClassificarCategoriaItem(i) == categoria);
+        return filtrados.Any() ? filtrados : ItensDaCampanha;
+    }
+
+    private void AdicionarSlotItem(string categoria)
+    {
+        ItensInventarioEdicao.Add(new ItemInventarioVinculado
+        {
+            Categoria = categoria,
+            Quantidade = 1
+        });
+    }
+
+    private void AlterarItemSlot(ItemInventarioVinculado slot, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int idItem))
+        {
+            slot.IdItem = idItem;
+            var itemCampanha = ItensDaCampanha.FirstOrDefault(i => i.IdItem == idItem);
+            if (itemCampanha != null)
+            {
+                slot.Nome = itemCampanha.Nome;
+                slot.PesoUnitario = itemCampanha.Peso ?? 0m;
+                slot.PrecoUnitario = itemCampanha.Preco ?? 0m;
+            }
+            else
+            {
+                slot.Nome = string.Empty;
+                slot.PesoUnitario = 0m;
+                slot.PrecoUnitario = 0m;
+            }
+        }
+    }
+
+    private void RemoverSlotItem(ItemInventarioVinculado slot)
+    {
+        ItensInventarioEdicao.Remove(slot);
+    }
+
+    private async Task EnviarFichaComInventarioAoMestreAsync()
+    {
+        if (CampanhaAtual is null || PersonagemEmPreparacao is null)
         {
             DefinirErro("Selecione um personagem para enviar ao Mestre.");
+            return;
+        }
+
+        int idEnviado = PersonagemEmPreparacao.IdPersonagem;
+
+        // Trava de segurança: impede editar itens de ficha que já foi enviada (Pendente) ou aprovada (Aceita)
+        var vinculoExistente = VinculosDoJogador.FirstOrDefault(v => v.IdPersonagem == idEnviado);
+        if (vinculoExistente != null && !string.Equals(vinculoExistente.StatusAprovacao, "Recusada", StringComparison.OrdinalIgnoreCase))
+        {
+            DefinirErro("Esta ficha já foi enviada ao Mestre e seus itens não podem mais ser editados por aqui.");
             return;
         }
 
@@ -584,7 +922,32 @@
         LimparMensagem();
         try
         {
-            int idEnviado = NovoPersonagemParaEnviarId;
+            var dadosInventario = new Inventario
+            {
+                IdPersonagem = idEnviado,
+                CapacidadeCarga = CapacidadeCargaMaximaEdicao,
+                PesoAtual = PesoTotalEdicao,
+                Dinheiro = MoedasPO,
+                MoedasPC = MoedasPC,
+                MoedasPP = MoedasPP,
+                MoedasPE = MoedasPE,
+                MoedasPO = MoedasPO,
+                MoedasPL = MoedasPL,
+                Notas = NotasInventario
+            };
+
+            var listaItens = ItensInventarioEdicao
+                .Where(i => i.IdItem > 0)
+                .Select(i => (i.IdItem, i.Quantidade))
+                .ToList();
+
+            var resultadoInv = await PersonagemService.SalvarInventarioCampanhaAsync(idEnviado, dadosInventario, listaItens);
+            if (!resultadoInv.Sucesso)
+            {
+                DefinirErro(resultadoInv.Mensagem);
+                return;
+            }
+
             var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idEnviado);
             if (!resultado.Sucesso)
             {
@@ -594,30 +957,15 @@
 
             CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
             ModoAdicionarNovaFicha = false;
+            ModoReenviarRecusada = false;
+            PersonagemEmPreparacao = null;
             await SincronizarVinculosDoJogadorAsync(idEnviado);
-            Mensagem = resultado.Mensagem;
+            AbaFichaPreview = "inventario";
+            Mensagem = "Ficha e inventário enviados para avaliação do Mestre!";
         }
         catch (Exception ex)
         {
-            DefinirErro($"Erro ao enviar ficha: {ex.Message}");
-        }
-        finally
-        {
-            Carregando = false;
-        }
-    }
-
-    private async Task ReenviarFichaRecusadaAsync(int idPersonagem)
-    {
-        if (CampanhaAtual is null) return;
-        Carregando = true;
-        LimparMensagem();
-        try
-        {
-            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idPersonagem);
-            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
-            await SincronizarVinculosDoJogadorAsync(idPersonagem);
-            Mensagem = resultado.Mensagem;
+            DefinirErro($"Erro ao enviar ficha e inventário: {ex.Message}");
         }
         finally
         {

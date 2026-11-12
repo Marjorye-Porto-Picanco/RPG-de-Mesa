@@ -91,24 +91,8 @@ namespace RPGdeMesa.Presentation.ViewModel
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
 
-        // Etapa 4: Inventário e Moedas (3FN)
-        public List<Item> ItensDisponiveis { get; set; } = new();
-        public List<ItemInventarioVinculado> ItensInventario { get; set; } = new();
-        public int MoedasPC { get; set; } = 0;
-        public int MoedasPP { get; set; } = 0;
-        public int MoedasPE { get; set; } = 0;
-        public int MoedasPO { get; set; } = 10;
-        public int MoedasPL { get; set; } = 0;
-        public string NotasInventario { get; set; } = string.Empty;
-
-        // Etapa 5: Grimório (3FN)
+        // Etapa 4: Grimório (3FN)
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
-
-        public decimal PesoTotalInventario =>
-            ItensInventario.Where(i => i.IdItem > 0).Sum(i => i.PesoUnitario * Math.Max(1, i.Quantidade));
-
-        public decimal CapacidadeCargaMaxima =>
-            Math.Round(Math.Max(1, PersonagemAtual.Forca) * 7.5m, 1);
 
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
@@ -139,7 +123,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 Sabedoria = 10,
                 Carisma = 10,
                 RacaTexto = "Humano",
-                ClasseTexto = "Guerreiro (1)",
+                ClasseTexto = "Guerreiro",
                 AntecedenteTexto = "Acólito",
                 Tendencia = "Neutra",
                 Genero = "Masculino",
@@ -151,13 +135,6 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             SalvaguardasSelecionadas.Clear();
             PericiasSelecionadas.Clear();
-            ItensInventario.Clear();
-            MoedasPC = 0;
-            MoedasPP = 0;
-            MoedasPE = 0;
-            MoedasPO = 10;
-            MoedasPL = 0;
-            NotasInventario = string.Empty;
             Magias.Clear();
 
             MensagemFeedback = "";
@@ -202,21 +179,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemAtual.ClasseTexto = textoResumo.Length > 50 ? textoResumo[..50] : textoResumo;
         }
 
-        public async Task CarregarDadosIniciaisAsync()
-        {
-            try
-            {
-                int idUsuario = _sessaoUsuario.IdUsuarioLogado;
-                var itens = await _campanhaService.ObterItensParaSessaoAsync(idUsuario);
-                ItensDisponiveis = itens.OrderBy(i => i.Nome).ToList();
-                NotifyStateChanged();
-            }
-            catch
-            {
-                ItensDisponiveis = new();
-            }
-        }
-
         public static string ClassificarCategoriaItem(Item i)
         {
             if ((i.Tipo != null && (i.Tipo.Contains("arma", StringComparison.OrdinalIgnoreCase) ||
@@ -238,48 +200,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                 return "Consumiveis";
 
             return "Outros";
-        }
-
-        public IEnumerable<Item> ObterItensPorCategoria(string categoria)
-        {
-            if (!ItensDisponiveis.Any()) return Enumerable.Empty<Item>();
-            var filtrados = ItensDisponiveis.Where(i => ClassificarCategoriaItem(i) == categoria);
-            return filtrados.Any() ? filtrados : ItensDisponiveis;
-        }
-
-        public void AdicionarSlotItem(string categoria)
-        {
-            ItensInventario.Add(new ItemInventarioVinculado
-            {
-                Categoria = categoria,
-                Quantidade = 1
-            });
-            NotifyStateChanged();
-        }
-
-        public void SelecionarItemExistente(ItemInventarioVinculado slot, int idItem)
-        {
-            slot.IdItem = idItem;
-            var itemBanco = ItensDisponiveis.FirstOrDefault(i => i.IdItem == idItem);
-            if (itemBanco != null)
-            {
-                slot.Nome = itemBanco.Nome;
-                slot.PesoUnitario = itemBanco.Peso ?? 0m;
-                slot.PrecoUnitario = itemBanco.Preco ?? 0m;
-            }
-            else
-            {
-                slot.Nome = string.Empty;
-                slot.PesoUnitario = 0m;
-                slot.PrecoUnitario = 0m;
-            }
-            NotifyStateChanged();
-        }
-
-        public void RemoverSlotItem(ItemInventarioVinculado slot)
-        {
-            ItensInventario.Remove(slot);
-            NotifyStateChanged();
         }
 
         public void AlternarSalvaguarda(string nome, bool marcado)
@@ -352,28 +272,9 @@ namespace RPGdeMesa.Presentation.ViewModel
                     return;
                 }
 
-                var dadosInventario = new Inventario
-                {
-                    IdPersonagem = PersonagemAtual.IdPersonagem,
-                    CapacidadeCarga = CapacidadeCargaMaxima,
-                    PesoAtual = PesoTotalInventario,
-                    Dinheiro = MoedasPO,
-                    MoedasPC = MoedasPC,
-                    MoedasPP = MoedasPP,
-                    MoedasPE = MoedasPE,
-                    MoedasPO = MoedasPO,
-                    MoedasPL = MoedasPL,
-                    Notas = NotasInventario
-                };
-
                 var listaClasses = ClassesSelecionadas
                     .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
                     .Select(c => (c.NomeClasse, Math.Clamp(c.Nivel, 1, 20)))
-                    .ToList();
-
-                var listaItens = ItensInventario
-                    .Where(i => i.IdItem > 0)
-                    .Select(i => (i.IdItem, i.Quantidade))
                     .ToList();
 
                 var listaMagias = Magias
@@ -387,13 +288,14 @@ namespace RPGdeMesa.Presentation.ViewModel
                     })
                     .ToList();
 
+                // O inventário agora pertence ao fluxo de entrada na Campanha (sessao-entrar)
                 await _personagemService.SalvarComplementos3FNAsync(
                     PersonagemAtual.IdPersonagem,
                     listaClasses,
                     SalvaguardasSelecionadas,
                     PericiasSelecionadas,
-                    dadosInventario,
-                    listaItens,
+                    dadosInventario: null,
+                    itens: null,
                     listaMagias);
 
                 if (IdCampanhaOpcional.HasValue && IdCampanhaOpcional.Value > 0)
