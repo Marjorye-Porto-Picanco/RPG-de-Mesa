@@ -152,6 +152,46 @@ public class CampanhaService
     public Task<List<Campanha>> ObterCampanhasComoJogadorAsync(int idAccount) =>
         _campanhaRepo.ListarPorJogadorAsync(idAccount);
 
+    public async Task<(bool Sucesso, string Mensagem)> ExcluirCampanhaAsync(int idAccount, int idCampanha)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha is null)
+                return (false, "Campanha não encontrada.");
+            if (campanha.IdAccount != idAccount)
+                return (false, "Somente o mestre pode excluir esta campanha.");
+
+            await _campanhaRepo.RemoverCampanhaAsync(idCampanha);
+            return (true, "Campanha excluída com sucesso.");
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao excluir campanha: {erroDetalhado}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> SairDaCampanhaAsync(int idAccount, int idCampanha)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha is null)
+                return (false, "Campanha não encontrada.");
+            if (campanha.IdAccount == idAccount)
+                return (false, "O mestre não pode sair da própria campanha.");
+
+            await _campanhaRepo.RemoverUsuarioDaCampanhaAsync(idAccount, idCampanha);
+            return (true, "Você saiu da campanha.");
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao sair da campanha: {erroDetalhado}");
+        }
+    }
+
     public async Task<List<Monstro>> ObterMonstrosDoUsuarioAsync(int idAccount)
     {
         var todos = await _campanhaRepo.ListarTodosMonstrosAsync();

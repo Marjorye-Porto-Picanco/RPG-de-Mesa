@@ -472,3 +472,20 @@ body {
         gap: 8px;
     }
 }
+
+
+/* Cartão com botão de excluir sobreposto (o link da ficha não pode conter um botão). */
+.cartao-wrap {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+    .cartao-wrap > .cartao-personagem {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+.cartao-npc {
+    position: relative;
+}

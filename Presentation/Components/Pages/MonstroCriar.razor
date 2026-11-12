@@ -1,4 +1,5 @@
 ﻿@page "/monstro-criar"
+@using System.IO
 @inject MonstroCriarViewModel ViewModel
 @inject NavigationManager Navigation
 @implements IDisposable
@@ -110,10 +111,10 @@
                         <span>Ou envie uma ilustração</span>
                         <label class="upload-imagem-botao">
                             <span aria-hidden="true">↑</span> Escolher imagem do monstro
-                            <input id="arquivo-monstro" type="file" accept="image/*" aria-label="Escolher imagem do monstro" />
+                            <InputFile id="arquivo-monstro" OnChange="CarregarImagemAsync" accept="image/*" aria-label="Escolher imagem do monstro" />
                         </label>
-                        <p class="upload-imagem-ajuda">Uma imagem enviada substitui a ilustração selecionada acima.</p>
-                        <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                        <p class="upload-imagem-ajuda">Uma imagem enviada substitui a ilustração selecionada acima (até 2 MB).</p>
+                        <p class="upload-imagem-status @(string.IsNullOrEmpty(ErroImagem) ? "" : "erro")" role="status" aria-live="polite">@(ErroImagem ?? StatusImagem)</p>
                     </div>
                 </div>
 
@@ -159,6 +160,9 @@
 }
 
 @code {
+    private const long LimiteImagemBytes = 2 * 1024 * 1024;
+    private string? ErroImagem { get; set; }
+    private string? StatusImagem { get; set; }
     private bool ExibirAvisoSaida { get; set; }
     private bool LiberarProximaNavegacao { get; set; }
     private string? DestinoPendente { get; set; }
@@ -172,6 +176,39 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
+    }
+
+    private async Task CarregarImagemAsync(InputFileChangeEventArgs evento)
+    {
+        ErroImagem = null;
+        StatusImagem = null;
+        var arquivo = evento.File;
+
+        if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            ErroImagem = "Selecione um arquivo de imagem válido.";
+            return;
+        }
+
+        if (arquivo.Size > LimiteImagemBytes)
+        {
+            ErroImagem = "A imagem deve ter no máximo 2 MB.";
+            return;
+        }
+
+        try
+        {
+            await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
+            using var memoria = new MemoryStream();
+            await origem.CopyToAsync(memoria);
+
+            ViewModel.MonstroAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            StatusImagem = "Imagem pronta.";
+        }
+        catch (Exception)
+        {
+            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo.";
+        }
     }
 
     private void AbrirAvisoSaida() => ExibirAvisoSaida = true;

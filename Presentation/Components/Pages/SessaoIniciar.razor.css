@@ -1,6 +1,7 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
+
 :root {
     color-scheme: dark;
     --wood: #1b120e;
@@ -13,6 +14,7 @@ button, a, input, select, textarea {
     font: inherit;
     -webkit-tap-highlight-color: transparent;
 }
+
 select {
     background-color: rgba(13, 20, 34, 0.85);
     color: #f5eedf;
@@ -725,4 +727,98 @@ textarea:focus-visible {
     .editor-row {
         grid-template-columns: minmax(0, 1fr) 94px;
     }
+}
+
+
+/* ============================================================
+   Correções — Sessão do Mestre (aba Configurações)
+   ============================================================ */
+
+/* Os dois painéis passam a ter a mesma altura e o de vínculo cresce junto com o formulário. */
+.configuration-layout {
+    align-items: stretch;
+}
+
+.resource-browser {
+    display: flex;
+    flex-direction: column;
+    min-height: 520px;
+}
+
+    .resource-browser .search-box {
+        margin-bottom: 12px;
+    }
+
+    .resource-browser .link-tabs {
+        margin-top: 10px;
+    }
+
+    .resource-browser .resource-list {
+        flex: 1 1 auto;
+        align-content: start;
+        min-height: 360px;
+        max-height: none;
+        margin-top: 15px;
+        overflow-y: auto;
+    }
+
+.resource-row {
+    justify-content: space-between;
+    gap: 10px;
+}
+
+    .resource-row.disponivel {
+        background: rgba(212, 175, 55, 0.1);
+    }
+
+.resource-label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.btn-vinculo {
+    display: grid;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+}
+
+.btn-desvincular {
+    border: 1px solid rgba(214, 96, 80, 0.55);
+    background: rgba(70, 24, 18, 0.82);
+    color: #f2b5a8;
+}
+
+    .btn-desvincular:hover {
+        background: #8c2f22;
+        color: #fff1ec;
+    }
+
+.btn-vincular {
+    border: 1px solid rgba(120, 190, 130, 0.55);
+    background: rgba(28, 60, 34, 0.82);
+    color: #b9e6c0;
+}
+
+    .btn-vincular:hover {
+        background: #2f7a3d;
+        color: #f2fff4;
+    }
+
+@media (max-width: 960px) {
+    .resource-browser {
+        min-height: 0;
+    }
+
+        .resource-browser .resource-list {
+            min-height: 0;
+            max-height: 60vh;
+        }
 }

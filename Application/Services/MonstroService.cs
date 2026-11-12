@@ -33,4 +33,21 @@ public class MonstroService
 
     public Task<Monstro?> ObterPorIdAsync(int idMonstro) =>
         _monstroRepo.ObterPorIdAsync(idMonstro);
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverMonstroAsync(int idAccount, int idMonstro)
+    {
+        try
+        {
+            var monstro = await _monstroRepo.ObterPorIdAsync(idMonstro);
+            if (monstro is null || monstro.IdAccount != idAccount)
+                return (false, "Monstro não encontrado ou sem permissão para removê-lo.");
+
+            await _monstroRepo.RemoverAsync(monstro);
+            return (true, "Monstro removido com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao remover monstro: {ex.Message}");
+        }
+    }
 }

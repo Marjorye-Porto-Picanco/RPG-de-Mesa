@@ -74,7 +74,6 @@
                             <h1>Configurações da sessão</h1>
                             <p class="page-description">Monte encontros, monstros, NPCs e itens da aventura.</p>
                         </div>
-                        <button class="add-button" type="button" @onclick="LimparFormulario"><span>+</span> Novo Registro</button>
                     </header>
 
                     <div class="session-page-content">
@@ -87,7 +86,7 @@
                                 <section class="resource-browser" aria-labelledby="titulo-recursos">
                                     <h3 id="titulo-recursos">Elementos da sessão</h3>
 
-                                    <div class="search-box" style="margin-bottom: 12px;">
+                                    <div class="search-box">
                                         <span aria-hidden="true">⌕</span>
                                         <input id="busca-catalogo" type="search" @bind="termoBusca" @bind:event="oninput" placeholder="Busque por nome ou tipo" autocomplete="off" />
                                     </div>
@@ -99,21 +98,21 @@
                                         <button class="resource-tab @(categoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => categoriaAtiva = "itens"'>Itens</button>
                                     </div>
 
-                                    <div class="link-tabs" role="tablist" style="margin-top: 10px;">
+                                    <div class="link-tabs" role="tablist">
                                         <button class="link-tab @(modoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => modoVisualizacao = "vinculados"'>Vinculados</button>
                                         <button class="link-tab @(modoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => modoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
                                     </div>
 
-                                    <div class="resource-list" style="margin-top: 15px; max-height: 280px; overflow-y: auto;">
+                                    <div class="resource-list">
                                         @if (modoVisualizacao == "vinculados")
                                         {
                                             @if (categoriaAtiva == "todos" || categoriaAtiva == "npcs")
                                             {
                                                 @foreach (var npc in NpcsVinculadosFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                                        <span><strong>[NPC]</strong> @npc.Nome <span>(@(npc.ClasseTexto ?? npc.Ocupacao))</span></span>
-                                                        <button type="button" title="Desvincular NPC" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularNpc(npc.IdNpc)">❌</button>
+                                                    <div class="player-option resource-row">
+                                                        <span class="resource-label"><strong>[NPC]</strong> @npc.Nome <span>(@(npc.ClasseTexto ?? npc.Ocupacao))</span></span>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular NPC" aria-label="Desvincular NPC" @onclick="() => DesvincularNpc(npc.IdNpc)">✕</button>
                                                     </div>
                                                 }
                                             }
@@ -121,9 +120,9 @@
                                             {
                                                 @foreach (var mc in MonstrosVinculadosFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                                        <span><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>(ND: @mc.Monstro?.NivelDesafio)</span></span>
-                                                        <button type="button" title="Desvincular Monstro" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularMonstro(mc.IdMonstro)">❌</button>
+                                                    <div class="player-option resource-row">
+                                                        <span class="resource-label"><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>(ND: @mc.Monstro?.NivelDesafio)</span></span>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Monstro" aria-label="Desvincular Monstro" @onclick="() => DesvincularMonstro(mc.IdMonstro)">✕</button>
                                                     </div>
                                                 }
                                             }
@@ -131,9 +130,9 @@
                                             {
                                                 @foreach (var ic in ItensVinculadosFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                                                        <span><strong>[Item]</strong> @ic.Item?.Nome <span>(@ic.Item?.Tipo)</span></span>
-                                                        <button type="button" title="Desvincular Item" style="background:transparent; border:none; color:#ff4d4d; cursor:pointer; font-weight:bold;" @onclick="() => DesvincularItem(ic.IdItem)">❌</button>
+                                                    <div class="player-option resource-row">
+                                                        <span class="resource-label"><strong>[Item]</strong> @ic.Item?.Nome <span>(@ic.Item?.Tipo)</span></span>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Item" aria-label="Desvincular Item" @onclick="() => DesvincularItem(ic.IdItem)">✕</button>
                                                     </div>
                                                 }
                                             }
@@ -144,9 +143,9 @@
                                             {
                                                 @foreach (var n in NpcsDisponiveisFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
-                                                        <span>NPC: <strong>@n.Nome</strong></span>
-                                                        <button type="button" title="Vincular NPC" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularNpcExistente(n.IdNpc)">➕</button>
+                                                    <div class="player-option resource-row disponivel">
+                                                        <span class="resource-label">NPC: <strong>@n.Nome</strong></span>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular NPC" aria-label="Vincular NPC" @onclick="() => VincularNpcExistente(n.IdNpc)">+</button>
                                                     </div>
                                                 }
                                             }
@@ -154,9 +153,9 @@
                                             {
                                                 @foreach (var m in MonstrosDisponiveisFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
-                                                        <span>Monstro: <strong>@m.Nome</strong></span>
-                                                        <button type="button" title="Vincular Monstro" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularMonstro(m.IdMonstro)">➕</button>
+                                                    <div class="player-option resource-row disponivel">
+                                                        <span class="resource-label">Monstro: <strong>@m.Nome</strong></span>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Monstro" aria-label="Vincular Monstro" @onclick="() => VincularMonstro(m.IdMonstro)">+</button>
                                                     </div>
                                                 }
                                             }
@@ -164,9 +163,9 @@
                                             {
                                                 @foreach (var i in ItensDisponiveisFiltrados)
                                                 {
-                                                    <div class="player-option" style="margin-bottom: 6px; background: rgba(212,175,55,0.1); display: flex; justify-content: space-between; align-items: center;">
-                                                        <span>Item: <strong>@i.Nome</strong></span>
-                                                        <button type="button" title="Vincular Item" style="background:transparent; border:none; color:#28a745; cursor:pointer; font-weight:bold;" @onclick="() => VincularItem(i.IdItem)">➕</button>
+                                                    <div class="player-option resource-row disponivel">
+                                                        <span class="resource-label">Item: <strong>@i.Nome</strong></span>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Item" aria-label="Vincular Item" @onclick="() => VincularItem(i.IdItem)">+</button>
                                                     </div>
                                                 }
                                             }
@@ -590,19 +589,6 @@
         var resultado = await CampanhaService.RemoverItemDaCampanhaAsync(IdCampanha, idItem);
         mensagemFeedback = resultado.Mensagem;
         await CarregarDadosCampanhaAsync();
-    }
-
-    private void LimparFormulario()
-    {
-        npcNome = npcAntecedente = npcHistoria = string.Empty;
-        monstroNome = monstroSentidos = monstroResistencias = monstroHabilidades = monstroDescricao = string.Empty;
-        itemNome = itemTipo = itemDescricao = itemDano = itemTipoDano = itemPropriedades = string.Empty;
-        itemPeso = null;
-        itemPreco = null;
-        itemCaBonus = 0;
-        itemRaridade = string.Empty;
-        itemSintonizacao = "Não";
-        mensagemFeedback = string.Empty;
     }
 
     void AbrirIniciar() { iniciar = true; config = false; hist = false; }

@@ -50,15 +50,20 @@
 
                 @foreach (var campanha in campanhasMestre)
                 {
-                    <a class="cartao-campanha" href="@($"/sessao-iniciar/{campanha.IdCampanha}")" aria-label="Abrir painel da campanha @campanha.Nome">
-                        <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
-                        <span class="estado-campanha tag-mestre">Mestre</span>
-                        <div class="info-campanha">
-                            <span>Código: @campanha.CodigoConvite</span>
-                            <h2>@campanha.Nome</h2>
-                            <small>Criada em @campanha.DataCriacao.ToString("dd/MM/yyyy")</small>
-                        </div>
-                    </a>
+                    <div class="cartao-campanha-wrap">
+                        <a class="cartao-campanha" href="@($"/sessao-iniciar/{campanha.IdCampanha}")" aria-label="Abrir painel da campanha @campanha.Nome">
+                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
+                            <span class="estado-campanha tag-mestre">Mestre</span>
+                            <div class="info-campanha">
+                                <span>Código: @campanha.CodigoConvite</span>
+                                <h2>@campanha.Nome</h2>
+                                <small>Criada em @campanha.DataCriacao.ToString("dd/MM/yyyy")</small>
+                            </div>
+                        </a>
+                        <button class="campanha-remover" type="button" title="Excluir campanha"
+                                aria-label="Excluir campanha @campanha.Nome"
+                                @onclick="() => PedirRemocaoCampanha(campanha, false)">Excluir</button>
+                    </div>
                 }
             </div>
         }
@@ -72,15 +77,20 @@
             <div class="grade-campanhas">
                 @foreach (var campanha in campanhasJogador)
                 {
-                    <a class="cartao-campanha" href="/sessao-entrar" aria-label="Entrar na campanha @campanha.Nome">
-                        <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
-                        <span class="estado-campanha tag-jogador">Jogador</span>
-                        <div class="info-campanha">
-                            <span>Aventureiro</span>
-                            <h2>@campanha.Nome</h2>
-                            <small>Participando</small>
-                        </div>
-                    </a>
+                    <div class="cartao-campanha-wrap">
+                        <a class="cartao-campanha" href="/sessao-entrar" aria-label="Entrar na campanha @campanha.Nome">
+                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
+                            <span class="estado-campanha tag-jogador">Jogador</span>
+                            <div class="info-campanha">
+                                <span>Aventureiro</span>
+                                <h2>@campanha.Nome</h2>
+                                <small>Participando</small>
+                            </div>
+                        </a>
+                        <button class="campanha-remover" type="button" title="Sair da campanha"
+                                aria-label="Sair da campanha @campanha.Nome"
+                                @onclick="() => PedirRemocaoCampanha(campanha, true)">Sair</button>
+                    </div>
                 }
                 
                 <button type="button" class="cartao-adicionar" @onclick="() => exibirModalEntrar = true">
@@ -99,11 +109,31 @@
                  OnCampanhaEntrada="CampanhaEntradaSucesso" />
 }
 
+<ConfirmarExclusao Visivel="@(campanhaPendente is not null)"
+                   Processando="processandoRemocao"
+                   Titulo="TituloConfirmacaoCampanha"
+                   Mensagem="MensagemConfirmacaoCampanha"
+                   Erro="erroRemocaoCampanha"
+                   OnConfirmar="ConfirmarRemocaoCampanha"
+                   OnCancelar="CancelarRemocaoCampanha" />
+
 @code {
     private bool exibirModalEntrar = false;
+    private bool processandoRemocao;
+    private string? erroRemocaoCampanha;
     private List<Campanha> campanhasMestre = new();
     private List<Campanha> campanhasJogador = new();
     private string abaAtiva = "mestre";
+    private sealed record RemocaoCampanhaPendente(int IdCampanha, string Nome, bool ComoJogador);
+    private RemocaoCampanhaPendente? campanhaPendente;
+
+    private string TituloConfirmacaoCampanha => campanhaPendente?.ComoJogador == true
+        ? "Sair da campanha?"
+        : "Excluir campanha?";
+
+    private string MensagemConfirmacaoCampanha => campanhaPendente?.ComoJogador == true
+        ? $"Sua participação e seus personagens vinculados serão removidos de {campanhaPendente.Nome}."
+        : $"A campanha {campanhaPendente?.Nome} e seus vínculos serão excluídos. Esta ação não pode ser desfeita.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,5 +155,51 @@
         exibirModalEntrar = false;
         abaAtiva = "jogador";
         await CarregarCampanhasAsync();
+    }
+
+    private void PedirRemocaoCampanha(Campanha campanha, bool comoJogador)
+    {
+        erroRemocaoCampanha = null;
+        campanhaPendente = new RemocaoCampanhaPendente(campanha.IdCampanha, campanha.Nome, comoJogador);
+    }
+
+    private void CancelarRemocaoCampanha()
+    {
+        if (processandoRemocao) return;
+        campanhaPendente = null;
+        erroRemocaoCampanha = null;
+    }
+
+    private async Task ConfirmarRemocaoCampanha()
+    {
+        if (campanhaPendente is null || processandoRemocao) return;
+
+        processandoRemocao = true;
+        erroRemocaoCampanha = null;
+        try
+        {
+            var pendente = campanhaPendente;
+            var idUsuario = SessaoUsuario.IdUsuarioLogado;
+            var resultado = pendente.ComoJogador
+                ? await CampanhaService.SairDaCampanhaAsync(idUsuario, pendente.IdCampanha)
+                : await CampanhaService.ExcluirCampanhaAsync(idUsuario, pendente.IdCampanha);
+
+            if (!resultado.Sucesso)
+            {
+                erroRemocaoCampanha = resultado.Mensagem;
+                return;
+            }
+
+            campanhaPendente = null;
+            await CarregarCampanhasAsync();
+        }
+        catch (Exception ex)
+        {
+            erroRemocaoCampanha = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            processandoRemocao = false;
+        }
     }
 }

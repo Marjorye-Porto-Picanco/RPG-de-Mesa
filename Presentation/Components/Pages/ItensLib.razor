@@ -69,6 +69,12 @@
                         @foreach (var monstro in MonstrosFiltrados.Take(LimiteVisivel))
                         {
                             <div class="monster-card" @onclick="() => AbrirModalMonstro(monstro)">
+                                @if (monstro.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                                {
+                                    <button class="library-card-delete" type="button" title="Excluir monstro" aria-label="@($"Excluir {monstro.Nome}")"
+                                            @onclick='() => PedirExclusao("monstro", monstro.IdMonstro, monstro.Nome)'
+                                            @onclick:stopPropagation="true">Excluir</button>
+                                }
                                 <div class="monster-art">
                                     @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
                                     {
@@ -109,15 +115,22 @@
                     {
                         @foreach (var npc in NpcsFiltrados.Take(LimiteVisivel))
                         {
-                            <button class="npc-card" type="button" @onclick="() => AbrirModalNpc(npc)">
-                                <span class="npc-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant())</span>
-                                <span class="npc-info">
-                                    <strong>@npc.Nome</strong>
-                                    <small>@(npc.RacaTexto ?? "Aventureiro") · @(npc.ClasseTexto ?? npc.Ocupacao ?? "Civil")</small>
-                                    <small>@(npc.Localizacao ?? npc.AntecedenteTexto ?? "Localização não informada")</small>
-                                </span>
-                                <span class="entry-arrow" aria-hidden="true">↗</span>
-                            </button>
+                            <div class="npc-card-wrap">
+                                <button class="npc-card" type="button" @onclick="() => AbrirModalNpc(npc)">
+                                    <span class="npc-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant())</span>
+                                    <span class="npc-info">
+                                        <strong>@npc.Nome</strong>
+                                        <small>@(npc.RacaTexto ?? "Aventureiro") · @(npc.ClasseTexto ?? npc.Ocupacao ?? "Civil")</small>
+                                        <small>@(npc.Localizacao ?? npc.AntecedenteTexto ?? "Localização não informada")</small>
+                                    </span>
+                                    <span class="entry-arrow" aria-hidden="true">↗</span>
+                                </button>
+                                @if (npc.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                                {
+                                    <button class="library-card-delete" type="button" title="Excluir NPC" aria-label="@($"Excluir {npc.Nome}")"
+                                            @onclick='() => PedirExclusao("npc", npc.IdNpc, npc.Nome)'>Excluir</button>
+                                }
+                            </div>
                         }
                     }
                     else
@@ -138,11 +151,18 @@
                     {
                         @foreach (var entrada in ItensFiltrados.Take(LimiteVisivel))
                         {
-                            <button class="library-entry" type="button" @onclick="() => AbrirModalItem(entrada)">
-                                <strong>@entrada.Nome</strong>
-                                <span class="entry-meta">@ObterRotuloMeta(entrada)</span>
-                                <span class="entry-arrow" aria-hidden="true">↗</span>
-                            </button>
+                            <div class="library-entry-wrap">
+                                <button class="library-entry" type="button" @onclick="() => AbrirModalItem(entrada)">
+                                    <strong>@entrada.Nome</strong>
+                                    <span class="entry-meta">@ObterRotuloMeta(entrada)</span>
+                                    <span class="entry-arrow" aria-hidden="true">↗</span>
+                                </button>
+                                @if (entrada.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                                {
+                                    <button class="library-card-delete" type="button" title="Excluir item" aria-label="@($"Excluir {entrada.Nome}")"
+                                            @onclick='() => PedirExclusao("item", entrada.IdItem, entrada.Nome)'>Excluir</button>
+                                }
+                            </div>
                         }
                     }
                     else if (!Carregando)
@@ -223,6 +243,13 @@
                         <p>@ItemSelecionado.Descricao</p>
                     </section>
                 }
+
+                @if (ItemSelecionado.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                {
+                    <div class="dialog-footer-acoes">
+                        <BotaoExcluir Inline="true" Texto="Excluir item" Titulo="Excluir item" OnClick='() => PedirExclusao("item", ItemSelecionado.IdItem, ItemSelecionado.Nome)' />
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -276,6 +303,10 @@
                         </div>
                     </div>
                     <div class="form-footer rodape-modal">
+                        @if (MonstroSelecionado.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                        {
+                            <BotaoExcluir Inline="true" Texto="Excluir monstro" Titulo="Excluir monstro" OnClick='() => PedirExclusao("monstro", MonstroSelecionado.IdMonstro, MonstroSelecionado.Nome)' />
+                        }
                         <button type="button" class="action-secondary" @onclick="FecharModalMonstro">Fechar</button>
                     </div>
                 </section>
@@ -363,6 +394,10 @@
                     </div>
 
                     <div class="form-footer rodape-modal">
+                        @if (NpcSelecionado.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                        {
+                            <BotaoExcluir Inline="true" Texto="Excluir NPC" Titulo="Excluir NPC" OnClick='() => PedirExclusao("npc", NpcSelecionado.IdNpc, NpcSelecionado.Nome)' />
+                        }
                         <button type="button" class="action-secondary" @onclick="FecharModalNpc">Fechar</button>
                     </div>
                 </section>
@@ -384,23 +419,23 @@
     </div>
 }
 
-@if (Criacao){
-<section class="modal-criacao" @onclick="ModalCriacaoF">
-        <div class="modal-content" @onclick:stopPropagation="true" href="">
-            <h2><i class="ph ph-cube"></i> Item</h2>
-        </div>
-        <div class="modal-content" @onclick:stopPropagation="true" href="">
-            <h2><i class="ph ph-sparkle"></i> Magia</h2>
-        </div>
-        <div class="modal-content" @onclick:stopPropagation="true" href="">
-            <h2><i class="ph ph-skull"></i> Monstro</h2>
-        </div>
-        <div class="modal-content" @onclick:stopPropagation="true" href="">
-            <h2><i class="ph ph-user-gear"></i> NPC</h2>
-        </div>
+@if (Criacao)
+{
+    <section class="modal-criacao" @onclick="ModalCriacaoF">
+        <a class="modal-content" href="/item-criar"><h2><i class="ph ph-cube"></i> Item</h2></a>
+        <a class="modal-content" href="/item-criar?tipo=magias"><h2><i class="ph ph-sparkle"></i> Magia</h2></a>
+        <a class="modal-content" href="/monstro-criar"><h2><i class="ph ph-skull"></i> Monstro</h2></a>
+        <a class="modal-content" href="/personagem-criar?tipo=NPC"><h2><i class="ph ph-user-gear"></i> NPC</h2></a>
     </section>
 }
 
+<ConfirmarExclusao Visivel="@(exclusaoPendente is not null)"
+                   Processando="excluindo"
+                   Titulo="@($"Excluir {exclusaoPendente?.Nome}?")"
+                   Mensagem="Esta ação não pode ser desfeita. O registro será removido da sua biblioteca."
+                   Erro="@erroExclusao"
+                   OnConfirmar="ConfirmarExclusao"
+                   OnCancelar="CancelarExclusao" />
 
 @code {
     private bool Criacao = false;
@@ -435,6 +470,63 @@
     private List<Item> EntradasItens { get; set; } = new();
     private List<Monstro> EntradasMonstros { get; set; } = new();
     private List<NPC> EntradasNpcs { get; set; } = new();
+
+    // Exclusão
+    private sealed record ExclusaoPendente(string Tipo, int Id, string Nome);
+    private ExclusaoPendente? exclusaoPendente;
+    private bool excluindo;
+    private string? erroExclusao;
+
+    private void PedirExclusao(string tipo, int id, string nome)
+    {
+        erroExclusao = null;
+        exclusaoPendente = new ExclusaoPendente(tipo, id, nome);
+    }
+
+    private void CancelarExclusao()
+    {
+        if (excluindo) return;
+        exclusaoPendente = null;
+        erroExclusao = null;
+    }
+
+    private async Task ConfirmarExclusao()
+    {
+        if (exclusaoPendente is null || excluindo) return;
+
+        excluindo = true;
+        erroExclusao = null;
+        try
+        {
+            var idUsuario = SessaoUsuario.IdUsuarioLogado;
+            var resultado = exclusaoPendente.Tipo switch
+            {
+                "monstro" => await MonstroService.RemoverMonstroAsync(idUsuario, exclusaoPendente.Id),
+                "npc" => await NpcService.RemoverNpcAsync(exclusaoPendente.Id),
+                _ => await ItemService.RemoverItemAsync(idUsuario, exclusaoPendente.Id)
+            };
+
+            if (!resultado.Sucesso)
+            {
+                erroExclusao = resultado.Mensagem;
+                return;
+            }
+
+            exclusaoPendente = null;
+            FecharModalItem();
+            FecharModalMonstro();
+            FecharModalNpc();
+            await CarregarDados();
+        }
+        catch (Exception ex)
+        {
+            erroExclusao = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            excluindo = false;
+        }
+    }
 
     // Modais
     private Item? ItemSelecionado { get; set; }

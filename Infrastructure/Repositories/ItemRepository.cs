@@ -36,4 +36,10 @@ public class ItemRepository : IItemRepository
         await _contexto.SaveChangesAsync();
         return item.IdItem; 
     }
+
+    public async Task RemoverAsync(Item item)
+    {
+        _contexto.Itens.Remove(item);
+        await _contexto.SaveChangesAsync();
+    }
 }

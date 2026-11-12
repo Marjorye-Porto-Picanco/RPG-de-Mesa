@@ -41,6 +41,7 @@
                     @foreach (var personagem in personagens)
                     {
                         string iniciais = ObterIniciais(personagem.Nome);
+                        <div class="cartao-wrap">
                         <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
                             <div class="retrato-personagem">
                                 <img src="@(string.IsNullOrEmpty(personagem.Imagem) ? "img/armaduraprata.png" : personagem.Imagem)" alt="Retrato de @personagem.Nome" />
@@ -53,6 +54,8 @@
                                 <small>Pronto para a aventura</small>
                             </div>
                         </a>
+                        <BotaoExcluir Titulo="@($"Excluir {personagem.Nome}")" OnClick='() => PedirExclusao("personagem", personagem.IdPersonagem, personagem.Nome)' />
+                        </div>
                     }
 
                     <a class="cartao-adicionar cartao-adicionar-personagem" href="/personagem-criar">
@@ -80,7 +83,8 @@
                     @foreach (var npc in npcs)
                     {
                         string iniciais = ObterIniciais(npc.Nome);
-                        <div class="cartao-personagem" aria-label="Ficha do NPC @npc.Nome">
+                        <div class="cartao-personagem cartao-npc" aria-label="Ficha do NPC @npc.Nome">
+                            <BotaoExcluir Titulo="@($"Excluir {npc.Nome}")" OnClick='() => PedirExclusao("npc", npc.IdNpc, npc.Nome)' />
                             <div class="retrato-personagem">
                                 <img src="@(string.IsNullOrEmpty(npc.Imagem) ? "img/capacampanha3.png" : npc.Imagem)" alt="Retrato de @npc.Nome" />
                                 <span>@iniciais</span>
@@ -105,10 +109,72 @@
     </main>
 </div>
 
+<ConfirmarExclusao Visivel="@(exclusaoPendente is not null)"
+                   Processando="excluindo"
+                   Titulo="@($"Excluir {exclusaoPendente?.Nome}?")"
+                   Mensagem="Esta ação não pode ser desfeita. A ficha será removida da sua biblioteca."
+                   Erro="@erroExclusao"
+                   OnConfirmar="ConfirmarExclusao"
+                   OnCancelar="CancelarExclusao" />
+
 @code {
     private List<Personagem>? personagens;
     private List<NPC>? npcs;
     private string abaAtiva = "personagens";
+
+    private sealed record ExclusaoPendente(string Tipo, int Id, string Nome);
+    private ExclusaoPendente? exclusaoPendente;
+    private bool excluindo;
+    private string? erroExclusao;
+
+    private void PedirExclusao(string tipo, int id, string nome)
+    {
+        erroExclusao = null;
+        exclusaoPendente = new ExclusaoPendente(tipo, id, nome);
+    }
+
+    private void CancelarExclusao()
+    {
+        if (excluindo) return;
+        exclusaoPendente = null;
+        erroExclusao = null;
+    }
+
+    private async Task ConfirmarExclusao()
+    {
+        if (exclusaoPendente is null || excluindo) return;
+
+        excluindo = true;
+        erroExclusao = null;
+        try
+        {
+            var idUsuario = SessaoUsuario.IdUsuarioLogado;
+            var resultado = exclusaoPendente.Tipo == "npc"
+                ? await NpcService.RemoverNpcAsync(exclusaoPendente.Id)
+                : await PersonagemService.RemoverPersonagemAsync(idUsuario, exclusaoPendente.Id);
+
+            if (!resultado.Sucesso)
+            {
+                erroExclusao = resultado.Mensagem;
+                return;
+            }
+
+            if (exclusaoPendente.Tipo == "npc")
+                npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+            else
+                personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+
+            exclusaoPendente = null;
+        }
+        catch (Exception ex)
+        {
+            erroExclusao = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            excluindo = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

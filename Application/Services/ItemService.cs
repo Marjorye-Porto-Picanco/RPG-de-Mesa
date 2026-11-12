@@ -31,6 +31,23 @@ public class ItemService
             return new ItemResult(false, $"Erro ao cadastrar item: {ex.Message}", 0);
         }
     }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverItemAsync(int idAccount, int idItem)
+    {
+        try
+        {
+            var item = await _itemRepository.ObterPorIdAsync(idItem);
+            if (item is null || item.IdAccount != idAccount)
+                return (false, "Item não encontrado ou sem permissão para removê-lo.");
+
+            await _itemRepository.RemoverAsync(item);
+            return (true, "Item removido com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao remover item: {ex.Message}");
+        }
+    }
 }
 
 public class ItemResult

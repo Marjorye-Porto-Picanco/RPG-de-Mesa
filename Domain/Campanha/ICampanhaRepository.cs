@@ -19,6 +19,8 @@ public interface ICampanhaRepository
     Task<List<Monstro>> ListarTodosMonstrosAsync();
     Task AdicionarAsync(Campanha campanha);
     Task AtualizarAsync(Campanha campanha);
+    Task RemoverCampanhaAsync(int idCampanha);
+    Task RemoverUsuarioDaCampanhaAsync(int idAccount, int idCampanha);
     Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc);
     Task AdicionarItemCampanhaAsync(int idCampanha, int idItem);

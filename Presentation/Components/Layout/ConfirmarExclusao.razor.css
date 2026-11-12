@@ -1,0 +1,68 @@
+.confirmacao-overlay {
+    position: fixed;
+    z-index: 3000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(12, 8, 6, 0.78);
+}
+
+.confirmacao-dialog {
+    width: min(100%, 440px);
+    padding: 24px;
+    border: 1px solid rgba(217, 184, 120, 0.6);
+    border-radius: 5px;
+    background: #2b1d15;
+    color: #f2e6cf;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+.confirmacao-dialog h2 {
+    margin: 0 0 10px;
+    color: #f1d99f;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.confirmacao-dialog p {
+    margin: 0;
+    color: #d1c1a6;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.confirmacao-dialog .confirmacao-erro {
+    margin-top: 12px;
+    color: #ff9a87;
+}
+
+.confirmacao-dialog footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.confirmacao-dialog button {
+    min-height: 36px;
+    padding: 0 13px;
+    border: 1px solid rgba(217, 184, 120, 0.45);
+    border-radius: 3px;
+    background: rgba(25, 17, 12, 0.8);
+    color: #ead9b9;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.confirmacao-dialog .confirmacao-confirmar {
+    border-color: rgba(226, 148, 127, 0.7);
+    background: #71342b;
+    color: #fff0e8;
+}
+
+.confirmacao-dialog button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}

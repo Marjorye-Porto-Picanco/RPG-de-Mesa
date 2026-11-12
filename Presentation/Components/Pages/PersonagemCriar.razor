@@ -12,8 +12,8 @@
 
 <div class="app-shell criacao-personagem">
     <main class="app-content">
-        <button class="text-link exit-prompt-link" type="button" @onclick="AbrirAvisoSaida">
-            ← Voltar aos personagens
+        <button class="exit-prompt-link" type="button" @onclick="AbrirAvisoSaida">
+            <span aria-hidden="true">←</span> Voltar aos personagens
         </button>
 
         <header class="top-bar">
@@ -43,10 +43,10 @@
                     }
                 </div>
                 <div class="aside-summary">
-                    <strong>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? "Novo Personagem" : ViewModel.PersonagemAtual.Nome)</strong>
-                    <span>@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.RacaTexto) ? "Raça" : ViewModel.PersonagemAtual.RacaTexto) • @(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.ClasseTexto) ? "Classe" : ViewModel.PersonagemAtual.ClasseTexto) • Nível Total @ViewModel.PersonagemAtual.Nivel</span>
-                    <hr style="border:0; border-top:1px solid rgba(215,180,109,0.25); margin:8px 0;" />
-                    <small style="color:#c5b79d;">Os dados preenchidos nas cinco etapas irão compor as abas Atributos, Personagem, Inventário e Grimório da ficha final.</small>
+                    <strong class="aside-name">@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome) ? "Novo Personagem" : ViewModel.PersonagemAtual.Nome)</strong>
+                    <span class="aside-meta">@(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.RacaTexto) ? "Raça" : ViewModel.PersonagemAtual.RacaTexto) • @(string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.ClasseTexto) ? "Classe" : ViewModel.PersonagemAtual.ClasseTexto) • Nível Total @ViewModel.PersonagemAtual.Nivel</span>
+                    <hr class="aside-divider" />
+                    <small class="aside-hint">Os dados preenchidos nas cinco etapas irão compor as abas Atributos, Personagem, Inventário e Grimório da ficha final.</small>
                 </div>
             </div>
         </aside>
@@ -796,11 +796,27 @@
         }
     }
 
-    private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
+    private bool FormularioIntocado =>
+        EtapaAtual == 1 && string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome);
+
+    // Origem do "voltar": se veio de uma campanha, retorna para ela; senão, para a biblioteca de heróis.
+    private string DestinoPadrao => CampanhaId.HasValue && CampanhaId.Value > 0 ? "/campanhas" : "/personagem-lib";
+
+    private void AbrirAvisoSaida()
+    {
+        if (FormularioIntocado)
+        {
+            LiberarProximaNavegacao = true;
+            Navigation.NavigateTo(DestinoPadrao);
+            return;
+        }
+
+        ExibirAvisoSaida = true;
+    }
 
     private void ConfirmarNavegacao(LocationChangingContext contexto)
     {
-        if (ViewModel.Sucesso || LiberarProximaNavegacao)
+        if (ViewModel.Sucesso || LiberarProximaNavegacao || FormularioIntocado)
         {
             LiberarProximaNavegacao = false;
             return;
@@ -819,7 +835,8 @@
 
     private void SairDaCriacao()
     {
+        ExibirAvisoSaida = false;
         LiberarProximaNavegacao = true;
-        Navigation.NavigateTo(DestinoPendente ?? "/personagem-lib");
+        Navigation.NavigateTo(DestinoPendente ?? DestinoPadrao);
     }
 }

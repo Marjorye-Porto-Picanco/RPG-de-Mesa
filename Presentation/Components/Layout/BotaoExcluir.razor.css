@@ -1,0 +1,26 @@
+.botao-excluir {
+    position: absolute;
+    z-index: 3;
+    top: 10px;
+    right: 10px;
+    padding: 6px 9px;
+    border: 1px solid rgba(226, 148, 127, 0.7);
+    border-radius: 3px;
+    background: rgba(57, 25, 20, 0.94);
+    color: #ffe4dc;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.botao-excluir:hover {
+    border-color: #f0a08a;
+    background: #7a3028;
+}
+
+.botao-excluir-inline {
+    position: static;
+    padding: 7px 11px;
+    font-size: 12px;
+}

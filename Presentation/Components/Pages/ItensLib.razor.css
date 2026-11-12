@@ -1432,11 +1432,11 @@ a {
     transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
-.npc-card:hover {
-    transform: translateY(-2px);
-    border-color: #c9a458;
-    background: rgba(66, 49, 32, .92);
-}
+    .npc-card:hover {
+        transform: translateY(-2px);
+        border-color: #c9a458;
+        background: rgba(66, 49, 32, .92);
+    }
 
 .npc-avatar {
     display: grid;
@@ -1457,22 +1457,22 @@ a {
     gap: 4px;
 }
 
-.npc-info strong {
-    overflow: hidden;
-    color: #f1e4ca;
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .npc-info strong {
+        overflow: hidden;
+        color: #f1e4ca;
+        font-size: 13px;
+        font-weight: 500;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-.npc-info small {
-    overflow: hidden;
-    color: #b7a78b;
-    font-size: 10px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+    .npc-info small {
+        overflow: hidden;
+        color: #b7a78b;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
 .monster-grid {
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
@@ -1547,10 +1547,10 @@ a {
     transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
-.monster-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.34);
-}
+    .monster-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.34);
+    }
 
 .monster-art {
     position: relative;
@@ -1864,4 +1864,70 @@ a {
     .monster-art {
         height: 190px;
     }
+}
+
+
+/* Cartões do "Criar conteúdo" agora são links para os cadastros. */
+a.modal-content {
+    text-decoration: none;
+    color: inherit;
+}
+
+.dialog-footer-acoes {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(217, 184, 120, 0.2);
+}
+
+.rodape-modal {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.monster-card,
+.npc-card-wrap,
+.library-entry-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.npc-card-wrap .npc-card,
+.library-entry-wrap .library-entry {
+    width: 100%;
+}
+
+.npc-card-wrap .npc-card {
+    padding-right: 82px;
+}
+
+.library-entry-wrap .library-entry {
+    padding-right: 90px;
+}
+
+.library-card-delete {
+    position: absolute;
+    z-index: 2;
+    top: 9px;
+    right: 9px;
+    padding: 5px 8px;
+    border: 1px solid rgba(226, 148, 127, 0.65);
+    border-radius: 3px;
+    background: rgba(57, 25, 20, 0.94);
+    color: #ffe4dc;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.monster-card > .library-card-delete {
+    right: auto;
+    left: 9px;
+}
+
+.library-card-delete:hover {
+    border-color: #f0a08a;
+    background: #7a3028;
 }

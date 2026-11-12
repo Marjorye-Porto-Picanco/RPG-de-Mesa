@@ -120,7 +120,7 @@ textarea {
 
 
 .sobretitulo-rpg {
-   margin: 0 0 5px;
+    margin: 0 0 5px;
     color: #d1ad67;
     font-size: 10px;
     letter-spacing: 1.3px;
@@ -1136,4 +1136,9 @@ textarea {
     .monster-grid {
         gap: 8px;
     }
+}
+
+
+.monster-card {
+    position: relative;
 }

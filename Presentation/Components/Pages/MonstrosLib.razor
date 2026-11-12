@@ -46,6 +46,10 @@
                 foreach (var monstro in MonstrosFiltrados)
                 {
                     <div class="monster-card" @onclick="() => AbrirModal(monstro)">
+                        @if (monstro.IdAccount == SessaoUsuario.IdUsuarioLogado)
+                        {
+                            <BotaoExcluir Titulo="@($"Excluir {monstro.Nome}")" OnClick="() => PedirExclusao(monstro)" />
+                        }
                         <div class="monster-art">
                             @* Só exibe a imagem quando ela realmente existe no banco. *@
                             @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
@@ -77,6 +81,14 @@
         </div>
     </main>
 </div>
+
+<ConfirmarExclusao Visivel="@(monstroParaExcluir is not null)"
+                   Processando="excluindo"
+                   Titulo="@($"Excluir {monstroParaExcluir?.Nome}?")"
+                   Mensagem="Esta ação não pode ser desfeita. A criatura será removida do seu bestiário."
+                   Erro="@erroExclusao"
+                   OnConfirmar="ConfirmarExclusao"
+                   OnCancelar="CancelarExclusao" />
 
 <!-- POP-UP / MODAL DE VISUALIZAÇÃO -->
 @if (exibirModal && monstroSelecionado != null)
@@ -188,6 +200,51 @@
     private string termoBusca = "";
     private string filtroTipo = "todos";
     private string mensagemErro = "";
+
+    private Monstro? monstroParaExcluir;
+    private bool excluindo;
+    private string? erroExclusao;
+
+    private void PedirExclusao(Monstro monstro)
+    {
+        erroExclusao = null;
+        monstroParaExcluir = monstro;
+    }
+
+    private void CancelarExclusao()
+    {
+        if (excluindo) return;
+        monstroParaExcluir = null;
+        erroExclusao = null;
+    }
+
+    private async Task ConfirmarExclusao()
+    {
+        if (monstroParaExcluir is null || excluindo) return;
+
+        excluindo = true;
+        erroExclusao = null;
+        try
+        {
+            var resultado = await MonstroService.RemoverMonstroAsync(SessaoUsuario.IdUsuarioLogado, monstroParaExcluir.IdMonstro);
+            if (!resultado.Sucesso)
+            {
+                erroExclusao = resultado.Mensagem;
+                return;
+            }
+
+            listaMonstros = await MonstroService.ObterMonstrosPorUsuarioAsync(SessaoUsuario.IdUsuarioLogado);
+            monstroParaExcluir = null;
+        }
+        catch (Exception ex)
+        {
+            erroExclusao = ex.InnerException?.Message ?? ex.Message;
+        }
+        finally
+        {
+            excluindo = false;
+        }
+    }
 
     private bool exibirModal = false;
     private Monstro? monstroSelecionado = null;

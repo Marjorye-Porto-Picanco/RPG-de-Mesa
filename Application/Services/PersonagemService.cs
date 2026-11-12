@@ -73,4 +73,22 @@ public class PersonagemService
             return (false, $"Erro ao atualizar: {erroDetalhado}");
         }
     }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverPersonagemAsync(int idAccount, int idPersonagem)
+    {
+        try
+        {
+            var personagem = await _personagemRepo.ObterPorIdAsync(idPersonagem);
+            if (personagem is null || personagem.IdAccount != idAccount)
+                return (false, "Personagem não encontrado ou sem permissão para removê-lo.");
+
+            await _personagemRepo.RemoverAsync(personagem);
+            return (true, "Personagem removido com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao remover personagem: {erroDetalhado}");
+        }
+    }
 }

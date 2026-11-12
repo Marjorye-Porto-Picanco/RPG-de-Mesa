@@ -106,6 +106,45 @@ public class CampanhaRepository : ICampanhaRepository
         await _contexto.SaveChangesAsync();
     }
 
+    public async Task RemoverCampanhaAsync(int idCampanha)
+    {
+        _contexto.ChangeTracker.Clear();
+        var campanha = await _contexto.Campanhas.FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
+        if (campanha is null) return;
+
+        var usuarios = await _contexto.UsuariosCampanha.Where(uc => uc.IdCampanha == idCampanha).ToListAsync();
+        var personagens = await _contexto.PersonagensCampanha.Where(pc => pc.IdCampanha == idCampanha).ToListAsync();
+        var monstros = await _contexto.MonstroCampanhas.Where(mc => mc.IdCampanha == idCampanha).ToListAsync();
+        var npcs = await _contexto.NpcCampanhas.Where(nc => nc.IdCampanha == idCampanha).ToListAsync();
+        var itens = await _contexto.ItemCampanhas.Where(ic => ic.IdCampanha == idCampanha).ToListAsync();
+
+        _contexto.UsuariosCampanha.RemoveRange(usuarios);
+        _contexto.PersonagensCampanha.RemoveRange(personagens);
+        _contexto.MonstroCampanhas.RemoveRange(monstros);
+        _contexto.NpcCampanhas.RemoveRange(npcs);
+        _contexto.ItemCampanhas.RemoveRange(itens);
+        _contexto.Campanhas.Remove(campanha);
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task RemoverUsuarioDaCampanhaAsync(int idAccount, int idCampanha)
+    {
+        _contexto.ChangeTracker.Clear();
+        var vinculoUsuario = await _contexto.UsuariosCampanha
+            .Where(uc => uc.IdAccount == idAccount && uc.IdCampanha == idCampanha)
+            .ToListAsync();
+        var idsPersonagens = _contexto.Personagens
+            .Where(p => p.IdAccount == idAccount)
+            .Select(p => p.IdPersonagem);
+        var vinculosPersonagens = await _contexto.PersonagensCampanha
+            .Where(pc => pc.IdCampanha == idCampanha && idsPersonagens.Contains(pc.IdPersonagem))
+            .ToListAsync();
+
+        _contexto.UsuariosCampanha.RemoveRange(vinculoUsuario);
+        _contexto.PersonagensCampanha.RemoveRange(vinculosPersonagens);
+        await _contexto.SaveChangesAsync();
+    }
+
     public async Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro)
     {
         _contexto.ChangeTracker.Clear();

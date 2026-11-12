@@ -18,12 +18,12 @@
 
         <label class="campos" for="email">
             <span>Email ou usuário</span>
-            <input type="text" id="email" @bind="viewModel.LoginOuEmail" autocomplete="username" />
+            <input type="text" id="email" @bind="viewModel.LoginOuEmail" @bind:event="oninput" @onkeydown="AoPressionarTecla" autocomplete="username" />
         </label>
 
         <label class="campos" for="senha">
             <span>Senha</span>
-            <input type="password" id="senha" @bind="viewModel.Senha" autocomplete="current-password" />
+            <input type="password" id="senha" @bind="viewModel.Senha" @bind:event="oninput" @onkeydown="AoPressionarTecla" autocomplete="current-password" />
         </label>
 
         @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
@@ -55,6 +55,12 @@
     {
         viewModel = new LoginViewModel(UsuarioService, AuthService, Navigation, SessaoUsuario);
         viewModel.OnChange += StateHasChanged;
+    }
+
+    private async Task AoPressionarTecla(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "NumpadEnter")
+            await viewModel.EntrarAsync();
     }
 
     public void Dispose()
