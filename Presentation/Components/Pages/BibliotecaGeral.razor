@@ -1,0 +1,125 @@
+﻿@page "/BibliotecaGeral"
+@using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
+@inject BibliotecaGeralViewModel VM
+
+<NavMenu />
+
+<div class="app-shell">
+    <main class="app-content library-content">
+        <header class="page-heading">
+            <div>
+                <p class="page-kicker">Compêndio e Bestiário</p>
+                <h1 class="page-title">Biblioteca Geral</h1>
+                <p class="page-description">Consulte itens, magias, armas e criaturas para suas campanhas.</p>
+            </div>
+
+            <a class="action-primary" @onclick="VM.AbrirModalCriacao">
+                <span aria-hidden="true">+</span> Criar conteúdo
+            </a>
+        </header>
+
+        <p class="library-scope">Exibindo registros cadastrados para a sua conta.</p>
+
+        <!-- ABAS DA BIBLIOTECA GERAL -->
+        <div class="library-tabs" role="tablist" aria-label="Categorias da biblioteca">
+            @foreach (var categoria in VM.Categorias)
+            {
+                <button class="library-tab @(VM.CategoriaAtual == categoria.Chave ? "active" : "")"
+                        type="button"
+                        role="tab"
+                        aria-selected="@(VM.CategoriaAtual == categoria.Chave)"
+                        @onclick="() => VM.TrocarCategoria(categoria.Chave)">
+                    @categoria.Nome
+                </button>
+            }
+        </div>
+
+        <section class="library-panel" role="tabpanel">
+            <div class="library-toolbar" role="search">
+                <label class="search-field">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search"
+                           placeholder="Buscar por nome, tipo ou descrição..."
+                           aria-label="Buscar na biblioteca"
+                           autocomplete="off"
+                           @bind="VM.TermoBusca"
+                           @bind:event="oninput"
+                           @bind:after="VM.ResetarPaginacao" />
+                </label>
+            </div>
+
+            <p class="library-status @(VM.TemErro ? "is-error" : "")" aria-live="polite">@VM.StatusMensagem</p>
+
+            @if (VM.CategoriaAtual == "monstros")
+            {
+                <SecaoMonstrosBiblioteca Monstros="VM.MonstrosFiltrados.Take(VM.LimiteVisivel)"
+                                         Carregando="VM.Carregando"
+                                         IdUsuarioLogado="VM.IdUsuarioLogado"
+                                         MonstroSelecionado="VM.MonstroSelecionado"
+                                         ExibirModal="VM.ExibirModalMonstro"
+                                         OnSelecionar="VM.AbrirModalMonstro"
+                                         OnFecharModal="VM.FecharModalMonstro"
+                                         OnPedirExclusao='args => VM.PedirExclusao("monstro", args.Id, args.Nome)' />
+            }
+            else if (VM.CategoriaAtual == "npcs")
+            {
+                <SecaoNpcsBiblioteca Npcs="VM.NpcsFiltrados.Take(VM.LimiteVisivel)"
+                                     Carregando="VM.Carregando"
+                                     IdUsuarioLogado="VM.IdUsuarioLogado"
+                                     NpcSelecionado="VM.NpcSelecionado"
+                                     ExibirModal="VM.ExibirModalNpc"
+                                     OnSelecionar="VM.AbrirModalNpc"
+                                     OnFecharModal="VM.FecharModalNpc"
+                                     OnPedirExclusao='args => VM.PedirExclusao("npc", args.Id, args.Nome)' />
+            }
+            else
+            {
+                <SecaoItensBiblioteca Itens="VM.ItensFiltrados.Take(VM.LimiteVisivel)"
+                                      Carregando="VM.Carregando"
+                                      IdUsuarioLogado="VM.IdUsuarioLogado"
+                                      ItemSelecionado="VM.ItemSelecionado"
+                                      ExibirModal="VM.ExibirModalItem"
+                                      OnSelecionar="VM.AbrirModalItem"
+                                      OnFecharModal="VM.FecharModalItem"
+                                      OnPedirExclusao='args => VM.PedirExclusao("item", args.Id, args.Nome)' />
+            }
+
+            @if (VM.PodeMostrarMais)
+            {
+                <button class="action-secondary library-more" type="button" @onclick="VM.MostrarMais">
+                    Mostrar mais
+                </button>
+            }
+
+            @if (VM.TemErro)
+            {
+                <button class="action-secondary library-retry" type="button" @onclick="VM.CarregarDadosAsync">
+                    Tentar novamente
+                </button>
+            }
+        </section>
+
+        <footer class="library-attribution">
+            Dados carregados do banco de dados da aplicação.
+        </footer>
+    </main>
+
+    <ModalCriacaoConteudo Visivel="VM.ExibirModalCriacao"
+                          OnFechar="VM.FecharModalCriacao" />
+
+    <ConfirmarExclusao Visivel="@(VM.ExclusaoAtual is not null)"
+                       Processando="VM.Excluindo"
+                       Titulo="@($"Excluir {VM.ExclusaoAtual?.Nome}?")"
+                       Mensagem="Esta ação não pode ser desfeita. O registro será removido da sua biblioteca."
+                       Erro="@VM.ErroExclusao"
+                       OnConfirmar="VM.ConfirmarExclusaoAsync"
+                       OnCancelar="VM.CancelarExclusao" />
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await VM.CarregarDadosAsync();
+    }
+}

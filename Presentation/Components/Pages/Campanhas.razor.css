@@ -128,7 +128,8 @@ body {
 }
 
 /* Botão principal de ação */
-.botao-dourado {
+.botao-dourado,
+.tela-rpg ::deep .botao-dourado {
     display: inline-flex;
     height: 40px;
     align-items: center;
@@ -148,12 +149,14 @@ body {
     white-space: nowrap;
 }
 
-    .botao-dourado:hover {
+    .botao-dourado:hover,
+    .tela-rpg ::deep .botao-dourado:hover {
         transform: translateY(-1px);
         background: #bd9140;
     }
 
-    .botao-dourado span {
+    .botao-dourado span,
+    .tela-rpg ::deep .botao-dourado span {
         font-size: 18px;
     }
 
@@ -225,7 +228,7 @@ body {
 }
 
 /* ============================================================
-   GRADE E CARTÕES DE CAMPANHA
+   GRADE E CARTÕES DE CAMPANHA (Subcomponente CartaoCampanha)
    ============================================================ */
 .grade-campanhas {
     display: grid;
@@ -233,7 +236,7 @@ body {
     gap: 18px;
 }
 
-.cartao-campanha {
+.tela-rpg ::deep .cartao-campanha {
     position: relative;
     display: block;
     aspect-ratio: 0.76;
@@ -247,21 +250,21 @@ body {
     transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
-    .cartao-campanha:hover {
+    .tela-rpg ::deep .cartao-campanha:hover {
         transform: translateY(-4px);
         box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
     }
 
-.cartao-campanha-wrap {
+.tela-rpg ::deep .cartao-campanha-wrap {
     position: relative;
     min-width: 0;
 }
 
-.cartao-campanha-wrap > .cartao-campanha {
-    width: 100%;
-}
+    .tela-rpg ::deep .cartao-campanha-wrap > .cartao-campanha {
+        width: 100%;
+    }
 
-.campanha-remover {
+.tela-rpg ::deep .campanha-remover {
     position: absolute;
     z-index: 2;
     top: 10px;
@@ -277,23 +280,23 @@ body {
     transition: background 150ms ease, border-color 150ms ease;
 }
 
-    .campanha-remover:hover {
+    .tela-rpg ::deep .campanha-remover:hover {
         border-color: #f0a08a;
         background: #7a3028;
     }
 
-    .cartao-campanha > img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 220ms ease;
-    }
+.tela-rpg ::deep .cartao-campanha > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 220ms ease;
+}
 
-    .cartao-campanha:hover > img {
-        transform: scale(1.035);
-    }
+.tela-rpg ::deep .cartao-campanha:hover > img {
+    transform: scale(1.035);
+}
 
-.estado-campanha {
+.tela-rpg ::deep .estado-campanha {
     position: absolute;
     top: 10px;
     left: 10px;
@@ -306,17 +309,17 @@ body {
     letter-spacing: 0.5px;
 }
 
-.tag-mestre {
+.tela-rpg ::deep .tag-mestre {
     background: rgba(139, 0, 0, 0.85);
     color: #fff;
 }
 
-.tag-jogador {
+.tela-rpg ::deep .tag-jogador {
     background: rgba(30, 58, 138, 0.85);
     color: #fff;
 }
 
-.info-campanha {
+.tela-rpg ::deep .info-campanha {
     position: absolute;
     right: 0;
     bottom: 0;
@@ -325,7 +328,7 @@ body {
     background: linear-gradient(transparent, rgba(18, 13, 10, 0.94) 38%);
 }
 
-    .info-campanha > span {
+    .tela-rpg ::deep .info-campanha > span {
         display: block;
         color: #e0bd73;
         font-size: 9px;
@@ -333,7 +336,7 @@ body {
         letter-spacing: 0.5px;
     }
 
-    .info-campanha h2 {
+    .tela-rpg ::deep .info-campanha h2 {
         margin: 5px 0 7px;
         color: #fff1d2;
         font-size: 16px;
@@ -341,7 +344,7 @@ body {
         line-height: 1.15;
     }
 
-    .info-campanha small {
+    .tela-rpg ::deep .info-campanha small {
         color: #d2c2a6;
         font-size: 10px;
     }
@@ -403,9 +406,9 @@ body {
 }
 
 /* ============================================================
-   MODAL DE ENTRAR NA CAMPANHA (DARK FANTASY)
+   MODAL DE ENTRAR NA CAMPANHA (Subcomponente ModalEntrar)
    ============================================================ */
-.modal-fundo {
+.tela-rpg ::deep .modal-fundo {
     position: fixed;
     top: 0;
     left: 0;
@@ -420,8 +423,8 @@ body {
     padding: 16px;
 }
 
-.painel-convite-container,
-.painel-convite-card {
+.tela-rpg ::deep .painel-convite-container,
+.tela-rpg ::deep .painel-convite-card {
     background-color: #1a120d;
     border: 1px solid rgba(218, 184, 118, 0.6);
     border-radius: 6px;
@@ -433,7 +436,7 @@ body {
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 18px rgba(218, 184, 118, 0.12);
 }
 
-.cabecalho-modal {
+.tela-rpg ::deep .cabecalho-modal {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -442,15 +445,15 @@ body {
     padding-bottom: 10px;
 }
 
-    .cabecalho-modal h3,
-    .cabecalho-modal h2 {
+    .tela-rpg ::deep .cabecalho-modal h3,
+    .tela-rpg ::deep .cabecalho-modal h2 {
         margin: 0;
         font-size: 20px;
         font-weight: 500;
         color: #f5e4bf;
     }
 
-.btn-fechar {
+.tela-rpg ::deep .btn-fechar {
     background: transparent;
     border: none;
     color: #a89f91;
@@ -461,17 +464,17 @@ body {
     transition: color 150ms ease;
 }
 
-    .btn-fechar:hover {
+    .tela-rpg ::deep .btn-fechar:hover {
         color: #dfbd6b;
     }
 
-.painel-convite-barra {
+.tela-rpg ::deep .painel-convite-barra {
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-.painel-convite-input-wrapper {
+.tela-rpg ::deep .painel-convite-input-wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -482,15 +485,15 @@ body {
     transition: border-color 160ms ease;
 }
 
-    .painel-convite-input-wrapper:focus-within {
+    .tela-rpg ::deep .painel-convite-input-wrapper:focus-within {
         border-color: #dfbd6b;
     }
 
-.icone-chave {
+.tela-rpg ::deep .icone-chave {
     font-size: 16px;
 }
 
-.painel-convite-input {
+.tela-rpg ::deep .painel-convite-input {
     width: 100%;
     background: transparent;
     border: none;
@@ -501,16 +504,16 @@ body {
     text-transform: uppercase;
 }
 
-    .painel-convite-input::placeholder {
+    .tela-rpg ::deep .painel-convite-input::placeholder {
         color: #7d7062;
         text-transform: none;
     }
 
-.painel-convite-barra .botao-dourado {
+.tela-rpg ::deep .painel-convite-barra .botao-dourado {
     width: 100%;
 }
 
-.feedback-mensagem {
+.tela-rpg ::deep .feedback-mensagem {
     width: 100%;
     margin-top: 12px;
     font-size: 12px;
@@ -518,11 +521,11 @@ body {
     text-align: center;
 }
 
-    .feedback-mensagem.sucesso {
+    .tela-rpg ::deep .feedback-mensagem.sucesso {
         color: #55c76e;
     }
 
-    .feedback-mensagem.erro {
+    .tela-rpg ::deep .feedback-mensagem.erro {
         color: #e66868;
     }
 
@@ -601,19 +604,19 @@ body {
         gap: 11px;
     }
 
-    .cartao-campanha {
+    .tela-rpg ::deep .cartao-campanha {
         aspect-ratio: 0.72;
     }
 
-    .info-campanha {
+    .tela-rpg ::deep .info-campanha {
         padding: 30px 9px 10px;
     }
 
-        .info-campanha h2 {
+        .tela-rpg ::deep .info-campanha h2 {
             font-size: 14px;
         }
 
-    .estado-campanha {
+    .tela-rpg ::deep .estado-campanha {
         top: 7px;
         left: 7px;
         padding: 4px 6px;
@@ -624,8 +627,8 @@ body {
         min-height: 150px;
     }
 
-    .painel-convite-container,
-    .painel-convite-card {
+    .tela-rpg ::deep .painel-convite-container,
+    .tela-rpg ::deep .painel-convite-card {
         padding: 28px 20px 16px 20px;
     }
 }

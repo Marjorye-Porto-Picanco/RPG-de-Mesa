@@ -1,0 +1,14 @@
+@if (Visivel)
+{
+    <section class="modal-criacao" @onclick="OnFechar">
+        <a class="modal-content" href="/item-criar"><h2><i class="ph ph-cube"></i> Item</h2></a>
+        <a class="modal-content" href="/item-criar?tipo=magias"><h2><i class="ph ph-sparkle"></i> Magia</h2></a>
+        <a class="modal-content" href="/monstro-criar"><h2><i class="ph ph-skull"></i> Monstro</h2></a>
+        <a class="modal-content" href="/personagem-criar?tipo=NPC"><h2><i class="ph ph-user-gear"></i> NPC</h2></a>
+    </section>
+}
+
+@code {
+    [Parameter] public bool Visivel { get; set; }
+    [Parameter] public EventCallback OnFechar { get; set; }
+}

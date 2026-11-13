@@ -1,0 +1,106 @@
+@using RPGdeMesa.Domain.Itens
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="library-grid" aria-live="polite">
+    @if (Carregando)
+    {
+        <p class="empty-state library-empty">Carregando itens...</p>
+    }
+    else if (Itens.Any())
+    {
+        @foreach (var entrada in Itens)
+        {
+            <div class="library-entry-wrap">
+                <button class="library-entry" type="button" @onclick="() => OnSelecionar.InvokeAsync(entrada)">
+                    <strong>@entrada.Nome</strong>
+                    <span class="entry-meta">@BibliotecaGeralViewModel.ObterRotuloMeta(entrada)</span>
+                    <span class="entry-arrow" aria-hidden="true">↗</span>
+                </button>
+                @if (entrada.IdAccount == IdUsuarioLogado)
+                {
+                    <button class="library-card-delete" type="button" title="Excluir item" aria-label="@($"Excluir {entrada.Nome}")"
+                            @onclick="() => OnPedirExclusao.InvokeAsync((entrada.IdItem, entrada.Nome))">
+                        Excluir
+                    </button>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-state library-empty">Nenhum registro encontrado nesta categoria.</p>
+    }
+</div>
+
+@if (ExibirModal && ItemSelecionado is not null)
+{
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+        <div class="entry-dialog" @onclick:stopPropagation="true">
+            <div class="dialog-heading">
+                <div>
+                    <p class="page-kicker">@BibliotecaGeralViewModel.ObterRotuloMeta(ItemSelecionado)</p>
+                    <h2>@ItemSelecionado.Nome</h2>
+                </div>
+                <button class="dialog-close" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
+            </div>
+
+            <div class="dialog-content">
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Tipo))
+                {
+                    <p class="detail-row"><strong>Tipo: </strong>@ItemSelecionado.Tipo</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Raridade))
+                {
+                    <p class="detail-row"><strong>Raridade: </strong>@ItemSelecionado.Raridade</p>
+                }
+                @if (ItemSelecionado.Dano is not null)
+                {
+                    <p class="detail-row"><strong>Dano: </strong>@ItemSelecionado.Dano @(string.IsNullOrWhiteSpace(ItemSelecionado.TipoDano) ? "" : $"({ItemSelecionado.TipoDano})")</p>
+                }
+                @if (ItemSelecionado.CaBonus > 0)
+                {
+                    <p class="detail-row"><strong>Bônus de CA: </strong>@ItemSelecionado.CaBonus</p>
+                }
+                @if (ItemSelecionado.Peso.HasValue)
+                {
+                    <p class="detail-row"><strong>Peso: </strong>@ItemSelecionado.Peso.Value.ToString("0.##")</p>
+                }
+                @if (ItemSelecionado.Preco.HasValue)
+                {
+                    <p class="detail-row"><strong>Preço: </strong>@ItemSelecionado.Preco.Value.ToString("0.##")</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Propriedades))
+                {
+                    <p class="detail-row"><strong>Propriedades: </strong>@ItemSelecionado.Propriedades</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Descricao))
+                {
+                    <section class="detail-description">
+                        <h3>Descrição</h3>
+                        <p>@ItemSelecionado.Descricao</p>
+                    </section>
+                }
+
+                @if (ItemSelecionado.IdAccount == IdUsuarioLogado)
+                {
+                    <div class="dialog-footer-acoes">
+                        <BotaoExcluir Inline="true" Texto="Excluir item" Titulo="Excluir item"
+                                      OnClick="() => OnPedirExclusao.InvokeAsync((ItemSelecionado.IdItem, ItemSelecionado.Nome))" />
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<Item> Itens { get; set; } = Enumerable.Empty<Item>();
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public int IdUsuarioLogado { get; set; }
+    [Parameter] public Item? ItemSelecionado { get; set; }
+    [Parameter] public bool ExibirModal { get; set; }
+
+    [Parameter] public EventCallback<Item> OnSelecionar { get; set; }
+    [Parameter] public EventCallback OnFecharModal { get; set; }
+    [Parameter] public EventCallback<(int Id, string Nome)> OnPedirExclusao { get; set; }
+}

@@ -1,15 +1,13 @@
 ﻿@page "/personagem-editar/{Id:int}"
-@using System.IO
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
 @inject PersonagemEditarViewModel ViewModel
-@inject NavigationManager Navigation
 @implements IDisposable
 
 <NavMenu />
-<NavigationLock OnBeforeInternalNavigation="ConfirmarNavegacao" />
+<NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
 
 <div class="mesa-edicao">
     <main class="palco">
@@ -24,7 +22,7 @@
                     </div>
                     <label class="upload-imagem-botao retrato-upload">
                         <span aria-hidden="true">↑</span> Foto
-                        <InputFile OnChange="CarregarFotoAsync" accept="image/*" aria-label="Alterar foto do personagem" />
+                        <InputFile OnChange="ViewModel.CarregarFotoAsync" accept="image/*" aria-label="Alterar foto do personagem" />
                     </label>
                 </div>
 
@@ -45,7 +43,7 @@
                 </div>
             </div>
 
-            <!-- BOTÕES DE TROCA DE ABAS (SEM INVENTÁRIO) -->
+            <!-- BOTÕES DE TROCA DE ABAS -->
             <div class="troca-ficha" role="tablist" aria-label="Visão da ficha">
                 <button class="aba-ficha @(ViewModel.AbaAtiva == "atributos" ? "ativa" : "")"
                         @onclick='() => ViewModel.MudarAba("atributos")'
@@ -72,32 +70,32 @@
                         <label class="atributo-box-edicao">
                             <span>Força</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Forca" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
                         </label>
                         <label class="atributo-box-edicao">
                             <span>Destreza</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Destreza" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
                         </label>
                         <label class="atributo-box-edicao">
                             <span>Constituição</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Constituicao" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
                         </label>
                         <label class="atributo-box-edicao">
                             <span>Inteligência</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Inteligencia" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
                         </label>
                         <label class="atributo-box-edicao">
                             <span>Sabedoria</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Sabedoria" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
                         </label>
                         <label class="atributo-box-edicao">
                             <span>Carisma</span>
                             <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Carisma" @bind:event="oninput" />
-                            <small>@ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
+                            <small>@PersonagemEditarViewModel.ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
                         </label>
                     </div>
 
@@ -105,7 +103,7 @@
                         <section class="pericias-grupo-edicao">
                             <h3>Salvaguardas</h3>
                             <div class="opcoes-salvaguarda-edicao">
-                                @foreach (var salv in ListaSalvaguardas)
+                                @foreach (var salv in ViewModel.ListaSalvaguardas)
                                 {
                                     <label class="opcao-proficiencia-edicao">
                                         <input type="checkbox"
@@ -120,7 +118,7 @@
                         <section class="pericias-grupo-edicao">
                             <h3>Perícias</h3>
                             <div class="opcoes-pericias-edicao">
-                                @foreach (var pericia in ListaPericias)
+                                @foreach (var pericia in ViewModel.ListaPericias)
                                 {
                                     <label class="opcao-proficiencia-edicao">
                                         <input type="checkbox"
@@ -181,7 +179,7 @@
                 </div>
             }
 
-            <!-- ABA 2: IDENTIDADE (CAMPOS FIXOS BLOQUEADOS), MULTICLASSE E HISTÓRIA -->
+            <!-- ABA 2: IDENTIDADE, MULTICLASSE E HISTÓRIA -->
             @if (ViewModel.AbaAtiva == "personagem")
             {
                 <div class="edicao-conteudo">
@@ -234,13 +232,13 @@
                             @foreach (var cl in ViewModel.ClassesSelecionadas)
                             {
                                 <div class="item-linha-edicao" style="grid-template-columns: 1fr 110px 32px;">
-                                    <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasse(cl, e)">
-                                        @foreach (var op in ListaOpcoesClasses)
+                                    <select value="@cl.NomeClasse" @onchange="e => ViewModel.AlterarNomeClasse(cl, e.Value?.ToString())">
+                                        @foreach (var op in ViewModel.ListaOpcoesClasses)
                                         {
                                             <option value="@op">@op</option>
                                         }
                                     </select>
-                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasse(cl, e)" />
+                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => ViewModel.AlterarNivelClasse(cl, e.Value?.ToString())" />
                                     @if (ViewModel.ClassesSelecionadas.Count > 1)
                                     {
                                         <button type="button" class="remover-item-edicao" title="Remover classe" @onclick="() => ViewModel.RemoverClasse(cl)">×</button>
@@ -344,7 +342,7 @@
             }
 
             <div style="position: relative; z-index: 1; padding-top: 16px; border-top: 1px solid rgba(126, 87, 31, 0.35); display: flex; justify-content: flex-end; gap: 10px;">
-                <button class="action-secondary" type="button" @onclick="AbrirAvisoSaida">Cancelar</button>
+                <button class="action-secondary" type="button" @onclick="ViewModel.AbrirAvisoSaida">Cancelar</button>
                 <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@ViewModel.IsProcessing">
                     @(ViewModel.IsProcessing ? "Salvando..." : "Salvar Alterações")
                 </button>
@@ -353,15 +351,15 @@
     </main>
 </div>
 
-@if (ExibirAvisoSaida)
+@if (ViewModel.ExibirAvisoSaida)
 {
-    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+    <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
         <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-personagem-edicao" aria-describedby="mensagem-aviso-personagem-edicao" @onclick:stopPropagation="true">
             <h2 id="titulo-aviso-personagem-edicao">Sair sem salvar?</h2>
             <p id="mensagem-aviso-personagem-edicao">Você tem certeza que quer sair? Vai perder tudo o que mudou.</p>
             <div class="confirm-actions">
-                <button class="confirm-exit" type="button" @onclick="SairDaEdicao">Sim</button>
-                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+                <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaEdicao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="ViewModel.FecharAvisoSaida">Não</button>
             </div>
         </section>
     </div>
@@ -370,30 +368,6 @@
 @code {
     [Parameter]
     public int Id { get; set; }
-
-    private const long LimiteImagemBytes = 2 * 1024 * 1024;
-
-    private readonly string[] ListaOpcoesClasses =
-    {
-        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
-        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
-    };
-
-    private readonly string[] ListaSalvaguardas =
-    {
-        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
-    };
-
-    private readonly string[] ListaPericias =
-    {
-        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
-        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
-        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
-    };
-
-    private bool ExibirAvisoSaida { get; set; }
-    private bool LiberarProximaNavegacao { get; set; }
-    private string? DestinoPendente { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -404,71 +378,5 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
-    }
-
-    private void AlterarNomeClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
-    {
-        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
-        ViewModel.SincronizarClassesENivel();
-    }
-
-    private void AlterarNivelClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int nv))
-        {
-            cl.Nivel = Math.Clamp(nv, 1, 20);
-            ViewModel.SincronizarClassesENivel();
-        }
-    }
-
-    private static string ObterModificador(int valor)
-    {
-        var modificador = (int)Math.Floor((valor - 10) / 2.0);
-        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
-    }
-
-    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
-    {
-        var arquivo = evento.File;
-        if (arquivo.Size > LimiteImagemBytes) return;
-        if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return;
-
-        try
-        {
-            await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-            using var memoria = new MemoryStream();
-            await origem.CopyToAsync(memoria);
-
-            ViewModel.PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
-            ViewModel.NotifyStateChanged();
-        }
-        catch { }
-    }
-
-    private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
-
-    private void ConfirmarNavegacao(LocationChangingContext contexto)
-    {
-        if (ViewModel.Sucesso || LiberarProximaNavegacao)
-        {
-            LiberarProximaNavegacao = false;
-            return;
-        }
-
-        contexto.PreventNavigation();
-        DestinoPendente = contexto.TargetLocation;
-        ExibirAvisoSaida = true;
-    }
-
-    private void FecharAvisoSaida()
-    {
-        ExibirAvisoSaida = false;
-        DestinoPendente = null;
-    }
-
-    private void SairDaEdicao()
-    {
-        LiberarProximaNavegacao = true;
-        Navigation.NavigateTo(DestinoPendente ?? "/personagem-lib");
     }
 }

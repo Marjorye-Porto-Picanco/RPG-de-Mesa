@@ -1,0 +1,128 @@
+@using RPGdeMesa.Domain.Bestiario
+
+<div class="monster-grid" aria-live="polite">
+    @if (Carregando)
+    {
+        <p class="empty-state library-empty">Carregando monstros...</p>
+    }
+    else if (Monstros.Any())
+    {
+        @foreach (var monstro in Monstros)
+        {
+            <div class="monster-card" @onclick="() => OnSelecionar.InvokeAsync(monstro)">
+                @if (monstro.IdAccount == IdUsuarioLogado)
+                {
+                    <button class="library-card-delete" type="button" title="Excluir monstro" aria-label="@($"Excluir {monstro.Nome}")"
+                            @onclick="() => OnPedirExclusao.InvokeAsync((monstro.IdMonstro, monstro.Nome))"
+                            @onclick:stopPropagation="true">
+                        Excluir
+                    </button>
+                }
+                <div class="monster-art">
+                    @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
+                    {
+                        <img src="@monstro.Imagem" alt="Ilustração do monstro @monstro.Nome" />
+                    }
+                    <span class="monster-cr">ND @(monstro.Nd)</span>
+                </div>
+                <div class="monster-info">
+                    <h2>@monstro.Nome</h2>
+                    <p>@(monstro.Tipo ?? "Criatura") @(monstro.Tamanho?.ToLower() ?? "médio") · @(monstro.Tendencia ?? "Neutro")</p>
+                    @if (!string.IsNullOrEmpty(monstro.Habilidades))
+                    {
+                        <div class="monster-tags">
+                            @foreach (var hab in monstro.Habilidades.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                <span>@hab.Trim()</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-state library-empty">Nenhum monstro encontrado.</p>
+    }
+</div>
+
+@if (ExibirModal && MonstroSelecionado is not null)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <button class="modal-close-btn" type="button" @onclick="OnFecharModal">×</button>
+
+            <div class="page-heading cabecalho-modal">
+                <div>
+                    <p class="page-kicker">Visualizar criatura</p>
+                    <h1 class="page-title titulo-modal">@MonstroSelecionado.Nome</h1>
+                    <p class="page-description">ND @MonstroSelecionado.Nd · @(MonstroSelecionado.Tipo ?? "Criatura")</p>
+                </div>
+            </div>
+
+            <div class="form-layout">
+                <section class="form-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <span class="field-label-title">Classe de armadura</span>
+                            <div class="field-value-box">@MonstroSelecionado.Defesa</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Pontos de vida</span>
+                            <div class="field-value-box">@MonstroSelecionado.Vida</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Deslocamento</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Deslocamento ?? "Não informado")</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Sentidos</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Sentidos ?? "Não informado")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Resistências</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Resistencias ?? "Nenhuma")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Habilidades especiais</span>
+                            <div class="field-value-box">@(MonstroSelecionado.Habilidades ?? "Nenhuma")</div>
+                        </div>
+                        <div class="form-field full-width">
+                            <span class="field-label-title">Descrição</span>
+                            <div class="field-value-box caixa-descricao">@(MonstroSelecionado.Descricao ?? "Sem descrição.")</div>
+                        </div>
+                    </div>
+                    <div class="form-footer rodape-modal">
+                        @if (MonstroSelecionado.IdAccount == IdUsuarioLogado)
+                        {
+                            <BotaoExcluir Inline="true" Texto="Excluir monstro" Titulo="Excluir monstro"
+                                          OnClick="() => OnPedirExclusao.InvokeAsync((MonstroSelecionado.IdMonstro, MonstroSelecionado.Nome))" />
+                        }
+                        <button type="button" class="action-secondary" @onclick="OnFecharModal">Fechar</button>
+                    </div>
+                </section>
+                <aside class="form-aside">
+                    <div class="aside-portrait">
+                        @if (!string.IsNullOrWhiteSpace(MonstroSelecionado.Imagem))
+                        {
+                            <img src="@MonstroSelecionado.Imagem" alt="Ilustração do monstro" />
+                        }
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<Monstro> Monstros { get; set; } = Enumerable.Empty<Monstro>();
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public int IdUsuarioLogado { get; set; }
+    [Parameter] public Monstro? MonstroSelecionado { get; set; }
+    [Parameter] public bool ExibirModal { get; set; }
+
+    [Parameter] public EventCallback<Monstro> OnSelecionar { get; set; }
+    [Parameter] public EventCallback OnFecharModal { get; set; }
+    [Parameter] public EventCallback<(int Id, string Nome)> OnPedirExclusao { get; set; }
+}
