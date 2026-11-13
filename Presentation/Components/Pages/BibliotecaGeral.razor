@@ -118,8 +118,15 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "categoria")]
+    public string? CategoriaQuery { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(CategoriaQuery))
+        {
+            VM.TrocarCategoria(CategoriaQuery);
+        }
         await VM.CarregarDadosAsync();
     }
 }
