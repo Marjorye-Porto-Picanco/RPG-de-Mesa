@@ -1,9 +1,7 @@
 @page "/campanhas"
 @using RPGdeMesa.Presentation.Components.Layout
-@using RPGdeMesa.Domain.Campanhas
-@inject CampanhaService CampanhaService
-@inject SessaoUsuarioService SessaoUsuario
-@inject NavigationManager Navigation
+@using RPGdeMesa.Presentation.ViewModel
+@inject CampanhasViewModel VM
 
 <NavMenu />
 
@@ -15,9 +13,9 @@
                 <h1>Campanhas</h1>
                 <p class="texto-apoio">Histórias prontas para continuar ou participar.</p>
             </div>
-            
+
             <div class="acoes-cabecalho">
-                <button type="button" class="botao-secundario-dourado" @onclick="() => exibirModalEntrar = true">
+                <button type="button" class="botao-secundario-dourado" @onclick="VM.AbrirModalEntrar">
                     <span aria-hidden="true">🔑</span> Inserir convite
                 </button>
                 <a class="botao-dourado" href="/criar-campanha">
@@ -27,17 +25,21 @@
         </div>
 
         <div class="abas-navegacao">
-            <button type="button" class="botao-aba @(abaAtiva == "mestre" ? "ativo" : "")" @onclick='() => abaAtiva = "mestre"'>
-                Como Mestre (@campanhasMestre.Count)
+            <button type="button"
+                    class="botao-aba @(VM.AbaAtiva == "mestre" ? "ativo" : "")"
+                    @onclick='() => VM.SelecionarAba("mestre")'>
+                Como Mestre (@VM.CampanhasMestre.Count)
             </button>
-            <button type="button" class="botao-aba @(abaAtiva == "jogador" ? "ativo" : "")" @onclick='() => abaAtiva = "jogador"'>
-                Como Jogador (@campanhasJogador.Count)
+            <button type="button"
+                    class="botao-aba @(VM.AbaAtiva == "jogador" ? "ativo" : "")"
+                    @onclick='() => VM.SelecionarAba("jogador")'>
+                Como Jogador (@VM.CampanhasJogador.Count)
             </button>
         </div>
 
-        @if (abaAtiva == "mestre")
+        @if (VM.AbaAtiva == "mestre")
         {
-            @if (!campanhasMestre.Any())
+            @if (!VM.CampanhasMestre.Any())
             {
                 <p class="aviso-vazio">Você ainda não criou nenhuma campanha como Mestre.</p>
             }
@@ -49,56 +51,30 @@
                     <small>Comece uma nova aventura</small>
                 </a>
 
-                @foreach (var campanha in campanhasMestre)
+                @foreach (var campanha in VM.CampanhasMestre)
                 {
-                    <div class="cartao-campanha-wrap">
-                        <a class="cartao-campanha" href="@($"/sessao-iniciar/{campanha.IdCampanha}")" aria-label="Abrir painel da campanha @campanha.Nome">
-                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
-                            <span class="estado-campanha tag-mestre">Mestre</span>
-                            <div class="info-campanha">
-                                <span>Código: @campanha.CodigoConvite</span>
-                                <h2>@campanha.Nome</h2>
-                                <small>Criada em @campanha.DataCriacao.ToString("dd/MM/yyyy")</small>
-                            </div>
-                        </a>
-                        <button class="campanha-remover" type="button" title="Excluir campanha"
-                                aria-label="Excluir campanha @campanha.Nome"
-                                @onclick="() => PedirRemocaoCampanha(campanha, false)">
-                            Excluir
-                        </button>
-                    </div>
+                    <CartaoCampanha Campanha="campanha"
+                                    ComoJogador="false"
+                                    OnRemover="c => VM.PedirRemocaoCampanha(c, false)" />
                 }
             </div>
         }
         else
         {
-            @if (!campanhasJogador.Any())
+            @if (!VM.CampanhasJogador.Any())
             {
                 <p class="aviso-vazio">Você ainda não está participando de nenhuma campanha como jogador.</p>
             }
 
             <div class="grade-campanhas">
-                @foreach (var campanha in campanhasJogador)
+                @foreach (var campanha in VM.CampanhasJogador)
                 {
-                    <div class="cartao-campanha-wrap">
-                        <a class="cartao-campanha" href="@($"/sessao-entrar/{campanha.IdCampanha}")" aria-label="Entrar na campanha @campanha.Nome">
-                            <img src="img/capacampanha1.png" alt="Capa da campanha @campanha.Nome" />
-                            <span class="estado-campanha tag-jogador">Jogador</span>
-                            <div class="info-campanha">
-                                <span>Aventureiro</span>
-                                <h2>@campanha.Nome</h2>
-                                <small>Participando</small>
-                            </div>
-                        </a>
-                        <button class="campanha-remover" type="button" title="Sair da campanha"
-                                aria-label="Sair da campanha @campanha.Nome"
-                                @onclick="() => PedirRemocaoCampanha(campanha, true)">
-                            Sair
-                        </button>
-                    </div>
+                    <CartaoCampanha Campanha="campanha"
+                                    ComoJogador="true"
+                                    OnRemover="c => VM.PedirRemocaoCampanha(c, true)" />
                 }
-                
-                <button type="button" class="cartao-adicionar" @onclick="() => exibirModalEntrar = true">
+
+                <button type="button" class="cartao-adicionar" @onclick="VM.AbrirModalEntrar">
                     <span class="mais-adicionar" aria-hidden="true">🔑</span>
                     <strong>Entrar com código</strong>
                     <small>Insira o convite do Mestre</small>
@@ -106,105 +82,25 @@
             </div>
         }
     </main>
+
+    @if (VM.ExibirModalEntrar)
+    {
+        <ModalEntrar OnFechar="VM.FecharModalEntrar"
+                     OnCampanhaEntrada="VM.CampanhaEntradaSucessoAsync" />
+    }
+
+    <ConfirmarExclusao Visivel="@(VM.CampanhaPendente is not null)"
+                       Processando="VM.ProcessandoRemocao"
+                       Titulo="@VM.TituloConfirmacaoCampanha"
+                       Mensagem="@VM.MensagemConfirmacaoCampanha"
+                       Erro="@VM.ErroRemocaoCampanha"
+                       OnConfirmar="VM.ConfirmarRemocaoCampanhaAsync"
+                       OnCancelar="VM.CancelarRemocaoCampanha" />
 </div>
 
-@if (exibirModalEntrar)
-{
-    <ModalEntrar OnFechar="() => exibirModalEntrar = false"
-                 OnCampanhaEntrada="CampanhaEntradaSucesso" />
-}
-
-<ConfirmarExclusao Visivel="@(campanhaPendente is not null)"
-                   Processando="processandoRemocao"
-                   Titulo="TituloConfirmacaoCampanha"
-                   Mensagem="MensagemConfirmacaoCampanha"
-                   Erro="erroRemocaoCampanha"
-                   OnConfirmar="ConfirmarRemocaoCampanha"
-                   OnCancelar="CancelarRemocaoCampanha" />
-
 @code {
-    private bool exibirModalEntrar = false;
-    private bool processandoRemocao;
-    private string? erroRemocaoCampanha;
-    private List<Campanha> campanhasMestre = new();
-    private List<Campanha> campanhasJogador = new();
-    private string abaAtiva = "mestre";
-    private sealed record RemocaoCampanhaPendente(int IdCampanha, string Nome, bool ComoJogador);
-    private RemocaoCampanhaPendente? campanhaPendente;
-
-    private string TituloConfirmacaoCampanha => campanhaPendente?.ComoJogador == true
-        ? "Sair da campanha?"
-        : "Excluir campanha?";
-
-    private string MensagemConfirmacaoCampanha => campanhaPendente?.ComoJogador == true
-        ? $"Sua participação e seus personagens vinculados serão removidos de {campanhaPendente.Nome}."
-        : $"A campanha {campanhaPendente?.Nome} e seus vínculos serão excluídos. Esta ação não pode ser desfeita.";
-
     protected override async Task OnInitializedAsync()
     {
-        await CarregarCampanhasAsync();
-    }
-
-    private async Task CarregarCampanhasAsync()
-    {
-        int idUsuario = SessaoUsuario.IdUsuarioLogado;
-        if (idUsuario > 0)
-        {
-            campanhasMestre = await CampanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
-            campanhasJogador = await CampanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
-        }
-    }
-
-    private async Task CampanhaEntradaSucesso()
-    {
-        exibirModalEntrar = false;
-        abaAtiva = "jogador";
-        await CarregarCampanhasAsync();
-    }
-
-    private void PedirRemocaoCampanha(Campanha campanha, bool comoJogador)
-    {
-        erroRemocaoCampanha = null;
-        campanhaPendente = new RemocaoCampanhaPendente(campanha.IdCampanha, campanha.Nome, comoJogador);
-    }
-
-    private void CancelarRemocaoCampanha()
-    {
-        if (processandoRemocao) return;
-        campanhaPendente = null;
-        erroRemocaoCampanha = null;
-    }
-
-    private async Task ConfirmarRemocaoCampanha()
-    {
-        if (campanhaPendente is null || processandoRemocao) return;
-
-        processandoRemocao = true;
-        erroRemocaoCampanha = null;
-        try
-        {
-            var pendente = campanhaPendente;
-            var idUsuario = SessaoUsuario.IdUsuarioLogado;
-            var resultado = pendente.ComoJogador
-                ? await CampanhaService.SairDaCampanhaAsync(idUsuario, pendente.IdCampanha)
-                : await CampanhaService.ExcluirCampanhaAsync(idUsuario, pendente.IdCampanha);
-
-            if (!resultado.Sucesso)
-            {
-                erroRemocaoCampanha = resultado.Mensagem;
-                return;
-            }
-
-            campanhaPendente = null;
-            await CarregarCampanhasAsync();
-        }
-        catch (Exception ex)
-        {
-            erroRemocaoCampanha = ex.InnerException?.Message ?? ex.Message;
-        }
-        finally
-        {
-            processandoRemocao = false;
-        }
+        await VM.CarregarCampanhasAsync();
     }
 }

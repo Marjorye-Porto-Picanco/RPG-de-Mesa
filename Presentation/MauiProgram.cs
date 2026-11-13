@@ -60,6 +60,8 @@ namespace RPGdeMesa
             builder.Services.AddScoped<MonstroCriarViewModel>();
             builder.Services.AddScoped<PersonagemCriarViewModel>();
             builder.Services.AddScoped<PersonagemEditarViewModel>();
+            builder.Services.AddScoped<BibliotecaGeralViewModel>();
+            builder.Services.AddScoped <CampanhasViewModel>();
 
             return builder.Build();
         }

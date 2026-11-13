@@ -1,0 +1,144 @@
+@using RPGdeMesa.Domain.Npcs
+
+<div class="npc-grid" aria-live="polite">
+    @if (Carregando)
+    {
+        <p class="empty-state library-empty">Carregando NPCs...</p>
+    }
+    else if (Npcs.Any())
+    {
+        @foreach (var npc in Npcs)
+        {
+            <div class="npc-card-wrap">
+                <button class="npc-card" type="button" @onclick="() => OnSelecionar.InvokeAsync(npc)">
+                    <span class="npc-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant())</span>
+                    <span class="npc-info">
+                        <strong>@npc.Nome</strong>
+                        <small>@(npc.RacaTexto ?? "Aventureiro") · @(npc.ClasseTexto ?? npc.Ocupacao ?? "Civil")</small>
+                        <small>@(npc.Localizacao ?? npc.AntecedenteTexto ?? "Localização não informada")</small>
+                    </span>
+                    <span class="entry-arrow" aria-hidden="true">↗</span>
+                </button>
+                @if (npc.IdAccount == IdUsuarioLogado)
+                {
+                    <button class="library-card-delete" type="button" title="Excluir NPC" aria-label="@($"Excluir {npc.Nome}")"
+                            @onclick="() => OnPedirExclusao.InvokeAsync((npc.IdNpc, npc.Nome))">
+                        Excluir
+                    </button>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-state library-empty">Nenhum NPC encontrado.</p>
+    }
+</div>
+
+@if (ExibirModal && NpcSelecionado is not null)
+{
+    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+        <div class="modal-content-custom" @onclick:stopPropagation="true">
+            <button class="modal-close-btn" type="button" @onclick="OnFecharModal">×</button>
+
+            <div class="page-heading cabecalho-modal">
+                <div>
+                    <p class="page-kicker">Ficha de Personagem Não Jogador</p>
+                    <h1 class="page-title titulo-modal">@NpcSelecionado.Nome</h1>
+                    <p class="page-description">@(NpcSelecionado.RacaTexto ?? "Humano") · @(NpcSelecionado.ClasseTexto ?? "Civil") (Nível @NpcSelecionado.Nivel) · @(NpcSelecionado.Tendencia ?? "Neutra")</p>
+                </div>
+            </div>
+
+            <div class="form-layout">
+                <section class="form-panel">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <span class="field-label-title">Ocupação / Cargo</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.Ocupacao) ? "Não informado" : NpcSelecionado.Ocupacao)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Localização</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.Localizacao) ? "Desconhecida" : NpcSelecionado.Localizacao)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Antecedente</span>
+                            <div class="field-value-box">@(string.IsNullOrWhiteSpace(NpcSelecionado.AntecedenteTexto) ? "Não informado" : NpcSelecionado.AntecedenteTexto)</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">Alinhamento</span>
+                            <div class="field-value-box">@(NpcSelecionado.Alinhamento ?? NpcSelecionado.Tendencia ?? "Neutro")</div>
+                        </div>
+
+                        <div class="form-divider">Atributos</div>
+
+                        <div class="form-field">
+                            <span class="field-label-title">FOR</span>
+                            <div class="field-value-box">@NpcSelecionado.Forca</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">DES</span>
+                            <div class="field-value-box">@NpcSelecionado.Destreza</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">CON</span>
+                            <div class="field-value-box">@NpcSelecionado.Constituicao</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">INT</span>
+                            <div class="field-value-box">@NpcSelecionado.Inteligencia</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">SAB</span>
+                            <div class="field-value-box">@NpcSelecionado.Sabedoria</div>
+                        </div>
+                        <div class="form-field">
+                            <span class="field-label-title">CAR</span>
+                            <div class="field-value-box">@NpcSelecionado.Carisma</div>
+                        </div>
+
+                        <div class="form-divider">História e Detalhes</div>
+
+                        <div class="form-field full-width">
+                            <span class="field-label-title">História / Descrição</span>
+                            <div class="field-value-box caixa-descricao">@(string.IsNullOrWhiteSpace(NpcSelecionado.Historia) ? (NpcSelecionado.Descricao ?? "Sem histórico registrado.") : NpcSelecionado.Historia)</div>
+                        </div>
+                    </div>
+
+                    <div class="form-footer rodape-modal">
+                        @if (NpcSelecionado.IdAccount == IdUsuarioLogado)
+                        {
+                            <BotaoExcluir Inline="true" Texto="Excluir NPC" Titulo="Excluir NPC"
+                                          OnClick="() => OnPedirExclusao.InvokeAsync((NpcSelecionado.IdNpc, NpcSelecionado.Nome))" />
+                        }
+                        <button type="button" class="action-secondary" @onclick="OnFecharModal">Fechar</button>
+                    </div>
+                </section>
+
+                <aside class="form-aside">
+                    <div class="aside-portrait">
+                        @if (!string.IsNullOrWhiteSpace(NpcSelecionado.Imagem))
+                        {
+                            <img src="@NpcSelecionado.Imagem" alt="Retrato de @NpcSelecionado.Nome" />
+                        }
+                    </div>
+                    <div class="aside-note">
+                        <strong>NPC Registrado</strong>
+                        Pronto para interações, diálogos e gerenciamento em suas campanhas.
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<NPC> Npcs { get; set; } = Enumerable.Empty<NPC>();
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public int IdUsuarioLogado { get; set; }
+    [Parameter] public NPC? NpcSelecionado { get; set; }
+    [Parameter] public bool ExibirModal { get; set; }
+
+    [Parameter] public EventCallback<NPC> OnSelecionar { get; set; }
+    [Parameter] public EventCallback OnFecharModal { get; set; }
+    [Parameter] public EventCallback<(int Id, string Nome)> OnPedirExclusao { get; set; }
+}

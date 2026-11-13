@@ -1,23 +1,50 @@
-﻿using Microsoft.AspNetCore.Components;
-using RPGdeMesa.Application.Services;
-using RPGdeMesa.Domain.Personagens;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Routing;
+using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Personagens;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
     public class PersonagemEditarViewModel
     {
+        private const long LimiteImagemBytes = 2 * 1024 * 1024;
         private readonly PersonagemService _personagemService;
+        private readonly NavigationManager _navigation;
 
-        public PersonagemEditarViewModel(PersonagemService personagemService)
+        public PersonagemEditarViewModel(
+            PersonagemService personagemService,
+            NavigationManager navigation)
         {
             _personagemService = personagemService;
+            _navigation = navigation;
         }
+
+        // Listas Estáticas de Apoio
+        public IReadOnlyList<string> ListaOpcoesClasses { get; } =
+        [
+            "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+            "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
+        ];
+
+        public IReadOnlyList<string> ListaSalvaguardas { get; } =
+        [
+            "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
+        ];
+
+        public IReadOnlyList<string> ListaPericias { get; } =
+        [
+            "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
+            "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
+            "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
+        ];
 
         public Personagem PersonagemAtual { get; set; } = new();
         public string AbaAtiva { get; set; } = "atributos";
@@ -31,6 +58,11 @@ namespace RPGdeMesa.Presentation.ViewModel
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
+
+        // Controle de Estado de Saída e Navegação
+        public bool ExibirAvisoSaida { get; private set; }
+        public bool LiberarProximaNavegacao { get; private set; }
+        public string? DestinoPendente { get; private set; }
 
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
@@ -69,6 +101,23 @@ namespace RPGdeMesa.Presentation.ViewModel
             }
         }
 
+        public void AlterarNomeClasse(ClassePersonagemEntry cl, string? novoNome)
+        {
+            cl.NomeClasse = string.IsNullOrWhiteSpace(novoNome) ? "Guerreiro" : novoNome;
+            SincronizarClassesENivel();
+            NotifyStateChanged();
+        }
+
+        public void AlterarNivelClasse(ClassePersonagemEntry cl, string? valorTexto)
+        {
+            if (int.TryParse(valorTexto, out int nv))
+            {
+                cl.Nivel = Math.Clamp(nv, 1, 20);
+                SincronizarClassesENivel();
+                NotifyStateChanged();
+            }
+        }
+
         public void SincronizarClassesENivel()
         {
             var validas = ClassesSelecionadas.Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse)).ToList();
@@ -89,12 +138,41 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemAtual.ClasseTexto = textoResumo.Length > 50 ? textoResumo[..50] : textoResumo;
         }
 
+        public static string ObterModificador(int valor)
+        {
+            var modificador = (int)Math.Floor((valor - 10) / 2.0);
+            return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
+        }
+
+        public async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+        {
+            var arquivo = evento.File;
+            if (arquivo.Size > LimiteImagemBytes) return;
+            if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return;
+
+            try
+            {
+                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
+                using var memoria = new MemoryStream();
+                await origem.CopyToAsync(memoria);
+
+                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+                NotifyStateChanged();
+            }
+            catch { }
+        }
+
         public async Task CarregarPersonagemAsync(int idPersonagem)
         {
             try
             {
                 IsProcessing = true;
                 MensagemFeedback = "";
+
+                ExibirAvisoSaida = false;
+                LiberarProximaNavegacao = false;
+                DestinoPendente = null;
+
                 NotifyStateChanged();
 
                 var encontrado = await _personagemService.ObterPorIdAsync(idPersonagem);
@@ -217,6 +295,41 @@ namespace RPGdeMesa.Presentation.ViewModel
             NotifyStateChanged();
         }
 
+        // Guarda de Navegação
+        public void AbrirAvisoSaida()
+        {
+            ExibirAvisoSaida = true;
+            NotifyStateChanged();
+        }
+
+        public void ConfirmarNavegacao(LocationChangingContext contexto)
+        {
+            if (Sucesso || LiberarProximaNavegacao)
+            {
+                LiberarProximaNavegacao = false;
+                return;
+            }
+
+            contexto.PreventNavigation();
+            DestinoPendente = contexto.TargetLocation;
+            ExibirAvisoSaida = true;
+            NotifyStateChanged();
+        }
+
+        public void FecharAvisoSaida()
+        {
+            ExibirAvisoSaida = false;
+            DestinoPendente = null;
+            NotifyStateChanged();
+        }
+
+        public void SairDaEdicao()
+        {
+            ExibirAvisoSaida = false;       
+            LiberarProximaNavegacao = true; 
+            _navigation.NavigateTo(DestinoPendente ?? "/personagem-lib");
+        }
+
         public async Task SalvarAlteracoesAsync()
         {
             if (IsProcessing) return;
@@ -274,6 +387,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 Sucesso = resultado3FN.Sucesso;
                 MensagemFeedback = Sucesso ? "Ficha atualizada com sucesso!" : resultado3FN.Mensagem;
+                if (Sucesso) LiberarProximaNavegacao = true;
                 NotifyStateChanged();
             }
             catch (Exception ex)

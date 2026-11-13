@@ -1,12 +1,16 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Routing;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -58,6 +62,9 @@ namespace RPGdeMesa.Presentation.ViewModel
 
     public class PersonagemCriarViewModel
     {
+        public const int TotalEtapas = 4;
+        public const long LimiteImagemBytes = 2 * 1024 * 1024;
+
         private readonly PersonagemService _personagemService;
         private readonly CampanhaService _campanhaService;
         private readonly SessaoUsuarioService _sessaoUsuario;
@@ -76,6 +83,34 @@ namespace RPGdeMesa.Presentation.ViewModel
             LimparFormulario();
         }
 
+        // Listas de Opções para a View
+        public IReadOnlyList<string> Etapas { get; } =
+        [
+            "Identidade & Físico",
+            "Atributos & Perícias",
+            "História & Diário",
+            "Grimório & Magias"
+        ];
+
+        public IReadOnlyList<string> ListaOpcoesClasses { get; } =
+        [
+            "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+            "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
+        ];
+
+        public IReadOnlyList<string> ListaSalvaguardas { get; } =
+        [
+            "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
+        ];
+
+        public IReadOnlyList<string> ListaPericias { get; } =
+        [
+            "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
+            "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
+            "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
+        ];
+
+        // Estado do Personagem e Formulário
         public Personagem PersonagemAtual { get; set; } = new();
         public int? IdCampanhaOpcional { get; set; }
 
@@ -89,15 +124,36 @@ namespace RPGdeMesa.Presentation.ViewModel
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
 
+        // Estado do Wizard, Imagem e Navegação
+        public int EtapaAtual { get; private set; } = 1;
+        public string? ErroEtapa { get; private set; }
+        public string? ErroImagem { get; private set; }
+        public bool ExibirAvisoSaida { get; private set; }
+        public bool LiberarProximaNavegacao { get; private set; }
+        public string? DestinoPendente { get; private set; }
+
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
+
+        public bool FormularioIntocado =>
+            EtapaAtual == 1 && string.IsNullOrWhiteSpace(PersonagemAtual.Nome);
+
+        public string DestinoPadrao =>
+            IdCampanhaOpcional.HasValue && IdCampanhaOpcional.Value > 0 ? "/campanhas" : "/personagem-lib";
 
         public event Action? OnChange;
         public void NotifyStateChanged() => OnChange?.Invoke();
 
         public void LimparFormulario()
         {
+            EtapaAtual = 1;
+            ErroEtapa = null;
+            ErroImagem = null;
+            ExibirAvisoSaida = false;
+            LiberarProximaNavegacao = false;
+            DestinoPendente = null;
+
             IdadeNumero = 25;
             AlturaCm = 170;
             PesoKg = 70m;
@@ -136,6 +192,77 @@ namespace RPGdeMesa.Presentation.ViewModel
             Sucesso = false;
         }
 
+        // Navegação entre Etapas (Wizard)
+        public void AvancarEtapa()
+        {
+            ErroEtapa = null;
+
+            if (EtapaAtual == 1)
+            {
+                SincronizarClassesENivel();
+
+                if (string.IsNullOrWhiteSpace(PersonagemAtual.Nome))
+                {
+                    ErroEtapa = "Informe o nome do personagem para continuar.";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(PersonagemAtual.RacaTexto))
+                {
+                    ErroEtapa = "Selecione a raça do personagem para continuar.";
+                    return;
+                }
+
+                if (!ClassesSelecionadas.Any() || ClassesSelecionadas.Any(c => string.IsNullOrWhiteSpace(c.NomeClasse)))
+                {
+                    ErroEtapa = "Selecione pelo menos uma classe válida.";
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(PersonagemAtual.AntecedenteTexto))
+                {
+                    ErroEtapa = "Selecione o antecedente do personagem para continuar.";
+                    return;
+                }
+
+                int somaNiveis = ClassesSelecionadas.Sum(c => c.Nivel);
+                if (somaNiveis < 1 || somaNiveis > 20)
+                {
+                    ErroEtapa = "A soma dos níveis das classes deve estar entre 1 e 20.";
+                    return;
+                }
+
+                if (IdadeNumero <= 0 || AlturaCm <= 0 || PesoKg <= 0)
+                {
+                    ErroEtapa = "Preencha idade, altura e peso com valores numéricos válidos.";
+                    return;
+                }
+
+                SincronizarMedidasFisicas();
+            }
+
+            if (EtapaAtual < TotalEtapas)
+            {
+                EtapaAtual++;
+            }
+        }
+
+        public void VoltarEtapa()
+        {
+            ErroEtapa = null;
+            if (EtapaAtual > 1) EtapaAtual--;
+        }
+
+        public void IrParaEtapa(int etapa)
+        {
+            if (etapa >= 1 && etapa <= EtapaAtual)
+            {
+                ErroEtapa = null;
+                EtapaAtual = etapa;
+            }
+        }
+
+        // Gerenciamento de Classes e Níveis
         public void AdicionarClasse()
         {
             if (ClassesSelecionadas.Sum(c => c.Nivel) >= 20) return;
@@ -151,6 +278,21 @@ namespace RPGdeMesa.Presentation.ViewModel
                 ClassesSelecionadas.Remove(item);
                 SincronizarClassesENivel();
                 NotifyStateChanged();
+            }
+        }
+
+        public void AlterarNomeClasse(ClassePersonagemEntry cl, string? novoNome)
+        {
+            cl.NomeClasse = string.IsNullOrWhiteSpace(novoNome) ? "Guerreiro" : novoNome;
+            SincronizarClassesENivel();
+        }
+
+        public void AlterarNivelClasse(ClassePersonagemEntry cl, string? valorTexto)
+        {
+            if (int.TryParse(valorTexto, out int nv))
+            {
+                cl.Nivel = Math.Clamp(nv, 1, 20);
+                SincronizarClassesENivel();
             }
         }
 
@@ -172,6 +314,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                 : string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
 
             PersonagemAtual.ClasseTexto = textoResumo.Length > 50 ? textoResumo[..50] : textoResumo;
+        }
+
+        // Cálculos e Utilitários
+        public static string ObterModificador(int valor)
+        {
+            var modificador = (int)Math.Floor((valor - 10) / 2.0);
+            return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
         }
 
         public static string ClassificarCategoriaItem(Item i)
@@ -229,6 +378,79 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemAtual.Peso = $"{PesoKg.ToString("0.#", new CultureInfo("pt-BR"))} kg";
         }
 
+        // Upload de Imagem
+        public async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+        {
+            ErroImagem = null;
+            var arquivo = evento.File;
+
+            if (arquivo.Size > LimiteImagemBytes)
+            {
+                ErroImagem = "A imagem deve ter no máximo 2 MB.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                ErroImagem = "Selecione um arquivo de imagem válido.";
+                return;
+            }
+
+            try
+            {
+                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
+                using var memoria = new MemoryStream();
+                await origem.CopyToAsync(memoria);
+
+                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            }
+            catch (Exception)
+            {
+                ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo.";
+            }
+        }
+
+        // Guarda de Navegação e Saída
+        public void AbrirAvisoSaida()
+        {
+            if (FormularioIntocado)
+            {
+                LiberarProximaNavegacao = true;
+                _navigation.NavigateTo(DestinoPadrao);
+                return;
+            }
+
+            ExibirAvisoSaida = true;
+        }
+
+        public void ConfirmarNavegacao(LocationChangingContext contexto)
+        {
+            if (Sucesso || LiberarProximaNavegacao || FormularioIntocado)
+            {
+                LiberarProximaNavegacao = false;
+                return;
+            }
+
+            contexto.PreventNavigation();
+            DestinoPendente = contexto.TargetLocation;
+            ExibirAvisoSaida = true;
+            NotifyStateChanged();
+        }
+
+        public void FecharAvisoSaida()
+        {
+            ExibirAvisoSaida = false;
+            DestinoPendente = null;
+        }
+
+        public void SairDaCriacao()
+        {
+            ExibirAvisoSaida = false;
+            LiberarProximaNavegacao = true;
+            _navigation.NavigateTo(DestinoPendente ?? DestinoPadrao);
+        }
+
+        // Persistência Final
         public async Task SalvarPersonagemAsync()
         {
             if (IsProcessing) return;
@@ -298,11 +520,12 @@ namespace RPGdeMesa.Presentation.ViewModel
                 }
 
                 Sucesso = true;
+                LiberarProximaNavegacao = true;
                 MensagemFeedback = "Personagem forjado com sucesso!";
                 NotifyStateChanged();
 
                 await Task.Delay(1000);
-                _navigation.NavigateTo("/personagem-lib");
+                _navigation.NavigateTo(DestinoPadrao);
             }
             catch (Exception ex)
             {

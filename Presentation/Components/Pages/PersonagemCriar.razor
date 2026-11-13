@@ -1,18 +1,16 @@
 ﻿@page "/personagem-criar"
-@using System.IO
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
 @inject PersonagemCriarViewModel ViewModel
-@inject NavigationManager Navigation
 @implements IDisposable
 
-<NavigationLock OnBeforeInternalNavigation="ConfirmarNavegacao" />
+<NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
 
 <div class="app-shell criacao-personagem">
     <main class="app-content">
-        <button class="exit-prompt-link" type="button" @onclick="AbrirAvisoSaida">
+        <button class="exit-prompt-link" type="button" @onclick="ViewModel.AbrirAvisoSaida">
             <span aria-hidden="true">←</span> Voltar aos personagens
         </button>
 
@@ -34,12 +32,12 @@
                 <div class="preview-actions">
                     <label class="btn-upload">
                         ↑ Escolher foto do herói
-                        <InputFile OnChange="CarregarFotoAsync" accept="image/*" aria-label="Escolher foto do personagem" />
+                        <InputFile OnChange="ViewModel.CarregarFotoAsync" accept="image/*" aria-label="Escolher foto do personagem" />
                     </label>
                     <p class="upload-help">Imagem de até 2 MB.</p>
-                    @if (!string.IsNullOrWhiteSpace(ErroImagem))
+                    @if (!string.IsNullOrWhiteSpace(ViewModel.ErroImagem))
                     {
-                        <p class="field-error" role="alert">@ErroImagem</p>
+                        <p class="field-error" role="alert">@ViewModel.ErroImagem</p>
                     }
                 </div>
                 <div class="aside-summary">
@@ -55,27 +53,27 @@
             <div class="progress-info">
                 <div class="progress-current">
                     <span>Progresso da criação</span>
-                    <strong>Etapa @EtapaAtual de @TotalEtapas</strong>
+                    <strong>Etapa @ViewModel.EtapaAtual de @PersonagemCriarViewModel.TotalEtapas</strong>
                 </div>
-                <p aria-live="polite">@(EtapaAtual == TotalEtapas ? "Última etapa — falta concluir esta ficha" : $"{TotalEtapas - EtapaAtual} {(TotalEtapas - EtapaAtual == 1 ? "etapa restante" : "etapas restantes")}")</p>
+                <p aria-live="polite">@(ViewModel.EtapaAtual == PersonagemCriarViewModel.TotalEtapas ? "Última etapa — falta concluir esta ficha" : $"{PersonagemCriarViewModel.TotalEtapas - ViewModel.EtapaAtual} {(PersonagemCriarViewModel.TotalEtapas - ViewModel.EtapaAtual == 1 ? "etapa restante" : "etapas restantes")}")</p>
             </div>
-            <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="@TotalEtapas" aria-valuenow="@EtapaAtual" aria-label="Progresso das etapas">
-                <div class="progress-fill" style="width: @(((EtapaAtual - 1) * 100) / (TotalEtapas - 1))%"></div>
+            <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="@PersonagemCriarViewModel.TotalEtapas" aria-valuenow="@ViewModel.EtapaAtual" aria-label="Progresso das etapas">
+                <div class="progress-fill" style="width: @(((ViewModel.EtapaAtual - 1) * 100) / (PersonagemCriarViewModel.TotalEtapas - 1))%"></div>
             </div>
 
             <nav class="wizard-steps" aria-label="Etapas da criação">
-                @for (var indice = 0; indice < Etapas.Length; indice++)
+                @for (var indice = 0; indice < ViewModel.Etapas.Count; indice++)
                 {
                     var etapa = indice + 1;
-                    <button type="button" class="step-pill @(EtapaAtual == etapa ? "active" : EtapaAtual > etapa ? "completed" : "")"
-                            disabled="@(etapa > EtapaAtual)"
-                            title="@(etapa > EtapaAtual ? "Conclua as etapas anteriores para liberar esta." : "Revisar etapa")"
-                            aria-current="@(EtapaAtual == etapa ? "step" : null)"
-                            @onclick="() => IrParaEtapa(etapa)">
-                        <span class="step-number">@(EtapaAtual > etapa ? "✓" : etapa.ToString())</span>
-                        <span class="step-label"><small>Etapa @etapa</small><strong>@Etapas[indice]</strong></span>
+                    <button type="button" class="step-pill @(ViewModel.EtapaAtual == etapa ? "active" : ViewModel.EtapaAtual > etapa ? "completed" : "")"
+                            disabled="@(etapa > ViewModel.EtapaAtual)"
+                            title="@(etapa > ViewModel.EtapaAtual ? "Conclua as etapas anteriores para liberar esta." : "Revisar etapa")"
+                            aria-current="@(ViewModel.EtapaAtual == etapa ? "step" : null)"
+                            @onclick="() => ViewModel.IrParaEtapa(etapa)">
+                        <span class="step-number">@(ViewModel.EtapaAtual > etapa ? "✓" : etapa.ToString())</span>
+                        <span class="step-label"><small>Etapa @etapa</small><strong>@ViewModel.Etapas[indice]</strong></span>
                     </button>
-                    @if (indice < Etapas.Length - 1)
+                    @if (indice < ViewModel.Etapas.Count - 1)
                     {
                         <span class="step-connector" aria-hidden="true">→</span>
                     }
@@ -86,7 +84,7 @@
         <form id="form-wizard" class="wizard-layout" @onsubmit="ViewModel.SalvarPersonagemAsync" @onsubmit:preventDefault="true">
             <section class="ficha-pergaminho">
 
-                @if (EtapaAtual == 1)
+                @if (ViewModel.EtapaAtual == 1)
                 {
                     <div class="step-panel active">
                         <h2 class="section-title">1. Identidade, Raça, Classes e Biografia Física</h2>
@@ -175,13 +173,13 @@
                                 @foreach (var cl in ViewModel.ClassesSelecionadas)
                                 {
                                     <div class="item-linha" style="grid-template-columns: 1fr 110px 32px;">
-                                        <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasse(cl, e)">
-                                            @foreach (var op in ListaOpcoesClasses)
+                                        <select value="@cl.NomeClasse" @onchange="e => ViewModel.AlterarNomeClasse(cl, e.Value?.ToString())">
+                                            @foreach (var op in ViewModel.ListaOpcoesClasses)
                                             {
                                                 <option value="@op">@op</option>
                                             }
                                         </select>
-                                        <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasse(cl, e)" />
+                                        <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => ViewModel.AlterarNivelClasse(cl, e.Value?.ToString())" />
                                         @if (ViewModel.ClassesSelecionadas.Count > 1)
                                         {
                                             <button type="button" class="remover-item" title="Remover classe" @onclick="() => ViewModel.RemoverClasse(cl)">×</button>
@@ -225,7 +223,7 @@
                         </div>
                     </div>
                 }
-                else if (EtapaAtual == 2)
+                else if (ViewModel.EtapaAtual == 2)
                 {
                     <div class="step-panel active step-panel-attributes">
                         <h2 class="section-title">2. Atributos, Salvaguardas e Perícias</h2>
@@ -243,32 +241,32 @@
                                 <label class="atributo-box">
                                     <span>Força</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Forca" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Forca)</small>
                                 </label>
                                 <label class="atributo-box">
                                     <span>Destreza</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Destreza" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Destreza)</small>
                                 </label>
                                 <label class="atributo-box">
                                     <span>Constituição</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Constituicao" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Constituicao)</small>
                                 </label>
                                 <label class="atributo-box">
                                     <span>Inteligência</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Inteligencia" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Inteligencia)</small>
                                 </label>
                                 <label class="atributo-box">
                                     <span>Sabedoria</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Sabedoria" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Sabedoria)</small>
                                 </label>
                                 <label class="atributo-box">
                                     <span>Carisma</span>
                                     <input type="number" min="1" max="30" @bind="ViewModel.PersonagemAtual.Carisma" @bind:event="oninput" />
-                                    <small>@ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
+                                    <small>@PersonagemCriarViewModel.ObterModificador(ViewModel.PersonagemAtual.Carisma)</small>
                                 </label>
                             </div>
                         </section>
@@ -283,7 +281,7 @@
                                     <p>Marque os atributos em que possui proficiência.</p>
                                 </div>
                                 <div class="opcoes-salvaguarda">
-                                    @foreach (var salv in ListaSalvaguardas)
+                                    @foreach (var salv in ViewModel.ListaSalvaguardas)
                                     {
                                         <label class="opcao-proficiencia">
                                             <input type="checkbox"
@@ -304,7 +302,7 @@
                                     <p>Selecione todas as perícias nas quais o personagem é treinado.</p>
                                 </div>
                                 <div class="opcoes-pericias">
-                                    @foreach (var pericia in ListaPericias)
+                                    @foreach (var pericia in ViewModel.ListaPericias)
                                     {
                                         <label class="opcao-proficiencia">
                                             <input type="checkbox"
@@ -318,7 +316,7 @@
                         </div>
                     </div>
                 }
-                else if (EtapaAtual == 3)
+                else if (ViewModel.EtapaAtual == 3)
                 {
                     <div class="step-panel active">
                         <h2 class="section-title">3. Personalidade, Diário, Aparência e História</h2>
@@ -376,7 +374,7 @@
                         </div>
                     </div>
                 }
-                else if (EtapaAtual == 4)
+                else if (ViewModel.EtapaAtual == 4)
                 {
                     <div class="step-panel active">
                         <h2 class="section-title">4. Equipar Magias e Truques do Grimório</h2>
@@ -418,15 +416,15 @@
                 <footer class="wizard-footer">
                     <button class="action-secondary"
                             type="button"
-                            style="visibility: @(EtapaAtual == 1 ? "hidden" : "visible")"
-                            @onclick="VoltarEtapa"
-                            disabled="@(EtapaAtual == 1 || ViewModel.IsProcessing)">
+                            style="visibility: @(ViewModel.EtapaAtual == 1 ? "hidden" : "visible")"
+                            @onclick="ViewModel.VoltarEtapa"
+                            disabled="@(ViewModel.EtapaAtual == 1 || ViewModel.IsProcessing)">
                         ← Etapa Anterior
                     </button>
 
-                    @if (EtapaAtual < TotalEtapas)
+                    @if (ViewModel.EtapaAtual < PersonagemCriarViewModel.TotalEtapas)
                     {
-                        <button class="action-primary" type="button" @onclick="AvancarEtapa" disabled="@ViewModel.IsProcessing">
+                        <button class="action-primary" type="button" @onclick="ViewModel.AvancarEtapa" disabled="@ViewModel.IsProcessing">
                             Próxima Etapa →
                         </button>
                     }
@@ -438,9 +436,9 @@
                     }
                 </footer>
 
-                @if (!string.IsNullOrWhiteSpace(ErroEtapa))
+                @if (!string.IsNullOrWhiteSpace(ViewModel.ErroEtapa))
                 {
-                    <p class="wizard-error" role="alert">@ErroEtapa</p>
+                    <p class="wizard-error" role="alert">@ViewModel.ErroEtapa</p>
                 }
 
                 @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
@@ -454,15 +452,15 @@
     </main>
 </div>
 
-@if (ExibirAvisoSaida)
+@if (ViewModel.ExibirAvisoSaida)
 {
-    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+    <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
         <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-personagem" aria-describedby="mensagem-aviso-personagem" @onclick:stopPropagation="true">
             <h2 id="titulo-aviso-personagem">Sair sem salvar?</h2>
             <p id="mensagem-aviso-personagem">Você tem certeza que quer sair? Vai perder tudo o que preencheu nesta criação.</p>
             <div class="confirm-actions">
-                <button class="confirm-exit" type="button" @onclick="SairDaCriacao">Sim</button>
-                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+                <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaCriacao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="ViewModel.FecharAvisoSaida">Não</button>
             </div>
         </section>
     </div>
@@ -471,42 +469,6 @@
 @code {
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaId { get; set; }
-
-    private const int TotalEtapas = 4;
-    private const long LimiteImagemBytes = 2 * 1024 * 1024;
-
-    private readonly string[] Etapas =
-    {
-        "Identidade & Físico",
-        "Atributos & Perícias",
-        "História & Diário",
-        "Grimório & Magias"
-    };
-
-    private readonly string[] ListaOpcoesClasses =
-    {
-        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
-        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
-    };
-
-    private readonly string[] ListaSalvaguardas =
-    {
-        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
-    };
-
-    private readonly string[] ListaPericias =
-    {
-        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
-        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
-        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
-    };
-
-    private int EtapaAtual { get; set; } = 1;
-    private string? ErroEtapa { get; set; }
-    private string? ErroImagem { get; set; }
-    private bool ExibirAvisoSaida { get; set; }
-    private bool LiberarProximaNavegacao { get; set; }
-    private string? DestinoPendente { get; set; }
 
     protected override void OnInitialized()
     {
@@ -518,169 +480,5 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
-    }
-
-    private void AlterarNomeClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
-    {
-        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
-        ViewModel.SincronizarClassesENivel();
-    }
-
-    private void AlterarNivelClasse(ClassePersonagemEntry cl, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int nv))
-        {
-            cl.Nivel = Math.Clamp(nv, 1, 20);
-            ViewModel.SincronizarClassesENivel();
-        }
-    }
-
-    private void AvancarEtapa()
-    {
-        ErroEtapa = null;
-
-        if (EtapaAtual == 1)
-        {
-            ViewModel.SincronizarClassesENivel();
-
-            if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome))
-            {
-                ErroEtapa = "Informe o nome do personagem para continuar.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.RacaTexto))
-            {
-                ErroEtapa = "Selecione a raça do personagem para continuar.";
-                return;
-            }
-
-            if (!ViewModel.ClassesSelecionadas.Any() || ViewModel.ClassesSelecionadas.Any(c => string.IsNullOrWhiteSpace(c.NomeClasse)))
-            {
-                ErroEtapa = "Selecione pelo menos uma classe válida.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.AntecedenteTexto))
-            {
-                ErroEtapa = "Selecione o antecedente do personagem para continuar.";
-                return;
-            }
-
-            int somaNiveis = ViewModel.ClassesSelecionadas.Sum(c => c.Nivel);
-            if (somaNiveis < 1 || somaNiveis > 20)
-            {
-                ErroEtapa = "A soma dos níveis das classes deve estar entre 1 e 20.";
-                return;
-            }
-
-            if (ViewModel.IdadeNumero <= 0 || ViewModel.AlturaCm <= 0 || ViewModel.PesoKg <= 0)
-            {
-                ErroEtapa = "Preencha idade, altura e peso com valores numéricos válidos.";
-                return;
-            }
-
-            ViewModel.SincronizarMedidasFisicas();
-        }
-
-        if (EtapaAtual < TotalEtapas)
-        {
-            EtapaAtual++;
-        }
-    }
-
-    private void VoltarEtapa()
-    {
-        ErroEtapa = null;
-        if (EtapaAtual > 1) EtapaAtual--;
-    }
-
-    private void IrParaEtapa(int etapa)
-    {
-        if (etapa >= 1 && etapa <= EtapaAtual)
-        {
-            ErroEtapa = null;
-            EtapaAtual = etapa;
-        }
-    }
-
-    private static string ObterModificador(int valor)
-    {
-        var modificador = (int)Math.Floor((valor - 10) / 2.0);
-        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
-    }
-
-    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
-    {
-        ErroImagem = null;
-        var arquivo = evento.File;
-
-        if (arquivo.Size > LimiteImagemBytes)
-        {
-            ErroImagem = "A imagem deve ter no máximo 2 MB.";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            ErroImagem = "Selecione um arquivo de imagem válido.";
-            return;
-        }
-
-        try
-        {
-            await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-            using var memoria = new MemoryStream();
-            await origem.CopyToAsync(memoria);
-
-            ViewModel.PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
-        }
-        catch (Exception)
-        {
-            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo.";
-        }
-    }
-
-    private bool FormularioIntocado =>
-        EtapaAtual == 1 && string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Nome);
-
-    private string DestinoPadrao => CampanhaId.HasValue && CampanhaId.Value > 0 ? "/campanhas" : "/personagem-lib";
-
-    private void AbrirAvisoSaida()
-    {
-        if (FormularioIntocado)
-        {
-            LiberarProximaNavegacao = true;
-            Navigation.NavigateTo(DestinoPadrao);
-            return;
-        }
-
-        ExibirAvisoSaida = true;
-    }
-
-    private void ConfirmarNavegacao(LocationChangingContext contexto)
-    {
-        if (ViewModel.Sucesso || LiberarProximaNavegacao || FormularioIntocado)
-        {
-            LiberarProximaNavegacao = false;
-            return;
-        }
-
-        contexto.PreventNavigation();
-        DestinoPendente = contexto.TargetLocation;
-        ExibirAvisoSaida = true;
-    }
-
-    private void FecharAvisoSaida()
-    {
-        ExibirAvisoSaida = false;
-        DestinoPendente = null;
-    }
-
-    private void SairDaCriacao()
-    {
-        ExibirAvisoSaida = false;
-        LiberarProximaNavegacao = true;
-        Navigation.NavigateTo(DestinoPendente ?? DestinoPadrao);
     }
 }

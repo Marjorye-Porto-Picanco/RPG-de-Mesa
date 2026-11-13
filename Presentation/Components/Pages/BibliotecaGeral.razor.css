@@ -1,0 +1,959 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    color-scheme: dark;
+    --ink: #241a14;
+    --ink-soft: #37271d;
+    --wood: #20150f;
+    --wood-light: #2b1c14;
+    --paper: #ead8b3;
+    --paper-light: #f3e8cf;
+    --gold: #d1a951;
+    --gold-deep: #98712d;
+    --moss: #748052;
+    --teal: #608782;
+    --wine: #8a5146;
+    --muted: #b7a78c;
+    --line: rgba(217, 184, 120, 0.28);
+}
+
+.app-shell {
+    color-scheme: dark;
+    --gold: #d1a951;
+    --gold-dim: #c9ad70;
+    --gold-light: #f0d17f;
+    --wood: #1b130f;
+    --wood-surface: rgba(36, 27, 21, 0.88);
+    --border-gold: rgba(216, 181, 112, 0.35);
+    min-height: 100vh;
+    background-color: var(--wood);
+    background-image: linear-gradient(rgba(25, 17, 13, 0.88), rgba(25, 17, 13, 0.92)), url("img/fundodemadeira.png.jpg");
+    background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+    color: #f2e6cf;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+}
+
+    .app-shell ::deep button,
+    .app-shell ::deep input,
+    .app-shell ::deep select,
+    .app-shell ::deep textarea,
+    .app-shell ::deep a {
+        font: inherit;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+        /* Foco de acessibilidade global propagado para subcomponentes */
+        .app-shell ::deep .library-tab:focus-visible,
+        .app-shell ::deep .library-entry:focus-visible,
+        .app-shell ::deep .dialog-close:focus-visible,
+        .app-shell ::deep .action-primary:focus-visible,
+        .app-shell ::deep .action-secondary:focus-visible,
+        .app-shell ::deep .action-quiet:focus-visible,
+        .app-shell ::deep a:focus-visible,
+        .app-shell ::deep button:focus-visible,
+        .app-shell ::deep input:focus-visible,
+        .app-shell ::deep select:focus-visible,
+        .app-shell ::deep textarea:focus-visible {
+            outline: 2px solid var(--gold-light);
+            outline-offset: 2px;
+        }
+
+.app-content {
+    width: min(1280px, 100%);
+    margin: 0 auto;
+    padding: 34px clamp(18px, 4.5vw, 64px) 58px;
+}
+
+.library-content {
+    min-height: calc(100vh - 64px);
+}
+
+/* Tipografia e Cabeçalho */
+.app-shell ::deep .page-kicker {
+    margin: 0 0 7px;
+    color: var(--gold);
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.app-shell ::deep .page-title {
+    margin: 0;
+    color: #f3e7ce;
+    font-size: clamp(28px, 3vw, 38px);
+    font-weight: 500;
+    line-height: 1.1;
+}
+
+.app-shell ::deep .page-description {
+    margin: 9px 0 0;
+    color: #c5b79d;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.app-shell ::deep .page-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 22px;
+    margin-bottom: 25px;
+}
+
+.library-content .page-heading {
+    margin-bottom: 15px;
+}
+
+.library-scope {
+    margin: 0 0 22px;
+    padding-left: 12px;
+    border-left: 2px solid var(--gold);
+    color: #c5b79d;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+/* Botões e Ações */
+.app-shell ::deep .action-primary,
+.app-shell ::deep .action-secondary,
+.app-shell ::deep .action-quiet {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid #d4b364;
+    border-radius: 4px;
+    color: #fff2d4;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.app-shell ::deep .action-primary {
+    background: #94702f;
+}
+
+    .app-shell ::deep .action-primary:hover {
+        border-color: var(--gold-light);
+        background: #a98239;
+    }
+
+.app-shell ::deep .action-secondary {
+    border-color: rgba(217, 184, 120, 0.48);
+    background: rgba(33, 23, 17, 0.48);
+    color: #e5d1aa;
+}
+
+    .app-shell ::deep .action-secondary:hover,
+    .app-shell ::deep .action-quiet:hover {
+        background: rgba(192, 150, 70, 0.2);
+    }
+
+.app-shell ::deep .action-quiet {
+    min-height: 34px;
+    padding: 0 10px;
+    border-color: transparent;
+    background: transparent;
+    color: #ccb98f;
+}
+
+/* Abas (Tabs) */
+.library-tabs {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border-gold);
+    scrollbar-width: none;
+}
+
+    .library-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+.library-tab {
+    min-width: 92px;
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #bcae91;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+    .library-tab:hover,
+    .library-tab[aria-selected="true"],
+    .library-tab.active {
+        border-bottom-color: #d3ac60;
+        color: #f5e4bf;
+    }
+
+/* Barra de Filtros e Busca */
+.library-panel {
+    padding-top: 18px;
+}
+
+.library-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 13px;
+}
+
+.search-field {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+    .search-field input {
+        width: 100%;
+        min-height: 42px;
+        padding: 0 14px 0 40px;
+        border: 1px solid var(--border-gold);
+        border-radius: 4px;
+        background: rgba(33, 24, 18, 0.86);
+        color: #f1e4cb;
+    }
+
+    .search-field span {
+        position: absolute;
+        top: 50%;
+        left: 13px;
+        color: var(--gold-dim);
+        transform: translateY(-50%);
+    }
+
+.library-status {
+    min-height: 18px;
+    margin: 0 0 11px;
+    color: #c5b79d;
+    font-size: 11px;
+}
+
+    .library-status.is-error {
+        color: #e8a58d;
+    }
+
+/* Grades (Grids) e Cards nos Subcomponentes */
+.app-shell ::deep .library-grid,
+.app-shell ::deep .monster-grid,
+.app-shell ::deep .npc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    align-items: stretch;
+    gap: 14px;
+}
+
+.app-shell ::deep .npc-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 12px;
+}
+
+.app-shell ::deep .monster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 16px;
+}
+
+.app-shell ::deep .npc-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 82px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 38px 12px 13px;
+    border: 1px solid rgba(210, 174, 105, .38);
+    border-radius: 4px;
+    background: rgba(36, 27, 21, .92);
+    color: #eee0c5;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+    .app-shell ::deep .npc-card:hover {
+        transform: translateY(-2px);
+        border-color: #c9a458;
+        background: rgba(66, 49, 32, .92);
+    }
+
+.app-shell ::deep .npc-avatar {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid rgba(210, 174, 105, .48);
+    border-radius: 50%;
+    background: rgba(116, 128, 82, .22);
+    color: #e5c477;
+    font-size: 15px;
+}
+
+.app-shell ::deep .npc-info {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+    .app-shell ::deep .npc-info strong {
+        overflow: hidden;
+        color: #f1e4ca;
+        font-size: 13px;
+        font-weight: 500;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .app-shell ::deep .npc-info small {
+        overflow: hidden;
+        color: #b7a78b;
+        font-size: 10px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+/* Card de Entrada (Itens/Magias/Armas) */
+.app-shell ::deep .library-entry {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 88px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    padding: 15px 40px 15px 16px;
+    border: 1px solid rgba(210, 174, 105, 0.34);
+    border-radius: 3px;
+    background: var(--wood-surface);
+    color: #eee0c5;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .app-shell ::deep .library-entry:hover {
+        border-color: #c9a458;
+        background: rgba(66, 49, 32, 0.92);
+    }
+
+    .app-shell ::deep .library-entry strong {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.35;
+    }
+
+.app-shell ::deep .entry-meta {
+    color: #c2a969;
+    font-size: 10px;
+}
+
+.app-shell ::deep .entry-arrow {
+    position: absolute;
+    top: 50%;
+    right: 13px;
+    color: #c2a969;
+    transform: translateY(-50%);
+}
+
+.library-retry {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+.library-more {
+    display: flex;
+    margin: 18px auto 0;
+}
+
+/* Card de Monstros */
+.app-shell ::deep .monster-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(210, 174, 105, 0.48);
+    border-radius: 4px;
+    background: rgba(36, 27, 21, 0.92);
+    color: #eee0c5;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+    .app-shell ::deep .monster-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.34);
+    }
+
+.app-shell ::deep .monster-art {
+    position: relative;
+    height: 154px;
+    overflow: hidden;
+    background: #32332d;
+}
+
+    .app-shell ::deep .monster-art img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 220ms ease;
+    }
+
+.app-shell ::deep .monster-card:hover .monster-art img {
+    transform: scale(1.035);
+}
+
+.app-shell ::deep .monster-art::after {
+    position: absolute;
+    inset: 45% 0 0;
+    background: linear-gradient(transparent, rgba(22, 17, 13, 0.6));
+    content: "";
+}
+
+.app-shell ::deep .monster-cr {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    right: 10px;
+    padding: 5px 8px;
+    border: 1px solid rgba(235, 212, 162, 0.48);
+    background: rgba(29, 22, 17, 0.8);
+    color: #eddaa9;
+    font-size: 10px;
+}
+
+.app-shell ::deep .monster-info {
+    padding: 12px 14px 14px;
+}
+
+    .app-shell ::deep .monster-info h2 {
+        margin: 0 0 4px;
+        color: #f1e4ca;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .app-shell ::deep .monster-info p {
+        margin: 0;
+        color: #b7a78b;
+        font-size: 11px;
+    }
+
+.app-shell ::deep .monster-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 11px;
+}
+
+    .app-shell ::deep .monster-tags span {
+        padding: 4px 7px;
+        border: 1px solid rgba(196, 161, 98, 0.32);
+        color: #d0bd96;
+        font-size: 9px;
+    }
+
+/* Estados Vazios */
+.app-shell ::deep .empty-state {
+    grid-column: 1 / -1;
+    padding: 44px 16px;
+    border: 1px dashed rgba(215, 182, 118, 0.4);
+    color: #c9b995;
+    font-size: 13px;
+    text-align: center;
+}
+
+    .app-shell ::deep .empty-state.library-empty {
+        padding: 23px 10px;
+        border: 0;
+        color: #c5b79d;
+    }
+
+/* Modais de Detalhes e Formulários Internos */
+.app-shell ::deep .form-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 270px;
+    align-items: start;
+    gap: 22px;
+}
+
+.app-shell ::deep .form-panel {
+    padding: clamp(20px, 3vw, 31px);
+    border: 1px solid rgba(205, 167, 95, 0.6);
+    border-radius: 4px;
+    background-color: var(--paper);
+    background-image: linear-gradient(rgba(246, 232, 199, 0.95), rgba(226, 205, 163, 0.97)), url("img/papelantigo.png");
+    color: #44331f;
+}
+
+.app-shell ::deep .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+}
+
+.app-shell ::deep .form-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+    color: #6d532e;
+    font-size: 11px;
+}
+
+    .app-shell ::deep .form-field.full-width {
+        grid-column: 1 / -1;
+    }
+
+.app-shell ::deep .form-divider {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 5px 0 0;
+    color: #805f30;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+    .app-shell ::deep .form-divider::after {
+        height: 1px;
+        flex: 1;
+        background: rgba(128, 95, 48, 0.34);
+        content: "";
+    }
+
+.app-shell ::deep .form-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.app-shell ::deep .aside-portrait {
+    position: relative;
+    min-height: 245px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(215, 180, 109, 0.54);
+    border-radius: 4px;
+    background: radial-gradient(circle at center 75%, #59604b, #29251d 72%);
+}
+
+    .app-shell ::deep .aside-portrait img {
+        width: 74%;
+        max-height: 215px;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 9px rgba(0, 0, 0, 0.38));
+    }
+
+.app-shell ::deep .aside-note {
+    padding: 14px 15px;
+    border-left: 2px solid #9b7b40;
+    background: rgba(50, 38, 28, 0.76);
+    color: #d0c0a1;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+    .app-shell ::deep .aside-note strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #ebd8aa;
+        font-weight: 500;
+    }
+
+.app-shell ::deep .form-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(127, 93, 45, 0.28);
+}
+
+.app-shell ::deep .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.app-shell ::deep .modal-content-custom {
+    position: relative;
+    width: min(1050px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+    background: #20150f url("img/fundodemadeira.png.jpg") center / cover fixed;
+    border: 1px solid rgba(217, 184, 120, 0.4);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    padding: 30px;
+    border-radius: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #98712d rgba(25, 17, 13, 0.86);
+}
+
+.app-shell ::deep .modal-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    color: #d4b364;
+    cursor: pointer;
+    transition: color 150ms ease;
+}
+
+    .app-shell ::deep .modal-close-btn:hover {
+        color: #f3dfa2;
+    }
+
+.app-shell ::deep .cabecalho-modal {
+    margin-bottom: 16px;
+}
+
+.app-shell ::deep .titulo-modal {
+    font-size: 26px;
+    color: #f3e7ce;
+}
+
+.app-shell ::deep .field-label-title {
+    color: #6d532e;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.app-shell ::deep .field-value-box {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid rgba(127, 93, 45, 0.43);
+    border-radius: 3px;
+    background: rgba(255, 251, 239, 0.85);
+    color: #2b1c14;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.app-shell ::deep .caixa-descricao {
+    min-height: 70px;
+    white-space: pre-wrap;
+    height: auto;
+}
+
+/* Modal de detalhes dos itens */
+.app-shell ::deep .entry-dialog-overlay {
+    position: fixed;
+    z-index: 10000;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(10, 7, 5, 0.78);
+    backdrop-filter: blur(3px);
+}
+
+.app-shell ::deep .entry-dialog {
+    width: min(620px, calc(100% - 28px));
+    max-height: min(80vh, 760px);
+    overflow: auto;
+    padding: 0;
+    border: 1px solid rgba(210, 174, 105, 0.72);
+    border-radius: 4px;
+    background: #211811;
+    color: #eee0c5;
+    box-shadow: 0 18px 70px rgba(0, 0, 0, 0.62);
+}
+
+.app-shell ::deep .dialog-heading {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 21px 23px 16px;
+    border-bottom: 1px solid var(--border-gold);
+    background: #211811;
+}
+
+    .app-shell ::deep .dialog-heading h2 {
+        margin: 0;
+        color: #f3e7ce;
+        font-size: 22px;
+        font-weight: 500;
+        overflow-wrap: anywhere;
+    }
+
+.app-shell ::deep .dialog-close {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--border-gold);
+    border-radius: 3px;
+    background: transparent;
+    color: #ead6ad;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+    .app-shell ::deep .dialog-close:hover {
+        background: rgba(192, 150, 70, 0.2);
+    }
+
+.app-shell ::deep .dialog-content {
+    padding: 18px 23px 24px;
+}
+
+.app-shell ::deep .detail-row {
+    margin: 0 0 9px;
+    color: #d5c6a9;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+    .app-shell ::deep .detail-row strong {
+        color: #d7b968;
+        font-weight: 500;
+    }
+
+.app-shell ::deep .detail-description {
+    margin-top: 17px;
+}
+
+    .app-shell ::deep .detail-description h3 {
+        margin: 0 0 8px;
+        color: #ecd9ad;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .app-shell ::deep .detail-description p {
+        margin: 0 0 10px;
+        color: #d5c6a9;
+        font-size: 12px;
+        line-height: 1.65;
+    }
+
+/* Modal de Criação */
+.app-shell ::deep .modal-criacao {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background-color: rgba(10, 7, 5, 0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.app-shell ::deep .modal-content {
+    background: linear-gradient(180deg, rgba(43, 28, 20, 0.96), rgba(27, 19, 15, 0.98));
+    border: 1px solid rgba(210, 174, 105, 0.55);
+    border-radius: 6px;
+    width: 200px;
+    height: 340px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .app-shell ::deep .modal-content:hover {
+        transform: translateY(-6px);
+        border-color: #f0d17f;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), 0 0 15px rgba(209, 169, 81, 0.2);
+    }
+
+    .app-shell ::deep .modal-content h2 {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        font-size: 1.4rem;
+        font-weight: 500;
+        color: #f3e7ce;
+    }
+
+    .app-shell ::deep .modal-content i {
+        font-size: 3.2rem;
+        color: #d1a951;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .app-shell ::deep .modal-content:hover i {
+        transform: scale(1.1);
+        color: #f0d17f;
+    }
+
+/* Exclusão e Rodapés */
+.library-attribution {
+    margin-top: 29px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-gold);
+    color: #a99a80;
+    font-size: 10px;
+    line-height: 1.7;
+}
+
+.app-shell ::deep .dialog-footer-acoes {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(217, 184, 120, 0.2);
+}
+
+.app-shell ::deep .rodape-modal {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.app-shell ::deep .monster-card,
+.app-shell ::deep .npc-card-wrap,
+.app-shell ::deep .library-entry-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+    .app-shell ::deep .npc-card-wrap .npc-card,
+    .app-shell ::deep .library-entry-wrap .library-entry {
+        width: 100%;
+    }
+
+    .app-shell ::deep .npc-card-wrap .npc-card {
+        padding-right: 82px;
+    }
+
+    .app-shell ::deep .library-entry-wrap .library-entry {
+        padding-right: 90px;
+    }
+
+.app-shell ::deep .library-card-delete {
+    position: absolute;
+    z-index: 2;
+    top: 9px;
+    right: 9px;
+    padding: 5px 8px;
+    border: 1px solid rgba(226, 148, 127, 0.65);
+    border-radius: 3px;
+    background: rgba(57, 25, 20, 0.94);
+    color: #ffe4dc;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 150ms ease, border-color 150ms ease;
+}
+
+.app-shell ::deep .monster-card > .library-card-delete {
+    right: auto;
+    left: 9px;
+}
+
+.app-shell ::deep .library-card-delete:hover {
+    border-color: #f0a08a;
+    background: #7a3028;
+}
+
+@media (max-width: 920px) {
+    .app-shell ::deep .form-layout {
+        grid-template-columns: minmax(0, 1fr) 235px;
+    }
+}
+
+@media (max-width: 700px) {
+    .app-content {
+        padding: 25px 16px 42px;
+    }
+
+    .app-shell ::deep .page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 13px;
+        margin-bottom: 19px;
+    }
+
+    .app-shell ::deep .form-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-shell ::deep .form-aside {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr);
+        align-items: stretch;
+    }
+
+    .app-shell ::deep .aside-portrait {
+        min-height: 150px;
+    }
+}
+
+@media (max-width: 560px) {
+    .library-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .library-tab {
+        flex: 1 0 auto;
+        padding: 0 12px;
+    }
+
+    .app-shell ::deep .dialog-heading,
+    .app-shell ::deep .dialog-content {
+        padding-right: 17px;
+        padding-left: 17px;
+    }
+
+    .app-shell ::deep .monster-art {
+        height: 190px;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-shell ::deep .form-grid,
+    .app-shell ::deep .form-aside {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app-shell ::deep .form-footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

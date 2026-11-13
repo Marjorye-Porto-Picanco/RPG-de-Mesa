@@ -1,0 +1,36 @@
+@using RPGdeMesa.Domain.Campanhas
+
+<div class="cartao-campanha-wrap">
+    <a class="cartao-campanha"
+       href="@UrlDestino"
+       aria-label="@($"{(ComoJogador ? "Entrar na" : "Abrir painel da")} campanha {Campanha.Nome}")">
+        <img src="img/capacampanha1.png" alt="Capa da campanha @Campanha.Nome" />
+        <span class="estado-campanha @(ComoJogador ? "tag-jogador" : "tag-mestre")">
+            @(ComoJogador ? "Jogador" : "Mestre")
+        </span>
+        <div class="info-campanha">
+            <span>@(ComoJogador ? "Aventureiro" : $"Código: {Campanha.CodigoConvite}")</span>
+            <h2>@Campanha.Nome</h2>
+            <small>@(ComoJogador ? "Participando" : $"Criada em {Campanha.DataCriacao:dd/MM/yyyy}")</small>
+        </div>
+    </a>
+    <button class="campanha-remover"
+            type="button"
+            title="@($"{TextoBotaoRemover} campanha")"
+            aria-label="@($"{TextoBotaoRemover} campanha {Campanha.Nome}")"
+            @onclick="() => OnRemover.InvokeAsync(Campanha)">
+        @TextoBotaoRemover
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Campanha Campanha { get; set; } = default!;
+    [Parameter] public bool ComoJogador { get; set; }
+    [Parameter] public EventCallback<Campanha> OnRemover { get; set; }
+
+    private string UrlDestino => ComoJogador
+        ? $"/sessao-entrar/{Campanha.IdCampanha}"
+        : $"/sessao-iniciar/{Campanha.IdCampanha}";
+
+    private string TextoBotaoRemover => ComoJogador ? "Sair" : "Excluir";
+}
