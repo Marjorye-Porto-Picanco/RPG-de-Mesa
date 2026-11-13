@@ -53,7 +53,7 @@
         else if (EtapaAtual == 1)
         {
             <!-- =========================================================================
-                 ETAPA 1: VISUALIZAR FICHAS ENVIADAS OU ENVIAR NOVA FICHA COM INVENTÁRIO
+                 ETAPA 1: VISUALIZAR FICHAS ENVIADAS OU ENVIAR/AJUSTAR FICHA NA CAMPANHA
                  ========================================================================= -->
             <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
                 <div class="step-header-row">
@@ -103,7 +103,7 @@
                         @if (StatusFichaAtual == "Pendente")
                         {
                             <div class="ficha-alert pendente">
-                                <strong>Ficha e equipamentos em avaliação!</strong> O mestre está analisando a ficha e os itens escolhidos para <b>@FichaCompletaVinculada.Nome</b>. Os itens não podem ser alterados após o envio.
+                                <strong>Ficha e equipamentos em avaliação!</strong> O mestre está analisando a ficha e os itens escolhidos para <b>@FichaCompletaVinculada.Nome</b>. Os dados e itens não podem ser alterados após o envio.
                             </div>
                         }
                         else if (StatusFichaAtual == "Aceita")
@@ -114,11 +114,19 @@
                         }
                         else if (StatusFichaAtual == "Recusada")
                         {
-                            <div class="ficha-alert recusada" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-                                <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Você pode ajustar os itens escolhidos e enviá-la novamente para avaliação.</span>
-                                <button type="button" class="action-secondary" style="min-height:32px; font-size:11px;" @onclick="AbrirReenvioDeFichaRecusada">
-                                    ↻ Ajustar Itens e Reenviar ao Mestre
-                                </button>
+                            <div class="ficha-alert recusada" style="display:flex; flex-direction:column; gap:10px;">
+                                <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Clique no botão abaixo para abrir a edição completa desta ficha da campanha (Atributos, Perícias, História, Grimório e Inventário) aqui mesmo na tela e reenviá-la.</span>
+                                @if (!string.IsNullOrWhiteSpace(VinculoSelecionado?.MotivoRecusa))
+                                {
+                                    <p style="margin:0; font-size:11px; background: rgba(0,0,0,0.25); padding:8px; border-radius:4px;">
+                                        💬 <b>Mensagem do Mestre:</b> @VinculoSelecionado.MotivoRecusa
+                                    </p>
+                                }
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button type="button" class="action-primary" style="min-height:34px; font-size:11px;" @onclick="AbrirReenvioDeFichaRecusada">
+                                        ✏️ Ajustar Ficha e Inventário Aqui Mesmo e Reenviar ao Mestre
+                                    </button>
+                                </div>
                             </div>
                         }
 
@@ -129,7 +137,7 @@
                                     <img src="@(string.IsNullOrEmpty(FichaCompletaVinculada.Imagem) ? "img/armaduraprata.png" : FichaCompletaVinculada.Imagem)" alt="Retrato do personagem" />
                                 </div>
                                 <div class="identidade-preview">
-                                    <p class="sobretitulo-preview">Ficha Selecionada (@StatusFichaAtual)</p>
+                                    <p class="sobretitulo-preview">Ficha Instanciada na Campanha (@StatusFichaAtual)</p>
                                     <h3>@FichaCompletaVinculada.Nome</h3>
                                     <p class="subtitulo-preview">@(FichaCompletaVinculada.RacaTexto ?? "Raça") • @(FichaCompletaVinculada.ClasseTexto ?? "Classe") • Nível Total @FichaCompletaVinculada.Nivel</p>
                                     <div class="dados-rapidos-preview">
@@ -291,7 +299,7 @@
                 else
                 {
                     <!-- =====================================================================
-                         FORMULÁRIO DE ESCOLHA DA FICHA + MONTAGEM DO INVENTÁRIO (ANTES DE ENVIAR)
+                         FORMULÁRIO DE ESCOLHA DA FICHA OU EDIÇÃO COMPLETA DA FICHA RECUSADA
                          ===================================================================== -->
                     <form @onsubmit="EnviarFichaComInventarioAoMestreAsync" @onsubmit:preventDefault="true">
                         @if (!ModoReenviarRecusada)
@@ -329,151 +337,428 @@
                         }
                         else
                         {
-                            <div class="ficha-alert recusada">
-                                Ajustando os itens iniciais de <strong>@(PersonagemEmPreparacao?.Nome)</strong> para reenviar ao Mestre da campanha <strong>@(CampanhaAtual.Nome)</strong>.
+                            <div class="ficha-alert recusada" style="display:flex; flex-direction:column; gap:6px;">
+                                <span>Ajustando a ficha e o inventário de <strong>@(PersonagemEmPreparacao?.Nome)</strong> para reenviar ao Mestre da campanha <strong>@(CampanhaAtual.Nome)</strong>.</span>
+                                @if (!string.IsNullOrWhiteSpace(VinculoSelecionado?.MotivoRecusa))
+                                {
+                                    <small style="background: rgba(0,0,0,0.25); padding:6px 8px; border-radius:4px;">
+                                        💬 <b>Motivo da recusa do Mestre:</b> @VinculoSelecionado.MotivoRecusa
+                                    </small>
+                                }
                             </div>
                         }
 
-                        @* ASSIM QUE O JOGADOR ESCOLHE A FICHA PARA ENVIAR, APARECE O INVENTÁRIO DA CAMPANHA ABAIXO *@
                         @if (PersonagemEmPreparacao != null)
                         {
                             <div class="ficha-preview-pergaminho" style="margin-top: 14px;">
-                                <h3 style="margin: 0 0 6px; color: #392819; font-size: 18px;">
-                                    2. Equipar Itens da Campanha em @PersonagemEmPreparacao.Nome (Antes de Enviar)
-                                </h3>
-                                <p style="margin: 0 0 16px; font-size: 12px; color: #6b4e23;">
-                                    Escolha com atenção as armas, armaduras, poções e materiais disponíveis nesta campanha (@ItensDaCampanha.Count itens liberados pelo Mestre). Após enviar para o Mestre, os itens ficarão travados para validação.
-                                </p>
+                                @if (ModoReenviarRecusada)
+                                {
+                                    <div class="ficha-cabecalho-preview">
+                                        <div class="retrato-preview">
+                                            <img src="@(string.IsNullOrEmpty(PersonagemEmPreparacao.Imagem) ? "img/armaduraprata.png" : PersonagemEmPreparacao.Imagem)" alt="Retrato do personagem" />
+                                        </div>
+                                        <div class="identidade-preview">
+                                            <p class="sobretitulo-preview">Editando Ficha da Campanha (Isolada da Biblioteca)</p>
+                                            <h3>@PersonagemEmPreparacao.Nome</h3>
+                                            <p class="subtitulo-preview">@(PersonagemEmPreparacao.RacaTexto ?? "Raça") • @(PersonagemEmPreparacao.ClasseTexto ?? "Classe") • Nível Total @PersonagemEmPreparacao.Nivel</p>
+                                        </div>
+                                    </div>
 
-                                <div class="corpo-inventario-campanha">
-                                    <div>
-                                        <!-- Armas -->
+                                    <!-- 4 ABAS EDITÁVEIS DENTRO DO SESSAOENTRAR QUANDO RECUSADA -->
+                                    <div class="abas-ficha-preview" role="tablist">
+                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "atributos"'>1. Atributos & Diário</button>
+                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "personagem" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "personagem"'>2. Personagem & Classes</button>
+                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "grimorio" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "grimorio"'>3. Grimório</button>
+                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "inventario" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "inventario"'>4. Inventário da Campanha</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <h3 style="margin: 0 0 6px; color: #392819; font-size: 18px;">
+                                        2. Equipar Itens da Campanha em @PersonagemEmPreparacao.Nome (Antes de Enviar)
+                                    </h3>
+                                    <p style="margin: 0 0 16px; font-size: 12px; color: #6b4e23;">
+                                        Escolha com atenção as armas, armaduras, poções e materiais disponíveis nesta campanha (@ItensDaCampanha.Count itens liberados pelo Mestre). Isso criará uma instância exclusiva deste personagem para esta campanha, sem alterar sua ficha original da biblioteca.
+                                    </p>
+                                }
+
+                                @* ABA EDITÁVEL 1: ATRIBUTOS, SALVAGUARDAS, PERÍCIAS E DIÁRIO *@
+                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "atributos")
+                                {
+                                    <div class="preview-tab-body">
+                                        <div class="atributos-grid-preview">
+                                            <label class="attr-card">
+                                                <span>FOR</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Forca" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Forca)</small>
+                                            </label>
+                                            <label class="attr-card">
+                                                <span>DES</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Destreza" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Destreza)</small>
+                                            </label>
+                                            <label class="attr-card">
+                                                <span>CON</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Constituicao" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Constituicao)</small>
+                                            </label>
+                                            <label class="attr-card">
+                                                <span>INT</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Inteligencia" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Inteligencia)</small>
+                                            </label>
+                                            <label class="attr-card">
+                                                <span>SAB</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Sabedoria" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Sabedoria)</small>
+                                            </label>
+                                            <label class="attr-card">
+                                                <span>CAR</span>
+                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Carisma" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@ObterModificador(PersonagemEmPreparacao.Carisma)</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="tags-row-preview">
+                                            <div>
+                                                <h4>Salvaguardas Proficientes</h4>
+                                                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-top:6px;">
+                                                    @foreach (var salv in ListaSalvaguardas)
+                                                    {
+                                                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+                                                            <input type="checkbox"
+                                                                   checked="@SalvaguardasEdicao.Contains(salv)"
+                                                                   @onchange="e => AlternarSalvaguardaEdicao(salv, (bool)(e.Value ?? false))" />
+                                                            <span>@salv</span>
+                                                        </label>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4>Perícias Treinadas</h4>
+                                                <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-top:6px; max-height:170px; overflow-y:auto;">
+                                                    @foreach (var pericia in ListaPericias)
+                                                    {
+                                                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+                                                            <input type="checkbox"
+                                                                   checked="@PericiasEdicao.Contains(pericia)"
+                                                                   @onchange="e => AlternarPericiaEdicao(pericia, (bool)(e.Value ?? false))" />
+                                                            <span>@pericia</span>
+                                                        </label>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="diario-grid-preview">
+                                            <div class="box-texto-preview">
+                                                <h4>Traços de Personalidade</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.TracosPersonalidade" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Ponto de Vista</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.PontoDeVista" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Ideais</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Ideais" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Ligações</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Ligacoes" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Defeitos</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Defeitos" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Idiomas</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Idiomas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @* ABA EDITÁVEL 2: PERSONAGEM, CLASSES (MULTICLASSE) E HISTÓRIA *@
+                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "personagem")
+                                {
+                                    <div class="preview-tab-body">
+                                        <div class="dados-fisicos-grid">
+                                            <div>
+                                                <span>Nome (Fixo)</span>
+                                                <input type="text" value="@PersonagemEmPreparacao.Nome" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                            </div>
+                                            <div>
+                                                <span>Raça (Fixo)</span>
+                                                <input type="text" value="@PersonagemEmPreparacao.RacaTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                            </div>
+                                            <div>
+                                                <span>Antecedente (Fixo)</span>
+                                                <input type="text" value="@PersonagemEmPreparacao.AntecedenteTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                            </div>
+                                            <div>
+                                                <span>Tendência</span>
+                                                <select @bind="PersonagemEmPreparacao.Tendencia" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;">
+                                                    <option value="Neutra">Neutra</option>
+                                                    <option value="Leal e boa">Leal e boa</option>
+                                                    <option value="Neutra e boa">Neutra e boa</option>
+                                                    <option value="Caótica e boa">Caótica e boa</option>
+                                                    <option value="Leal e neutra">Leal e neutra</option>
+                                                    <option value="Caótica e neutra">Caótica e neutra</option>
+                                                    <option value="Leal e má">Leal e má</option>
+                                                    <option value="Neutra e má">Neutra e má</option>
+                                                    <option value="Caótica e má">Caótica e má</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="dados-fisicos-grid">
+                                            <div>
+                                                <span>Experiência (XP)</span>
+                                                <input type="number" min="0" max="999999" step="10" @bind="PersonagemEmPreparacao.ExperienciaXp" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                            </div>
+                                            <div>
+                                                <span>Idade</span>
+                                                <input type="text" @bind="PersonagemEmPreparacao.Idade" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                            </div>
+                                            <div>
+                                                <span>Peso</span>
+                                                <input type="text" @bind="PersonagemEmPreparacao.Peso" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                            </div>
+                                            <div>
+                                                <span>Gênero / Altura (Fixo)</span>
+                                                <input type="text" value="@($"{PersonagemEmPreparacao.Genero ?? "—"} / {PersonagemEmPreparacao.Altura ?? "—"}")" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                            </div>
+                                        </div>
+
+                                        <!-- CLASSES (MULTICLASSE) -->
                                         <div class="categoria-itens-campanha">
                                             <div class="titulo-categoria-campanha">
-                                                <h4>⌁ Armas</h4>
-                                                <button type="button" class="btn-add-item-campanha" title="Adicionar arma da campanha" @onclick='() => AdicionarSlotItem("Armas")'>+</button>
+                                                <h4>⌁ Classes do Personagem (Nível Total: @PersonagemEmPreparacao.Nivel)</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar classe (Multiclasse)" @onclick="AdicionarClasseEdicao">+</button>
                                             </div>
-                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armas"))
+                                            <div class="cabecalho-linha-campanha" style="grid-template-columns: 1fr 120px 28px;">
+                                                <span>Classe</span>
+                                                <span>Nível na Classe</span>
+                                                <span></span>
+                                            </div>
+                                            @foreach (var cl in ClassesEdicao)
                                             {
-                                                <div class="item-linha-campanha">
-                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
-                                                        <option value="0">Selecione uma arma...</option>
-                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armas"))
+                                                <div class="item-linha-campanha" style="grid-template-columns: 1fr 120px 28px;">
+                                                    <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasseEdicao(cl, e)">
+                                                        @foreach (var op in ListaOpcoesClasses)
                                                         {
-                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                            <option value="@op">@op</option>
                                                         }
                                                     </select>
-                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
-                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
-                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasseEdicao(cl, e)" />
+                                                    @if (ClassesEdicao.Count > 1)
+                                                    {
+                                                        <button type="button" class="remover-item-campanha" @onclick="() => RemoverClasseEdicao(cl)">×</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span></span>
+                                                    }
                                                 </div>
                                             }
                                         </div>
 
-                                        <!-- Armaduras e Escudos -->
-                                        <div class="categoria-itens-campanha">
-                                            <div class="titulo-categoria-campanha">
-                                                <h4>⌁ Armaduras e Escudos</h4>
-                                                <button type="button" class="btn-add-item-campanha" title="Adicionar armadura da campanha" @onclick='() => AdicionarSlotItem("Armaduras")'>+</button>
+                                        <div class="diario-grid-preview">
+                                            <div class="box-texto-preview">
+                                                <h4>Aparência</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Aparencia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
-                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armaduras"))
-                                            {
-                                                <div class="item-linha-campanha">
-                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
-                                                        <option value="0">Selecione uma armadura...</option>
-                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armaduras"))
-                                                        {
-                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
-                                                        }
-                                                    </select>
-                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
-                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
-                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
-                                                </div>
-                                            }
+                                            <div class="box-texto-preview">
+                                                <h4>Aliados e Organizações</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Aliados" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview full-span">
+                                                <h4>História do Personagem</h4>
+                                                <textarea rows="4" @bind="PersonagemEmPreparacao.Historia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Características e Habilidades</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Caracteristicas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
+                                            <div class="box-texto-preview">
+                                                <h4>Tesouro Pessoal</h4>
+                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Tesouro" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                            </div>
                                         </div>
+                                    </div>
+                                }
 
-                                        <!-- Poções e Consumíveis -->
+                                @* ABA EDITÁVEL 3: GRIMÓRIO *@
+                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "grimorio")
+                                {
+                                    <div class="preview-tab-body">
                                         <div class="categoria-itens-campanha">
                                             <div class="titulo-categoria-campanha">
-                                                <h4>⌁ Poções e Consumíveis</h4>
-                                                <button type="button" class="btn-add-item-campanha" title="Adicionar consumível da campanha" @onclick='() => AdicionarSlotItem("Consumiveis")'>+</button>
+                                                <h4>⌁ Magias Conhecidas / Preparadas</h4>
+                                                <button type="button" class="btn-add-item-campanha" @onclick="AdicionarMagiaEdicao">+</button>
                                             </div>
-                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Consumiveis"))
-                                            {
-                                                <div class="item-linha-campanha">
-                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
-                                                        <option value="0">Selecione um consumível...</option>
-                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Consumiveis"))
-                                                        {
-                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
-                                                        }
-                                                    </select>
-                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
-                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
-                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
-                                                </div>
-                                            }
-                                        </div>
-
-                                        <!-- Materiais e Outros -->
-                                        <div class="categoria-itens-campanha">
-                                            <div class="titulo-categoria-campanha">
-                                                <h4>⌁ Materiais e Outros</h4>
-                                                <button type="button" class="btn-add-item-campanha" title="Adicionar item da campanha" @onclick='() => AdicionarSlotItem("Outros")'>+</button>
+                                            <div class="cabecalho-linha-campanha" style="grid-template-columns: 1.3fr 110px 110px 1fr 28px;">
+                                                <span>Nome da Magia</span>
+                                                <span>Círculo</span>
+                                                <span>Dano / Efeito</span>
+                                                <span>Alcance / Notas</span>
+                                                <span></span>
                                             </div>
-                                            <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                            @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Outros"))
+                                            @foreach (var magia in MagiasEdicao)
                                             {
-                                                <div class="item-linha-campanha">
-                                                    <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
-                                                        <option value="0">Selecione um item...</option>
-                                                        @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Outros"))
-                                                        {
-                                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
-                                                        }
+                                                <div class="item-linha-campanha" style="grid-template-columns: 1.3fr 110px 110px 1fr 28px;">
+                                                    <input type="text" @bind="magia.Nome" placeholder="Ex.: Mísseis Mágicos" />
+                                                    <select @bind="magia.Circulo">
+                                                        <option value="Truque">Truque</option>
+                                                        <option value="1º Círculo">1º Círculo</option>
+                                                        <option value="2º Círculo">2º Círculo</option>
+                                                        <option value="3º Círculo">3º Círculo</option>
+                                                        <option value="4º Círculo">4º Círculo</option>
+                                                        <option value="5º Círculo">5º Círculo</option>
                                                     </select>
-                                                    <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
-                                                    <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
-                                                    <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                    <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    <input type="text" @bind="magia.Efeito" placeholder="Ex.: 3d4+3 Energia" />
+                                                    <input type="text" @bind="magia.AlcanceNotas" placeholder="Ex.: 36m · Ação" />
+                                                    <button type="button" class="remover-item-campanha" @onclick="() => RemoverMagiaEdicao(magia)">×</button>
                                                 </div>
                                             }
                                         </div>
                                     </div>
+                                }
 
-                                    <aside class="resumo-inventario-campanha">
-                                        <section class="painel-moedas-campanha">
-                                            <h4>Moedas Iniciais</h4>
-                                            <div class="moedas-grade-campanha">
-                                                <label class="moeda-campanha"><span class="icone-moeda-campanha">PC</span><input type="number" min="0" @bind="MoedasPC" /></label>
-                                                <label class="moeda-campanha"><span class="icone-moeda-campanha prata">PP</span><input type="number" min="0" @bind="MoedasPP" /></label>
-                                                <label class="moeda-campanha"><span class="icone-moeda-campanha electrum">PE</span><input type="number" min="0" @bind="MoedasPE" /></label>
-                                                <label class="moeda-campanha"><span class="icone-moeda-campanha ouro">PO</span><input type="number" min="0" @bind="MoedasPO" /></label>
-                                                <label class="moeda-campanha"><span class="icone-moeda-campanha platina">PL</span><input type="number" min="0" @bind="MoedasPL" /></label>
+                                @* ABA EDITÁVEL 4 (OU PADRÃO AO ENVIAR NOVA FICHA): INVENTÁRIO DA CAMPANHA *@
+                                @if (!ModoReenviarRecusada || AbaEdicaoRecusada == "inventario")
+                                {
+                                    <div class="corpo-inventario-campanha">
+                                        <div>
+                                            <!-- Armas -->
+                                            <div class="categoria-itens-campanha">
+                                                <div class="titulo-categoria-campanha">
+                                                    <h4>⌁ Armas</h4>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar arma da campanha" @onclick='() => AdicionarSlotItem("Armas")'>+</button>
+                                                </div>
+                                                <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armas"))
+                                                {
+                                                    <div class="item-linha-campanha">
+                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                            <option value="0">Selecione uma arma...</option>
+                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armas"))
+                                                            {
+                                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                            }
+                                                        </select>
+                                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    </div>
+                                                }
                                             </div>
-                                        </section>
 
-                                        <section class="painel-carga-campanha">
-                                            <h4>Capacidade de Carga</h4>
-                                            <p style="text-align:center; margin:0 0 8px; font-size:12px;">
-                                                <strong>@PesoTotalEdicao.ToString("0.0") kg</strong> / @CapacidadeCargaMaximaEdicao.ToString("0.0") kg
-                                            </p>
-                                            <progress max="@((double)CapacidadeCargaMaximaEdicao)" value="@((double)Math.Min(PesoTotalEdicao, CapacidadeCargaMaximaEdicao))"></progress>
-                                        </section>
+                                            <!-- Armaduras e Escudos -->
+                                            <div class="categoria-itens-campanha">
+                                                <div class="titulo-categoria-campanha">
+                                                    <h4>⌁ Armaduras e Escudos</h4>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar armadura da campanha" @onclick='() => AdicionarSlotItem("Armaduras")'>+</button>
+                                                </div>
+                                                <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armaduras"))
+                                                {
+                                                    <div class="item-linha-campanha">
+                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                            <option value="0">Selecione uma armadura...</option>
+                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armaduras"))
+                                                            {
+                                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                            }
+                                                        </select>
+                                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    </div>
+                                                }
+                                            </div>
 
-                                        <div class="notas-inventario-campanha">
-                                            <h4>Notas do Inventário</h4>
-                                            <textarea rows="3" @bind="NotasInventario" placeholder="Anote detalhes dos equipamentos escolhidos..."></textarea>
+                                            <!-- Poções e Consumíveis -->
+                                            <div class="categoria-itens-campanha">
+                                                <div class="titulo-categoria-campanha">
+                                                    <h4>⌁ Poções e Consumíveis</h4>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar consumível da campanha" @onclick='() => AdicionarSlotItem("Consumiveis")'>+</button>
+                                                </div>
+                                                <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Consumiveis"))
+                                                {
+                                                    <div class="item-linha-campanha">
+                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                            <option value="0">Selecione um consumível...</option>
+                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Consumiveis"))
+                                                            {
+                                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                            }
+                                                        </select>
+                                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    </div>
+                                                }
+                                            </div>
+
+                                            <!-- Materiais e Outros -->
+                                            <div class="categoria-itens-campanha">
+                                                <div class="titulo-categoria-campanha">
+                                                    <h4>⌁ Materiais e Outros</h4>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar item da campanha" @onclick='() => AdicionarSlotItem("Outros")'>+</button>
+                                                </div>
+                                                <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
+                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Outros"))
+                                                {
+                                                    <div class="item-linha-campanha">
+                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                            <option value="0">Selecione um item...</option>
+                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Outros"))
+                                                            {
+                                                                <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
+                                                            }
+                                                        </select>
+                                                        <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
+                                                        <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
+                                                        <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                    </div>
+                                                }
+                                            </div>
                                         </div>
-                                    </aside>
-                                </div>
+
+                                        <aside class="resumo-inventario-campanha">
+                                            <section class="painel-moedas-campanha">
+                                                <h4>Moedas Iniciais</h4>
+                                                <div class="moedas-grade-campanha">
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha">PC</span><input type="number" min="0" @bind="MoedasPC" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha prata">PP</span><input type="number" min="0" @bind="MoedasPP" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha electrum">PE</span><input type="number" min="0" @bind="MoedasPE" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha ouro">PO</span><input type="number" min="0" @bind="MoedasPO" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha platina">PL</span><input type="number" min="0" @bind="MoedasPL" /></label>
+                                                </div>
+                                            </section>
+
+                                            <section class="painel-carga-campanha">
+                                                <h4>Capacidade de Carga</h4>
+                                                <p style="text-align:center; margin:0 0 8px; font-size:12px;">
+                                                    <strong>@PesoTotalEdicao.ToString("0.0") kg</strong> / @CapacidadeCargaMaximaEdicao.ToString("0.0") kg
+                                                </p>
+                                                <progress max="@((double)CapacidadeCargaMaximaEdicao)" value="@((double)Math.Min(PesoTotalEdicao, CapacidadeCargaMaximaEdicao))"></progress>
+                                            </section>
+
+                                            <div class="notas-inventario-campanha">
+                                                <h4>Notas do Inventário</h4>
+                                                <textarea rows="3" @bind="NotasInventario" placeholder="Anote detalhes dos equipamentos escolhidos..."></textarea>
+                                            </div>
+                                        </aside>
+                                    </div>
+                                }
                             </div>
                         }
 
@@ -492,7 +777,7 @@
                             }
 
                             <button class="action-primary" type="submit" disabled="@(Carregando || PersonagemEmPreparacao == null)">
-                                @(Carregando ? "Salvando e enviando..." : "Vincular Inventário e Enviar Ficha ao Mestre →")
+                                @(Carregando ? "Salvando e enviando..." : (ModoReenviarRecusada ? "Salvar Ajustes na Ficha e Reenviar ao Mestre →" : "Vincular Inventário e Enviar Ficha ao Mestre →"))
                             </button>
                         </div>
                     </form>
@@ -656,7 +941,9 @@
 
     private List<Personagem> PersonagensNaoEnviados =>
         PersonagensDisponiveis
-            .Where(p => !VinculosDoJogador.Any(v => v.IdPersonagem == p.IdPersonagem))
+            .Where(p => !VinculosDoJogador.Any(v =>
+                v.IdPersonagem == p.IdPersonagem ||
+                (v.Personagem != null && v.Personagem.IdPersonagemOrigem == p.IdPersonagem)))
             .ToList();
 
     private PersonagemCampanha? VinculoSelecionado { get; set; }
@@ -665,8 +952,31 @@
     private Personagem? PersonagemEmPreparacao { get; set; }
     private string StatusFichaAtual => VinculoSelecionado?.StatusAprovacao ?? string.Empty;
     private string AbaFichaPreview { get; set; } = "atributos";
+    private string AbaEdicaoRecusada { get; set; } = "atributos";
 
-    // Estado do Construtor de Inventário da Campanha
+    private readonly string[] ListaOpcoesClasses =
+    {
+        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
+    };
+
+    private readonly string[] ListaSalvaguardas =
+    {
+        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
+    };
+
+    private readonly string[] ListaPericias =
+    {
+        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
+        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
+        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
+    };
+
+    private List<ClasseCampanhaEntry> ClassesEdicao { get; set; } = new();
+    private HashSet<string> SalvaguardasEdicao { get; set; } = new();
+    private HashSet<string> PericiasEdicao { get; set; } = new();
+    private List<MagiaCampanhaEntry> MagiasEdicao { get; set; } = new();
+
     private List<ItemInventarioVinculado> ItensInventarioEdicao { get; set; } = new();
     private int MoedasPC { get; set; } = 0;
     private int MoedasPP { get; set; } = 0;
@@ -782,12 +1092,17 @@
         NovoPersonagemParaEnviarId = idPersonagem;
         PersonagemEmPreparacao = await PersonagemService.ObterPorIdAsync(idPersonagem)
                                  ?? PersonagensDisponiveis.FirstOrDefault(p => p.IdPersonagem == idPersonagem);
-        PreencherEditorInventarioComDadosDoPersonagem(PersonagemEmPreparacao);
+        PreencherEditorCompletoComDadosDoPersonagem(PersonagemEmPreparacao);
     }
 
-    private void PreencherEditorInventarioComDadosDoPersonagem(Personagem? p)
+    private void PreencherEditorCompletoComDadosDoPersonagem(Personagem? p)
     {
+        ClassesEdicao.Clear();
+        SalvaguardasEdicao.Clear();
+        PericiasEdicao.Clear();
+        MagiasEdicao.Clear();
         ItensInventarioEdicao.Clear();
+
         MoedasPC = 0;
         MoedasPP = 0;
         MoedasPE = 0;
@@ -795,33 +1110,82 @@
         MoedasPL = 0;
         NotasInventario = string.Empty;
 
-        if (p?.Inventario == null) return;
+        if (p == null) return;
 
-        MoedasPC = p.Inventario.MoedasPC;
-        MoedasPP = p.Inventario.MoedasPP;
-        MoedasPE = p.Inventario.MoedasPE;
-        MoedasPO = p.Inventario.MoedasPO;
-        MoedasPL = p.Inventario.MoedasPL;
-        NotasInventario = p.Inventario.Notas ?? string.Empty;
-
-        var idsPermitidosNaCampanha = ItensDaCampanha.Select(i => i.IdItem).ToHashSet();
-
-        foreach (var ii in p.Inventario.Itens)
+        if (p.PersonagemClasses != null && p.PersonagemClasses.Any())
         {
-            if (!idsPermitidosNaCampanha.Contains(ii.IdItem)) continue;
-
-            var itemRef = ItensDaCampanha.FirstOrDefault(x => x.IdItem == ii.IdItem) ?? ii.Item;
-            if (itemRef != null)
+            foreach (var pc in p.PersonagemClasses)
             {
-                ItensInventarioEdicao.Add(new ItemInventarioVinculado
+                if (pc.Classe != null)
                 {
-                    Categoria = PersonagemCriarViewModel.ClassificarCategoriaItem(itemRef),
-                    IdItem = itemRef.IdItem,
-                    Nome = itemRef.Nome,
-                    Quantidade = ii.Quantidade,
-                    PesoUnitario = itemRef.Peso ?? 0m,
-                    PrecoUnitario = itemRef.Preco ?? 0m
+                    ClassesEdicao.Add(new ClasseCampanhaEntry
+                    {
+                        NomeClasse = pc.Classe.Nome,
+                        Nivel = pc.NivelNaClasse
+                    });
+                }
+            }
+        }
+
+        if (!ClassesEdicao.Any())
+        {
+            ClassesEdicao.Add(new ClasseCampanhaEntry
+            {
+                NomeClasse = string.IsNullOrWhiteSpace(p.ClasseTexto) ? "Guerreiro" : p.ClasseTexto.Split('/')[0].Trim(),
+                Nivel = Math.Max(1, p.Nivel)
+            });
+        }
+
+        foreach (var s in p.Salvaguardas)
+            SalvaguardasEdicao.Add(s.Atributo);
+
+        foreach (var per in p.Pericias)
+            PericiasEdicao.Add(per.NomePericia);
+
+        foreach (var pm in p.PersonagemMagias)
+        {
+            if (pm.Magia != null)
+            {
+                MagiasEdicao.Add(new MagiaCampanhaEntry
+                {
+                    Nome = pm.Magia.Nome,
+                    Circulo = pm.Magia.CirculoNivel == 0 ? "Truque" : $"{pm.Magia.CirculoNivel}º Círculo",
+                    Efeito = pm.Magia.DanoEfeito ?? string.Empty,
+                    AlcanceNotas = pm.Magia.Alcance ?? string.Empty
                 });
+            }
+        }
+        if (!MagiasEdicao.Any())
+            MagiasEdicao.Add(new MagiaCampanhaEntry());
+
+        if (p.Inventario != null)
+        {
+            MoedasPC = p.Inventario.MoedasPC;
+            MoedasPP = p.Inventario.MoedasPP;
+            MoedasPE = p.Inventario.MoedasPE;
+            MoedasPO = p.Inventario.MoedasPO;
+            MoedasPL = p.Inventario.MoedasPL;
+            NotasInventario = p.Inventario.Notas ?? string.Empty;
+
+            var idsPermitidosNaCampanha = ItensDaCampanha.Select(i => i.IdItem).ToHashSet();
+
+            foreach (var ii in p.Inventario.Itens)
+            {
+                if (!idsPermitidosNaCampanha.Contains(ii.IdItem)) continue;
+
+                var itemRef = ItensDaCampanha.FirstOrDefault(x => x.IdItem == ii.IdItem) ?? ii.Item;
+                if (itemRef != null)
+                {
+                    ItensInventarioEdicao.Add(new ItemInventarioVinculado
+                    {
+                        Categoria = PersonagemCriarViewModel.ClassificarCategoriaItem(itemRef),
+                        IdItem = itemRef.IdItem,
+                        Nome = itemRef.Nome,
+                        Quantidade = ii.Quantidade,
+                        PesoUnitario = itemRef.Peso ?? 0m,
+                        PrecoUnitario = itemRef.Preco ?? 0m
+                    });
+                }
             }
         }
     }
@@ -838,16 +1202,16 @@
             PersonagemEmPreparacao = null;
     }
 
-    private void AbrirReenvioDeFichaRecusada()
+    private async Task AbrirReenvioDeFichaRecusada()
     {
-        // Só permite abrir se a ficha tiver sido Recusada pelo Mestre
         if (FichaCompletaVinculada == null || StatusFichaAtual != "Recusada") return;
         LimparMensagem();
         ModoAdicionarNovaFicha = false;
         ModoReenviarRecusada = true;
+        AbaEdicaoRecusada = "atributos";
         NovoPersonagemParaEnviarId = FichaCompletaVinculada.IdPersonagem;
-        PersonagemEmPreparacao = FichaCompletaVinculada;
-        PreencherEditorInventarioComDadosDoPersonagem(FichaCompletaVinculada);
+        PersonagemEmPreparacao = await PersonagemService.ObterPorIdAsync(FichaCompletaVinculada.IdPersonagem) ?? FichaCompletaVinculada;
+        PreencherEditorCompletoComDadosDoPersonagem(PersonagemEmPreparacao);
     }
 
     private void CancelarModoEdicaoOuAdicao()
@@ -856,6 +1220,71 @@
         ModoReenviarRecusada = false;
         PersonagemEmPreparacao = null;
         LimparMensagem();
+    }
+
+    private void AlternarSalvaguardaEdicao(string atributo, bool marcado)
+    {
+        if (marcado) SalvaguardasEdicao.Add(atributo);
+        else SalvaguardasEdicao.Remove(atributo);
+    }
+
+    private void AlternarPericiaEdicao(string pericia, bool marcado)
+    {
+        if (marcado) PericiasEdicao.Add(pericia);
+        else PericiasEdicao.Remove(pericia);
+    }
+
+    private void AdicionarClasseEdicao()
+    {
+        ClassesEdicao.Add(new ClasseCampanhaEntry { NomeClasse = "Guerreiro", Nivel = 1 });
+        SincronizarClassesENivelEdicao();
+    }
+
+    private void RemoverClasseEdicao(ClasseCampanhaEntry item)
+    {
+        if (ClassesEdicao.Count > 1)
+        {
+            ClassesEdicao.Remove(item);
+            SincronizarClassesENivelEdicao();
+        }
+    }
+
+    private void AlterarNomeClasseEdicao(ClasseCampanhaEntry cl, ChangeEventArgs e)
+    {
+        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
+        SincronizarClassesENivelEdicao();
+    }
+
+    private void AlterarNivelClasseEdicao(ClasseCampanhaEntry cl, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int nv))
+        {
+            cl.Nivel = Math.Clamp(nv, 1, 20);
+            SincronizarClassesENivelEdicao();
+        }
+    }
+
+    private void SincronizarClassesENivelEdicao()
+    {
+        if (PersonagemEmPreparacao == null) return;
+        var validas = ClassesEdicao.Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse)).ToList();
+        if (!validas.Any()) return;
+
+        PersonagemEmPreparacao.Nivel = Math.Clamp(validas.Sum(c => Math.Max(1, c.Nivel)), 1, 20);
+        PersonagemEmPreparacao.ClasseTexto = validas.Count == 1
+            ? validas[0].NomeClasse
+            : string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
+    }
+
+    private void AdicionarMagiaEdicao() => MagiasEdicao.Add(new MagiaCampanhaEntry());
+    private void RemoverMagiaEdicao(MagiaCampanhaEntry magia) => MagiasEdicao.Remove(magia);
+
+    private static int ExtrairCirculoMagia(string circuloTexto)
+    {
+        if (string.IsNullOrWhiteSpace(circuloTexto) || circuloTexto.Contains("Truque", StringComparison.OrdinalIgnoreCase))
+            return 0;
+        var digito = new string(circuloTexto.Where(char.IsDigit).ToArray());
+        return int.TryParse(digito, out int c) ? c : 1;
     }
 
     private IEnumerable<Item> ObterItensCampanhaPorCategoria(string categoria)
@@ -908,13 +1337,15 @@
             return;
         }
 
-        int idEnviado = PersonagemEmPreparacao.IdPersonagem;
+        int idBaseOuInstancia = PersonagemEmPreparacao.IdPersonagem;
 
-        // Trava de segurança: impede editar itens de ficha que já foi enviada (Pendente) ou aprovada (Aceita)
-        var vinculoExistente = VinculosDoJogador.FirstOrDefault(v => v.IdPersonagem == idEnviado);
+        var vinculoExistente = VinculosDoJogador.FirstOrDefault(v =>
+            v.IdPersonagem == idBaseOuInstancia ||
+            (v.Personagem != null && v.Personagem.IdPersonagemOrigem == idBaseOuInstancia));
+
         if (vinculoExistente != null && !string.Equals(vinculoExistente.StatusAprovacao, "Recusada", StringComparison.OrdinalIgnoreCase))
         {
-            DefinirErro("Esta ficha já foi enviada ao Mestre e seus itens não podem mais ser editados por aqui.");
+            DefinirErro("Esta ficha já foi enviada ao Mestre nesta campanha e não pode mais ser editada por aqui.");
             return;
         }
 
@@ -924,7 +1355,6 @@
         {
             var dadosInventario = new Inventario
             {
-                IdPersonagem = idEnviado,
                 CapacidadeCarga = CapacidadeCargaMaximaEdicao,
                 PesoAtual = PesoTotalEdicao,
                 Dinheiro = MoedasPO,
@@ -941,14 +1371,75 @@
                 .Select(i => (i.IdItem, i.Quantidade))
                 .ToList();
 
-            var resultadoInv = await PersonagemService.SalvarInventarioCampanhaAsync(idEnviado, dadosInventario, listaItens);
-            if (!resultadoInv.Sucesso)
+            int idInstanciaCampanha;
+
+            if (ModoReenviarRecusada && vinculoExistente != null)
             {
-                DefinirErro(resultadoInv.Mensagem);
-                return;
+                SincronizarClassesENivelEdicao();
+                int modCon = (int)Math.Floor((PersonagemEmPreparacao.Constituicao - 10) / 2.0);
+                PersonagemEmPreparacao.PvMaximo = Math.Max(1, (10 + modCon) + ((PersonagemEmPreparacao.Nivel - 1) * Math.Max(1, 6 + modCon)));
+                PersonagemEmPreparacao.PvAtual = PersonagemEmPreparacao.PvMaximo;
+
+                var resAtu = await PersonagemService.AtualizarPersonagemAsync(PersonagemEmPreparacao);
+                if (!resAtu.Sucesso)
+                {
+                    DefinirErro(resAtu.Mensagem);
+                    return;
+                }
+
+                var classesParaSalvar = ClassesEdicao
+                    .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+                    .Select(c => (c.NomeClasse.Trim(), Math.Max(1, c.Nivel)))
+                    .ToList();
+
+                var magiasParaSalvar = MagiasEdicao
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Nome))
+                    .Select(m => new Magia
+                    {
+                        Nome = m.Nome.Trim(),
+                        CirculoNivel = ExtrairCirculoMagia(m.Circulo),
+                        DanoEfeito = m.Efeito,
+                        Alcance = m.AlcanceNotas
+                    })
+                    .ToList();
+
+                dadosInventario.IdPersonagem = PersonagemEmPreparacao.IdPersonagem;
+
+                var res3Fn = await PersonagemService.SalvarComplementos3FNAsync(
+                    PersonagemEmPreparacao.IdPersonagem,
+                    classesParaSalvar,
+                    SalvaguardasEdicao,
+                    PericiasEdicao,
+                    dadosInventario,
+                    listaItens,
+                    magiasParaSalvar);
+
+                if (!res3Fn.Sucesso)
+                {
+                    DefinirErro(res3Fn.Mensagem);
+                    return;
+                }
+
+                idInstanciaCampanha = PersonagemEmPreparacao.IdPersonagem;
+            }
+            else
+            {
+                var resultadoInstancia = await PersonagemService.InstanciarPersonagemParaCampanhaAsync(
+                    idBaseOuInstancia,
+                    CampanhaAtual.IdCampanha,
+                    dadosInventario,
+                    listaItens);
+
+                if (!resultadoInstancia.Sucesso || resultadoInstancia.IdPersonagemInstancia <= 0)
+                {
+                    DefinirErro(resultadoInstancia.Mensagem);
+                    return;
+                }
+
+                idInstanciaCampanha = resultadoInstancia.IdPersonagemInstancia;
             }
 
-            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idEnviado);
+            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idInstanciaCampanha);
             if (!resultado.Sucesso)
             {
                 DefinirErro(resultado.Mensagem);
@@ -959,9 +1450,9 @@
             ModoAdicionarNovaFicha = false;
             ModoReenviarRecusada = false;
             PersonagemEmPreparacao = null;
-            await SincronizarVinculosDoJogadorAsync(idEnviado);
-            AbaFichaPreview = "inventario";
-            Mensagem = "Ficha e inventário enviados para avaliação do Mestre!";
+            await SincronizarVinculosDoJogadorAsync(idInstanciaCampanha);
+            AbaFichaPreview = "atributos";
+            Mensagem = "Ficha e inventário atualizados e enviados para avaliação do Mestre!";
         }
         catch (Exception ex)
         {
@@ -1030,4 +1521,18 @@
     private void VoltarParaHome() => Navigation.NavigateTo("/campanhas");
     private void LimparMensagem() { Mensagem = string.Empty; TemErro = false; }
     private void DefinirErro(string mensagem) { TemErro = true; Mensagem = mensagem; }
+
+    private class ClasseCampanhaEntry
+    {
+        public string NomeClasse { get; set; } = "Guerreiro";
+        public int Nivel { get; set; } = 1;
+    }
+
+    private class MagiaCampanhaEntry
+    {
+        public string Nome { get; set; } = string.Empty;
+        public string Circulo { get; set; } = "Truque";
+        public string Efeito { get; set; } = string.Empty;
+        public string AlcanceNotas { get; set; } = string.Empty;
+    }
 }

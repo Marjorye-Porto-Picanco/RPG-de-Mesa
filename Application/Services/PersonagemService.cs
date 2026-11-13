@@ -67,6 +67,26 @@ public class PersonagemService
         }
     }
 
+    // Cria uma instância clonada independente do personagem da biblioteca para uma campanha específica
+    public async Task<(bool Sucesso, string Mensagem, int IdPersonagemInstancia)> InstanciarPersonagemParaCampanhaAsync(
+        int idPersonagemBase,
+        int idCampanha,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
+        try
+        {
+            int idGerado = await _personagemRepo.ClonarPersonagemParaCampanhaAsync(
+                idPersonagemBase, idCampanha, dadosInventario, itens);
+            return (true, "Ficha instanciada para a campanha com sucesso!", idGerado);
+        }
+        catch (Exception ex)
+        {
+            string erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+            return (false, $"Erro ao preparar personagem para a campanha: {erroDetalhado}", 0);
+        }
+    }
+
     public Task<List<Personagem>> ObterPersonagensPorUsuarioAsync(int idAccount) =>
         _personagemRepo.ListarPorUsuarioAsync(idAccount);
 

@@ -18,5 +18,10 @@ public interface IPersonagemRepository
         int idPersonagem,
         Inventario dadosInventario,
         IEnumerable<(int IdItem, int Quantidade)> itens);
+    Task<int> ClonarPersonagemParaCampanhaAsync(
+        int idPersonagemBase,
+        int idCampanha,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens);
     Task RemoverAsync(Personagem personagem);
 }

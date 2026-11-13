@@ -179,7 +179,7 @@ public class CampanhaRepository : ICampanhaRepository
 
         await _contexto.SaveChangesAsync();
     }
-    public async Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus)
+    public async Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus, string? motivoRecusa = null)
     {
         _contexto.ChangeTracker.Clear();
         var vinculo = await _contexto.PersonagensCampanha
@@ -190,14 +190,13 @@ public class CampanhaRepository : ICampanhaRepository
             if (novoStatus.Equals("Aceita", StringComparison.OrdinalIgnoreCase))
                 vinculo.AprovarFicha();
             else if (novoStatus.Equals("Recusada", StringComparison.OrdinalIgnoreCase))
-                vinculo.RecusarFicha();
+                vinculo.RecusarFicha(motivoRecusa);
             else
                 vinculo.ReenviarFicha();
 
             await _contexto.SaveChangesAsync();
         }
     }
-
     public async Task RemoverPersonagemCampanhaAsync(int idCampanha, int idPersonagem)
     {
         _contexto.ChangeTracker.Clear();

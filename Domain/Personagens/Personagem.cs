@@ -9,6 +9,7 @@ public class Personagem : IAggregateRoot
 {
     public int IdPersonagem { get; private set; }
     public int IdAccount { get; private set; }
+    public int? IdPersonagemOrigem { get; set; } 
     public int? IdRaca { get; set; }
     public int? IdAntecedente { get; set; }
 

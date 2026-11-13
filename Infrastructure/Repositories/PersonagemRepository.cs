@@ -36,13 +36,15 @@ public class PersonagemRepository : IPersonagemRepository
         return personagem;
     }
 
+    // Retorna APENAS as fichas base da biblioteca do usuário (IdPersonagemOrigem == null)
     public async Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount)
     {
         _contexto.ChangeTracker.Clear();
         return await _contexto.Personagens
+            .AsNoTracking()
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
-            .Where(p => p.IdAccount == idAccount)
+            .Where(p => p.IdAccount == idAccount && p.IdPersonagemOrigem == null)
             .ToListAsync();
     }
 
@@ -60,6 +62,7 @@ public class PersonagemRepository : IPersonagemRepository
         if (existente != null)
         {
             string nomeOriginal = existente.Nome;
+            int? idOrigemOriginal = existente.IdPersonagemOrigem;
             int? idRacaOriginal = existente.IdRaca;
             string? racaOriginal = existente.RacaTexto;
             int? idAntecedenteOriginal = existente.IdAntecedente;
@@ -70,6 +73,7 @@ public class PersonagemRepository : IPersonagemRepository
             _contexto.Entry(existente).CurrentValues.SetValues(personagem);
 
             existente.Nome = nomeOriginal;
+            existente.IdPersonagemOrigem = idOrigemOriginal;
             existente.IdRaca = idRacaOriginal;
             existente.RacaTexto = racaOriginal;
             existente.IdAntecedente = idAntecedenteOriginal;
@@ -79,6 +83,111 @@ public class PersonagemRepository : IPersonagemRepository
 
             await _contexto.SaveChangesAsync();
         }
+    }
+
+    public async Task<int> ClonarPersonagemParaCampanhaAsync(
+        int idPersonagemBase,
+        int idCampanha,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        // Verifica se já existe uma instância clonada deste personagem base nesta mesma campanha
+        var vinculoExistenteNaCampanha = await _contexto.PersonagensCampanha
+            .Include(pc => pc.Personagem)
+            .FirstOrDefaultAsync(pc =>
+                pc.IdCampanha == idCampanha &&
+                pc.Personagem != null &&
+                (pc.IdPersonagem == idPersonagemBase || pc.Personagem.IdPersonagemOrigem == idPersonagemBase));
+
+        if (vinculoExistenteNaCampanha != null && vinculoExistenteNaCampanha.Personagem?.IdPersonagemOrigem != null)
+        {
+            // Se já era uma instância exclusiva desta campanha (ex: foi recusada e está reenviando), apenas atualiza o inventário dela
+            int idInstanciaExistente = vinculoExistenteNaCampanha.IdPersonagem;
+            await SalvarInventarioInternoAsync(idInstanciaExistente, dadosInventario, itens);
+            await _contexto.SaveChangesAsync();
+            return idInstanciaExistente;
+        }
+
+        // Busca a ficha base completa da biblioteca
+        var fichaBase = await ObterPorIdAsync(idPersonagemBase);
+        if (fichaBase == null)
+            throw new InvalidOperationException("Ficha base não encontrada na biblioteca.");
+
+        int idOrigemReal = fichaBase.IdPersonagemOrigem ?? fichaBase.IdPersonagem;
+
+        // Cria uma nova instância isolada de Personagem para a campanha
+        var cloneCampanha = new Personagem(
+            fichaBase.IdAccount,
+            fichaBase.Nome,
+            fichaBase.RacaTexto,
+            fichaBase.ClasseTexto,
+            fichaBase.PvMaximo)
+        {
+            IdPersonagemOrigem = idOrigemReal,
+            IdRaca = fichaBase.IdRaca,
+            IdAntecedente = fichaBase.IdAntecedente,
+            Nivel = fichaBase.Nivel,
+            ExperienciaXp = fichaBase.ExperienciaXp,
+            PvAtual = fichaBase.PvAtual,
+            PvMaximo = fichaBase.PvMaximo,
+            Iniciativa = fichaBase.Iniciativa,
+            Deslocamento = fichaBase.Deslocamento,
+            AntecedenteTexto = fichaBase.AntecedenteTexto,
+            Tendencia = fichaBase.Tendencia,
+            Historia = fichaBase.Historia,
+            Imagem = fichaBase.Imagem,
+            Forca = fichaBase.Forca,
+            Destreza = fichaBase.Destreza,
+            Constituicao = fichaBase.Constituicao,
+            Inteligencia = fichaBase.Inteligencia,
+            Sabedoria = fichaBase.Sabedoria,
+            Carisma = fichaBase.Carisma,
+            Idade = fichaBase.Idade,
+            Genero = fichaBase.Genero,
+            Altura = fichaBase.Altura,
+            Peso = fichaBase.Peso,
+            Aparencia = fichaBase.Aparencia,
+            Aliados = fichaBase.Aliados,
+            Caracteristicas = fichaBase.Caracteristicas,
+            Tesouro = fichaBase.Tesouro,
+            TracosPersonalidade = fichaBase.TracosPersonalidade,
+            PontoDeVista = fichaBase.PontoDeVista,
+            Ideais = fichaBase.Ideais,
+            Ligacoes = fichaBase.Ligacoes,
+            Defeitos = fichaBase.Defeitos,
+            Idiomas = fichaBase.Idiomas
+        };
+
+        await _contexto.Personagens.AddAsync(cloneCampanha);
+        await _contexto.SaveChangesAsync();
+
+        // Copia Classes (Multiclasse), Salvaguardas, Perícias e Magias da Ficha Base + Salva o Inventário da Campanha
+        var classesBase = fichaBase.PersonagemClasses
+            .Where(pc => pc.Classe != null)
+            .Select(pc => (pc.Classe!.Nome, pc.NivelNaClasse))
+            .ToList();
+
+        var salvaguardasBase = fichaBase.Salvaguardas.Select(s => s.Atributo).ToList();
+        var periciasBase = fichaBase.Pericias.Select(p => p.NomePericia).ToList();
+        var magiasBase = fichaBase.PersonagemMagias
+            .Where(pm => pm.Magia != null)
+            .Select(pm => pm.Magia!)
+            .ToList();
+
+        dadosInventario.IdPersonagem = cloneCampanha.IdPersonagem;
+
+        await SalvarFichaCompleta3FNAsync(
+            cloneCampanha.IdPersonagem,
+            classesBase,
+            salvaguardasBase,
+            periciasBase,
+            dadosInventario,
+            itens,
+            magiasBase);
+
+        return cloneCampanha.IdPersonagem;
     }
 
     private async Task VincularRacaEAntecedente3FNAsync(Personagem personagem)
@@ -139,7 +248,6 @@ public class PersonagemRepository : IPersonagemRepository
     {
         _contexto.ChangeTracker.Clear();
 
-        // 0. Atualiza Multiclasse na tabela Personagem_Classe (3FN)
         var classesAntigas = await _contexto.PersonagemClasses.Where(pc => pc.IdPersonagem == idPersonagem).ToListAsync();
         _contexto.PersonagemClasses.RemoveRange(classesAntigas);
         await _contexto.SaveChangesAsync();
@@ -175,7 +283,6 @@ public class PersonagemRepository : IPersonagemRepository
             });
         }
 
-        // 1. Atualiza Salvaguardas (3FN)
         var salvAntigas = await _contexto.PersonagemSalvaguardas.Where(s => s.IdPersonagem == idPersonagem).ToListAsync();
         _contexto.PersonagemSalvaguardas.RemoveRange(salvAntigas);
         foreach (var s in salvaguardas.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
@@ -183,7 +290,6 @@ public class PersonagemRepository : IPersonagemRepository
             await _contexto.PersonagemSalvaguardas.AddAsync(new PersonagemSalvaguarda(idPersonagem, s.Trim()));
         }
 
-        // 2. Atualiza Perícias (3FN)
         var perAntigas = await _contexto.PersonagemPericias.Where(p => p.IdPersonagem == idPersonagem).ToListAsync();
         _contexto.PersonagemPericias.RemoveRange(perAntigas);
         foreach (var p in pericias.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
@@ -191,13 +297,11 @@ public class PersonagemRepository : IPersonagemRepository
             await _contexto.PersonagemPericias.AddAsync(new PersonagemPericia(idPersonagem, p.Trim()));
         }
 
-        // 3. Atualiza Inventário apenas se foi fornecido (preserva o inventário da campanha ao editar a ficha)
         if (dadosInventario != null && itens != null)
         {
             await SalvarInventarioInternoAsync(idPersonagem, dadosInventario, itens);
         }
 
-        // 4. Atualiza Grimório / Magias (3FN)
         var magiasAntigas = await _contexto.PersonagemMagias.Where(pm => pm.IdPersonagem == idPersonagem).ToListAsync();
         _contexto.PersonagemMagias.RemoveRange(magiasAntigas);
         await _contexto.SaveChangesAsync();
@@ -292,7 +396,24 @@ public class PersonagemRepository : IPersonagemRepository
 
     public async Task RemoverAsync(Personagem personagem)
     {
-        _contexto.Personagens.Remove(personagem);
+        _contexto.ChangeTracker.Clear();
+
+        // Se o usuário excluir a ficha base da biblioteca, desvincula o ponteiro das instâncias de campanhas para não dar erro de FK
+        var copiasEmCampanhas = await _contexto.Personagens
+            .Where(p => p.IdPersonagemOrigem == personagem.IdPersonagem)
+            .ToListAsync();
+
+        foreach (var copia in copiasEmCampanhas)
+        {
+            copia.IdPersonagemOrigem = null;
+        }
         await _contexto.SaveChangesAsync();
+
+        var alvo = await _contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
+        if (alvo != null)
+        {
+            _contexto.Personagens.Remove(alvo);
+            await _contexto.SaveChangesAsync();
+        }
     }
 }

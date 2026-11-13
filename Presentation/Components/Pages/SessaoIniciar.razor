@@ -391,7 +391,7 @@
                                                     @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Inspecionar Ficha e Itens")
                                                 </button>
                                                 <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(p.IdPersonagem)">✓ Aceitar</button>
-                                                <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">✕ Recusar</button>
+                                                <button type="button" class="btn-recusar-ficha" @onclick="() => AbrirModalRecusa(p.IdPersonagem)">✕ Recusar</button>
                                             </div>
                                         </div>
                                     }
@@ -419,7 +419,7 @@
                                                 <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
                                                     @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Visualizar Ficha e Itens")
                                                 </button>
-                                                <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => RecusarFichaJogadorAsync(p.IdPersonagem)">Revogar</button>
+                                                <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => AbrirModalRecusa(p.IdPersonagem)">Revogar</button>
                                             </div>
                                         </div>
                                     }
@@ -430,6 +430,22 @@
                                 }
                             }
                         </div>
+
+                        <!-- MODAL DE MOTIVO DE RECUSA -->
+                        @if (idPersonagemParaRecusar > 0)
+                        {
+                            <div class="confirm-overlay" role="presentation" @onclick="() => idPersonagemParaRecusar = 0">
+                                <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
+                                    <h2>Motivo da Recusa</h2>
+                                    <p>Escreva o motivo pelo qual esta ficha/inventário está sendo recusada. O jogador visualizará essa mensagem na tela dele.</p>
+                                    <textarea @bind="textoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..." style="width:100%; padding:8px; margin:10px 0; background:#18110c; color:#fff; border:1px solid #9c783d; border-radius:4px;"></textarea>
+                                    <div class="confirm-actions">
+                                        <button class="confirm-exit" type="button" @onclick="ConfirmarRecusaComMotivoAsync">Confirmar Recusa</button>
+                                        <button class="confirm-cancel" type="button" @onclick="() => idPersonagemParaRecusar = 0">Cancelar</button>
+                                    </div>
+                                </section>
+                            </div>
+                        }
 
                         <!-- =========================================================================
                              PAINEL DE INSPEÇÃO COMPLETA DA FICHA + ITENS DA CAMPANHA LOGO ABAIXO
@@ -443,7 +459,7 @@
                                         @if (StatusDaFichaInspecionada == "Pendente")
                                         {
                                             <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha e Itens</button>
-                                            <button type="button" class="btn-recusar-ficha" @onclick="() => RecusarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
+                                            <button type="button" class="btn-recusar-ficha" @onclick="() => AbrirModalRecusa(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
                                         }
                                         <button type="button" class="btn-fechar-inspecao" @onclick="() => fichaInspecionada = null">Fechar ✕</button>
                                     </div>
@@ -684,6 +700,9 @@
     private string secaoDiarioInspecao = "ideais";
     private string mensagemFeedbackFichas = string.Empty;
 
+    private int idPersonagemParaRecusar = 0;
+    private string textoMotivoRecusa = string.Empty;
+
     private IEnumerable<PersonagemCampanha> FichasPendentes =>
         campanhaAtual?.FichasPendentes ?? Enumerable.Empty<PersonagemCampanha>();
 
@@ -810,14 +829,24 @@
         }
     }
 
-    private async Task RecusarFichaJogadorAsync(int idPersonagem)
+    private void AbrirModalRecusa(int idPersonagem)
     {
-        var resultado = await CampanhaService.RecusarFichaCampanhaAsync(IdCampanha, idPersonagem);
+        idPersonagemParaRecusar = idPersonagem;
+        textoMotivoRecusa = string.Empty;
+    }
+
+    private async Task ConfirmarRecusaComMotivoAsync()
+    {
+        if (idPersonagemParaRecusar <= 0) return;
+
+        var resultado = await CampanhaService.RecusarFichaCampanhaAsync(IdCampanha, idPersonagemParaRecusar, textoMotivoRecusa);
         mensagemFeedbackFichas = resultado.Mensagem;
-        if (fichaInspecionada?.IdPersonagem == idPersonagem)
+        if (fichaInspecionada?.IdPersonagem == idPersonagemParaRecusar)
         {
             fichaInspecionada = null;
         }
+        idPersonagemParaRecusar = 0;
+        textoMotivoRecusa = string.Empty;
         await CarregarDadosCampanhaAsync();
     }
 
