@@ -1,15 +1,8 @@
 ﻿@page "/sessao-iniciar/{idCampanha:int}"
 @using RPGdeMesa.Presentation.Components.Layout
-@using RPGdeMesa.Domain.Campanhas
-@using RPGdeMesa.Domain.Bestiario
-@using RPGdeMesa.Domain.Itens
-@using RPGdeMesa.Domain.Npcs
-@using RPGdeMesa.Domain.Personagens
-@inject CampanhaService CampanhaService
-@inject PersonagemService PersonagemService
-@inject NpcService NpcService
-@inject ItemService ItemService
-@inject NavigationManager Navigation
+@using RPGdeMesa.Presentation.ViewModel
+@inject SessaoIniciarViewModel ViewModel
+@implements IDisposable
 
 <NavMenu />
 
@@ -19,26 +12,26 @@
             <!-- Sidebar: Navegação e Jogadores -->
             <aside class="session-sidebar">
                 <nav class="session-nav" aria-label="Páginas da sessão">
-                    <a class="session-nav-link @(abaMenu == "iniciar" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirIniciar">Iniciar sessão</a>
-                    <a class="session-nav-link @(abaMenu == "config" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirConfig">Configurações</a>
-                    <a class="session-nav-link @(abaMenu == "fichas" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirFichas" style="display:flex; justify-content:space-between; align-items:center;">
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "iniciar" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirIniciar">Iniciar sessão</a>
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "config" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirConfig">Configurações</a>
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "fichas" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirFichas" style="display:flex; justify-content:space-between; align-items:center;">
                         <span>Fichas dos Jogadores</span>
-                        @if (FichasPendentes.Any())
+                        @if (ViewModel.FichasPendentes.Any())
                         {
-                            <span class="badge-pendentes">@FichasPendentes.Count()</span>
+                            <span class="badge-pendentes">@ViewModel.FichasPendentes.Count()</span>
                         }
                     </a>
-                    <a class="session-nav-link @(abaMenu == "hist" ? "ativa" : "")" href="javascript:void(0)" @onclick="AbrirHist">Histórico</a>
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "hist" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirHist">Histórico</a>
                 </nav>
 
                 <section class="session-players-panel" aria-labelledby="titulo-jogadores">
                     <h2 id="titulo-jogadores">Jogadores Aceitos na Mesa</h2>
                     <div class="session-players">
-                        @if (campanhaAtual?.Personagens != null && campanhaAtual.Personagens.Any())
+                        @if (ViewModel.CampanhaAtual?.Personagens != null && ViewModel.CampanhaAtual.Personagens.Any())
                         {
-                            @foreach (var p in campanhaAtual.Personagens)
+                            @foreach (var p in ViewModel.CampanhaAtual.Personagens)
                             {
-                                <div class="player-option" style="cursor:pointer;" title="Clique para inspecionar a ficha e o inventário" @onclick="() => InspecionarFichaNaAbaAsync(p.IdPersonagem)">
+                                <div class="player-option" style="cursor:pointer;" title="Clique para inspecionar a ficha e o inventário" @onclick="() => ViewModel.InspecionarFichaNaAbaAsync(p.IdPersonagem)">
                                     <span>@p.Nome<span>@(p.RacaTexto ?? "Aventureiro") · @(p.ClasseTexto ?? "Geral") (Nv. @p.Nivel)</span></span>
                                 </div>
                             }
@@ -53,7 +46,7 @@
 
             <!-- Conteúdo Principal -->
             <section class="preview-content">
-                @if (abaMenu == "iniciar")
+                @if (ViewModel.AbaMenu == "iniciar")
                 {
                     <header class="page-heading">
                         <div>
@@ -64,20 +57,20 @@
                     </header>
                     <section class="session-summary" aria-label="Resumo da sessão">
                         <p class="summary-kicker">Campanha Ativa</p>
-                        <h2>@(campanhaAtual?.Nome ?? "Carregando...")</h2>
-                        <p class="summary-description">@(campanhaAtual?.Descricao ?? "Sem descrição informada.")</p>
+                        <h2>@(ViewModel.CampanhaAtual?.Nome ?? "Carregando...")</h2>
+                        <p class="summary-description">@(ViewModel.CampanhaAtual?.Descricao ?? "Sem descrição informada.")</p>
                         <dl class="summary-details">
-                            <div><dt>Código</dt><dd>@(campanhaAtual?.CodigoConvite ?? "---")</dd></div>
-                            <div><dt>Criação</dt><dd>@campanhaAtual?.DataCriacao.ToString("dd/MM/yyyy")</dd></div>
-                            <div><dt>Aventureiros Aceitos</dt><dd>@(campanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
-                            <div><dt>Fichas Pendentes</dt><dd>@FichasPendentes.Count() aguardando avaliação</dd></div>
+                            <div><dt>Código</dt><dd>@(ViewModel.CampanhaAtual?.CodigoConvite ?? "---")</dd></div>
+                            <div><dt>Criação</dt><dd>@ViewModel.CampanhaAtual?.DataCriacao.ToString("dd/MM/yyyy")</dd></div>
+                            <div><dt>Aventureiros Aceitos</dt><dd>@(ViewModel.CampanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
+                            <div><dt>Fichas Pendentes</dt><dd>@ViewModel.FichasPendentes.Count() aguardando avaliação</dd></div>
                         </dl>
                         <div style="display:flex; gap:12px; flex-wrap:wrap;">
                             <a class="action-primary" href="/saladojogo">Abrir Sala de Jogo <span aria-hidden="true">→</span></a>
-                            @if (FichasPendentes.Any())
+                            @if (ViewModel.FichasPendentes.Any())
                             {
-                                <button type="button" class="action-primary" style="background:#6f5296; border-color:#a28acb;" @onclick="AbrirFichas">
-                                    Avaliar @FichasPendentes.Count() Ficha(s) Pendente(s)
+                                <button type="button" class="action-primary" style="background:#6f5296; border-color:#a28acb;" @onclick="ViewModel.AbrirFichas">
+                                    Avaliar @ViewModel.FichasPendentes.Count() Ficha(s) Pendente(s)
                                 </button>
                             }
                             <a class="action-primary" style="background:transparent; border-color:rgba(217,184,120,0.4);" href="/campanhas">Voltar para campanhas</a>
@@ -85,7 +78,7 @@
                     </section>
                 }
 
-                @if (abaMenu == "config")
+                @if (ViewModel.AbaMenu == "config")
                 {
                     <header class="page-heading">
                         <div>
@@ -98,7 +91,7 @@
                     <div class="session-page-content">
                         <section class="configuration-content" aria-label="Conteúdo da sessão">
                             <div class="configuration-heading">
-                                <div><p class="page-kicker">Encontro atual</p><h2>@(campanhaAtual?.Nome)</h2></div>
+                                <div><p class="page-kicker">Encontro atual</p><h2>@(ViewModel.CampanhaAtual?.Nome)</h2></div>
                             </div>
                             <div class="configuration-layout">
                                 <!-- LADO ESQUERDO: Navegador de Recursos -->
@@ -107,84 +100,84 @@
 
                                     <div class="search-box">
                                         <span aria-hidden="true">⌕</span>
-                                        <input id="busca-catalogo" type="search" @bind="termoBusca" @bind:event="oninput" placeholder="Busque por nome ou tipo" autocomplete="off" />
+                                        <input id="busca-catalogo" type="search" @bind="ViewModel.TermoBusca" @bind:event="oninput" placeholder="Busque por nome ou tipo" autocomplete="off" />
                                     </div>
                                     
                                     <div class="resource-tabs" role="tablist">
-                                        <button class="resource-tab @(categoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => categoriaAtiva = "todos"'>Todos</button>
-                                        <button class="resource-tab @(categoriaAtiva == "npcs" ? "ativa" : "")" @onclick='() => categoriaAtiva = "npcs"'>NPCs</button>
-                                        <button class="resource-tab @(categoriaAtiva == "monstros" ? "ativa" : "")" @onclick='() => categoriaAtiva = "monstros"'>Monstros</button>
-                                        <button class="resource-tab @(categoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => categoriaAtiva = "itens"'>Itens</button>
+                                        <button class="resource-tab @(ViewModel.CategoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "todos"'>Todos</button>
+                                        <button class="resource-tab @(ViewModel.CategoriaAtiva == "npcs" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "npcs"'>NPCs</button>
+                                        <button class="resource-tab @(ViewModel.CategoriaAtiva == "monstros" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "monstros"'>Monstros</button>
+                                        <button class="resource-tab @(ViewModel.CategoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "itens"'>Itens</button>
                                     </div>
 
                                     <div class="link-tabs" role="tablist">
-                                        <button class="link-tab @(modoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => modoVisualizacao = "vinculados"'>Vinculados</button>
-                                        <button class="link-tab @(modoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => modoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
+                                        <button class="link-tab @(ViewModel.ModoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "vinculados"'>Vinculados</button>
+                                        <button class="link-tab @(ViewModel.ModoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
                                     </div>
 
                                     <div class="resource-list">
-                                        @if (modoVisualizacao == "vinculados")
+                                        @if (ViewModel.ModoVisualizacao == "vinculados")
                                         {
-                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "npcs")
+                                            @if (ViewModel.CategoriaAtiva == "todos" || ViewModel.CategoriaAtiva == "npcs")
                                             {
-                                                @foreach (var npc in NpcsVinculadosFiltrados)
+                                                @foreach (var npc in ViewModel.NpcsVinculadosFiltrados)
                                                 {
                                                     <div class="player-option resource-row">
                                                         <span class="resource-label"><strong>[NPC]</strong> @npc.Nome <span>(@(npc.ClasseTexto ?? npc.Ocupacao))</span></span>
-                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular NPC" aria-label="Desvincular NPC" @onclick="() => DesvincularNpc(npc.IdNpc)">✕</button>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular NPC" aria-label="Desvincular NPC" @onclick="() => ViewModel.DesvincularNpc(npc.IdNpc)">✕</button>
                                                     </div>
                                                 }
                                             }
-                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "monstros")
+                                            @if (ViewModel.CategoriaAtiva == "todos" || ViewModel.CategoriaAtiva == "monstros")
                                             {
-                                                @foreach (var mc in MonstrosVinculadosFiltrados)
+                                                @foreach (var mc in ViewModel.MonstrosVinculadosFiltrados)
                                                 {
                                                     <div class="player-option resource-row">
                                                         <span class="resource-label"><strong>[Monstro]</strong> @mc.Monstro?.Nome <span>(ND: @mc.Monstro?.NivelDesafio)</span></span>
-                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Monstro" aria-label="Desvincular Monstro" @onclick="() => DesvincularMonstro(mc.IdMonstro)">✕</button>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Monstro" aria-label="Desvincular Monstro" @onclick="() => ViewModel.DesvincularMonstro(mc.IdMonstro)">✕</button>
                                                     </div>
                                                 }
                                             }
-                                            @if (categoriaAtiva == "todos" || categoriaAtiva == "itens")
+                                            @if (ViewModel.CategoriaAtiva == "todos" || ViewModel.CategoriaAtiva == "itens")
                                             {
-                                                @foreach (var ic in ItensVinculadosFiltrados)
+                                                @foreach (var ic in ViewModel.ItensVinculadosFiltrados)
                                                 {
                                                     <div class="player-option resource-row">
                                                         <span class="resource-label"><strong>[Item]</strong> @ic.Item?.Nome <span>(@ic.Item?.Tipo)</span></span>
-                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Item" aria-label="Desvincular Item" @onclick="() => DesvincularItem(ic.IdItem)">✕</button>
+                                                        <button type="button" class="btn-vinculo btn-desvincular" title="Desvincular Item" aria-label="Desvincular Item" @onclick="() => ViewModel.DesvincularItem(ic.IdItem)">✕</button>
                                                     </div>
                                                 }
                                             }
                                         }
                                         else
                                         {
-                                            @if (categoriaAtiva == "npcs" || categoriaAtiva == "todos")
+                                            @if (ViewModel.CategoriaAtiva == "npcs" || ViewModel.CategoriaAtiva == "todos")
                                             {
-                                                @foreach (var n in NpcsDisponiveisFiltrados)
+                                                @foreach (var n in ViewModel.NpcsDisponiveisFiltrados)
                                                 {
                                                     <div class="player-option resource-row disponivel">
                                                         <span class="resource-label">NPC: <strong>@n.Nome</strong></span>
-                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular NPC" aria-label="Vincular NPC" @onclick="() => VincularNpcExistente(n.IdNpc)">+</button>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular NPC" aria-label="Vincular NPC" @onclick="() => ViewModel.VincularNpcExistente(n.IdNpc)">+</button>
                                                     </div>
                                                 }
                                             }
-                                            @if (categoriaAtiva == "monstros" || categoriaAtiva == "todos")
+                                            @if (ViewModel.CategoriaAtiva == "monstros" || ViewModel.CategoriaAtiva == "todos")
                                             {
-                                                @foreach (var m in MonstrosDisponiveisFiltrados)
+                                                @foreach (var m in ViewModel.MonstrosDisponiveisFiltrados)
                                                 {
                                                     <div class="player-option resource-row disponivel">
                                                         <span class="resource-label">Monstro: <strong>@m.Nome</strong></span>
-                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Monstro" aria-label="Vincular Monstro" @onclick="() => VincularMonstro(m.IdMonstro)">+</button>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Monstro" aria-label="Vincular Monstro" @onclick="() => ViewModel.VincularMonstro(m.IdMonstro)">+</button>
                                                     </div>
                                                 }
                                             }
-                                            @if (categoriaAtiva == "itens" || categoriaAtiva == "todos")
+                                            @if (ViewModel.CategoriaAtiva == "itens" || ViewModel.CategoriaAtiva == "todos")
                                             {
-                                                @foreach (var i in ItensDisponiveisFiltrados)
+                                                @foreach (var i in ViewModel.ItensDisponiveisFiltrados)
                                                 {
                                                     <div class="player-option resource-row disponivel">
                                                         <span class="resource-label">Item: <strong>@i.Nome</strong></span>
-                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Item" aria-label="Vincular Item" @onclick="() => VincularItem(i.IdItem)">+</button>
+                                                        <button type="button" class="btn-vinculo btn-vincular" title="Vincular Item" aria-label="Vincular Item" @onclick="() => ViewModel.VincularItem(i.IdItem)">+</button>
                                                     </div>
                                                 }
                                             }
@@ -193,26 +186,26 @@
                                 </section>
 
                                 <!-- LADO DIREITO: Formulário Dinâmico -->
-                                <form class="resource-editor" @onsubmit="SalvarRegistroAsync">
+                                <form class="resource-editor" @onsubmit="ViewModel.SalvarRegistroAsync">
                                     <div class="editor-heading">
-                                        <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar e Vincular @categoriaSelecionada.ToUpper()</h3></div>
+                                        <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar e Vincular @ViewModel.CategoriaSelecionada.ToUpper()</h3></div>
                                     </div>
 
                                     <label class="form-field">
                                         Categoria de Cadastro
-                                        <select @bind="categoriaSelecionada">
+                                        <select @bind="ViewModel.CategoriaSelecionada">
                                             <option value="npc">NPC</option>
                                             <option value="monstro">Monstro</option>
                                             <option value="item">Item</option>
                                         </select>
                                     </label>
 
-                                    @if (categoriaSelecionada == "npc")
+                                    @if (ViewModel.CategoriaSelecionada == "npc")
                                     {
-                                        <label class="form-field">Nome do NPC<input @bind="npcNome" required maxlength="60" placeholder="Ex.: Aldeão" /></label>
+                                        <label class="form-field">Nome do NPC<input @bind="ViewModel.NpcNome" required maxlength="60" placeholder="Ex.: Aldeão" /></label>
                                         <label class="form-field">
                                             Raça
-                                            <select @bind="npcRaca">
+                                            <select @bind="ViewModel.NpcRaca">
                                                 <option value="Humano">Humano</option>
                                                 <option value="Elfo">Elfo</option>
                                                 <option value="Anão">Anão</option>
@@ -221,18 +214,18 @@
                                         </label>
                                         <label class="form-field">
                                             Classe
-                                            <select @bind="npcClasse">
+                                            <select @bind="ViewModel.NpcClasse">
                                                 <option value="Guerreiro">Guerreiro</option>
                                                 <option value="Mago">Mago</option>
                                                 <option value="Bardo">Bardo</option>
                                                 <option value="Outra">Outra</option>
                                             </select>
                                         </label>
-                                        <label class="form-field">Nível<input @bind="npcNivel" type="number" min="1" max="20" /></label>
-                                        <label class="form-field">Antecedente<input @bind="npcAntecedente" maxlength="50" placeholder="Ex.: Batedor" /></label>
+                                        <label class="form-field">Nível<input @bind="ViewModel.NpcNivel" type="number" min="1" max="20" /></label>
+                                        <label class="form-field">Antecedente<input @bind="ViewModel.NpcAntecedente" maxlength="50" placeholder="Ex.: Batedor" /></label>
                                         <label class="form-field">
                                             Tendência
-                                            <select @bind="npcTendencia">
+                                            <select @bind="ViewModel.NpcTendencia">
                                                 <option value="Neutra">Neutra</option>
                                                 <option value="Leal e boa">Leal e boa</option>
                                                 <option value="Caótica e má">Caótica e má</option>
@@ -241,22 +234,22 @@
 
                                         <div class="form-divider" style="margin: 10px 0 5px 0; font-size: 0.85rem; color: #d4af37;">Atributos</div>
                                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-                                            <label class="form-field" style="font-size:0.8rem;">FOR<input @bind="npcForca" type="number" min="1" max="30" style="padding:4px;" /></label>
-                                            <label class="form-field" style="font-size:0.8rem;">DES<input @bind="npcDestreza" type="number" min="1" max="30" style="padding:4px;" /></label>
-                                            <label class="form-field" style="font-size:0.8rem;">CON<input @bind="npcConstituicao" type="number" min="1" max="30" style="padding:4px;" /></label>
-                                            <label class="form-field" style="font-size:0.8rem;">INT<input @bind="npcInteligencia" type="number" min="1" max="30" style="padding:4px;" /></label>
-                                            <label class="form-field" style="font-size:0.8rem;">SAB<input @bind="npcSabedoria" type="number" min="1" max="30" style="padding:4px;" /></label>
-                                            <label class="form-field" style="font-size:0.8rem;">CAR<input @bind="npcCarisma" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">FOR<input @bind="ViewModel.NpcForca" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">DES<input @bind="ViewModel.NpcDestreza" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">CON<input @bind="ViewModel.NpcConstituicao" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">INT<input @bind="ViewModel.NpcInteligencia" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">SAB<input @bind="ViewModel.NpcSabedoria" type="number" min="1" max="30" style="padding:4px;" /></label>
+                                            <label class="form-field" style="font-size:0.8rem;">CAR<input @bind="ViewModel.NpcCarisma" type="number" min="1" max="30" style="padding:4px;" /></label>
                                         </div>
 
-                                        <label class="form-field" style="margin-top: 8px;">História e anotações<textarea @bind="npcHistoria" rows="2" placeholder="Detalhes do NPC..."></textarea></label>
+                                        <label class="form-field" style="margin-top: 8px;">História e anotações<textarea @bind="ViewModel.NpcHistoria" rows="2" placeholder="Detalhes do NPC..."></textarea></label>
                                     }
-                                    else if (categoriaSelecionada == "monstro")
+                                    else if (ViewModel.CategoriaSelecionada == "monstro")
                                     {
-                                        <label class="form-field">Nome da criatura<input @bind="monstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
+                                        <label class="form-field">Nome da criatura<input @bind="ViewModel.MonstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
                                         <label class="form-field">
                                             Tipo
-                                            <select @bind="monstroTipo" style="color: white;">
+                                            <select @bind="ViewModel.MonstroTipo" style="color: white;">
                                                 <option value="Outro">Outro</option>
                                                 <option value="Dragao">Dragão</option>
                                                 <option value="Fera">Fera</option>
@@ -265,28 +258,28 @@
                                         </label>
                                         <label class="form-field">
                                             Tamanho
-                                            <select @bind="monstroTamanho" style="color: white;">
+                                            <select @bind="ViewModel.MonstroTamanho" style="color: white;">
                                                 <option value="Médio">Médio</option>
                                                 <option value="Grande">Grande</option>
                                                 <option value="Pequeno">Pequeno</option>
                                             </select>
                                         </label>
-                                        <label class="form-field">Alinhamento<input @bind="monstroAlinhamento" maxlength="40" placeholder="Ex.: Caótico e mau" /></label>
-                                        <label class="form-field">Nível de desafio<input @bind="monstroNd" type="number" min="0" max="30" step="0.125" /></label>
-                                        <label class="form-field">Classe de armadura<input @bind="monstroDefesa" type="number" min="0" max="40" /></label>
-                                        <label class="form-field">Pontos de vida<input @bind="monstroVida" type="number" min="1" max="9999" /></label>
-                                        <label class="form-field">Deslocamento<input @bind="monstroDeslocamento" maxlength="50" placeholder="9 m" /></label>
-                                        <label class="form-field">Sentidos<input @bind="monstroSentidos" maxlength="80" placeholder="Visão no escuro 18 m" /></label>
-                                        <label class="form-field full-width">Resistências e imunidades<input @bind="monstroResistencias" maxlength="120" placeholder="Ex.: frio, veneno" /></label>
-                                        <label class="form-field full-width">Habilidades especiais<input @bind="monstroHabilidades" maxlength="160" placeholder="Ex.: Ataque múltiplo" /></label>
-                                        <label class="form-field full-width">Descrição<textarea @bind="monstroDescricao" rows="2" placeholder="Táticas e anotações..."></textarea></label>
+                                        <label class="form-field">Alinhamento<input @bind="ViewModel.MonstroAlinhamento" maxlength="40" placeholder="Ex.: Caótico e mau" /></label>
+                                        <label class="form-field">Nível de desafio<input @bind="ViewModel.MonstroNd" type="number" min="0" max="30" step="0.125" /></label>
+                                        <label class="form-field">Classe de armadura<input @bind="ViewModel.MonstroDefesa" type="number" min="0" max="40" /></label>
+                                        <label class="form-field">Pontos de vida<input @bind="ViewModel.MonstroVida" type="number" min="1" max="9999" /></label>
+                                        <label class="form-field">Deslocamento<input @bind="ViewModel.MonstroDeslocamento" maxlength="50" placeholder="9 m" /></label>
+                                        <label class="form-field">Sentidos<input @bind="ViewModel.MonstroSentidos" maxlength="80" placeholder="Visão no escuro 18 m" /></label>
+                                        <label class="form-field full-width">Resistências e imunidades<input @bind="ViewModel.MonstroResistencias" maxlength="120" placeholder="Ex.: frio, veneno" /></label>
+                                        <label class="form-field full-width">Habilidades especiais<input @bind="ViewModel.MonstroHabilidades" maxlength="160" placeholder="Ex.: Ataque múltiplo" /></label>
+                                        <label class="form-field full-width">Descrição<textarea @bind="ViewModel.MonstroDescricao" rows="2" placeholder="Táticas e anotações..."></textarea></label>
                                     }
                                     else
                                     {
-                                        <label class="form-field">Nome do Item<input @bind="itemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
+                                        <label class="form-field">Nome do Item<input @bind="ViewModel.ItemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
                                         <label class="form-field">
                                             Tipo
-                                            <select @bind="itemTipo" style="color: white;">
+                                            <select @bind="ViewModel.ItemTipo" style="color: white;">
                                                 <option value="">Selecionar...</option>
                                                 <option value="Anéis">Anéis</option>
                                                 <option value="Armadura">Armadura</option>
@@ -299,16 +292,16 @@
                                                 <option value="varinhas">varinhas</option>
                                             </select>
                                         </label>
-                                        <label class="form-field">Peso (kg)<input @bind="itemPeso" type="number" step="0.1" min="0" /></label>
-                                        <label class="form-field">Preço (PO)<input @bind="itemPreco" type="number" step="0.01" min="0" /></label>
-                                        <label class="form-field">Dano<input @bind="itemDano" maxlength="20" placeholder="Ex.: 1d8" /></label>
-                                        <label class="form-field">Tipo de Dano<input @bind="itemTipoDano" maxlength="30" placeholder="Ex.: Cortante" /></label>
-                                        <label class="form-field">Propriedades<input @bind="itemPropriedades" maxlength="100" placeholder="Ex.: Versátil, acuidade" /></label>
-                                        <label class="form-field">Bônus de CA<input @bind="itemCaBonus" type="number" min="0" max="10" /></label>
+                                        <label class="form-field">Peso (kg)<input @bind="ViewModel.ItemPeso" type="number" step="0.1" min="0" /></label>
+                                        <label class="form-field">Preço (PO)<input @bind="ViewModel.ItemPreco" type="number" step="0.01" min="0" /></label>
+                                        <label class="form-field">Dano<input @bind="ViewModel.ItemDano" maxlength="20" placeholder="Ex.: 1d8" /></label>
+                                        <label class="form-field">Tipo de Dano<input @bind="ViewModel.ItemTipoDano" maxlength="30" placeholder="Ex.: Cortante" /></label>
+                                        <label class="form-field">Propriedades<input @bind="ViewModel.ItemPropriedades" maxlength="100" placeholder="Ex.: Versátil, acuidade" /></label>
+                                        <label class="form-field">Bônus de CA<input @bind="ViewModel.ItemCaBonus" type="number" min="0" max="10" /></label>
                                         
                                         <label class="form-field">
                                             Raridade
-                                            <select @bind="itemRaridade">
+                                            <select @bind="ViewModel.ItemRaridade">
                                                 <option value="">Sem raridade</option>
                                                 <option value="Comum">Comum</option>
                                                 <option value="Incomum">Incomum</option>
@@ -320,22 +313,22 @@
 
                                         <label class="form-field">
                                             Sintonização
-                                            <select @bind="itemSintonizacao">
+                                            <select @bind="ViewModel.ItemSintonizacao">
                                                 <option value="Não">Não</option>
                                                 <option value="Sim">Sim</option>
                                             </select>
                                         </label>
 
-                                        <label class="form-field full-width">Descrição<textarea @bind="itemDescricao" rows="2" placeholder="Efeito mágico ou história do item..."></textarea></label>
+                                        <label class="form-field full-width">Descrição<textarea @bind="ViewModel.ItemDescricao" rows="2" placeholder="Efeito mágico ou história do item..."></textarea></label>
                                     }
 
                                     <div class="editor-actions">
                                         <button class="save-button" type="submit">Cadastrar e Vincular</button>
                                     </div>
 
-                                    @if (!string.IsNullOrEmpty(mensagemFeedback))
+                                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
                                     {
-                                        <p class="save-status" role="status" style="margin-top: 10px; color: #d4af37;">@mensagemFeedback</p>
+                                        <p class="save-status" role="status" style="margin-top: 10px; color: #d4af37;">@ViewModel.MensagemFeedback</p>
                                     }
                                 </form>
                             </div>
@@ -346,7 +339,7 @@
                 @* =========================================================================
                    ABA DO MESTRE: FICHAS DOS JOGADORES E VALIDAÇÃO DE INVENTÁRIO DA CAMPANHA
                    ========================================================================= *@
-                @if (abaMenu == "fichas")
+                @if (ViewModel.AbaMenu == "fichas")
                 {
                     <header class="page-heading">
                         <div>
@@ -358,40 +351,40 @@
 
                     <div class="session-page-content">
                         <div class="link-tabs" role="tablist" style="max-width: 480px; margin-bottom: 16px;">
-                            <button class="link-tab @(filtroFichasMestre == "pendentes" ? "ativa" : "")" @onclick='() => filtroFichasMestre = "pendentes"'>
-                                Fichas para Validar <span>@FichasPendentes.Count()</span>
+                            <button class="link-tab @(ViewModel.FiltroFichasMestre == "pendentes" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "pendentes"'>
+                                Fichas para Validar <span>@ViewModel.FichasPendentes.Count()</span>
                             </button>
-                            <button class="link-tab @(filtroFichasMestre == "aceitas" ? "ativa" : "")" @onclick='() => filtroFichasMestre = "aceitas"'>
-                                Fichas Aceitas <span>@FichasAceitas.Count()</span>
+                            <button class="link-tab @(ViewModel.FiltroFichasMestre == "aceitas" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "aceitas"'>
+                                Fichas Aceitas <span>@ViewModel.FichasAceitas.Count()</span>
                             </button>
                         </div>
 
-                        @if (!string.IsNullOrEmpty(mensagemFeedbackFichas))
+                        @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedbackFichas))
                         {
-                            <p class="save-status" style="margin-bottom: 14px; font-size: 12px; color: #d4af37; font-weight: bold;">@mensagemFeedbackFichas</p>
+                            <p class="save-status" style="margin-bottom: 14px; font-size: 12px; color: #d4af37; font-weight: bold;">@ViewModel.MensagemFeedbackFichas</p>
                         }
 
                         <div class="fichas-mestre-lista">
-                            @if (filtroFichasMestre == "pendentes")
+                            @if (ViewModel.FiltroFichasMestre == "pendentes")
                             {
-                                @if (FichasPendentes.Any())
+                                @if (ViewModel.FichasPendentes.Any())
                                 {
-                                    @foreach (var pc in FichasPendentes)
+                                    @foreach (var pc in ViewModel.FichasPendentes)
                                     {
                                         var p = pc.Personagem!;
                                         int qtdItens = p.Inventario?.Itens?.Sum(i => i.Quantidade) ?? 0;
-                                        <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
+                                        <div class="ficha-mestre-card @(ViewModel.FichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome</strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
                                                 <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) selecionado(s) na campanha</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
-                                                <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
-                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Inspecionar Ficha e Itens")
+                                                <button type="button" class="btn-inspecionar" @onclick="() => ViewModel.CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
+                                                    @(ViewModel.FichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Inspecionar Ficha e Itens")
                                                 </button>
-                                                <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(p.IdPersonagem)">✓ Aceitar</button>
-                                                <button type="button" class="btn-recusar-ficha" @onclick="() => AbrirModalRecusa(p.IdPersonagem)">✕ Recusar</button>
+                                                <button type="button" class="btn-aprovar-ficha" @onclick="() => ViewModel.AprovarFichaJogadorAsync(p.IdPersonagem)">✓ Aceitar</button>
+                                                <button type="button" class="btn-recusar-ficha" @onclick="() => ViewModel.AbrirModalRecusa(p.IdPersonagem)">✕ Recusar</button>
                                             </div>
                                         </div>
                                     }
@@ -403,23 +396,23 @@
                             }
                             else
                             {
-                                @if (FichasAceitas.Any())
+                                @if (ViewModel.FichasAceitas.Any())
                                 {
-                                    @foreach (var pc in FichasAceitas)
+                                    @foreach (var pc in ViewModel.FichasAceitas)
                                     {
                                         var p = pc.Personagem!;
                                         int qtdItens = p.Inventario?.Itens?.Sum(i => i.Quantidade) ?? 0;
-                                        <div class="ficha-mestre-card @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
+                                        <div class="ficha-mestre-card @(ViewModel.FichaInspecionada?.IdPersonagem == p.IdPersonagem ? "selecionada" : "")">
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome <span class="tag-aceita">✓ Aceita</span></strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
                                                 <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) equipado(s)</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
-                                                <button type="button" class="btn-inspecionar" @onclick="() => CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
-                                                    @(fichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Visualizar Ficha e Itens")
+                                                <button type="button" class="btn-inspecionar" @onclick="() => ViewModel.CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
+                                                    @(ViewModel.FichaInspecionada?.IdPersonagem == p.IdPersonagem ? "▼ Ficha e Itens Abertos Abaixo" : "👁 Visualizar Ficha e Itens")
                                                 </button>
-                                                <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => AbrirModalRecusa(p.IdPersonagem)">Revogar</button>
+                                                <button type="button" class="btn-recusar-ficha" title="Revogar aprovação da ficha" @onclick="() => ViewModel.AbrirModalRecusa(p.IdPersonagem)">Revogar</button>
                                             </div>
                                         </div>
                                     }
@@ -432,16 +425,16 @@
                         </div>
 
                         <!-- MODAL DE MOTIVO DE RECUSA -->
-                        @if (idPersonagemParaRecusar > 0)
+                        @if (ViewModel.IdPersonagemParaRecusar > 0)
                         {
-                            <div class="confirm-overlay" role="presentation" @onclick="() => idPersonagemParaRecusar = 0">
+                            <div class="confirm-overlay" role="presentation" @onclick="() => ViewModel.IdPersonagemParaRecusar = 0">
                                 <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
                                     <h2>Motivo da Recusa</h2>
                                     <p>Escreva o motivo pelo qual esta ficha/inventário está sendo recusada. O jogador visualizará essa mensagem na tela dele.</p>
-                                    <textarea @bind="textoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..." style="width:100%; padding:8px; margin:10px 0; background:#18110c; color:#fff; border:1px solid #9c783d; border-radius:4px;"></textarea>
+                                    <textarea @bind="ViewModel.TextoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..." style="width:100%; padding:8px; margin:10px 0; background:#18110c; color:#fff; border:1px solid #9c783d; border-radius:4px;"></textarea>
                                     <div class="confirm-actions">
-                                        <button class="confirm-exit" type="button" @onclick="ConfirmarRecusaComMotivoAsync">Confirmar Recusa</button>
-                                        <button class="confirm-cancel" type="button" @onclick="() => idPersonagemParaRecusar = 0">Cancelar</button>
+                                        <button class="confirm-exit" type="button" @onclick="ViewModel.ConfirmarRecusaComMotivoAsync">Confirmar Recusa</button>
+                                        <button class="confirm-cancel" type="button" @onclick="() => ViewModel.IdPersonagemParaRecusar = 0">Cancelar</button>
                                     </div>
                                 </section>
                             </div>
@@ -450,18 +443,19 @@
                         <!-- =========================================================================
                              PAINEL DE INSPEÇÃO COMPLETA DA FICHA + ITENS DA CAMPANHA LOGO ABAIXO
                              ========================================================================= -->
-                        @if (fichaInspecionada != null)
+                        @if (ViewModel.FichaInspecionada != null)
                         {
+                            var fichaInspecionada = ViewModel.FichaInspecionada;
                             <section class="ficha-pergaminho-inspecao" aria-label="Inspeção completa da ficha">
                                 <div class="inspecao-top-bar">
                                     <span>Inspecionando ficha e equipamentos de <strong>@fichaInspecionada.Nome</strong></span>
                                     <div style="display:flex; gap:8px;">
-                                        @if (StatusDaFichaInspecionada == "Pendente")
+                                        @if (ViewModel.StatusDaFichaInspecionada == "Pendente")
                                         {
-                                            <button type="button" class="btn-aprovar-ficha" @onclick="() => AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha e Itens</button>
-                                            <button type="button" class="btn-recusar-ficha" @onclick="() => AbrirModalRecusa(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
+                                            <button type="button" class="btn-aprovar-ficha" @onclick="() => ViewModel.AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha e Itens</button>
+                                            <button type="button" class="btn-recusar-ficha" @onclick="() => ViewModel.AbrirModalRecusa(fichaInspecionada.IdPersonagem)">✕ Recusar Ficha</button>
                                         }
-                                        <button type="button" class="btn-fechar-inspecao" @onclick="() => fichaInspecionada = null">Fechar ✕</button>
+                                        <button type="button" class="btn-fechar-inspecao" @onclick="() => ViewModel.CarregarFichaParaInspecaoAsync(0)">Fechar ✕</button>
                                     </div>
                                 </div>
 
@@ -470,7 +464,7 @@
                                         <img src="@(string.IsNullOrEmpty(fichaInspecionada.Imagem) ? "img/armaduraprata.png" : fichaInspecionada.Imagem)" alt="Retrato do personagem" />
                                     </div>
                                     <div class="identidade-inspecao">
-                                        <p class="sobretitulo-inspecao">Ficha de Personagem (@StatusDaFichaInspecionada)</p>
+                                        <p class="sobretitulo-inspecao">Ficha de Personagem (@ViewModel.StatusDaFichaInspecionada)</p>
                                         <h2>@fichaInspecionada.Nome</h2>
                                         <p class="descricao-inspecao">@(fichaInspecionada.RacaTexto ?? "Raça") • @(fichaInspecionada.ClasseTexto ?? "Classe") • Nível Total @fichaInspecionada.Nivel</p>
                                         <div class="dados-inspecao">
@@ -483,21 +477,21 @@
                                 </div>
 
                                 <div class="troca-ficha-inspecao" role="tablist">
-                                    <button type="button" class="aba-inspecao @(abaInspecao == "atributos" ? "ativa" : "")" @onclick='() => abaInspecao = "atributos"'>Atributos & Diário</button>
-                                    <button type="button" class="aba-inspecao @(abaInspecao == "personagem" ? "ativa" : "")" @onclick='() => abaInspecao = "personagem"'>Personagem & Classes</button>
-                                    <button type="button" class="aba-inspecao @(abaInspecao == "grimorio" ? "ativa" : "")" @onclick='() => abaInspecao = "grimorio"'>Grimório</button>
+                                    <button type="button" class="aba-inspecao @(ViewModel.AbaInspecao == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaInspecao = "atributos"'>Atributos & Diário</button>
+                                    <button type="button" class="aba-inspecao @(ViewModel.AbaInspecao == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaInspecao = "personagem"'>Personagem & Classes</button>
+                                    <button type="button" class="aba-inspecao @(ViewModel.AbaInspecao == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.AbaInspecao = "grimorio"'>Grimório</button>
                                 </div>
 
-                                @if (abaInspecao == "atributos")
+                                @if (ViewModel.AbaInspecao == "atributos")
                                 {
                                     <div class="inspecao-corpo">
                                         <div class="atributos-grid-inspecao">
-                                            <div class="box-attr-inspecao"><span>Força</span><strong>@fichaInspecionada.Forca</strong><small>@ObterModificador(fichaInspecionada.Forca)</small></div>
-                                            <div class="box-attr-inspecao"><span>Destreza</span><strong>@fichaInspecionada.Destreza</strong><small>@ObterModificador(fichaInspecionada.Destreza)</small></div>
-                                            <div class="box-attr-inspecao"><span>Constituição</span><strong>@fichaInspecionada.Constituicao</strong><small>@ObterModificador(fichaInspecionada.Constituicao)</small></div>
-                                            <div class="box-attr-inspecao"><span>Inteligência</span><strong>@fichaInspecionada.Inteligencia</strong><small>@ObterModificador(fichaInspecionada.Inteligencia)</small></div>
-                                            <div class="box-attr-inspecao"><span>Sabedoria</span><strong>@fichaInspecionada.Sabedoria</strong><small>@ObterModificador(fichaInspecionada.Sabedoria)</small></div>
-                                            <div class="box-attr-inspecao"><span>Carisma</span><strong>@fichaInspecionada.Carisma</strong><small>@ObterModificador(fichaInspecionada.Carisma)</small></div>
+                                            <div class="box-attr-inspecao"><span>Força</span><strong>@fichaInspecionada.Forca</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Forca)</small></div>
+                                            <div class="box-attr-inspecao"><span>Destreza</span><strong>@fichaInspecionada.Destreza</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Destreza)</small></div>
+                                            <div class="box-attr-inspecao"><span>Constituição</span><strong>@fichaInspecionada.Constituicao</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Constituicao)</small></div>
+                                            <div class="box-attr-inspecao"><span>Inteligência</span><strong>@fichaInspecionada.Inteligencia</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Inteligencia)</small></div>
+                                            <div class="box-attr-inspecao"><span>Sabedoria</span><strong>@fichaInspecionada.Sabedoria</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Sabedoria)</small></div>
+                                            <div class="box-attr-inspecao"><span>Carisma</span><strong>@fichaInspecionada.Carisma</strong><small>@SessaoIniciarViewModel.ObterModificador(fichaInspecionada.Carisma)</small></div>
                                         </div>
 
                                         <div class="grid-2-inspecao">
@@ -524,23 +518,23 @@
 
                                         <div class="diario-inspecao-switch">
                                             <div class="diario-inspecao-tabs">
-                                                <button type="button" class="@(secaoDiarioInspecao == "ideais" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "ideais"'>Ideais</button>
-                                                <button type="button" class="@(secaoDiarioInspecao == "ligacoes" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "ligacoes"'>Ligações</button>
-                                                <button type="button" class="@(secaoDiarioInspecao == "defeitos" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "defeitos"'>Defeitos</button>
-                                                <button type="button" class="@(secaoDiarioInspecao == "idiomas" ? "ativa" : "")" @onclick='() => secaoDiarioInspecao = "idiomas"'>Idiomas</button>
+                                                <button type="button" class="@(ViewModel.SecaoDiarioInspecao == "ideais" ? "ativa" : "")" @onclick='() => ViewModel.SecaoDiarioInspecao = "ideais"'>Ideais</button>
+                                                <button type="button" class="@(ViewModel.SecaoDiarioInspecao == "ligacoes" ? "ativa" : "")" @onclick='() => ViewModel.SecaoDiarioInspecao = "ligacoes"'>Ligações</button>
+                                                <button type="button" class="@(ViewModel.SecaoDiarioInspecao == "defeitos" ? "ativa" : "")" @onclick='() => ViewModel.SecaoDiarioInspecao = "defeitos"'>Defeitos</button>
+                                                <button type="button" class="@(ViewModel.SecaoDiarioInspecao == "idiomas" ? "ativa" : "")" @onclick='() => ViewModel.SecaoDiarioInspecao = "idiomas"'>Idiomas</button>
                                             </div>
                                             <div class="painel-marrom-inspecao">
-                                                @if (secaoDiarioInspecao == "ideais")
+                                                @if (ViewModel.SecaoDiarioInspecao == "ideais")
                                                 {
                                                     <h4>Ideais</h4>
                                                     <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Ideais) ? "Não informado." : fichaInspecionada.Ideais)</p>
                                                 }
-                                                else if (secaoDiarioInspecao == "ligacoes")
+                                                else if (ViewModel.SecaoDiarioInspecao == "ligacoes")
                                                 {
                                                     <h4>Ligações</h4>
                                                     <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Ligacoes) ? "Não informado." : fichaInspecionada.Ligacoes)</p>
                                                 }
-                                                else if (secaoDiarioInspecao == "defeitos")
+                                                else if (ViewModel.SecaoDiarioInspecao == "defeitos")
                                                 {
                                                     <h4>Defeitos</h4>
                                                     <p>@(string.IsNullOrWhiteSpace(fichaInspecionada.Defeitos) ? "Não informado." : fichaInspecionada.Defeitos)</p>
@@ -554,7 +548,7 @@
                                         </div>
                                     </div>
                                 }
-                                else if (abaInspecao == "personagem")
+                                else if (ViewModel.AbaInspecao == "personagem")
                                 {
                                     <div class="inspecao-corpo">
                                         <div class="grid-4-inspecao">
@@ -581,7 +575,7 @@
                                         </div>
                                     </div>
                                 }
-                                else if (abaInspecao == "grimorio")
+                                else if (ViewModel.AbaInspecao == "grimorio")
                                 {
                                     <div class="inspecao-corpo">
                                         <div class="painel-marrom-inspecao">
@@ -665,13 +659,13 @@
                     </div>
                 }
 
-                @if (abaMenu == "hist")
+                @if (ViewModel.AbaMenu == "hist")
                 {
                     <header class="page-heading">
                         <div><p class="page-kicker">Memória da campanha</p><h1>Histórico das sessões</h1><p class="page-description">Acompanhe os registros desta mesa.</p></div>
                     </header>
                     <div class="session-page-content">
-                        <p class="aviso-vazio">Diário de bordo ativo para <strong>@(campanhaAtual?.Nome)</strong>.</p>
+                        <p class="aviso-vazio">Diário de bordo ativo para <strong>@(ViewModel.CampanhaAtual?.Nome)</strong>.</p>
                     </div>
                 }
             </section>
@@ -682,328 +676,14 @@
 @code {
     [Parameter] public int IdCampanha { get; set; }
 
-    private Campanha? campanhaAtual;
-    private List<Monstro> monstrosDisponiveis = new();
-    private List<NPC> npcsDisponiveis = new();
-    private List<Item> itensDisponiveis = new();
-    private string termoBusca = string.Empty;
-
-    private string abaMenu = "iniciar";
-    private string categoriaAtiva = "todos";
-    private string modoVisualizacao = "vinculados";
-    private string categoriaSelecionada = "npc";
-
-    // Estado da Aba de Fichas do Mestre
-    private string filtroFichasMestre = "pendentes";
-    private Personagem? fichaInspecionada;
-    private string abaInspecao = "atributos";
-    private string secaoDiarioInspecao = "ideais";
-    private string mensagemFeedbackFichas = string.Empty;
-
-    private int idPersonagemParaRecusar = 0;
-    private string textoMotivoRecusa = string.Empty;
-
-    private IEnumerable<PersonagemCampanha> FichasPendentes =>
-        campanhaAtual?.FichasPendentes ?? Enumerable.Empty<PersonagemCampanha>();
-
-    private IEnumerable<PersonagemCampanha> FichasAceitas =>
-        campanhaAtual?.FichasAceitas ?? Enumerable.Empty<PersonagemCampanha>();
-
-    private string StatusDaFichaInspecionada =>
-        campanhaAtual?.PersonagemCampanhas
-            .FirstOrDefault(pc => pc.IdPersonagem == fichaInspecionada?.IdPersonagem)?.StatusAprovacao ?? "Pendente";
-
-    private IEnumerable<NPC> NpcsVinculadosFiltrados =>
-        (campanhaAtual?.Npcs ?? Array.Empty<NPC>()).Where(n =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            n.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-            (n.ClasseTexto != null && n.ClasseTexto.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
-            (n.Ocupacao != null && n.Ocupacao.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
-
-    private IEnumerable<MonstroCampanha> MonstrosVinculadosFiltrados =>
-        (campanhaAtual?.MonstroCampanhas ?? Enumerable.Empty<MonstroCampanha>()).Where(mc =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            (mc.Monstro != null && (
-                mc.Monstro.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-                (mc.Monstro.TipoMonstro != null && mc.Monstro.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase))
-            )));
-
-    private IEnumerable<ItemCampanha> ItensVinculadosFiltrados =>
-        (campanhaAtual?.ItemCampanhas ?? Enumerable.Empty<ItemCampanha>()).Where(ic =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            (ic.Item != null && (
-                ic.Item.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-                (ic.Item.Tipo != null && ic.Item.Tipo.Contains(termoBusca, StringComparison.OrdinalIgnoreCase))
-            )));
-
-    private IEnumerable<NPC> NpcsDisponiveisFiltrados =>
-        npcsDisponiveis.Where(n =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            n.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-            (n.ClasseTexto != null && n.ClasseTexto.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)) ||
-            (n.Ocupacao != null && n.Ocupacao.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
-
-    private IEnumerable<Monstro> MonstrosDisponiveisFiltrados =>
-        monstrosDisponiveis.Where(m =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            m.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-            (m.TipoMonstro != null && m.TipoMonstro.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
-
-    private IEnumerable<Item> ItensDisponiveisFiltrados =>
-        itensDisponiveis.Where(i =>
-            string.IsNullOrWhiteSpace(termoBusca) ||
-            i.Nome.Contains(termoBusca, StringComparison.OrdinalIgnoreCase) ||
-            (i.Tipo != null && i.Tipo.Contains(termoBusca, StringComparison.OrdinalIgnoreCase)));
-
-    // Campos do NPC
-    private string npcNome = string.Empty, npcRaca = "Humano", npcClasse = "Guerreiro", npcTendencia = "Neutra", npcAntecedente = string.Empty, npcHistoria = string.Empty;
-    private int npcNivel = 1;
-    private int npcForca = 10, npcDestreza = 10, npcConstituicao = 10, npcInteligencia = 10, npcSabedoria = 10, npcCarisma = 10;
-
-    // Campos do Monstro
-    private string monstroNome = string.Empty, monstroTipo = "Outro", monstroTamanho = "Médio", monstroAlinhamento = string.Empty, monstroDeslocamento = "9 m", monstroSentidos = string.Empty, monstroResistencias = string.Empty, monstroHabilidades = string.Empty, monstroDescricao = string.Empty;
-    private decimal monstroNd = 1; int monstroDefesa = 12, monstroVida = 15;
-
-    // Campos de Item Completos
-    private string itemNome = string.Empty, itemTipo = string.Empty, itemDescricao = string.Empty;
-    private decimal? itemPeso = null;
-    private decimal? itemPreco = null;
-    private string? itemDano = string.Empty;
-    private string? itemTipoDano = string.Empty;
-    private string? itemPropriedades = string.Empty;
-    private int itemCaBonus = 0;
-    private string itemRaridade = string.Empty;
-    private string itemSintonizacao = "Não";
-    
-    private string mensagemFeedback = string.Empty;
-
     protected override async Task OnParametersSetAsync()
     {
-        await CarregarDadosCampanhaAsync();
+        ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarDadosCampanhaAsync(IdCampanha);
     }
 
-    private async Task CarregarDadosCampanhaAsync()
+    public void Dispose()
     {
-        if (IdCampanha > 0)
-        {
-            campanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
-            if (campanhaAtual != null)
-            {
-                var todosMonstros = await CampanhaService.ObterMonstrosParaSessaoAsync(campanhaAtual.IdAccount);
-                var idsMonstrosVinculados = campanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
-                monstrosDisponiveis = todosMonstros.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
-
-                var todosNpcsUsuario = await NpcService.ObterNpcsPorUsuarioAsync(campanhaAtual.IdAccount);
-                var idsNpcsVinculados = campanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
-                npcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
-
-                var todosItens = await CampanhaService.ObterItensParaSessaoAsync(campanhaAtual.IdAccount);
-                var idsItensVinculados = campanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
-                itensDisponiveis = todosItens.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
-            }
-        }
+        ViewModel.OnChange -= StateHasChanged;
     }
-
-    private async Task InspecionarFichaNaAbaAsync(int idPersonagem)
-    {
-        abaMenu = "fichas";
-        filtroFichasMestre = "aceitas";
-        await CarregarFichaParaInspecaoAsync(idPersonagem);
-    }
-
-    private async Task CarregarFichaParaInspecaoAsync(int idPersonagem)
-    {
-        fichaInspecionada = await PersonagemService.ObterPorIdAsync(idPersonagem);
-        abaInspecao = "atributos";
-        secaoDiarioInspecao = "ideais";
-    }
-
-    private async Task AprovarFichaJogadorAsync(int idPersonagem)
-    {
-        var resultado = await CampanhaService.AprovarFichaCampanhaAsync(IdCampanha, idPersonagem);
-        mensagemFeedbackFichas = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-        if (fichaInspecionada?.IdPersonagem == idPersonagem)
-        {
-            fichaInspecionada = await PersonagemService.ObterPorIdAsync(idPersonagem);
-        }
-    }
-
-    private void AbrirModalRecusa(int idPersonagem)
-    {
-        idPersonagemParaRecusar = idPersonagem;
-        textoMotivoRecusa = string.Empty;
-    }
-
-    private async Task ConfirmarRecusaComMotivoAsync()
-    {
-        if (idPersonagemParaRecusar <= 0) return;
-
-        var resultado = await CampanhaService.RecusarFichaCampanhaAsync(IdCampanha, idPersonagemParaRecusar, textoMotivoRecusa);
-        mensagemFeedbackFichas = resultado.Mensagem;
-        if (fichaInspecionada?.IdPersonagem == idPersonagemParaRecusar)
-        {
-            fichaInspecionada = null;
-        }
-        idPersonagemParaRecusar = 0;
-        textoMotivoRecusa = string.Empty;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task SalvarRegistroAsync()
-    {
-        if (campanhaAtual == null) return;
-
-        try
-        {
-            if (categoriaSelecionada == "npc")
-            {
-                var novoNpc = new NPC(
-                    idAccount: campanhaAtual.IdAccount,
-                    nome: npcNome,
-                    racaTexto: npcRaca,
-                    classeTexto: npcClasse,
-                    nivel: npcNivel,
-                    antecedenteTexto: npcAntecedente,
-                    tendencia: npcTendencia,
-                    forca: npcForca,
-                    destreza: npcDestreza,
-                    constituicao: npcConstituicao,
-                    inteligencia: npcInteligencia,
-                    sabedoria: npcSabedoria,
-                    carisma: npcCarisma,
-                    historia: npcHistoria,
-                    idCampanha: IdCampanha
-                );
-
-                var resultado = await NpcService.CriarNpcAsync(campanhaAtual.IdAccount, novoNpc, IdCampanha);
-                mensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
-                if (resultado.Sucesso) { npcNome = npcAntecedente = npcHistoria = string.Empty; }
-            }
-            else if (categoriaSelecionada == "monstro")
-            {
-                var novoMonstro = new Monstro
-                {
-                    Nome = monstroNome,
-                    TipoMonstro = monstroTipo,
-                    NivelDesafio = monstroNd,
-                    PvMaximo = monstroVida,
-                    ClasseArmadura = monstroDefesa,
-                    Tamanho = monstroTamanho,
-                    Tendencia = monstroAlinhamento,
-                    Deslocamento = monstroDeslocamento,
-                    Sentidos = monstroSentidos,
-                    Resistencias = monstroResistencias,
-                    Habilidades = monstroHabilidades,
-                    Descricao = monstroDescricao
-                };
-
-                var resultado = await CampanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);
-                mensagemFeedback = resultado.Mensagem;
-                if (resultado.Sucesso) { monstroNome = monstroDescricao = string.Empty; }
-            }
-            else if (categoriaSelecionada == "item")
-            {
-                var novoItem = new Item(
-                    idAccount: campanhaAtual.IdAccount,
-                    nome: itemNome,
-                    tipo: itemTipo,
-                    peso: itemPeso,
-                    preco: itemPreco,
-                    dano: string.IsNullOrWhiteSpace(itemDano) ? null : itemDano,
-                    tipoDano: string.IsNullOrWhiteSpace(itemTipoDano) ? null : itemTipoDano,
-                    propriedades: string.IsNullOrWhiteSpace(itemPropriedades) ? null : itemPropriedades,
-                    caBonus: itemCaBonus,
-                    descricao: itemDescricao,
-                    raridade: string.IsNullOrEmpty(itemRaridade) ? null : itemRaridade,
-                    sintonizacao: itemSintonizacao
-                );
-
-                var resultadoCriacao = await ItemService.CriarItemAsync(campanhaAtual.IdAccount, novoItem);
-                if (resultadoCriacao.Sucesso)
-                {
-                    if (resultadoCriacao.IdItemCriado > 0)
-                    {
-                        await CampanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, resultadoCriacao.IdItemCriado);
-                    }
-
-                    mensagemFeedback = "Item cadastrado e vinculado com sucesso!";
-                    itemNome = itemTipo = itemDescricao = string.Empty;
-                    itemDano = itemTipoDano = itemPropriedades = string.Empty;
-                    itemPeso = null;
-                    itemPreco = null;
-                    itemCaBonus = 0;
-                    itemRaridade = string.Empty;
-                    itemSintonizacao = "Não";
-                }
-                else
-                {
-                    mensagemFeedback = resultadoCriacao.Mensagem;
-                }
-            }
-
-            await CarregarDadosCampanhaAsync();
-        }
-        catch (Exception ex)
-        {
-            mensagemFeedback = $"Erro: {ex.Message}";
-        }
-    }
-
-    private async Task VincularMonstro(int idMonstro)
-    {
-        var resultado = await CampanhaService.AdicionarMonstroNaCampanhaAsync(IdCampanha, idMonstro);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task VincularNpcExistente(int idNpc)
-    {
-        var resultado = await CampanhaService.AdicionarNpcNaCampanhaAsync(IdCampanha, idNpc);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task VincularItem(int idItem)
-    {
-        var resultado = await CampanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, idItem);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task DesvincularMonstro(int idMonstro)
-    {
-        var resultado = await CampanhaService.RemoverMonstroDaCampanhaAsync(IdCampanha, idMonstro);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task DesvincularNpc(int idNpc)
-    {
-        var resultado = await CampanhaService.RemoverNpcDaCampanhaAsync(IdCampanha, idNpc);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private async Task DesvincularItem(int idItem)
-    {
-        var resultado = await CampanhaService.RemoverItemDaCampanhaAsync(IdCampanha, idItem);
-        mensagemFeedback = resultado.Mensagem;
-        await CarregarDadosCampanhaAsync();
-    }
-
-    private static string ObterModificador(int valor)
-    {
-        var modificador = (int)Math.Floor((valor - 10) / 2.0);
-        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
-    }
-
-    void AbrirIniciar() { abaMenu = "iniciar"; }
-    void AbrirConfig() { abaMenu = "config"; }
-    void AbrirFichas()
-    {
-        abaMenu = "fichas";
-        filtroFichasMestre = FichasPendentes.Any() ? "pendentes" : "aceitas";
-    }
-    void AbrirHist() { abaMenu = "hist"; }
 }

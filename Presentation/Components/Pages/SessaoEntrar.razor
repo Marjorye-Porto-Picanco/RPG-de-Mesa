@@ -5,10 +5,8 @@
 @using RPGdeMesa.Domain.Campanhas
 @using RPGdeMesa.Domain.Itens
 @using RPGdeMesa.Domain.Personagens
-@inject CampanhaService CampanhaService
-@inject PersonagemService PersonagemService
-@inject SessaoUsuarioService SessaoUsuario
-@inject NavigationManager Navigation
+@inject SessaoEntrarViewModel ViewModel
+@implements IDisposable
 
 <NavMenu />
 
@@ -17,40 +15,40 @@
         <header class="page-heading join-page-heading">
             <div>
                 <p class="page-kicker">Aventureiros, a mesa está aberta</p>
-                <h1 class="page-title">@(CampanhaAtual?.Nome ?? "Entrar em sessão")</h1>
+                <h1 class="page-title">@(ViewModel.CampanhaAtual?.Nome ?? "Entrar em sessão")</h1>
                 <p class="page-description">Escolha sua ficha, monte seu inventário inicial da campanha e conecte-se na sala.</p>
             </div>
-            <button class="botao-voltar" type="button" @onclick="VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
+            <button class="botao-voltar" type="button" @onclick="ViewModel.VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
         </header>
 
         <!-- 2 ETAPAS INDEPENDENTES -->
         <ol class="join-progress join-progress-2" aria-label="Etapas para entrar na sessão">
-            <li class="@(EtapaAtual == 1 ? "ativa" : PossuiAlgumaFichaAceita ? "concluida" : "")">
-                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 1 ? "step" : null)" @onclick="() => IrParaEtapa(1)">
-                    <span>@(PossuiAlgumaFichaAceita ? "✓" : "1")</span>
-                    <strong>1. Ficha e Inventário na Campanha (@VinculosDoJogador.Count)</strong>
+            <li class="@(ViewModel.EtapaAtual == 1 ? "ativa" : ViewModel.PossuiAlgumaFichaAceita ? "concluida" : "")">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 1 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapa(1)">
+                    <span>@(ViewModel.PossuiAlgumaFichaAceita ? "✓" : "1")</span>
+                    <strong>1. Ficha e Inventário na Campanha (@ViewModel.VinculosDoJogador.Count)</strong>
                 </button>
             </li>
-            <li class="@(EtapaAtual == 2 ? "ativa" : "")">
-                <button type="button" class="join-step-link" aria-current="@(EtapaAtual == 2 ? "step" : null)" @onclick="() => IrParaEtapa(2)">
+            <li class="@(ViewModel.EtapaAtual == 2 ? "ativa" : "")">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 2 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapa(2)">
                     <span>2</span>
                     <strong>2. Conectar na Sessão</strong>
                 </button>
             </li>
         </ol>
 
-        @if (CampanhaAtual is null)
+        @if (ViewModel.CampanhaAtual is null)
         {
             <section class="join-step join-card">
                 <p class="page-kicker">Aviso</p>
                 <h2>Campanha não localizada</h2>
                 <p class="join-status">Selecione uma campanha válida na sua biblioteca de Campanhas para configurar sua ficha e entrar na sessão.</p>
                 <div class="join-actions">
-                    <button class="action-primary" type="button" @onclick="VoltarParaHome">Voltar para Campanhas →</button>
+                    <button class="action-primary" type="button" @onclick="ViewModel.VoltarParaHome">Voltar para Campanhas →</button>
                 </div>
             </section>
         }
-        else if (EtapaAtual == 1)
+        else if (ViewModel.EtapaAtual == 1)
         {
             <!-- =========================================================================
                  ETAPA 1: VISUALIZAR FICHAS ENVIADAS OU ENVIAR/AJUSTAR FICHA NA CAMPANHA
@@ -59,32 +57,32 @@
                 <div class="step-header-row">
                     <div>
                         <p class="page-kicker">Etapa 1 · Preparação dos Heróis</p>
-                        <h2 id="titulo-personagem">Suas Fichas e Equipamentos em @(CampanhaAtual.Nome)</h2>
+                        <h2 id="titulo-personagem">Suas Fichas e Equipamentos em @(ViewModel.CampanhaAtual.Nome)</h2>
                     </div>
 
-                    @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha && !ModoReenviarRecusada && PersonagensNaoEnviados.Any())
+                    @if (ViewModel.VinculosDoJogador.Any() && !ViewModel.ModoAdicionarNovaFicha && !ViewModel.ModoReenviarRecusada && ViewModel.PersonagensNaoEnviados.Any())
                     {
-                        <button type="button" class="action-secondary" style="min-height:34px; font-size:11px;" @onclick="AbrirModoEnviarNovaFicha">
+                        <button type="button" class="action-secondary" style="min-height:34px; font-size:11px;" @onclick="ViewModel.AbrirModoEnviarNovaFichaAsync">
                             + Enviar outra ficha
                         </button>
                     }
                 </div>
 
-                @if (VinculosDoJogador.Any() && !ModoAdicionarNovaFicha && !ModoReenviarRecusada)
+                @if (ViewModel.VinculosDoJogador.Any() && !ViewModel.ModoAdicionarNovaFicha && !ViewModel.ModoReenviarRecusada)
                 {
                     <!-- SELETOR DAS FICHAS JÁ VINCULADAS PELO JOGADOR NESTA CAMPANHA -->
                     <fieldset class="character-picker" style="margin-bottom: 18px;">
                         <legend>Selecione uma das suas fichas vinculadas a esta campanha para visualizar ou jogar:</legend>
                         <div class="character-options">
-                            @foreach (var vinculo in VinculosDoJogador)
+                            @foreach (var vinculo in ViewModel.VinculosDoJogador)
                             {
                                 var p = vinculo.Personagem!;
-                                bool estaSelecionada = VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
-                                <label class="character-option @(estaSelecionada ? "selecionado" : "")" @onclick="() => SelecionarVinculoExistenteAsync(vinculo)">
+                                bool estaSelecionada = ViewModel.VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
+                                <label class="character-option @(estaSelecionada ? "selecionado" : "")" @onclick="() => ViewModel.SelecionarVinculoExistenteAsync(vinculo)">
                                     <input type="radio"
                                            name="vinculo-ativo"
                                            checked="@estaSelecionada"
-                                           @onchange="() => SelecionarVinculoExistenteAsync(vinculo)" />
+                                           @onchange="() => ViewModel.SelecionarVinculoExistenteAsync(vinculo)" />
                                     <span class="character-option-copy" style="flex:1;">
                                         <strong>@p.Nome</strong>
                                         <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
@@ -98,32 +96,32 @@
                         </div>
                     </fieldset>
 
-                    @if (VinculoSelecionado != null && FichaCompletaVinculada != null)
+                    @if (ViewModel.VinculoSelecionado != null && ViewModel.FichaCompletaVinculada != null)
                     {
-                        @if (StatusFichaAtual == "Pendente")
+                        @if (ViewModel.StatusFichaAtual == "Pendente")
                         {
                             <div class="ficha-alert pendente">
-                                <strong>Ficha e equipamentos em avaliação!</strong> O mestre está analisando a ficha e os itens escolhidos para <b>@FichaCompletaVinculada.Nome</b>. Os dados e itens não podem ser alterados após o envio.
+                                <strong>Ficha e equipamentos em avaliação!</strong> O mestre está analisando a ficha e os itens escolhidos para <b>@ViewModel.FichaCompletaVinculada.Nome</b>. Os dados e itens não podem ser alterados após o envio.
                             </div>
                         }
-                        else if (StatusFichaAtual == "Aceita")
+                        else if (ViewModel.StatusFichaAtual == "Aceita")
                         {
                             <div class="ficha-alert aceita">
-                                <strong>Ficha e equipamentos aprovados pelo Mestre!</strong> O personagem <b>@FichaCompletaVinculada.Nome</b> e seu inventário inicial já foram validados e estão prontos para a partida.
+                                <strong>Ficha e equipamentos aprovados pelo Mestre!</strong> O personagem <b>@ViewModel.FichaCompletaVinculada.Nome</b> e seu inventário inicial já foram validados e estão prontos para a partida.
                             </div>
                         }
-                        else if (StatusFichaAtual == "Recusada")
+                        else if (ViewModel.StatusFichaAtual == "Recusada")
                         {
                             <div class="ficha-alert recusada" style="display:flex; flex-direction:column; gap:10px;">
                                 <span><strong>Esta ficha foi recusada pelo Mestre.</strong> Clique no botão abaixo para abrir a edição completa desta ficha da campanha (Atributos, Perícias, História, Grimório e Inventário) aqui mesmo na tela e reenviá-la.</span>
-                                @if (!string.IsNullOrWhiteSpace(VinculoSelecionado?.MotivoRecusa))
+                                @if (!string.IsNullOrWhiteSpace(ViewModel.VinculoSelecionado?.MotivoRecusa))
                                 {
                                     <p style="margin:0; font-size:11px; background: rgba(0,0,0,0.25); padding:8px; border-radius:4px;">
-                                        💬 <b>Mensagem do Mestre:</b> @VinculoSelecionado.MotivoRecusa
+                                        💬 <b>Mensagem do Mestre:</b> @ViewModel.VinculoSelecionado.MotivoRecusa
                                     </p>
                                 }
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    <button type="button" class="action-primary" style="min-height:34px; font-size:11px;" @onclick="AbrirReenvioDeFichaRecusada">
+                                    <button type="button" class="action-primary" style="min-height:34px; font-size:11px;" @onclick="ViewModel.AbrirReenvioDeFichaRecusadaAsync">
                                         ✏️ Ajustar Ficha e Inventário Aqui Mesmo e Reenviar ao Mestre
                                     </button>
                                 </div>
@@ -134,98 +132,98 @@
                         <div class="ficha-preview-pergaminho">
                             <div class="ficha-cabecalho-preview">
                                 <div class="retrato-preview">
-                                    <img src="@(string.IsNullOrEmpty(FichaCompletaVinculada.Imagem) ? "img/armaduraprata.png" : FichaCompletaVinculada.Imagem)" alt="Retrato do personagem" />
+                                    <img src="@(string.IsNullOrEmpty(ViewModel.FichaCompletaVinculada.Imagem) ? "img/armaduraprata.png" : ViewModel.FichaCompletaVinculada.Imagem)" alt="Retrato do personagem" />
                                 </div>
                                 <div class="identidade-preview">
-                                    <p class="sobretitulo-preview">Ficha Instanciada na Campanha (@StatusFichaAtual)</p>
-                                    <h3>@FichaCompletaVinculada.Nome</h3>
-                                    <p class="subtitulo-preview">@(FichaCompletaVinculada.RacaTexto ?? "Raça") • @(FichaCompletaVinculada.ClasseTexto ?? "Classe") • Nível Total @FichaCompletaVinculada.Nivel</p>
+                                    <p class="sobretitulo-preview">Ficha Instanciada na Campanha (@ViewModel.StatusFichaAtual)</p>
+                                    <h3>@ViewModel.FichaCompletaVinculada.Nome</h3>
+                                    <p class="subtitulo-preview">@(ViewModel.FichaCompletaVinculada.RacaTexto ?? "Raça") • @(ViewModel.FichaCompletaVinculada.ClasseTexto ?? "Classe") • Nível Total @ViewModel.FichaCompletaVinculada.Nivel</p>
                                     <div class="dados-rapidos-preview">
-                                        <span><b>Tendência:</b> @(FichaCompletaVinculada.Tendencia ?? "Neutra")</span>
-                                        <span><b>Antecedente:</b> @(FichaCompletaVinculada.AntecedenteTexto ?? "Não informado")</span>
-                                        <span><b>XP:</b> @FichaCompletaVinculada.ExperienciaXp.ToString("N0")</span>
+                                        <span><b>Tendência:</b> @(ViewModel.FichaCompletaVinculada.Tendencia ?? "Neutra")</span>
+                                        <span><b>Antecedente:</b> @(ViewModel.FichaCompletaVinculada.AntecedenteTexto ?? "Não informado")</span>
+                                        <span><b>XP:</b> @ViewModel.FichaCompletaVinculada.ExperienciaXp.ToString("N0")</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="abas-ficha-preview" role="tablist">
-                                <button type="button" class="aba-btn @(AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "atributos"'>Atributos & Diário</button>
-                                <button type="button" class="aba-btn @(AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "personagem"'>Personagem & Classes</button>
-                                <button type="button" class="aba-btn @(AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "inventario"'>Inventário da Campanha</button>
-                                <button type="button" class="aba-btn @(AbaFichaPreview == "grimorio" ? "ativa" : "")" @onclick='() => AbaFichaPreview = "grimorio"'>Grimório</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "atributos"'>Atributos & Diário</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "personagem"'>Personagem & Classes</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "inventario"'>Inventário da Campanha</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "grimorio"'>Grimório</button>
                             </div>
 
-                            @if (AbaFichaPreview == "atributos")
+                            @if (ViewModel.AbaFichaPreview == "atributos")
                             {
                                 <div class="preview-tab-body">
                                     <div class="atributos-grid-preview">
-                                        <div class="attr-card"><span>FOR</span><strong>@FichaCompletaVinculada.Forca</strong><small>@ObterModificador(FichaCompletaVinculada.Forca)</small></div>
-                                        <div class="attr-card"><span>DES</span><strong>@FichaCompletaVinculada.Destreza</strong><small>@ObterModificador(FichaCompletaVinculada.Destreza)</small></div>
-                                        <div class="attr-card"><span>CON</span><strong>@FichaCompletaVinculada.Constituicao</strong><small>@ObterModificador(FichaCompletaVinculada.Constituicao)</small></div>
-                                        <div class="attr-card"><span>INT</span><strong>@FichaCompletaVinculada.Inteligencia</strong><small>@ObterModificador(FichaCompletaVinculada.Inteligencia)</small></div>
-                                        <div class="attr-card"><span>SAB</span><strong>@FichaCompletaVinculada.Sabedoria</strong><small>@ObterModificador(FichaCompletaVinculada.Sabedoria)</small></div>
-                                        <div class="attr-card"><span>CAR</span><strong>@FichaCompletaVinculada.Carisma</strong><small>@ObterModificador(FichaCompletaVinculada.Carisma)</small></div>
+                                        <div class="attr-card"><span>FOR</span><strong>@ViewModel.FichaCompletaVinculada.Forca</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Forca)</small></div>
+                                        <div class="attr-card"><span>DES</span><strong>@ViewModel.FichaCompletaVinculada.Destreza</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Destreza)</small></div>
+                                        <div class="attr-card"><span>CON</span><strong>@ViewModel.FichaCompletaVinculada.Constituicao</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Constituicao)</small></div>
+                                        <div class="attr-card"><span>INT</span><strong>@ViewModel.FichaCompletaVinculada.Inteligencia</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Inteligencia)</small></div>
+                                        <div class="attr-card"><span>SAB</span><strong>@ViewModel.FichaCompletaVinculada.Sabedoria</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Sabedoria)</small></div>
+                                        <div class="attr-card"><span>CAR</span><strong>@ViewModel.FichaCompletaVinculada.Carisma</strong><small>@SessaoEntrarViewModel.ObterModificador(ViewModel.FichaCompletaVinculada.Carisma)</small></div>
                                     </div>
 
                                     <div class="tags-row-preview">
                                         <div>
                                             <h4>Salvaguardas Proficientes</h4>
-                                            <p>@(FichaCompletaVinculada.Salvaguardas.Any() ? string.Join(", ", FichaCompletaVinculada.Salvaguardas.Select(s => s.Atributo)) : "Nenhuma marcada")</p>
+                                            <p>@(ViewModel.FichaCompletaVinculada.Salvaguardas.Any() ? string.Join(", ", ViewModel.FichaCompletaVinculada.Salvaguardas.Select(s => s.Atributo)) : "Nenhuma marcada")</p>
                                         </div>
                                         <div>
                                             <h4>Perícias Treinadas</h4>
-                                            <p>@(FichaCompletaVinculada.Pericias.Any() ? string.Join(", ", FichaCompletaVinculada.Pericias.Select(p => p.NomePericia)) : "Nenhuma marcada")</p>
+                                            <p>@(ViewModel.FichaCompletaVinculada.Pericias.Any() ? string.Join(", ", ViewModel.FichaCompletaVinculada.Pericias.Select(p => p.NomePericia)) : "Nenhuma marcada")</p>
                                         </div>
                                     </div>
 
                                     <div class="diario-grid-preview">
-                                        <div class="box-texto-preview"><h4>Traços de Personalidade</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.TracosPersonalidade) ? "—" : FichaCompletaVinculada.TracosPersonalidade)</p></div>
-                                        <div class="box-texto-preview"><h4>Ponto de Vista</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.PontoDeVista) ? "—" : FichaCompletaVinculada.PontoDeVista)</p></div>
-                                        <div class="box-texto-preview"><h4>Ideais</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Ideais) ? "—" : FichaCompletaVinculada.Ideais)</p></div>
-                                        <div class="box-texto-preview"><h4>Ligações</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Ligacoes) ? "—" : FichaCompletaVinculada.Ligacoes)</p></div>
-                                        <div class="box-texto-preview"><h4>Defeitos</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Defeitos) ? "—" : FichaCompletaVinculada.Defeitos)</p></div>
-                                        <div class="box-texto-preview"><h4>Idiomas</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Idiomas) ? "—" : FichaCompletaVinculada.Idiomas)</p></div>
+                                        <div class="box-texto-preview"><h4>Traços de Personalidade</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.TracosPersonalidade) ? "—" : ViewModel.FichaCompletaVinculada.TracosPersonalidade)</p></div>
+                                        <div class="box-texto-preview"><h4>Ponto de Vista</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.PontoDeVista) ? "—" : ViewModel.FichaCompletaVinculada.PontoDeVista)</p></div>
+                                        <div class="box-texto-preview"><h4>Ideais</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Ideais) ? "—" : ViewModel.FichaCompletaVinculada.Ideais)</p></div>
+                                        <div class="box-texto-preview"><h4>Ligações</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Ligacoes) ? "—" : ViewModel.FichaCompletaVinculada.Ligacoes)</p></div>
+                                        <div class="box-texto-preview"><h4>Defeitos</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Defeitos) ? "—" : ViewModel.FichaCompletaVinculada.Defeitos)</p></div>
+                                        <div class="box-texto-preview"><h4>Idiomas</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Idiomas) ? "—" : ViewModel.FichaCompletaVinculada.Idiomas)</p></div>
                                     </div>
                                 </div>
                             }
-                            else if (AbaFichaPreview == "personagem")
+                            else if (ViewModel.AbaFichaPreview == "personagem")
                             {
                                 <div class="preview-tab-body">
                                     <div class="dados-fisicos-grid">
-                                        <div><span>Idade</span><strong>@(FichaCompletaVinculada.Idade ?? "—")</strong></div>
-                                        <div><span>Gênero</span><strong>@(FichaCompletaVinculada.Genero ?? "—")</strong></div>
-                                        <div><span>Altura</span><strong>@(FichaCompletaVinculada.Altura ?? "—")</strong></div>
-                                        <div><span>Peso</span><strong>@(FichaCompletaVinculada.Peso ?? "—")</strong></div>
+                                        <div><span>Idade</span><strong>@(ViewModel.FichaCompletaVinculada.Idade ?? "—")</strong></div>
+                                        <div><span>Gênero</span><strong>@(ViewModel.FichaCompletaVinculada.Genero ?? "—")</strong></div>
+                                        <div><span>Altura</span><strong>@(ViewModel.FichaCompletaVinculada.Altura ?? "—")</strong></div>
+                                        <div><span>Peso</span><strong>@(ViewModel.FichaCompletaVinculada.Peso ?? "—")</strong></div>
                                     </div>
 
                                     <div class="diario-grid-preview">
-                                        <div class="box-texto-preview"><h4>Aparência</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Aparencia) ? "—" : FichaCompletaVinculada.Aparencia)</p></div>
-                                        <div class="box-texto-preview"><h4>Aliados e Organizações</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Aliados) ? "—" : FichaCompletaVinculada.Aliados)</p></div>
-                                        <div class="box-texto-preview full-span"><h4>História do Personagem</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Historia) ? "—" : FichaCompletaVinculada.Historia)</p></div>
-                                        <div class="box-texto-preview"><h4>Características e Habilidades</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Caracteristicas) ? "—" : FichaCompletaVinculada.Caracteristicas)</p></div>
-                                        <div class="box-texto-preview"><h4>Tesouro Pessoal</h4><p>@(string.IsNullOrWhiteSpace(FichaCompletaVinculada.Tesouro) ? "—" : FichaCompletaVinculada.Tesouro)</p></div>
+                                        <div class="box-texto-preview"><h4>Aparência</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Aparencia) ? "—" : ViewModel.FichaCompletaVinculada.Aparencia)</p></div>
+                                        <div class="box-texto-preview"><h4>Aliados e Organizações</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Aliados) ? "—" : ViewModel.FichaCompletaVinculada.Aliados)</p></div>
+                                        <div class="box-texto-preview full-span"><h4>História do Personagem</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Historia) ? "—" : ViewModel.FichaCompletaVinculada.Historia)</p></div>
+                                        <div class="box-texto-preview"><h4>Características e Habilidades</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Caracteristicas) ? "—" : ViewModel.FichaCompletaVinculada.Caracteristicas)</p></div>
+                                        <div class="box-texto-preview"><h4>Tesouro Pessoal</h4><p>@(string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Tesouro) ? "—" : ViewModel.FichaCompletaVinculada.Tesouro)</p></div>
                                     </div>
                                 </div>
                             }
-                            else if (AbaFichaPreview == "inventario")
+                            else if (ViewModel.AbaFichaPreview == "inventario")
                             {
                                 <div class="preview-tab-body">
-                                    @if (FichaCompletaVinculada.Inventario != null)
+                                    @if (ViewModel.FichaCompletaVinculada.Inventario != null)
                                     {
                                         <div class="dados-fisicos-grid">
-                                            <div><span>PC</span><strong>@FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
-                                            <div><span>PP</span><strong>@FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
-                                            <div><span>PE</span><strong>@FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
-                                            <div><span>PO</span><strong>@FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
-                                            <div><span>PL</span><strong>@FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
+                                            <div><span>PC</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
+                                            <div><span>PP</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
+                                            <div><span>PE</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
+                                            <div><span>PO</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
+                                            <div><span>PL</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
                                         </div>
 
                                         <div class="box-texto-preview full-span" style="margin-top: 12px;">
-                                            <h4>Itens Vinculados na Campanha (Carga: @(FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
-                                            @if (FichaCompletaVinculada.Inventario.Itens != null && FichaCompletaVinculada.Inventario.Itens.Any())
+                                            <h4>Itens Vinculados na Campanha (Carga: @(ViewModel.FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(ViewModel.FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
+                                            @if (ViewModel.FichaCompletaVinculada.Inventario.Itens != null && ViewModel.FichaCompletaVinculada.Inventario.Itens.Any())
                                             {
                                                 <ul class="lista-itens-preview">
-                                                    @foreach (var ii in FichaCompletaVinculada.Inventario.Itens)
+                                                    @foreach (var ii in ViewModel.FichaCompletaVinculada.Inventario.Itens)
                                                     {
                                                         <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · Peso unit.: @(ii.Item?.Peso ?? 0) kg · Valor: @(ii.Item?.Preco ?? 0) po)</span></li>
                                                     }
@@ -237,11 +235,11 @@
                                             }
                                         </div>
 
-                                        @if (!string.IsNullOrWhiteSpace(FichaCompletaVinculada.Inventario.Notas))
+                                        @if (!string.IsNullOrWhiteSpace(ViewModel.FichaCompletaVinculada.Inventario.Notas))
                                         {
                                             <div class="box-texto-preview full-span" style="margin-top: 10px;">
                                                 <h4>Notas do Inventário</h4>
-                                                <p>@FichaCompletaVinculada.Inventario.Notas</p>
+                                                <p>@ViewModel.FichaCompletaVinculada.Inventario.Notas</p>
                                             </div>
                                         }
                                     }
@@ -251,13 +249,13 @@
                                     }
                                 </div>
                             }
-                            else if (AbaFichaPreview == "grimorio")
+                            else if (ViewModel.AbaFichaPreview == "grimorio")
                             {
                                 <div class="preview-tab-body">
-                                    @if (FichaCompletaVinculada.PersonagemMagias != null && FichaCompletaVinculada.PersonagemMagias.Any())
+                                    @if (ViewModel.FichaCompletaVinculada.PersonagemMagias != null && ViewModel.FichaCompletaVinculada.PersonagemMagias.Any())
                                     {
                                         <ul class="lista-itens-preview">
-                                            @foreach (var pm in FichaCompletaVinculada.PersonagemMagias)
+                                            @foreach (var pm in ViewModel.FichaCompletaVinculada.PersonagemMagias)
                                             {
                                                 if (pm.Magia != null)
                                                 {
@@ -278,12 +276,12 @@
                         </div>
                     }
 
-                    <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                    <p class="join-status @(ViewModel.TemErro ? "erro" : "")" role="status" aria-live="polite">@ViewModel.Mensagem</p>
 
                     <div class="join-actions">
-                        @if (PersonagensNaoEnviados.Any())
+                        @if (ViewModel.PersonagensNaoEnviados.Any())
                         {
-                            <button class="action-secondary" type="button" @onclick="AbrirModoEnviarNovaFicha">
+                            <button class="action-secondary" type="button" @onclick="ViewModel.AbrirModoEnviarNovaFichaAsync">
                                 + Enviar outra ficha para esta campanha
                             </button>
                         }
@@ -291,8 +289,8 @@
                         {
                             <span></span>
                         }
-                        <button class="action-primary" type="button" @onclick="() => IrParaEtapa(2)">
-                            Ir para Etapa 2: Conectar com @(FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
+                        <button class="action-primary" type="button" @onclick="() => ViewModel.IrParaEtapa(2)">
+                            Ir para Etapa 2: Conectar com @(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
                         </button>
                     </div>
                 }
@@ -301,22 +299,22 @@
                     <!-- =====================================================================
                          FORMULÁRIO DE ESCOLHA DA FICHA OU EDIÇÃO COMPLETA DA FICHA RECUSADA
                          ===================================================================== -->
-                    <form @onsubmit="EnviarFichaComInventarioAoMestreAsync" @onsubmit:preventDefault="true">
-                        @if (!ModoReenviarRecusada)
+                    <form @onsubmit="ViewModel.EnviarFichaComInventarioAoMestreAsync" @onsubmit:preventDefault="true">
+                        @if (!ViewModel.ModoReenviarRecusada)
                         {
                             <fieldset class="character-picker">
                                 <legend>1. Escolha um personagem da sua biblioteca para enviar ao Mestre desta campanha:</legend>
-                                @if (PersonagensNaoEnviados.Any())
+                                @if (ViewModel.PersonagensNaoEnviados.Any())
                                 {
                                     <div class="character-options" id="opcoes-personagens">
-                                        @foreach (var personagem in PersonagensNaoEnviados)
+                                        @foreach (var personagem in ViewModel.PersonagensNaoEnviados)
                                         {
-                                            <label class="character-option @(NovoPersonagemParaEnviarId == personagem.IdPersonagem ? "selecionado" : "")">
+                                            <label class="character-option @(ViewModel.NovoPersonagemParaEnviarId == personagem.IdPersonagem ? "selecionado" : "")">
                                                 <input type="radio"
                                                        name="novo-personagem"
                                                        value="@personagem.IdPersonagem"
-                                                       @onchange="() => AoEscolherPersonagemParaEnviarAsync(personagem.IdPersonagem)"
-                                                       checked="@(NovoPersonagemParaEnviarId == personagem.IdPersonagem)" />
+                                                       @onchange="() => ViewModel.AoEscolherPersonagemParaEnviarAsync(personagem.IdPersonagem)"
+                                                       checked="@(ViewModel.NovoPersonagemParaEnviarId == personagem.IdPersonagem)" />
                                                 <span class="character-option-copy">
                                                     <strong>@personagem.Nome</strong>
                                                     <small>@(personagem.RacaTexto ?? "Raça não informada") · @(personagem.ClasseTexto ?? "Classe não informada") · Nível @personagem.Nivel</small>
@@ -325,7 +323,7 @@
                                         }
                                     </div>
                                 }
-                                else if (PersonagensDisponiveis.Any())
+                                else if (ViewModel.PersonagensDisponiveis.Any())
                                 {
                                     <p class="join-status">Todos os seus personagens cadastrados já foram enviados para esta campanha!</p>
                                 }
@@ -338,84 +336,84 @@
                         else
                         {
                             <div class="ficha-alert recusada" style="display:flex; flex-direction:column; gap:6px;">
-                                <span>Ajustando a ficha e o inventário de <strong>@(PersonagemEmPreparacao?.Nome)</strong> para reenviar ao Mestre da campanha <strong>@(CampanhaAtual.Nome)</strong>.</span>
-                                @if (!string.IsNullOrWhiteSpace(VinculoSelecionado?.MotivoRecusa))
+                                <span>Ajustando a ficha e o inventário de <strong>@(ViewModel.PersonagemEmPreparacao?.Nome)</strong> para reenviar ao Mestre da campanha <strong>@(ViewModel.CampanhaAtual.Nome)</strong>.</span>
+                                @if (!string.IsNullOrWhiteSpace(ViewModel.VinculoSelecionado?.MotivoRecusa))
                                 {
                                     <small style="background: rgba(0,0,0,0.25); padding:6px 8px; border-radius:4px;">
-                                        💬 <b>Motivo da recusa do Mestre:</b> @VinculoSelecionado.MotivoRecusa
+                                        💬 <b>Motivo da recusa do Mestre:</b> @ViewModel.VinculoSelecionado.MotivoRecusa
                                     </small>
                                 }
                             </div>
                         }
 
-                        @if (PersonagemEmPreparacao != null)
+                        @if (ViewModel.PersonagemEmPreparacao != null)
                         {
                             <div class="ficha-preview-pergaminho" style="margin-top: 14px;">
-                                @if (ModoReenviarRecusada)
+                                @if (ViewModel.ModoReenviarRecusada)
                                 {
                                     <div class="ficha-cabecalho-preview">
                                         <div class="retrato-preview">
-                                            <img src="@(string.IsNullOrEmpty(PersonagemEmPreparacao.Imagem) ? "img/armaduraprata.png" : PersonagemEmPreparacao.Imagem)" alt="Retrato do personagem" />
+                                            <img src="@(string.IsNullOrEmpty(ViewModel.PersonagemEmPreparacao.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemEmPreparacao.Imagem)" alt="Retrato do personagem" />
                                         </div>
                                         <div class="identidade-preview">
                                             <p class="sobretitulo-preview">Editando Ficha da Campanha (Isolada da Biblioteca)</p>
-                                            <h3>@PersonagemEmPreparacao.Nome</h3>
-                                            <p class="subtitulo-preview">@(PersonagemEmPreparacao.RacaTexto ?? "Raça") • @(PersonagemEmPreparacao.ClasseTexto ?? "Classe") • Nível Total @PersonagemEmPreparacao.Nivel</p>
+                                            <h3>@ViewModel.PersonagemEmPreparacao.Nome</h3>
+                                            <p class="subtitulo-preview">@(ViewModel.PersonagemEmPreparacao.RacaTexto ?? "Raça") • @(ViewModel.PersonagemEmPreparacao.ClasseTexto ?? "Classe") • Nível Total @ViewModel.PersonagemEmPreparacao.Nivel</p>
                                         </div>
                                     </div>
 
                                     <!-- 4 ABAS EDITÁVEIS DENTRO DO SESSAOENTRAR QUANDO RECUSADA -->
                                     <div class="abas-ficha-preview" role="tablist">
-                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "atributos"'>1. Atributos & Diário</button>
-                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "personagem" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "personagem"'>2. Personagem & Classes</button>
-                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "grimorio" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "grimorio"'>3. Grimório</button>
-                                        <button type="button" class="aba-btn @(AbaEdicaoRecusada == "inventario" ? "ativa" : "")" @onclick='() => AbaEdicaoRecusada = "inventario"'>4. Inventário da Campanha</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "atributos"'>1. Atributos & Diário</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "personagem"'>2. Personagem & Classes</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "grimorio"'>3. Grimório</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "inventario"'>4. Inventário da Campanha</button>
                                     </div>
                                 }
                                 else
                                 {
                                     <h3 style="margin: 0 0 6px; color: #392819; font-size: 18px;">
-                                        2. Equipar Itens da Campanha em @PersonagemEmPreparacao.Nome (Antes de Enviar)
+                                        2. Equipar Itens da Campanha em @ViewModel.PersonagemEmPreparacao.Nome (Antes de Enviar)
                                     </h3>
                                     <p style="margin: 0 0 16px; font-size: 12px; color: #6b4e23;">
-                                        Escolha com atenção as armas, armaduras, poções e materiais disponíveis nesta campanha (@ItensDaCampanha.Count itens liberados pelo Mestre). Isso criará uma instância exclusiva deste personagem para esta campanha, sem alterar sua ficha original da biblioteca.
+                                        Escolha com atenção as armas, armaduras, poções e materiais disponíveis nesta campanha (@ViewModel.ItensDaCampanha.Count itens liberados pelo Mestre). Isso criará uma instância exclusiva deste personagem para esta campanha, sem alterar sua ficha original da biblioteca.
                                     </p>
                                 }
 
                                 @* ABA EDITÁVEL 1: ATRIBUTOS, SALVAGUARDAS, PERÍCIAS E DIÁRIO *@
-                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "atributos")
+                                @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "atributos")
                                 {
                                     <div class="preview-tab-body">
                                         <div class="atributos-grid-preview">
                                             <label class="attr-card">
                                                 <span>FOR</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Forca" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Forca)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Forca" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Forca)</small>
                                             </label>
                                             <label class="attr-card">
                                                 <span>DES</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Destreza" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Destreza)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Destreza" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Destreza)</small>
                                             </label>
                                             <label class="attr-card">
                                                 <span>CON</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Constituicao" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Constituicao)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Constituicao" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Constituicao)</small>
                                             </label>
                                             <label class="attr-card">
                                                 <span>INT</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Inteligencia" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Inteligencia)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Inteligencia" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Inteligencia)</small>
                                             </label>
                                             <label class="attr-card">
                                                 <span>SAB</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Sabedoria" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Sabedoria)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Sabedoria" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Sabedoria)</small>
                                             </label>
                                             <label class="attr-card">
                                                 <span>CAR</span>
-                                                <input type="number" min="1" max="30" @bind="PersonagemEmPreparacao.Carisma" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
-                                                <small>@ObterModificador(PersonagemEmPreparacao.Carisma)</small>
+                                                <input type="number" min="1" max="30" @bind="ViewModel.PersonagemEmPreparacao.Carisma" @bind:event="oninput" style="width:100%; text-align:center; font-weight:bold; font-size:18px; background:rgba(255,255,255,0.6); border:1px solid #9c783d; border-radius:4px; color:#2b1b0e;" />
+                                                <small>@SessaoEntrarViewModel.ObterModificador(ViewModel.PersonagemEmPreparacao.Carisma)</small>
                                             </label>
                                         </div>
 
@@ -423,12 +421,12 @@
                                             <div>
                                                 <h4>Salvaguardas Proficientes</h4>
                                                 <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-top:6px;">
-                                                    @foreach (var salv in ListaSalvaguardas)
+                                                    @foreach (var salv in ViewModel.ListaSalvaguardas)
                                                     {
                                                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
                                                             <input type="checkbox"
-                                                                   checked="@SalvaguardasEdicao.Contains(salv)"
-                                                                   @onchange="e => AlternarSalvaguardaEdicao(salv, (bool)(e.Value ?? false))" />
+                                                                   checked="@ViewModel.SalvaguardasEdicao.Contains(salv)"
+                                                                   @onchange="e => ViewModel.AlternarSalvaguardaEdicao(salv, (bool)(e.Value ?? false))" />
                                                             <span>@salv</span>
                                                         </label>
                                                     }
@@ -437,12 +435,12 @@
                                             <div>
                                                 <h4>Perícias Treinadas</h4>
                                                 <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-top:6px; max-height:170px; overflow-y:auto;">
-                                                    @foreach (var pericia in ListaPericias)
+                                                    @foreach (var pericia in ViewModel.ListaPericias)
                                                     {
                                                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
                                                             <input type="checkbox"
-                                                                   checked="@PericiasEdicao.Contains(pericia)"
-                                                                   @onchange="e => AlternarPericiaEdicao(pericia, (bool)(e.Value ?? false))" />
+                                                                   checked="@ViewModel.PericiasEdicao.Contains(pericia)"
+                                                                   @onchange="e => ViewModel.AlternarPericiaEdicao(pericia, (bool)(e.Value ?? false))" />
                                                             <span>@pericia</span>
                                                         </label>
                                                     }
@@ -453,52 +451,52 @@
                                         <div class="diario-grid-preview">
                                             <div class="box-texto-preview">
                                                 <h4>Traços de Personalidade</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.TracosPersonalidade" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.TracosPersonalidade" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Ponto de Vista</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.PontoDeVista" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.PontoDeVista" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Ideais</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Ideais" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Ideais" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Ligações</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Ligacoes" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Ligacoes" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Defeitos</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Defeitos" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Defeitos" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Idiomas</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Idiomas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Idiomas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                         </div>
                                     </div>
                                 }
 
-                                @* ABA EDITÁVEL 2: PERSONAGEM, CLASSES (MULTICLASSE) E HISTÓRIA *@
-                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "personagem")
+                                @* ABA EDITÁVEL 2: PERSONAGEM, CLASSES E HISTÓRIA *@
+                                @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "personagem")
                                 {
                                     <div class="preview-tab-body">
                                         <div class="dados-fisicos-grid">
                                             <div>
                                                 <span>Nome (Fixo)</span>
-                                                <input type="text" value="@PersonagemEmPreparacao.Nome" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                                <input type="text" value="@ViewModel.PersonagemEmPreparacao.Nome" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
                                             </div>
                                             <div>
                                                 <span>Raça (Fixo)</span>
-                                                <input type="text" value="@PersonagemEmPreparacao.RacaTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                                <input type="text" value="@ViewModel.PersonagemEmPreparacao.RacaTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
                                             </div>
                                             <div>
                                                 <span>Antecedente (Fixo)</span>
-                                                <input type="text" value="@PersonagemEmPreparacao.AntecedenteTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                                <input type="text" value="@ViewModel.PersonagemEmPreparacao.AntecedenteTexto" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
                                             </div>
                                             <div>
                                                 <span>Tendência</span>
-                                                <select @bind="PersonagemEmPreparacao.Tendencia" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;">
+                                                <select @bind="ViewModel.PersonagemEmPreparacao.Tendencia" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;">
                                                     <option value="Neutra">Neutra</option>
                                                     <option value="Leal e boa">Leal e boa</option>
                                                     <option value="Neutra e boa">Neutra e boa</option>
@@ -515,46 +513,46 @@
                                         <div class="dados-fisicos-grid">
                                             <div>
                                                 <span>Experiência (XP)</span>
-                                                <input type="number" min="0" max="999999" step="10" @bind="PersonagemEmPreparacao.ExperienciaXp" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                                <input type="number" min="0" max="999999" step="10" @bind="ViewModel.PersonagemEmPreparacao.ExperienciaXp" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
                                             </div>
                                             <div>
                                                 <span>Idade</span>
-                                                <input type="text" @bind="PersonagemEmPreparacao.Idade" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                                <input type="text" @bind="ViewModel.PersonagemEmPreparacao.Idade" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
                                             </div>
                                             <div>
                                                 <span>Peso</span>
-                                                <input type="text" @bind="PersonagemEmPreparacao.Peso" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
+                                                <input type="text" @bind="ViewModel.PersonagemEmPreparacao.Peso" style="width:100%; background:rgba(255,255,255,0.75); border:1px solid #b59257; border-radius:4px; padding:5px; color:#2b1b0e;" />
                                             </div>
                                             <div>
                                                 <span>Gênero / Altura (Fixo)</span>
-                                                <input type="text" value="@($"{PersonagemEmPreparacao.Genero ?? "—"} / {PersonagemEmPreparacao.Altura ?? "—"}")" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
+                                                <input type="text" value="@($"{ViewModel.PersonagemEmPreparacao.Genero ?? "—"} / {ViewModel.PersonagemEmPreparacao.Altura ?? "—"}")" readonly disabled style="width:100%; opacity:0.75; background:rgba(0,0,0,0.08); border:1px solid #b59257; border-radius:4px; padding:5px;" />
                                             </div>
                                         </div>
 
                                         <!-- CLASSES (MULTICLASSE) -->
                                         <div class="categoria-itens-campanha">
                                             <div class="titulo-categoria-campanha">
-                                                <h4>⌁ Classes do Personagem (Nível Total: @PersonagemEmPreparacao.Nivel)</h4>
-                                                <button type="button" class="btn-add-item-campanha" title="Adicionar classe (Multiclasse)" @onclick="AdicionarClasseEdicao">+</button>
+                                                <h4>⌁ Classes do Personagem (Nível Total: @ViewModel.PersonagemEmPreparacao.Nivel)</h4>
+                                                <button type="button" class="btn-add-item-campanha" title="Adicionar classe (Multiclasse)" @onclick="ViewModel.AdicionarClasseEdicao">+</button>
                                             </div>
                                             <div class="cabecalho-linha-campanha" style="grid-template-columns: 1fr 120px 28px;">
                                                 <span>Classe</span>
                                                 <span>Nível na Classe</span>
                                                 <span></span>
                                             </div>
-                                            @foreach (var cl in ClassesEdicao)
+                                            @foreach (var cl in ViewModel.ClassesEdicao)
                                             {
                                                 <div class="item-linha-campanha" style="grid-template-columns: 1fr 120px 28px;">
-                                                    <select value="@cl.NomeClasse" @onchange="e => AlterarNomeClasseEdicao(cl, e)">
-                                                        @foreach (var op in ListaOpcoesClasses)
+                                                    <select value="@cl.NomeClasse" @onchange="e => ViewModel.AlterarNomeClasseEdicao(cl, e)">
+                                                        @foreach (var op in ViewModel.ListaOpcoesClasses)
                                                         {
                                                             <option value="@op">@op</option>
                                                         }
                                                     </select>
-                                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => AlterarNivelClasseEdicao(cl, e)" />
-                                                    @if (ClassesEdicao.Count > 1)
+                                                    <input type="number" min="1" max="20" value="@cl.Nivel" @onchange="e => ViewModel.AlterarNivelClasseEdicao(cl, e)" />
+                                                    @if (ViewModel.ClassesEdicao.Count > 1)
                                                     {
-                                                        <button type="button" class="remover-item-campanha" @onclick="() => RemoverClasseEdicao(cl)">×</button>
+                                                        <button type="button" class="remover-item-campanha" @onclick="() => ViewModel.RemoverClasseEdicao(cl)">×</button>
                                                     }
                                                     else
                                                     {
@@ -567,36 +565,36 @@
                                         <div class="diario-grid-preview">
                                             <div class="box-texto-preview">
                                                 <h4>Aparência</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Aparencia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Aparencia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Aliados e Organizações</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Aliados" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Aliados" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview full-span">
                                                 <h4>História do Personagem</h4>
-                                                <textarea rows="4" @bind="PersonagemEmPreparacao.Historia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="4" @bind="ViewModel.PersonagemEmPreparacao.Historia" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Características e Habilidades</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Caracteristicas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Caracteristicas" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                             <div class="box-texto-preview">
                                                 <h4>Tesouro Pessoal</h4>
-                                                <textarea rows="3" @bind="PersonagemEmPreparacao.Tesouro" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
+                                                <textarea rows="3" @bind="ViewModel.PersonagemEmPreparacao.Tesouro" style="width:100%; background:rgba(255,255,255,0.65); border:1px solid #b59257; border-radius:4px; padding:6px; color:#2b1b0e;"></textarea>
                                             </div>
                                         </div>
                                     </div>
                                 }
 
                                 @* ABA EDITÁVEL 3: GRIMÓRIO *@
-                                @if (ModoReenviarRecusada && AbaEdicaoRecusada == "grimorio")
+                                @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "grimorio")
                                 {
                                     <div class="preview-tab-body">
                                         <div class="categoria-itens-campanha">
                                             <div class="titulo-categoria-campanha">
                                                 <h4>⌁ Magias Conhecidas / Preparadas</h4>
-                                                <button type="button" class="btn-add-item-campanha" @onclick="AdicionarMagiaEdicao">+</button>
+                                                <button type="button" class="btn-add-item-campanha" @onclick="ViewModel.AdicionarMagiaEdicao">+</button>
                                             </div>
                                             <div class="cabecalho-linha-campanha" style="grid-template-columns: 1.3fr 110px 110px 1fr 28px;">
                                                 <span>Nome da Magia</span>
@@ -605,7 +603,7 @@
                                                 <span>Alcance / Notas</span>
                                                 <span></span>
                                             </div>
-                                            @foreach (var magia in MagiasEdicao)
+                                            @foreach (var magia in ViewModel.MagiasEdicao)
                                             {
                                                 <div class="item-linha-campanha" style="grid-template-columns: 1.3fr 110px 110px 1fr 28px;">
                                                     <input type="text" @bind="magia.Nome" placeholder="Ex.: Mísseis Mágicos" />
@@ -619,7 +617,7 @@
                                                     </select>
                                                     <input type="text" @bind="magia.Efeito" placeholder="Ex.: 3d4+3 Energia" />
                                                     <input type="text" @bind="magia.AlcanceNotas" placeholder="Ex.: 36m · Ação" />
-                                                    <button type="button" class="remover-item-campanha" @onclick="() => RemoverMagiaEdicao(magia)">×</button>
+                                                    <button type="button" class="remover-item-campanha" @onclick="() => ViewModel.RemoverMagiaEdicao(magia)">×</button>
                                                 </div>
                                             }
                                         </div>
@@ -627,7 +625,7 @@
                                 }
 
                                 @* ABA EDITÁVEL 4 (OU PADRÃO AO ENVIAR NOVA FICHA): INVENTÁRIO DA CAMPANHA *@
-                                @if (!ModoReenviarRecusada || AbaEdicaoRecusada == "inventario")
+                                @if (!ViewModel.ModoReenviarRecusada || ViewModel.AbaEdicaoRecusada == "inventario")
                                 {
                                     <div class="corpo-inventario-campanha">
                                         <div>
@@ -635,15 +633,15 @@
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Armas</h4>
-                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar arma da campanha" @onclick='() => AdicionarSlotItem("Armas")'>+</button>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar arma da campanha" @onclick='() => ViewModel.AdicionarSlotItem("Armas")'>+</button>
                                                 </div>
                                                 <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armas"))
+                                                @foreach (var slot in ViewModel.ItensInventarioEdicao.Where(i => i.Categoria == "Armas"))
                                                 {
                                                     <div class="item-linha-campanha">
-                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <select value="@slot.IdItem" @onchange="e => ViewModel.AlterarItemSlot(slot, e)">
                                                             <option value="0">Selecione uma arma...</option>
-                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armas"))
+                                                            @foreach (var itemOpcao in ViewModel.ObterItensCampanhaPorCategoria("Armas"))
                                                             {
                                                                 <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
                                                             }
@@ -651,7 +649,7 @@
                                                         <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
                                                         <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
                                                         <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
                                                     </div>
                                                 }
                                             </div>
@@ -660,15 +658,15 @@
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Armaduras e Escudos</h4>
-                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar armadura da campanha" @onclick='() => AdicionarSlotItem("Armaduras")'>+</button>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar armadura da campanha" @onclick='() => ViewModel.AdicionarSlotItem("Armaduras")'>+</button>
                                                 </div>
                                                 <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Armaduras"))
+                                                @foreach (var slot in ViewModel.ItensInventarioEdicao.Where(i => i.Categoria == "Armaduras"))
                                                 {
                                                     <div class="item-linha-campanha">
-                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <select value="@slot.IdItem" @onchange="e => ViewModel.AlterarItemSlot(slot, e)">
                                                             <option value="0">Selecione uma armadura...</option>
-                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Armaduras"))
+                                                            @foreach (var itemOpcao in ViewModel.ObterItensCampanhaPorCategoria("Armaduras"))
                                                             {
                                                                 <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
                                                             }
@@ -676,7 +674,7 @@
                                                         <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
                                                         <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
                                                         <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
                                                     </div>
                                                 }
                                             </div>
@@ -685,15 +683,15 @@
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Poções e Consumíveis</h4>
-                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar consumível da campanha" @onclick='() => AdicionarSlotItem("Consumiveis")'>+</button>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar consumível da campanha" @onclick='() => ViewModel.AdicionarSlotItem("Consumiveis")'>+</button>
                                                 </div>
                                                 <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Consumiveis"))
+                                                @foreach (var slot in ViewModel.ItensInventarioEdicao.Where(i => i.Categoria == "Consumiveis"))
                                                 {
                                                     <div class="item-linha-campanha">
-                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <select value="@slot.IdItem" @onchange="e => ViewModel.AlterarItemSlot(slot, e)">
                                                             <option value="0">Selecione um consumível...</option>
-                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Consumiveis"))
+                                                            @foreach (var itemOpcao in ViewModel.ObterItensCampanhaPorCategoria("Consumiveis"))
                                                             {
                                                                 <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
                                                             }
@@ -701,7 +699,7 @@
                                                         <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
                                                         <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
                                                         <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
                                                     </div>
                                                 }
                                             </div>
@@ -710,15 +708,15 @@
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Materiais e Outros</h4>
-                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar item da campanha" @onclick='() => AdicionarSlotItem("Outros")'>+</button>
+                                                    <button type="button" class="btn-add-item-campanha" title="Adicionar item da campanha" @onclick='() => ViewModel.AdicionarSlotItem("Outros")'>+</button>
                                                 </div>
                                                 <div class="cabecalho-linha-campanha"><span>Item da Campanha</span><span>Qtd.</span><span>Peso</span><span>Valor</span><span></span></div>
-                                                @foreach (var slot in ItensInventarioEdicao.Where(i => i.Categoria == "Outros"))
+                                                @foreach (var slot in ViewModel.ItensInventarioEdicao.Where(i => i.Categoria == "Outros"))
                                                 {
                                                     <div class="item-linha-campanha">
-                                                        <select value="@slot.IdItem" @onchange="e => AlterarItemSlot(slot, e)">
+                                                        <select value="@slot.IdItem" @onchange="e => ViewModel.AlterarItemSlot(slot, e)">
                                                             <option value="0">Selecione um item...</option>
-                                                            @foreach (var itemOpcao in ObterItensCampanhaPorCategoria("Outros"))
+                                                            @foreach (var itemOpcao in ViewModel.ObterItensCampanhaPorCategoria("Outros"))
                                                             {
                                                                 <option value="@itemOpcao.IdItem">@itemOpcao.Nome</option>
                                                             }
@@ -726,7 +724,7 @@
                                                         <input type="number" min="1" max="99" @bind="slot.Quantidade" @bind:event="oninput" />
                                                         <input type="text" value="@($"{(slot.PesoUnitario * Math.Max(1, slot.Quantidade)):0.#} kg")" readonly />
                                                         <input type="text" value="@($"{(slot.PrecoUnitario * Math.Max(1, slot.Quantidade)):0.##} po")" readonly />
-                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => RemoverSlotItem(slot)">×</button>
+                                                        <button type="button" class="remover-item-campanha" title="Remover item" @onclick="() => ViewModel.RemoverSlotItem(slot)">×</button>
                                                     </div>
                                                 }
                                             </div>
@@ -736,25 +734,25 @@
                                             <section class="painel-moedas-campanha">
                                                 <h4>Moedas Iniciais</h4>
                                                 <div class="moedas-grade-campanha">
-                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha">PC</span><input type="number" min="0" @bind="MoedasPC" /></label>
-                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha prata">PP</span><input type="number" min="0" @bind="MoedasPP" /></label>
-                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha electrum">PE</span><input type="number" min="0" @bind="MoedasPE" /></label>
-                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha ouro">PO</span><input type="number" min="0" @bind="MoedasPO" /></label>
-                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha platina">PL</span><input type="number" min="0" @bind="MoedasPL" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha">PC</span><input type="number" min="0" @bind="ViewModel.MoedasPC" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha prata">PP</span><input type="number" min="0" @bind="ViewModel.MoedasPP" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha electrum">PE</span><input type="number" min="0" @bind="ViewModel.MoedasPE" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha ouro">PO</span><input type="number" min="0" @bind="ViewModel.MoedasPO" /></label>
+                                                    <label class="moeda-campanha"><span class="icone-moeda-campanha platina">PL</span><input type="number" min="0" @bind="ViewModel.MoedasPL" /></label>
                                                 </div>
                                             </section>
 
                                             <section class="painel-carga-campanha">
                                                 <h4>Capacidade de Carga</h4>
                                                 <p style="text-align:center; margin:0 0 8px; font-size:12px;">
-                                                    <strong>@PesoTotalEdicao.ToString("0.0") kg</strong> / @CapacidadeCargaMaximaEdicao.ToString("0.0") kg
+                                                    <strong>@ViewModel.PesoTotalEdicao.ToString("0.0") kg</strong> / @ViewModel.CapacidadeCargaMaximaEdicao.ToString("0.0") kg
                                                 </p>
-                                                <progress max="@((double)CapacidadeCargaMaximaEdicao)" value="@((double)Math.Min(PesoTotalEdicao, CapacidadeCargaMaximaEdicao))"></progress>
+                                                <progress max="@((double)ViewModel.CapacidadeCargaMaximaEdicao)" value="@((double)Math.Min(ViewModel.PesoTotalEdicao, ViewModel.CapacidadeCargaMaximaEdicao))"></progress>
                                             </section>
 
                                             <div class="notas-inventario-campanha">
                                                 <h4>Notas do Inventário</h4>
-                                                <textarea rows="3" @bind="NotasInventario" placeholder="Anote detalhes dos equipamentos escolhidos..."></textarea>
+                                                <textarea rows="3" @bind="ViewModel.NotasInventario" placeholder="Anote detalhes dos equipamentos escolhidos..."></textarea>
                                             </div>
                                         </aside>
                                     </div>
@@ -762,29 +760,29 @@
                             </div>
                         }
 
-                        <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                        <p class="join-status @(ViewModel.TemErro ? "erro" : "")" role="status" aria-live="polite">@ViewModel.Mensagem</p>
 
                         <div class="join-actions">
-                            @if (VinculosDoJogador.Any())
+                            @if (ViewModel.VinculosDoJogador.Any())
                             {
-                                <button class="action-secondary" type="button" @onclick="CancelarModoEdicaoOuAdicao">
+                                <button class="action-secondary" type="button" @onclick="ViewModel.CancelarModoEdicaoOuAdicao">
                                     ← Cancelar e voltar para minhas fichas
                                 </button>
                             }
                             else
                             {
-                                <button class="action-secondary" type="button" @onclick="VoltarParaHome">Voltar</button>
+                                <button class="action-secondary" type="button" @onclick="ViewModel.VoltarParaHome">Voltar</button>
                             }
 
-                            <button class="action-primary" type="submit" disabled="@(Carregando || PersonagemEmPreparacao == null)">
-                                @(Carregando ? "Salvando e enviando..." : (ModoReenviarRecusada ? "Salvar Ajustes na Ficha e Reenviar ao Mestre →" : "Vincular Inventário e Enviar Ficha ao Mestre →"))
+                            <button class="action-primary" type="submit" disabled="@(ViewModel.Carregando || ViewModel.PersonagemEmPreparacao == null)">
+                                @(ViewModel.Carregando ? "Salvando e enviando..." : (ViewModel.ModoReenviarRecusada ? "Salvar Ajustes na Ficha e Reenviar ao Mestre →" : "Vincular Inventário e Enviar Ficha ao Mestre →"))
                             </button>
                         </div>
                     </form>
                 }
             </section>
         }
-        else if (EtapaAtual == 2)
+        else if (ViewModel.EtapaAtual == 2)
         {
             <!-- =========================================================================
                  ETAPA 2: ESCOLHER ENTRE AS FICHAS ACEITAS (EXIBE INVENTÁRIO) E CONECTAR
@@ -792,22 +790,22 @@
             <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
                 <p class="page-kicker">Etapa 2 · Sala de Jogo</p>
                 <h2 id="titulo-confirmacao">Conectar na Sessão</h2>
-                <p class="join-session-name">Campanha: <strong>@(CampanhaAtual.Nome)</strong></p>
+                <p class="join-session-name">Campanha: <strong>@(ViewModel.CampanhaAtual.Nome)</strong></p>
 
-                @if (FichasAceitasDoJogador.Count > 1)
+                @if (ViewModel.FichasAceitasDoJogador.Count > 1)
                 {
                     <fieldset class="character-picker" style="margin-bottom: 18px;">
-                        <legend>Você possui <strong>@FichasAceitasDoJogador.Count fichas aceitas</strong> nesta campanha. Escolha com qual vai jogar agora:</legend>
+                        <legend>Você possui <strong>@ViewModel.FichasAceitasDoJogador.Count fichas aceitas</strong> nesta campanha. Escolha com qual vai jogar agora:</legend>
                         <div class="character-options">
-                            @foreach (var vinculoAceito in FichasAceitasDoJogador)
+                            @foreach (var vinculoAceito in ViewModel.FichasAceitasDoJogador)
                             {
                                 var p = vinculoAceito.Personagem!;
-                                bool selecionada = VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
-                                <label class="character-option @(selecionada ? "selecionado" : "")" @onclick="() => SelecionarVinculoExistenteAsync(vinculoAceito)">
+                                bool selecionada = ViewModel.VinculoSelecionado?.IdPersonagem == p.IdPersonagem;
+                                <label class="character-option @(selecionada ? "selecionado" : "")" @onclick="() => ViewModel.SelecionarVinculoExistenteAsync(vinculoAceito)">
                                     <input type="radio"
                                            name="ficha-conectar"
                                            checked="@selecionada"
-                                           @onchange="() => SelecionarVinculoExistenteAsync(vinculoAceito)" />
+                                           @onchange="() => ViewModel.SelecionarVinculoExistenteAsync(vinculoAceito)" />
                                     <span class="character-option-copy">
                                         <strong>@p.Nome</strong>
                                         <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
@@ -821,24 +819,24 @@
                 <dl class="join-review">
                     <div>
                         <dt>Personagem Escolhido</dt>
-                        <dd>@(FichaCompletaVinculada?.Nome ?? "Nenhuma ficha selecionada")</dd>
+                        <dd>@(ViewModel.FichaCompletaVinculada?.Nome ?? "Nenhuma ficha selecionada")</dd>
                     </div>
                     <div>
                         <dt>Raça & Classe</dt>
-                        <dd>@(FichaCompletaVinculada != null ? $"{FichaCompletaVinculada.RacaTexto} · {FichaCompletaVinculada.ClasseTexto} (Nv. {FichaCompletaVinculada.Nivel})" : "—")</dd>
+                        <dd>@(ViewModel.FichaCompletaVinculada != null ? $"{ViewModel.FichaCompletaVinculada.RacaTexto} · {ViewModel.FichaCompletaVinculada.ClasseTexto} (Nv. {ViewModel.FichaCompletaVinculada.Nivel})" : "—")</dd>
                     </div>
                     <div>
                         <dt>Status de Aprovação</dt>
                         <dd>
-                            @if (StatusFichaAtual == "Aceita")
+                            @if (ViewModel.StatusFichaAtual == "Aceita")
                             {
                                 <strong style="color: #78be82;">✓ Aceita pelo Mestre</strong>
                             }
-                            else if (StatusFichaAtual == "Pendente")
+                            else if (ViewModel.StatusFichaAtual == "Pendente")
                             {
                                 <strong style="color: #e6c665;">⏳ Aguardando Mestre</strong>
                             }
-                            else if (StatusFichaAtual == "Recusada")
+                            else if (ViewModel.StatusFichaAtual == "Recusada")
                             {
                                 <strong style="color: #e88d8d;">✕ Recusada pelo Mestre</strong>
                             }
@@ -851,24 +849,24 @@
                 </dl>
 
                 <!-- EXIBE O INVENTÁRIO VINCULADO DO PERSONAGEM NA ETAPA DE CONECTAR -->
-                @if (FichaCompletaVinculada?.Inventario != null)
+                @if (ViewModel.FichaCompletaVinculada?.Inventario != null)
                 {
                     <div class="ficha-preview-pergaminho" style="margin-top: 16px;">
                         <h4 style="margin: 0 0 10px; color: #392819; font-size: 14px; text-transform: uppercase;">
-                            🎒 Inventário de @FichaCompletaVinculada.Nome na Sessão (Carga: @(FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)
+                            🎒 Inventário de @ViewModel.FichaCompletaVinculada.Nome na Sessão (Carga: @(ViewModel.FichaCompletaVinculada.Inventario.PesoAtual ?? 0) kg / @(ViewModel.FichaCompletaVinculada.Inventario.CapacidadeCarga ?? 0) kg)
                         </h4>
                         <div class="dados-fisicos-grid" style="margin-bottom: 10px;">
-                            <div><span>PC</span><strong>@FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
-                            <div><span>PP</span><strong>@FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
-                            <div><span>PE</span><strong>@FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
-                            <div><span>PO</span><strong>@FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
-                            <div><span>PL</span><strong>@FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
+                            <div><span>PC</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPC</strong></div>
+                            <div><span>PP</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPP</strong></div>
+                            <div><span>PE</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPE</strong></div>
+                            <div><span>PO</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPO</strong></div>
+                            <div><span>PL</span><strong>@ViewModel.FichaCompletaVinculada.Inventario.MoedasPL</strong></div>
                         </div>
 
-                        @if (FichaCompletaVinculada.Inventario.Itens != null && FichaCompletaVinculada.Inventario.Itens.Any())
+                        @if (ViewModel.FichaCompletaVinculada.Inventario.Itens != null && ViewModel.FichaCompletaVinculada.Inventario.Itens.Any())
                         {
                             <ul class="lista-itens-preview">
-                                @foreach (var ii in FichaCompletaVinculada.Inventario.Itens)
+                                @foreach (var ii in ViewModel.FichaCompletaVinculada.Inventario.Itens)
                                 {
                                     <li><strong>@(ii.Quantidade)x @(ii.Item?.Nome ?? "Item")</strong> <span>(@(ii.Item?.Tipo ?? "Geral") · @(ii.Item?.Peso ?? 0) kg)</span></li>
                                 }
@@ -881,28 +879,28 @@
                     </div>
                 }
 
-                @if (StatusFichaAtual != "Aceita")
+                @if (ViewModel.StatusFichaAtual != "Aceita")
                 {
                     <div class="ficha-alert pendente" style="margin-top: 16px;">
                         Para entrar na sala de jogo, selecione uma ficha que esteja <strong>Aceita pelo Mestre</strong> (na Etapa 1) ou clique em "Atualizar Status".
                     </div>
                 }
 
-                <p class="join-status @(TemErro ? "erro" : "")" role="status" aria-live="polite">@Mensagem</p>
+                <p class="join-status @(ViewModel.TemErro ? "erro" : "")" role="status" aria-live="polite">@ViewModel.Mensagem</p>
 
                 <div class="join-actions">
-                    <button class="action-secondary" type="button" disabled="@Carregando" @onclick="() => IrParaEtapa(1)">
+                    <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="() => ViewModel.IrParaEtapa(1)">
                         ← Voltar para Fichas (Etapa 1)
                     </button>
                     <div style="display: flex; gap: 10px;">
-                        <button class="action-secondary" type="button" disabled="@Carregando" @onclick="RecarregarStatusAsync">
+                        <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="ViewModel.RecarregarStatusAsync">
                             ↻ Atualizar Status
                         </button>
                         <button class="action-primary"
                                 type="button"
-                                disabled="@(Carregando || StatusFichaAtual != "Aceita")"
-                                @onclick="ConectarNaSala">
-                            @(Carregando ? "Conectando..." : $"Conectar com {(FichaCompletaVinculada?.Nome ?? "Ficha")} →")
+                                disabled="@(ViewModel.Carregando || ViewModel.StatusFichaAtual != "Aceita")"
+                                @onclick="ViewModel.ConectarNaSala">
+                            @(ViewModel.Carregando ? "Conectando..." : $"Conectar com {(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha")} →")
                         </button>
                     </div>
                 </div>
@@ -917,622 +915,14 @@
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaIdQuery { get; set; }
 
-    private int EtapaAtual { get; set; } = 1;
-    private string Mensagem { get; set; } = string.Empty;
-    private bool TemErro { get; set; }
-    private bool Carregando { get; set; }
-    private bool ModoAdicionarNovaFicha { get; set; }
-    private bool ModoReenviarRecusada { get; set; }
-
-    private Campanha? CampanhaAtual { get; set; }
-    private List<Personagem> PersonagensDisponiveis { get; set; } = new();
-    private List<PersonagemCampanha> VinculosDoJogador { get; set; } = new();
-
-    private List<Item> ItensDaCampanha =>
-        CampanhaAtual?.Itens.OrderBy(i => i.Nome).ToList() ?? new List<Item>();
-
-    private List<PersonagemCampanha> FichasAceitasDoJogador =>
-        VinculosDoJogador
-            .Where(v => string.IsNullOrEmpty(v.StatusAprovacao) ||
-                        v.StatusAprovacao.Equals("Aceita", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-    private bool PossuiAlgumaFichaAceita => FichasAceitasDoJogador.Any();
-
-    private List<Personagem> PersonagensNaoEnviados =>
-        PersonagensDisponiveis
-            .Where(p => !VinculosDoJogador.Any(v =>
-                v.IdPersonagem == p.IdPersonagem ||
-                (v.Personagem != null && v.Personagem.IdPersonagemOrigem == p.IdPersonagem)))
-            .ToList();
-
-    private PersonagemCampanha? VinculoSelecionado { get; set; }
-    private Personagem? FichaCompletaVinculada { get; set; }
-    private int NovoPersonagemParaEnviarId { get; set; }
-    private Personagem? PersonagemEmPreparacao { get; set; }
-    private string StatusFichaAtual => VinculoSelecionado?.StatusAprovacao ?? string.Empty;
-    private string AbaFichaPreview { get; set; } = "atributos";
-    private string AbaEdicaoRecusada { get; set; } = "atributos";
-
-    private readonly string[] ListaOpcoesClasses =
-    {
-        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
-        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
-    };
-
-    private readonly string[] ListaSalvaguardas =
-    {
-        "Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"
-    };
-
-    private readonly string[] ListaPericias =
-    {
-        "Acrobacia", "Adestrar Animais", "Arcanismo", "Atletismo", "Atuação", "Enganação",
-        "Furtividade", "História", "Intimidação", "Intuição", "Investigação", "Medicina",
-        "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
-    };
-
-    private List<ClasseCampanhaEntry> ClassesEdicao { get; set; } = new();
-    private HashSet<string> SalvaguardasEdicao { get; set; } = new();
-    private HashSet<string> PericiasEdicao { get; set; } = new();
-    private List<MagiaCampanhaEntry> MagiasEdicao { get; set; } = new();
-
-    private List<ItemInventarioVinculado> ItensInventarioEdicao { get; set; } = new();
-    private int MoedasPC { get; set; } = 0;
-    private int MoedasPP { get; set; } = 0;
-    private int MoedasPE { get; set; } = 0;
-    private int MoedasPO { get; set; } = 10;
-    private int MoedasPL { get; set; } = 0;
-    private string NotasInventario { get; set; } = string.Empty;
-
-    private decimal PesoTotalEdicao =>
-        ItensInventarioEdicao.Where(i => i.IdItem > 0).Sum(i => i.PesoUnitario * Math.Max(1, i.Quantidade));
-
-    private decimal CapacidadeCargaMaximaEdicao =>
-        Math.Round(Math.Max(1, PersonagemEmPreparacao?.Forca ?? 10) * 7.5m, 1);
-
     protected override async Task OnParametersSetAsync()
     {
-        if (!SessaoUsuario.EstaLogado)
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
-
-        await CarregarContextoJogadorAsync();
+        ViewModel.OnChange += StateHasChanged;
+        await ViewModel.InicializarAsync(IdCampanha, CampanhaIdQuery);
     }
 
-    private async Task CarregarContextoJogadorAsync()
+    public void Dispose()
     {
-        Carregando = true;
-        LimparMensagem();
-        try
-        {
-            int idUsuario = SessaoUsuario.IdUsuarioLogado;
-            PersonagensDisponiveis = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
-
-            int idAlvo = IdCampanha > 0 ? IdCampanha : (CampanhaIdQuery ?? 0);
-            if (idAlvo <= 0)
-            {
-                var campanhasDoJogador = await CampanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
-                if (campanhasDoJogador.Any())
-                    idAlvo = campanhasDoJogador[0].IdCampanha;
-            }
-
-            if (idAlvo > 0)
-            {
-                CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(idAlvo);
-                await SincronizarVinculosDoJogadorAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            DefinirErro($"Erro ao carregar dados da sessão: {ex.Message}");
-        }
-        finally
-        {
-            Carregando = false;
-        }
-    }
-
-    private async Task SincronizarVinculosDoJogadorAsync(int? idPersonagemPreferencial = null)
-    {
-        VinculosDoJogador.Clear();
-        VinculoSelecionado = null;
-        FichaCompletaVinculada = null;
-
-        if (CampanhaAtual is null) return;
-
-        int idUsuario = SessaoUsuario.IdUsuarioLogado;
-        VinculosDoJogador = CampanhaAtual.PersonagemCampanhas
-            .Where(pc => pc.Personagem != null && pc.Personagem.IdAccount == idUsuario)
-            .OrderByDescending(pc => pc.StatusAprovacao == "Aceita")
-            .ThenByDescending(pc => pc.StatusAprovacao == "Pendente")
-            .ToList();
-
-        if (VinculosDoJogador.Any())
-        {
-            var escolhido = (idPersonagemPreferencial.HasValue
-                ? VinculosDoJogador.FirstOrDefault(v => v.IdPersonagem == idPersonagemPreferencial.Value)
-                : null)
-                ?? FichasAceitasDoJogador.FirstOrDefault()
-                ?? VinculosDoJogador.First();
-
-            await CarregarVinculoSelecionadoInternoAsync(escolhido);
-        }
-        else if (PersonagensNaoEnviados.Count == 1)
-        {
-            await AoEscolherPersonagemParaEnviarAsync(PersonagensNaoEnviados[0].IdPersonagem);
-        }
-    }
-
-    private async Task SelecionarVinculoExistenteAsync(PersonagemCampanha vinculo)
-    {
-        if (Carregando) return;
-        Carregando = true;
-        try
-        {
-            await CarregarVinculoSelecionadoInternoAsync(vinculo);
-        }
-        finally
-        {
-            Carregando = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task CarregarVinculoSelecionadoInternoAsync(PersonagemCampanha vinculo)
-    {
-        VinculoSelecionado = vinculo;
-        FichaCompletaVinculada = await PersonagemService.ObterPorIdAsync(vinculo.IdPersonagem) ?? vinculo.Personagem;
-    }
-
-    private async Task AoEscolherPersonagemParaEnviarAsync(int idPersonagem)
-    {
-        NovoPersonagemParaEnviarId = idPersonagem;
-        PersonagemEmPreparacao = await PersonagemService.ObterPorIdAsync(idPersonagem)
-                                 ?? PersonagensDisponiveis.FirstOrDefault(p => p.IdPersonagem == idPersonagem);
-        PreencherEditorCompletoComDadosDoPersonagem(PersonagemEmPreparacao);
-    }
-
-    private void PreencherEditorCompletoComDadosDoPersonagem(Personagem? p)
-    {
-        ClassesEdicao.Clear();
-        SalvaguardasEdicao.Clear();
-        PericiasEdicao.Clear();
-        MagiasEdicao.Clear();
-        ItensInventarioEdicao.Clear();
-
-        MoedasPC = 0;
-        MoedasPP = 0;
-        MoedasPE = 0;
-        MoedasPO = 10;
-        MoedasPL = 0;
-        NotasInventario = string.Empty;
-
-        if (p == null) return;
-
-        if (p.PersonagemClasses != null && p.PersonagemClasses.Any())
-        {
-            foreach (var pc in p.PersonagemClasses)
-            {
-                if (pc.Classe != null)
-                {
-                    ClassesEdicao.Add(new ClasseCampanhaEntry
-                    {
-                        NomeClasse = pc.Classe.Nome,
-                        Nivel = pc.NivelNaClasse
-                    });
-                }
-            }
-        }
-
-        if (!ClassesEdicao.Any())
-        {
-            ClassesEdicao.Add(new ClasseCampanhaEntry
-            {
-                NomeClasse = string.IsNullOrWhiteSpace(p.ClasseTexto) ? "Guerreiro" : p.ClasseTexto.Split('/')[0].Trim(),
-                Nivel = Math.Max(1, p.Nivel)
-            });
-        }
-
-        foreach (var s in p.Salvaguardas)
-            SalvaguardasEdicao.Add(s.Atributo);
-
-        foreach (var per in p.Pericias)
-            PericiasEdicao.Add(per.NomePericia);
-
-        foreach (var pm in p.PersonagemMagias)
-        {
-            if (pm.Magia != null)
-            {
-                MagiasEdicao.Add(new MagiaCampanhaEntry
-                {
-                    Nome = pm.Magia.Nome,
-                    Circulo = pm.Magia.CirculoNivel == 0 ? "Truque" : $"{pm.Magia.CirculoNivel}º Círculo",
-                    Efeito = pm.Magia.DanoEfeito ?? string.Empty,
-                    AlcanceNotas = pm.Magia.Alcance ?? string.Empty
-                });
-            }
-        }
-        if (!MagiasEdicao.Any())
-            MagiasEdicao.Add(new MagiaCampanhaEntry());
-
-        if (p.Inventario != null)
-        {
-            MoedasPC = p.Inventario.MoedasPC;
-            MoedasPP = p.Inventario.MoedasPP;
-            MoedasPE = p.Inventario.MoedasPE;
-            MoedasPO = p.Inventario.MoedasPO;
-            MoedasPL = p.Inventario.MoedasPL;
-            NotasInventario = p.Inventario.Notas ?? string.Empty;
-
-            var idsPermitidosNaCampanha = ItensDaCampanha.Select(i => i.IdItem).ToHashSet();
-
-            foreach (var ii in p.Inventario.Itens)
-            {
-                if (!idsPermitidosNaCampanha.Contains(ii.IdItem)) continue;
-
-                var itemRef = ItensDaCampanha.FirstOrDefault(x => x.IdItem == ii.IdItem) ?? ii.Item;
-                if (itemRef != null)
-                {
-                    ItensInventarioEdicao.Add(new ItemInventarioVinculado
-                    {
-                        Categoria = PersonagemCriarViewModel.ClassificarCategoriaItem(itemRef),
-                        IdItem = itemRef.IdItem,
-                        Nome = itemRef.Nome,
-                        Quantidade = ii.Quantidade,
-                        PesoUnitario = itemRef.Peso ?? 0m,
-                        PrecoUnitario = itemRef.Preco ?? 0m
-                    });
-                }
-            }
-        }
-    }
-
-    private async Task AbrirModoEnviarNovaFicha()
-    {
-        LimparMensagem();
-        ModoReenviarRecusada = false;
-        ModoAdicionarNovaFicha = true;
-        int idInicial = PersonagensNaoEnviados.FirstOrDefault()?.IdPersonagem ?? 0;
-        if (idInicial > 0)
-            await AoEscolherPersonagemParaEnviarAsync(idInicial);
-        else
-            PersonagemEmPreparacao = null;
-    }
-
-    private async Task AbrirReenvioDeFichaRecusada()
-    {
-        if (FichaCompletaVinculada == null || StatusFichaAtual != "Recusada") return;
-        LimparMensagem();
-        ModoAdicionarNovaFicha = false;
-        ModoReenviarRecusada = true;
-        AbaEdicaoRecusada = "atributos";
-        NovoPersonagemParaEnviarId = FichaCompletaVinculada.IdPersonagem;
-        PersonagemEmPreparacao = await PersonagemService.ObterPorIdAsync(FichaCompletaVinculada.IdPersonagem) ?? FichaCompletaVinculada;
-        PreencherEditorCompletoComDadosDoPersonagem(PersonagemEmPreparacao);
-    }
-
-    private void CancelarModoEdicaoOuAdicao()
-    {
-        ModoAdicionarNovaFicha = false;
-        ModoReenviarRecusada = false;
-        PersonagemEmPreparacao = null;
-        LimparMensagem();
-    }
-
-    private void AlternarSalvaguardaEdicao(string atributo, bool marcado)
-    {
-        if (marcado) SalvaguardasEdicao.Add(atributo);
-        else SalvaguardasEdicao.Remove(atributo);
-    }
-
-    private void AlternarPericiaEdicao(string pericia, bool marcado)
-    {
-        if (marcado) PericiasEdicao.Add(pericia);
-        else PericiasEdicao.Remove(pericia);
-    }
-
-    private void AdicionarClasseEdicao()
-    {
-        ClassesEdicao.Add(new ClasseCampanhaEntry { NomeClasse = "Guerreiro", Nivel = 1 });
-        SincronizarClassesENivelEdicao();
-    }
-
-    private void RemoverClasseEdicao(ClasseCampanhaEntry item)
-    {
-        if (ClassesEdicao.Count > 1)
-        {
-            ClassesEdicao.Remove(item);
-            SincronizarClassesENivelEdicao();
-        }
-    }
-
-    private void AlterarNomeClasseEdicao(ClasseCampanhaEntry cl, ChangeEventArgs e)
-    {
-        cl.NomeClasse = e.Value?.ToString() ?? "Guerreiro";
-        SincronizarClassesENivelEdicao();
-    }
-
-    private void AlterarNivelClasseEdicao(ClasseCampanhaEntry cl, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int nv))
-        {
-            cl.Nivel = Math.Clamp(nv, 1, 20);
-            SincronizarClassesENivelEdicao();
-        }
-    }
-
-    private void SincronizarClassesENivelEdicao()
-    {
-        if (PersonagemEmPreparacao == null) return;
-        var validas = ClassesEdicao.Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse)).ToList();
-        if (!validas.Any()) return;
-
-        PersonagemEmPreparacao.Nivel = Math.Clamp(validas.Sum(c => Math.Max(1, c.Nivel)), 1, 20);
-        PersonagemEmPreparacao.ClasseTexto = validas.Count == 1
-            ? validas[0].NomeClasse
-            : string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
-    }
-
-    private void AdicionarMagiaEdicao() => MagiasEdicao.Add(new MagiaCampanhaEntry());
-    private void RemoverMagiaEdicao(MagiaCampanhaEntry magia) => MagiasEdicao.Remove(magia);
-
-    private static int ExtrairCirculoMagia(string circuloTexto)
-    {
-        if (string.IsNullOrWhiteSpace(circuloTexto) || circuloTexto.Contains("Truque", StringComparison.OrdinalIgnoreCase))
-            return 0;
-        var digito = new string(circuloTexto.Where(char.IsDigit).ToArray());
-        return int.TryParse(digito, out int c) ? c : 1;
-    }
-
-    private IEnumerable<Item> ObterItensCampanhaPorCategoria(string categoria)
-    {
-        if (!ItensDaCampanha.Any()) return Enumerable.Empty<Item>();
-        var filtrados = ItensDaCampanha.Where(i => PersonagemCriarViewModel.ClassificarCategoriaItem(i) == categoria);
-        return filtrados.Any() ? filtrados : ItensDaCampanha;
-    }
-
-    private void AdicionarSlotItem(string categoria)
-    {
-        ItensInventarioEdicao.Add(new ItemInventarioVinculado
-        {
-            Categoria = categoria,
-            Quantidade = 1
-        });
-    }
-
-    private void AlterarItemSlot(ItemInventarioVinculado slot, ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int idItem))
-        {
-            slot.IdItem = idItem;
-            var itemCampanha = ItensDaCampanha.FirstOrDefault(i => i.IdItem == idItem);
-            if (itemCampanha != null)
-            {
-                slot.Nome = itemCampanha.Nome;
-                slot.PesoUnitario = itemCampanha.Peso ?? 0m;
-                slot.PrecoUnitario = itemCampanha.Preco ?? 0m;
-            }
-            else
-            {
-                slot.Nome = string.Empty;
-                slot.PesoUnitario = 0m;
-                slot.PrecoUnitario = 0m;
-            }
-        }
-    }
-
-    private void RemoverSlotItem(ItemInventarioVinculado slot)
-    {
-        ItensInventarioEdicao.Remove(slot);
-    }
-
-    private async Task EnviarFichaComInventarioAoMestreAsync()
-    {
-        if (CampanhaAtual is null || PersonagemEmPreparacao is null)
-        {
-            DefinirErro("Selecione um personagem para enviar ao Mestre.");
-            return;
-        }
-
-        int idBaseOuInstancia = PersonagemEmPreparacao.IdPersonagem;
-
-        var vinculoExistente = VinculosDoJogador.FirstOrDefault(v =>
-            v.IdPersonagem == idBaseOuInstancia ||
-            (v.Personagem != null && v.Personagem.IdPersonagemOrigem == idBaseOuInstancia));
-
-        if (vinculoExistente != null && !string.Equals(vinculoExistente.StatusAprovacao, "Recusada", StringComparison.OrdinalIgnoreCase))
-        {
-            DefinirErro("Esta ficha já foi enviada ao Mestre nesta campanha e não pode mais ser editada por aqui.");
-            return;
-        }
-
-        Carregando = true;
-        LimparMensagem();
-        try
-        {
-            var dadosInventario = new Inventario
-            {
-                CapacidadeCarga = CapacidadeCargaMaximaEdicao,
-                PesoAtual = PesoTotalEdicao,
-                Dinheiro = MoedasPO,
-                MoedasPC = MoedasPC,
-                MoedasPP = MoedasPP,
-                MoedasPE = MoedasPE,
-                MoedasPO = MoedasPO,
-                MoedasPL = MoedasPL,
-                Notas = NotasInventario
-            };
-
-            var listaItens = ItensInventarioEdicao
-                .Where(i => i.IdItem > 0)
-                .Select(i => (i.IdItem, i.Quantidade))
-                .ToList();
-
-            int idInstanciaCampanha;
-
-            if (ModoReenviarRecusada && vinculoExistente != null)
-            {
-                SincronizarClassesENivelEdicao();
-                int modCon = (int)Math.Floor((PersonagemEmPreparacao.Constituicao - 10) / 2.0);
-                PersonagemEmPreparacao.PvMaximo = Math.Max(1, (10 + modCon) + ((PersonagemEmPreparacao.Nivel - 1) * Math.Max(1, 6 + modCon)));
-                PersonagemEmPreparacao.PvAtual = PersonagemEmPreparacao.PvMaximo;
-
-                var resAtu = await PersonagemService.AtualizarPersonagemAsync(PersonagemEmPreparacao);
-                if (!resAtu.Sucesso)
-                {
-                    DefinirErro(resAtu.Mensagem);
-                    return;
-                }
-
-                var classesParaSalvar = ClassesEdicao
-                    .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
-                    .Select(c => (c.NomeClasse.Trim(), Math.Max(1, c.Nivel)))
-                    .ToList();
-
-                var magiasParaSalvar = MagiasEdicao
-                    .Where(m => !string.IsNullOrWhiteSpace(m.Nome))
-                    .Select(m => new Magia
-                    {
-                        Nome = m.Nome.Trim(),
-                        CirculoNivel = ExtrairCirculoMagia(m.Circulo),
-                        DanoEfeito = m.Efeito,
-                        Alcance = m.AlcanceNotas
-                    })
-                    .ToList();
-
-                dadosInventario.IdPersonagem = PersonagemEmPreparacao.IdPersonagem;
-
-                var res3Fn = await PersonagemService.SalvarComplementos3FNAsync(
-                    PersonagemEmPreparacao.IdPersonagem,
-                    classesParaSalvar,
-                    SalvaguardasEdicao,
-                    PericiasEdicao,
-                    dadosInventario,
-                    listaItens,
-                    magiasParaSalvar);
-
-                if (!res3Fn.Sucesso)
-                {
-                    DefinirErro(res3Fn.Mensagem);
-                    return;
-                }
-
-                idInstanciaCampanha = PersonagemEmPreparacao.IdPersonagem;
-            }
-            else
-            {
-                var resultadoInstancia = await PersonagemService.InstanciarPersonagemParaCampanhaAsync(
-                    idBaseOuInstancia,
-                    CampanhaAtual.IdCampanha,
-                    dadosInventario,
-                    listaItens);
-
-                if (!resultadoInstancia.Sucesso || resultadoInstancia.IdPersonagemInstancia <= 0)
-                {
-                    DefinirErro(resultadoInstancia.Mensagem);
-                    return;
-                }
-
-                idInstanciaCampanha = resultadoInstancia.IdPersonagemInstancia;
-            }
-
-            var resultado = await CampanhaService.EnviarFichaParaAvaliacaoAsync(CampanhaAtual.IdCampanha, idInstanciaCampanha);
-            if (!resultado.Sucesso)
-            {
-                DefinirErro(resultado.Mensagem);
-                return;
-            }
-
-            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
-            ModoAdicionarNovaFicha = false;
-            ModoReenviarRecusada = false;
-            PersonagemEmPreparacao = null;
-            await SincronizarVinculosDoJogadorAsync(idInstanciaCampanha);
-            AbaFichaPreview = "atributos";
-            Mensagem = "Ficha e inventário atualizados e enviados para avaliação do Mestre!";
-        }
-        catch (Exception ex)
-        {
-            DefinirErro($"Erro ao enviar ficha e inventário: {ex.Message}");
-        }
-        finally
-        {
-            Carregando = false;
-        }
-    }
-
-    private async Task RecarregarStatusAsync()
-    {
-        if (CampanhaAtual is null) return;
-        Carregando = true;
-        LimparMensagem();
-        try
-        {
-            int? idAtual = VinculoSelecionado?.IdPersonagem;
-            CampanhaAtual = await CampanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
-            await SincronizarVinculosDoJogadorAsync(idAtual);
-            Mensagem = StatusFichaAtual == "Aceita"
-                ? "Ficha aprovada! Você já pode conectar na sessão."
-                : "Status atualizado.";
-        }
-        finally
-        {
-            Carregando = false;
-        }
-    }
-
-    private void ConectarNaSala()
-    {
-        if (StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
-        {
-            VinculoSelecionado = FichasAceitasDoJogador.First();
-            FichaCompletaVinculada = VinculoSelecionado.Personagem;
-        }
-
-        if (StatusFichaAtual != "Aceita")
-        {
-            DefinirErro("Selecione uma ficha aprovada pelo Mestre antes de conectar na sessão.");
-            return;
-        }
-
-        Navigation.NavigateTo("/saladojogo");
-    }
-
-    private void IrParaEtapa(int etapa)
-    {
-        if (etapa == 2 && StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
-        {
-            _ = SelecionarVinculoExistenteAsync(FichasAceitasDoJogador.First());
-        }
-
-        EtapaAtual = etapa;
-        LimparMensagem();
-    }
-
-    private static string ObterModificador(int valor)
-    {
-        var modificador = (int)Math.Floor((valor - 10) / 2.0);
-        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
-    }
-
-    private void VoltarParaHome() => Navigation.NavigateTo("/campanhas");
-    private void LimparMensagem() { Mensagem = string.Empty; TemErro = false; }
-    private void DefinirErro(string mensagem) { TemErro = true; Mensagem = mensagem; }
-
-    private class ClasseCampanhaEntry
-    {
-        public string NomeClasse { get; set; } = "Guerreiro";
-        public int Nivel { get; set; } = 1;
-    }
-
-    private class MagiaCampanhaEntry
-    {
-        public string Nome { get; set; } = string.Empty;
-        public string Circulo { get; set; } = "Truque";
-        public string Efeito { get; set; } = string.Empty;
-        public string AlcanceNotas { get; set; } = string.Empty;
+        ViewModel.OnChange -= StateHasChanged;
     }
 }

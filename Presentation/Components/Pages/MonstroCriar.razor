@@ -1,172 +1,149 @@
 ﻿@page "/monstro-criar"
-@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
 @inject MonstroCriarViewModel ViewModel
-@inject NavigationManager Navigation
 @implements IDisposable
 
-<NavigationLock OnBeforeInternalNavigation="ConfirmarNavegacao" />
+<NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
 
-<div class="app-shell page-monstro-criar">
+<div class="app-shell criacao-personagem">
     <main class="app-content">
-        <button class="text-link exit-prompt-link" type="button" @onclick="AbrirAvisoSaida">← Voltar à biblioteca</button>
+        <button class="exit-prompt-link" type="button" @onclick="ViewModel.AbrirAvisoSaida">
+            <span aria-hidden="true">←</span> Voltar ao Bestiário
+        </button>
 
-        <div class="page-heading" style="margin-top: 16px">
-            <div>
-                <p class="page-kicker">Acrescente uma ameaça ao bestiário</p>
-                <h1 class="page-title">Cadastrar monstro</h1>
-                <p class="page-description">Defina as características e os recursos da criatura.</p>
+        <header class="top-bar">
+            <div class="top-bar-copy">
+                <p class="page-kicker">Bestiário e Criaturas</p>
+                <h1 class="page-title">Criar Monstro / Criatura</h1>
+                <p class="page-description">Preencha os atributos e características para registrar uma nova ameaça para suas campanhas.</p>
             </div>
-        </div>
+        </header>
 
-        <form id="form-monstro" class="form-layout" @onsubmit="ViewModel.SalvarMonstroAsync" @onsubmit:preventDefault="true">
-            <section class="form-panel">
-                <h2>Descrição e estatísticas</h2>
-                <div class="form-grid">
-                    <label class="form-field full-width">
-                        Nome da criatura
-                        <input @bind="ViewModel.MonstroAtual.Nome" required maxlength="60" placeholder="Ex.: Guardião das raízes" />
-                    </label>
+        <form class="wizard-layout" @onsubmit="ViewModel.SalvarMonstroAsync" @onsubmit:preventDefault="true">
+            <section class="ficha-pergaminho">
+                <div class="step-panel active">
+                    <h2 class="section-title">Detalhes da Criatura</h2>
 
-                    <label class="form-field">
-                        Tipo
-                        <select @bind="ViewModel.MonstroAtual.Tipo" required>
-                            <option value="Outro">Outro</option>
-                            <option value="Dragao">Dragão</option>
-                            <option value="Fera">Fera</option>
-                            <option value="Monstruosidade">Monstruosidade</option>
-                            <option value="Morto-vivo">Morto-vivo</option>
-                        </select>
-                    </label>
-
-                    <label class="form-field">
-                        Tamanho
-                        <select @bind="ViewModel.MonstroAtual.Tamanho">
-                            <option value="Pequeno">Pequeno</option>
-                            <option value="Médio">Médio</option>
-                            <option value="Grande">Grande</option>
-                            <option value="Enorme">Enorme</option>
-                            <option value="Imenso">Imenso</option>
-                        </select>
-                    </label>
-
-                    <label class="form-field">
-                        Alinhamento
-                        <input @bind="ViewModel.MonstroAtual.Tendencia" maxlength="40" placeholder="Ex.: Caótico e mau" />
-                    </label>
-
-                    <label class="form-field">
-                        Nível de desafio
-                        <input @bind="ViewModel.MonstroAtual.Nd" type="number" min="0" max="30" step="0.125" />
-                    </label>
-
-                    <div class="form-divider">Combate e sentidos</div>
-
-                    <label class="form-field">
-                        Classe de armadura
-                        <input @bind="ViewModel.MonstroAtual.Defesa" type="number" min="0" max="40" />
-                    </label>
-
-                    <label class="form-field">
-                        Pontos de vida
-                        <input @bind="ViewModel.MonstroAtual.Vida" type="number" min="1" max="9999" />
-                    </label>
-
-                    <label class="form-field">
-                        Deslocamento
-                        <input @bind="ViewModel.MonstroAtual.Deslocamento" maxlength="50" placeholder="9 m, escavação 3 m" />
-                    </label>
-
-                    <label class="form-field">
-                        Sentidos
-                        <input @bind="ViewModel.MonstroAtual.Sentidos" maxlength="80" placeholder="Visão no escuro 18 m" />
-                    </label>
-
-                    <label class="form-field full-width">
-                        Resistências e imunidades
-                        <input @bind="ViewModel.MonstroAtual.Resistencias" maxlength="120" placeholder="Ex.: frio, veneno" />
-                    </label>
-
-                    <label class="form-field full-width">
-                        Habilidades especiais
-                        <input @bind="ViewModel.MonstroAtual.Habilidades" maxlength="160" placeholder="Separe cada habilidade por vírgula" />
-                    </label>
-
-                    <label class="form-field full-width">
-                        Descrição
-                        <textarea @bind="ViewModel.MonstroAtual.Descricao" maxlength="1000" placeholder="Aparência, comportamento, táticas ou qualquer detalhe útil na sessão."></textarea>
-                    </label>
-
-                    <label class="form-field full-width">
-                        Ilustração
-                        <select @bind="ViewModel.MonstroAtual.Imagem">
-                            <option value="img/capacampanha3.png">Ruínas antigas</option>
-                            <option value="img/capacampanha6.png">Criatura selvagem</option>
-                            <option value="img/capacampanha7.png">Floresta sombria</option>
-                            <option value="img/capacampanha8.png">Ameaça infernal</option>
-                            <option value="img/capacampanha10.png">Dragão ancestral</option>
-                        </select>
-                    </label>
-
-                    <div class="form-field full-width upload-imagem">
-                        <span>Ou envie uma ilustração</span>
-                        <label class="upload-imagem-botao">
-                            <span aria-hidden="true">↑</span> Escolher imagem do monstro
-                            <InputFile id="arquivo-monstro" OnChange="CarregarImagemAsync" accept="image/*" aria-label="Escolher imagem do monstro" />
+                    <div class="form-grid-2">
+                        <label class="campo-ficha full-width">
+                            <span>Nome da Criatura</span>
+                            <input type="text"
+                                   @bind="ViewModel.MonstroAtual.Nome"
+                                   @bind:event="oninput"
+                                   maxlength="60"
+                                   placeholder="Ex.: Guardião das Sombras"
+                                   autocomplete="off"
+                                   required />
                         </label>
-                        <p class="upload-imagem-ajuda">Uma imagem enviada substitui a ilustração selecionada acima (até 2 MB).</p>
-                        <p class="upload-imagem-status @(string.IsNullOrEmpty(ErroImagem) ? "" : "erro")" role="status" aria-live="polite">@(ErroImagem ?? StatusImagem)</p>
+
+                        <label class="campo-ficha">
+                            <span>Tipo</span>
+                            <select @bind="ViewModel.MonstroAtual.TipoMonstro">
+                                <option value="Outro">Outro</option>
+                                <option value="Dragao">Dragão</option>
+                                <option value="Fera">Fera</option>
+                                <option value="Morto-vivo">Morto-vivo</option>
+                                <option value="Aberração">Aberração</option>
+                                <option value="Corrupto">Corrupto</option>
+                            </select>
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Tamanho</span>
+                            <select @bind="ViewModel.MonstroAtual.Tamanho">
+                                <option value="Pequeno">Pequeno</option>
+                                <option value="Médio">Médio</option>
+                                <option value="Grande">Grande</option>
+                                <option value="Enorme">Enorme</option>
+                                <option value="Imenso">Imenso</option>
+                            </select>
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Nível de Desafio (ND)</span>
+                            <input type="number" @bind="ViewModel.MonstroAtual.Nd" min="0" max="30" step="0.125" required />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Classe de Armadura (CA)</span>
+                            <input type="number" @bind="ViewModel.MonstroAtual.ClasseArmadura" min="1" max="40" required />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Pontos de Vida (PV)</span>
+                            <input type="number" @bind="ViewModel.MonstroAtual.PvMaximo" min="1" max="9999" required />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Deslocamento</span>
+                            <input type="text" @bind="ViewModel.MonstroAtual.Deslocamento" placeholder="Ex.: 9 m, voo 18 m" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Tendência</span>
+                            <input type="text" @bind="ViewModel.MonstroAtual.Tendencia" placeholder="Ex.: Neutro e mau" />
+                        </label>
+
+                        <label class="campo-ficha full-width">
+                            <span>Sentidos</span>
+                            <input type="text" @bind="ViewModel.MonstroAtual.Sentidos" placeholder="Ex.: Visão no escuro 18 m, Percepção passiva 13" />
+                        </label>
+
+                        <label class="campo-ficha full-width">
+                            <span>Resistências / Imunidades</span>
+                            <input type="text" @bind="ViewModel.MonstroAtual.Resistencias" placeholder="Ex.: Resistência a dano necrótico, imunidade a veneno" />
+                        </label>
+
+                        <label class="campo-ficha full-width">
+                            <span>Habilidades Especiais</span>
+                            <textarea @bind="ViewModel.MonstroAtual.Habilidades" rows="3" placeholder="Ataques múltiplos, magias inatas, traços especiais..."></textarea>
+                        </label>
+
+                        <label class="campo-ficha full-width">
+                            <span>Descrição da Criatura</span>
+                            <textarea @bind="ViewModel.MonstroAtual.Descricao" rows="3" placeholder="Lore, comportamento ou anotações do Mestre..."></textarea>
+                        </label>
                     </div>
                 </div>
 
-                <div class="form-footer">
-                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
-                    {
-                        <p class="form-status" style="color: @(ViewModel.Sucesso ? "#28a745" : "#dc3545"); font-weight: bold; margin-bottom: 10px;">
-                            @ViewModel.MensagemFeedback
-                        </p>
-                    }
-                    <div>
-                        <button class="action-secondary" type="button" @onclick="AbrirAvisoSaida">Cancelar</button>
-                        <button class="action-primary" type="submit">Salvar monstro <span aria-hidden="true">→</span></button>
-                    </div>
-                </div>
+                <footer class="wizard-footer">
+                    <button class="action-secondary" type="button" @onclick="ViewModel.CancelarCriacao" disabled="@ViewModel.IsProcessing">
+                        Cancelar
+                    </button>
+                    <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
+                        @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Monstro")
+                    </button>
+                </footer>
+
+                @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
+                {
+                    <p class="form-status @(ViewModel.Sucesso ? "success" : "error")" role="status" aria-live="polite">
+                        @ViewModel.MensagemFeedback
+                    </p>
+                }
             </section>
-
-            <aside class="form-aside">
-                <div class="aside-portrait">
-                    <img id="imagem-previa" src="@(string.IsNullOrEmpty(ViewModel.MonstroAtual.Imagem) ? "img/capacampanha3.png" : ViewModel.MonstroAtual.Imagem)" alt="Ilustração selecionada para o monstro" />
-                </div>
-                <div class="aside-note">
-                    <strong>Seu bestiário, suas regras</strong>
-                    As criaturas cadastradas aqui ficarão disponíveis na sua biblioteca e poderão ser selecionadas diretamente no momento de criar novas campanhas.
-                </div>
-            </aside>
         </form>
     </main>
 </div>
 
-@if (ExibirAvisoSaida)
+@if (ViewModel.ExibirAvisoSaida)
 {
-    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
-        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-monstro" aria-describedby="mensagem-aviso-monstro" @onclick:stopPropagation="true">
-            <h2 id="titulo-aviso-monstro">Sair sem salvar?</h2>
-            <p id="mensagem-aviso-monstro">Você tem certeza que quer sair? Vai perder tudo se não salvar.</p>
+    <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
+            <h2>Sair sem salvar?</h2>
+            <p>Tem certeza que deseja cancelar? As alterações feitas no monstro serão perdidas.</p>
             <div class="confirm-actions">
-                <button class="confirm-exit" type="button" @onclick="SairDaCriacao">Sim</button>
-                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+                <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaCriacao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="ViewModel.FecharAvisoSaida">Não</button>
             </div>
         </section>
     </div>
 }
 
 @code {
-    private const long LimiteImagemBytes = 2 * 1024 * 1024;
-    private string? ErroImagem { get; set; }
-    private string? StatusImagem { get; set; }
-    private bool ExibirAvisoSaida { get; set; }
-    private bool LiberarProximaNavegacao { get; set; }
-    private string? DestinoPendente { get; set; }
-
     protected override void OnInitialized()
     {
         ViewModel.LimparFormulario();
@@ -176,65 +153,5 @@
     public void Dispose()
     {
         ViewModel.OnChange -= StateHasChanged;
-    }
-
-    private async Task CarregarImagemAsync(InputFileChangeEventArgs evento)
-    {
-        ErroImagem = null;
-        StatusImagem = null;
-        var arquivo = evento.File;
-
-        if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            ErroImagem = "Selecione um arquivo de imagem válido.";
-            return;
-        }
-
-        if (arquivo.Size > LimiteImagemBytes)
-        {
-            ErroImagem = "A imagem deve ter no máximo 2 MB.";
-            return;
-        }
-
-        try
-        {
-            await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-            using var memoria = new MemoryStream();
-            await origem.CopyToAsync(memoria);
-
-            ViewModel.MonstroAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
-            StatusImagem = "Imagem pronta.";
-        }
-        catch (Exception)
-        {
-            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo.";
-        }
-    }
-
-    private void AbrirAvisoSaida() => ExibirAvisoSaida = true;
-
-    private void ConfirmarNavegacao(LocationChangingContext contexto)
-    {
-        if (LiberarProximaNavegacao)
-        {
-            LiberarProximaNavegacao = false;
-            return;
-        }
-
-        contexto.PreventNavigation();
-        DestinoPendente = contexto.TargetLocation;
-        ExibirAvisoSaida = true;
-    }
-
-    private void FecharAvisoSaida()
-    {
-        ExibirAvisoSaida = false;
-        DestinoPendente = null;
-    }
-
-    private void SairDaCriacao()
-    {
-        LiberarProximaNavegacao = true;
-        Navigation.NavigateTo(DestinoPendente ?? "/monstros-lib");
     }
 }
