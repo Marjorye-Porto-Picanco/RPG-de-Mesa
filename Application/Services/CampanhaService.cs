@@ -343,16 +343,29 @@ public class CampanhaService
         }
     }
 
-    public async Task<(bool Sucesso, string Mensagem)> RecusarFichaCampanhaAsync(int idCampanha, int idPersonagem)
+    public async Task<(bool Sucesso, string Mensagem)> RecusarFichaCampanhaAsync(int idCampanha, int idPersonagem, string? motivo = null)
     {
         try
         {
-            await _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, "Recusada");
-            return (true, "Ficha recusada. O jogador poderá enviar outra ficha.");
+            await _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, "Recusada", motivo);
+            return (true, "Ficha recusada e motivo enviado ao jogador.");
         }
         catch (Exception ex)
         {
             return (false, $"Erro ao recusar ficha: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> ReenviarFichaAjustadaAsync(int idCampanha, int idPersonagem)
+    {
+        try
+        {
+            await _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, "Pendente", null);
+            return (true, "Ficha ajustada e reenviada para o Mestre!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao reenviar ficha: {ex.Message}");
         }
     }
 
@@ -428,5 +441,6 @@ public class CampanhaService
         }
     }
 
-    public Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string status) => _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, status);
+    public Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string status) =>
+        _campanhaRepo.AtualizarStatusFichaCampanhaAsync(idCampanha, idPersonagem, status);
 }

@@ -23,18 +23,13 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string AbaAtiva { get; set; } = "atributos";
         public string SecaoDiarioAtiva { get; set; } = "ideais";
 
-        // Multiclasse (3FN)
         public List<ClassePersonagemEntry> ClassesSelecionadas { get; set; } = new();
 
-        // Controles numéricos editáveis (Idade e Peso; Altura fica bloqueada)
         public int IdadeNumero { get; set; } = 25;
         public decimal PesoKg { get; set; } = 70m;
 
-        // 3FN: Salvaguardas e Perícias
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
-
-        // 3FN: Grimório
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
 
         public string MensagemFeedback { get; set; } = "";
@@ -268,7 +263,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                     })
                     .ToList();
 
-                // Passa null para dadosInventario e itens para preservar o inventário da campanha intacto
                 var resultado3FN = await _personagemService.SalvarComplementos3FNAsync(
                     PersonagemAtual.IdPersonagem,
                     listaClasses,

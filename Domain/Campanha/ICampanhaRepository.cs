@@ -22,7 +22,7 @@ public interface ICampanhaRepository
     Task RemoverCampanhaAsync(int idCampanha);
     Task RemoverUsuarioDaCampanhaAsync(int idAccount, int idCampanha);
     Task EnviarFichaCampanhaAsync(int idCampanha, int idPersonagem, string statusInicial = "Pendente");
-    Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus);
+    Task AtualizarStatusFichaCampanhaAsync(int idCampanha, int idPersonagem, string novoStatus, string? motivoRecusa = null);
     Task RemoverPersonagemCampanhaAsync(int idCampanha, int idPersonagem);
     Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc);
@@ -31,4 +31,5 @@ public interface ICampanhaRepository
     Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc);
     Task RemoverItemCampanhaAsync(int idCampanha, int idItem);
     Task RemoverNpcAsync(int idNpc);
+
 }

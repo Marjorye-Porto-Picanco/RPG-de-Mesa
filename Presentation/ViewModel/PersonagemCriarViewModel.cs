@@ -79,19 +79,14 @@ namespace RPGdeMesa.Presentation.ViewModel
         public Personagem PersonagemAtual { get; set; } = new();
         public int? IdCampanhaOpcional { get; set; }
 
-        // Multiclasse (3FN)
         public List<ClassePersonagemEntry> ClassesSelecionadas { get; set; } = new();
 
-        // Controles numéricos da Etapa 1
         public int IdadeNumero { get; set; } = 25;
         public int AlturaCm { get; set; } = 170;
         public decimal PesoKg { get; set; } = 70m;
 
-        // Etapa 2: Salvaguardas e Perícias (3FN)
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
-
-        // Etapa 4: Grimório (3FN)
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
 
         public string MensagemFeedback { get; set; } = "";
@@ -288,7 +283,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                     })
                     .ToList();
 
-                // O inventário agora pertence ao fluxo de entrada na Campanha (sessao-entrar)
                 await _personagemService.SalvarComplementos3FNAsync(
                     PersonagemAtual.IdPersonagem,
                     listaClasses,

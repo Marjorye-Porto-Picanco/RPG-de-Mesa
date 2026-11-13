@@ -8,13 +8,14 @@ public class PersonagemCampanha
     public int IdPersonagem { get; private set; }
     public int IdCampanha { get; private set; }
     public string StatusAprovacao { get; private set; } = "Pendente";
+    public string? MotivoRecusa { get; private set; }
 
     public virtual Personagem? Personagem { get; private set; }
     public virtual Campanha Campanha { get; private set; } = null!;
 
     protected PersonagemCampanha() { }
 
-    public PersonagemCampanha(int idPersonagem, int idCampanha, string statusAprovacao = "Pendente")
+    public PersonagemCampanha(int idPersonagem, int idCampanha, string statusAprovacao = "Pendente", string? motivoRecusa = null)
     {
         if (idPersonagem <= 0)
             throw new DomainException("Personagem inválido para vínculo.");
@@ -24,11 +25,30 @@ public class PersonagemCampanha
         IdPersonagem = idPersonagem;
         IdCampanha = idCampanha;
         StatusAprovacao = string.IsNullOrWhiteSpace(statusAprovacao) ? "Pendente" : statusAprovacao.Trim();
+        MotivoRecusa = motivoRecusa?.Trim();
     }
 
-    public void AprovarFicha() => StatusAprovacao = "Aceita";
+    public void AprovarFicha()
+    {
+        StatusAprovacao = "Aceita";
+        MotivoRecusa = null;
+    }
 
-    public void RecusarFicha() => StatusAprovacao = "Recusada";
+    public void RecusarFicha(string? motivo = null)
+    {
+        StatusAprovacao = "Recusada";
+        MotivoRecusa = motivo?.Trim();
+    }
 
-    public void ReenviarFicha() => StatusAprovacao = "Pendente";
+    public void ReenviarFicha()
+    {
+        StatusAprovacao = "Pendente";
+        MotivoRecusa = null;
+    }
+
+    public void ReenviarFichaParaAvaliacao()
+    {
+        StatusAprovacao = "Pendente";
+        MotivoRecusa = null;
+    }
 }

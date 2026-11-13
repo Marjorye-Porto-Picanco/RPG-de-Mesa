@@ -52,15 +52,10 @@ public class AppDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            string connectionString = @"Server=rpgsystem.database.windows.net,1433;
-                        Initial Catalog=rpg_system;
-                        Persist Security Info=False;
-                        User ID=cleverson; 
-                        Password=Seila1234@;
-                        MultipleActiveResultSets=False;
-                        Encrypt=True;
-                        TrustServerCertificate=True;
-                        Connection Timeout=30;";
+            string connectionString = @"Server=localhost;
+                                    Initial Catalog=rpg_system;
+                                    Integrated Security=True;
+                                    TrustServerCertificate=True;";
 
             optionsBuilder.UseSqlServer(connectionString, sqlOptions =>
             {
@@ -184,7 +179,7 @@ public class AppDbContext : DbContext
             e.Property(p => p.IdAccount).HasColumnName("id_account");
             e.Property(p => p.IdRaca).HasColumnName("id_raca");
             e.Property(p => p.IdAntecedente).HasColumnName("id_antecedente");
-
+            e.Property(p => p.IdPersonagemOrigem).HasColumnName("id_personagem_origem");
             e.Property(p => p.Nome).HasColumnName("nome");
             e.Property(p => p.Nivel).HasColumnName("nivel");
             e.Property(p => p.ExperienciaXp).HasColumnName("experiencia_xp");
@@ -468,6 +463,7 @@ public class AppDbContext : DbContext
             e.Property(pc => pc.IdPersonagem).HasColumnName("id_personagem");
             e.Property(pc => pc.IdCampanha).HasColumnName("id_campanha");
             e.Property(pc => pc.StatusAprovacao).HasColumnName("status_aprovacao").HasMaxLength(20);
+            e.Property(pc => pc.MotivoRecusa).HasColumnName("motivo_recusa");
 
             e.HasOne(pc => pc.Personagem)
              .WithMany(p => p.PersonagemCampanhas)
