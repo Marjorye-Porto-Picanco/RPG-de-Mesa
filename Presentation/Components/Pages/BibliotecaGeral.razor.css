@@ -232,6 +232,27 @@
         transform: translateY(-50%);
     }
 
+.filter-field {
+    flex: 0 0 230px;
+    min-width: 180px;
+}
+
+.filter-select {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--border-gold);
+    border-radius: 4px;
+    background: rgba(33, 24, 18, 0.86);
+    color: #f1e4cb;
+    cursor: pointer;
+}
+
+    .filter-select option {
+        background: #211811;
+        color: #f1e4cb;
+    }
+
 .library-status {
     min-height: 18px;
     margin: 0 0 11px;
@@ -928,6 +949,10 @@
     .library-toolbar {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .filter-field {
+        flex: 1 1 auto;
     }
 
     .library-tab {

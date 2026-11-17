@@ -1,0 +1,234 @@
+@page "/item-criar"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.ViewModel
+@inject ItemCriarViewModel ViewModel
+@implements IDisposable
+
+<NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
+
+<div class="app-shell criacao-personagem">
+    <main class="app-content">
+        <button class="exit-prompt-link" type="button" @onclick="ViewModel.AbrirAvisoSaida">
+            <span aria-hidden="true">←</span> Voltar à Biblioteca de Itens
+        </button>
+
+        <header class="top-bar">
+            <div class="top-bar-copy">
+                <p class="page-kicker">Compêndio de Equipamentos</p>
+                <h1 class="page-title">Criar Item / Equipamento</h1>
+                <p class="page-description">Preencha os atributos e propriedades para registrar um novo item ou arma na sua conta.</p>
+            </div>
+        </header>
+
+        <form id="form-item" class="form-layout" @onsubmit="ViewModel.SalvarItemAsync" @onsubmit:preventDefault="true">
+            <section class="ficha-pergaminho">
+                <div class="ficha-conteudo">
+                    <div class="form-grid-2">
+                        <label class="campo-ficha full-width">
+                            <span>Nome do Item</span>
+                            <input type="text"
+                                   id="item-nome"
+                                   @bind="ViewModel.ItemNome"
+                                   @bind:event="oninput"
+                                   maxlength="100"
+                                   placeholder="Ex.: Espada Longa"
+                                   autocomplete="off"
+                                   required />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Tipo</span>
+                            <select id="item-tipo" @bind="ViewModel.ItemTipo">
+                                <option value="Anéis">Anéis</option>
+                                <option value="Armadura">Armadura</option>
+                                <option value="armas">armas</option>
+                                <option value="Bastões">Bastões</option>
+                                <option value="cajados">cajados</option>
+                                <option value="itens maravilhosos">itens maravilhosos</option>
+                                <option value="pergaminhos">pergaminhos</option>
+                                <option value="poções">poções</option>
+                                <option value="varinhas">varinhas</option>
+                                <option value="Equipamento de Aventura">Equipamento de Aventura</option>
+                            </select>
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Peso (kg)</span>
+                            <input type="number"
+                                   id="item-peso"
+                                   step="0.1"
+                                   min="0"
+                                   max="999.99"
+                                   placeholder="0.0"
+                                   @bind="ViewModel.ItemPeso"
+                                   @bind:event="oninput" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Preço (PO)</span>
+                            <input type="number"
+                                   id="item-preco"
+                                   step="0.01"
+                                   min="0"
+                                   max="999999.99"
+                                   placeholder="0"
+                                   @bind="ViewModel.ItemPreco"
+                                   @bind:event="oninput" />
+                        </label>
+
+                        <div class="form-divider">Combate e Propriedades</div>
+
+                        <label class="campo-ficha">
+                            <span>Dano</span>
+                            <input type="text"
+                                   id="item-dano"
+                                   maxlength="20"
+                                   placeholder="Ex.: 1d8"
+                                   @bind="ViewModel.ItemDano"
+                                   @bind:event="oninput" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Tipo de Dano</span>
+                            <select id="item-tipodano" @bind="ViewModel.ItemTipoDano">
+                                <option value="">Nenhum / N/A</option>
+                                <option value="Cortante">Cortante</option>
+                                <option value="Perfurante">Perfurante</option>
+                                <option value="Concussão">Concussão</option>
+                                <option value="Fogo">Fogo</option>
+                                <option value="Frio">Frio</option>
+                                <option value="Ácido">Ácido</option>
+                                <option value="Elétrico">Elétrico</option>
+                                <option value="Veneno">Veneno</option>
+                                <option value="Necrótico">Necrótico</option>
+                                <option value="Radiante">Radiante</option>
+                                <option value="Psíquico">Psíquico</option>
+                                <option value="Força">Força</option>
+                                <option value="Trovão">Trovão</option>
+                            </select>
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Propriedades</span>
+                            <input type="text"
+                                   id="item-propriedades"
+                                   maxlength="100"
+                                   placeholder="Ex.: Versátil, acuidade"
+                                   @bind="ViewModel.ItemPropriedades"
+                                   @bind:event="oninput" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Bônus de CA</span>
+                            <input type="number"
+                                   id="item-ca"
+                                   min="0"
+                                   max="20"
+                                   @bind="ViewModel.ItemCaBonus"
+                                   @bind:event="oninput" />
+                        </label>
+
+                        <div class="form-divider">Raridade e Detalhes</div>
+
+                        <label class="campo-ficha">
+                            <span>Raridade</span>
+                            <select id="item-raridade" @bind="ViewModel.ItemRaridade">
+                                <option value="Sem raridade">Sem raridade</option>
+                                <option value="Comum">Comum</option>
+                                <option value="Incomum">Incomum</option>
+                                <option value="Raro">Raro</option>
+                                <option value="Muito Raro">Muito Raro</option>
+                                <option value="Lendário">Lendário</option>
+                                <option value="Artefato">Artefato</option>
+                            </select>
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Sintonização</span>
+                            <select id="item-sintonizacao" @bind="ViewModel.ItemSintonizacao">
+                                <option value="Não">Não</option>
+                                <option value="Sim">Sim</option>
+                            </select>
+                        </label>
+
+                        <div class="painel-descricao">
+                            <label for="item-descricao">Descrição</label>
+                            <textarea id="item-descricao"
+                                      placeholder="Efeito mágico ou história do item..."
+                                      @bind="ViewModel.ItemDescricao"
+                                      @bind:event="oninput"></textarea>
+                        </div>
+                    </div>
+
+                    <footer class="form-footer">
+                        <button class="action-secondary" type="button" @onclick="ViewModel.CancelarCriacao" disabled="@ViewModel.IsProcessing">
+                            Cancelar
+                        </button>
+                        <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
+                            @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Item")
+                        </button>
+                    </footer>
+
+                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
+                    {
+                        <p class="form-status @(ViewModel.Sucesso ? "success" : "error")" role="status" aria-live="polite">
+                            @ViewModel.MensagemFeedback
+                        </p>
+                    }
+                </div>
+            </section>
+
+            <!-- PREVIEW LATERAL DO ITEM EM TEMPO REAL -->
+            <aside class="form-aside" aria-label="Prévia do item">
+                <div class="item-preview-card">
+                    <span class="item-preview-kicker" id="prev-raridade">@ViewModel.PreviewRaridade</span>
+                    <h3 id="prev-nome">@ViewModel.PreviewNome</h3>
+                    <p class="item-detail-row"><strong>Tipo:</strong> <span id="prev-tipo">@ViewModel.PreviewTipo</span></p>
+                    <p class="item-detail-row"><strong>Dano:</strong> <span id="prev-dano">@ViewModel.PreviewDano</span></p>
+                    <p class="item-detail-row"><strong>Bônus de CA:</strong> <span id="prev-ca">@ViewModel.PreviewCa</span></p>
+                    <p class="item-detail-row"><strong>Propriedades:</strong> <span id="prev-prop">@ViewModel.PreviewPropriedades</span></p>
+                    <p class="item-detail-row"><strong>Peso:</strong> <span id="prev-peso">@ViewModel.PreviewPeso</span></p>
+                    <p class="item-detail-row"><strong>Preço:</strong> <span id="prev-preco">@ViewModel.PreviewPreco</span></p>
+                    <p class="item-detail-row"><strong>Sintonização:</strong> <span id="prev-sint">@ViewModel.PreviewSintonizacao</span></p>
+
+                    @if (!string.IsNullOrWhiteSpace(ViewModel.ItemDescricao))
+                    {
+                        <div class="item-preview-desc">
+                            <strong>Descrição:</strong>
+                            <p>@ViewModel.ItemDescricao</p>
+                        </div>
+                    }
+                </div>
+            </aside>
+        </form>
+    </main>
+</div>
+
+@if (ViewModel.ExibirAvisoSaida)
+{
+    <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
+            <h2>Sair sem salvar?</h2>
+            <p>Tem certeza que deseja cancelar? As alterações feitas no item serão perdidas.</p>
+            <div class="confirm-actions">
+                <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaCriacao">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="ViewModel.FecharAvisoSaida">Não</button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        ViewModel.LimparFormulario();
+        ViewModel.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ViewModel.OnChange -= StateHasChanged;
+    }
+}

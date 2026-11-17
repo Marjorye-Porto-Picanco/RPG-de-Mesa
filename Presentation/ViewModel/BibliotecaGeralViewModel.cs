@@ -38,7 +38,6 @@ public class BibliotecaGeralViewModel
     public IReadOnlyList<CategoriaItem> Categorias { get; } =
     [
         new("itens", "Itens"),
-        new("armas", "Armas"),
         new("magias", "Magias"),
         new("monstros", "Monstros"),
         new("npcs", "NPCs")
@@ -46,6 +45,7 @@ public class BibliotecaGeralViewModel
 
     public string CategoriaAtual { get; private set; } = "itens";
     public string TermoBusca { get; set; } = string.Empty;
+    public string FiltroTipoItem { get; set; } = string.Empty;
     public int LimiteVisivel { get; private set; } = 30;
     public bool Carregando { get; private set; }
     public bool TemErro { get; private set; }
@@ -73,6 +73,7 @@ public class BibliotecaGeralViewModel
     // Filtros Calculados
     public IEnumerable<Item> ItensFiltrados => EntradasItens
         .Where(item => PertenceACategoria(item, CategoriaAtual))
+        .Where(item => CategoriaAtual != "itens" || CorrespondeAoTipoSelecionado(item, FiltroTipoItem))
         .Where(item => string.IsNullOrWhiteSpace(TermoBusca) ||
             item.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
             item.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
@@ -141,7 +142,21 @@ public class BibliotecaGeralViewModel
 
     public void TrocarCategoria(string categoria)
     {
-        CategoriaAtual = categoria;
+        // Caso algum link antigo passe ?categoria=armas, redireciona para a aba unificada "itens" já filtrada por armas
+        if (string.Equals(categoria, "armas", StringComparison.OrdinalIgnoreCase))
+        {
+            CategoriaAtual = "itens";
+            FiltroTipoItem = "armas";
+        }
+        else
+        {
+            CategoriaAtual = categoria;
+            if (categoria != "itens")
+            {
+                FiltroTipoItem = string.Empty;
+            }
+        }
+
         ResetarPaginacao();
         FecharTodosModaisDetalhes();
         AtualizarMensagemStatus();
@@ -153,11 +168,16 @@ public class BibliotecaGeralViewModel
         {
             "monstros" => $"{EntradasMonstros.Count} monstro(s) cadastrado(s).",
             "npcs" => $"{EntradasNpcs.Count} NPC(s) cadastrado(s).",
-            _ => $"{EntradasItens.Count} item(ns) cadastrado(s)."
+            _ => $"{ItensFiltrados.Count()} item(ns) exibido(s)."
         };
     }
 
-    public void ResetarPaginacao() => LimiteVisivel = 30;
+    public void ResetarPaginacao()
+    {
+        LimiteVisivel = 30;
+        AtualizarMensagemStatus();
+    }
+
     public void MostrarMais() => LimiteVisivel += 30;
 
     // Ações de Modais
@@ -239,10 +259,29 @@ public class BibliotecaGeralViewModel
 
         return categoria switch
         {
-            "armas" => ehArma,
             "magias" => ehMagia && !ehArma,
-            _ => !ehArma && !ehMagia
+            // Na aba "itens", exibe tanto os itens gerais quanto tudo o que antes aparecia na aba "armas"
+            _ => ehArma || !ehMagia
         };
+    }
+
+    private static bool CorrespondeAoTipoSelecionado(Item item, string filtroTipo)
+    {
+        if (string.IsNullOrWhiteSpace(filtroTipo))
+            return true;
+
+        var tipoItem = item.Tipo?.Trim() ?? string.Empty;
+
+        // Se o filtro for "armas", contempla tanto o tipo "armas" quanto itens que possuam Dano ou termo de arma
+        if (string.Equals(filtroTipo, "armas", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Equals(tipoItem, "armas", StringComparison.OrdinalIgnoreCase) ||
+                   !string.IsNullOrWhiteSpace(item.Dano) ||
+                   ContemTermo(tipoItem, "arma", "weapon", "armamento");
+        }
+
+        return string.Equals(tipoItem, filtroTipo.Trim(), StringComparison.OrdinalIgnoreCase) ||
+               tipoItem.Contains(filtroTipo.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     public static string ObterRotuloMeta(Item item) =>

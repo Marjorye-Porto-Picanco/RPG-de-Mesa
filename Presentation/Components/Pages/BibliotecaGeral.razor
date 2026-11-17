@@ -11,7 +11,7 @@
             <div>
                 <p class="page-kicker">Compêndio e Bestiário</p>
                 <h1 class="page-title">Biblioteca Geral</h1>
-                <p class="page-description">Consulte itens, magias, armas e criaturas para suas campanhas.</p>
+                <p class="page-description">Consulte itens, armas, magias e criaturas para suas campanhas.</p>
             </div>
 
             <a class="action-primary" @onclick="VM.AbrirModalCriacao">
@@ -47,6 +47,26 @@
                            @bind:event="oninput"
                            @bind:after="VM.ResetarPaginacao" />
                 </label>
+
+                @if (VM.CategoriaAtual == "itens")
+                {
+                    <label class="filter-field" aria-label="Filtrar por tipo de item">
+                        <select class="filter-select"
+                                @bind="VM.FiltroTipoItem"
+                                @bind:after="VM.ResetarPaginacao">
+                            <option value="">Todos os tipos...</option>
+                            <option value="Anéis">Anéis</option>
+                            <option value="Armadura">Armadura</option>
+                            <option value="armas">armas</option>
+                            <option value="Bastões">Bastões</option>
+                            <option value="cajados">cajados</option>
+                            <option value="itens maravilhosos">itens maravilhosos</option>
+                            <option value="pergaminhos">pergaminhos</option>
+                            <option value="poções">poções</option>
+                            <option value="varinhas">varinhas</option>
+                        </select>
+                    </label>
+                }
             </div>
 
             <p class="library-status @(VM.TemErro ? "is-error" : "")" aria-live="polite">@VM.StatusMensagem</p>

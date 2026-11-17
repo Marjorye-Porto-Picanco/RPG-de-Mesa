@@ -64,6 +64,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<CampanhasViewModel>();
             builder.Services.AddTransient<SessaoEntrarViewModel>();
             builder.Services.AddTransient<SessaoIniciarViewModel>();
+            builder.Services.AddTransient<ItemCriarViewModel>();
 
             return builder.Build();
         }
