@@ -14,7 +14,7 @@
         <div class="titulo-pagina">
             <div>
                 <p class="sobretitulo-rpg">Heróis e lendas</p>
-                <h1>Herós</h1>
+                <h1>Heróis</h1>
                 <p class="texto-apoio">Suas fichas reunidas em um só lugar.</p>
             </div>
             <a class="botao-dourado" href="@(abaAtiva == "personagens" ? "/personagem-criar" : "/personagem-criar?tipo=NPC")">
@@ -41,10 +41,12 @@
                     @foreach (var personagem in personagens)
                     {
                         string iniciais = ObterIniciais(personagem.Nome);
-                        <div class="cartao-wrap">
+                        bool temFoto = !string.IsNullOrWhiteSpace(personagem.Imagem);
+                        <div class="cartao-wrap" @key="personagem.IdPersonagem">
                         <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
-                            <div class="retrato-personagem">
-                                <img src="@(string.IsNullOrEmpty(personagem.Imagem) ? "img/armaduraprata.png" : personagem.Imagem)" alt="Retrato de @personagem.Nome" />
+                            <div class="retrato-personagem @(temFoto ? "com-foto" : "padrao")">
+                                <img src="@(temFoto ? personagem.Imagem : "img/armaduraprata.png")" alt="Retrato de @personagem.Nome" loading="lazy"
+                                     onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
                                 <span>@iniciais</span>
                             </div>
                             <div class="info-personagem">
@@ -83,10 +85,11 @@
                     @foreach (var npc in npcs)
                     {
                         string iniciais = ObterIniciais(npc.Nome);
-                        <div class="cartao-personagem cartao-npc" aria-label="Ficha do NPC @npc.Nome">
+                        <div class="cartao-personagem cartao-npc" aria-label="Ficha do NPC @npc.Nome" @key="npc.IdNpc">
                             <BotaoExcluir Titulo="@($"Excluir {npc.Nome}")" OnClick='() => PedirExclusao("npc", npc.IdNpc, npc.Nome)' />
-                            <div class="retrato-personagem">
-                                <img src="@(string.IsNullOrEmpty(npc.Imagem) ? "img/capacampanha3.png" : npc.Imagem)" alt="Retrato de @npc.Nome" />
+                            <div class="retrato-personagem com-foto">
+                                <img src="@(string.IsNullOrWhiteSpace(npc.Imagem) ? "img/capacampanha3.png" : npc.Imagem)" alt="Retrato de @npc.Nome" loading="lazy"
+                                     onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
                                 <span>@iniciais</span>
                             </div>
                             <div class="info-personagem">

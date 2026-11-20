@@ -52,10 +52,16 @@ public class AppDbContext : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            string connectionString = @"Server=localhost;
-                                    Initial Catalog=rpg_system;
-                                    Integrated Security=True;
-                                    TrustServerCertificate=True;";
+            string connectionString =
+                "Server=tcp:rpg-system.database.windows.net,1433;" +
+                "Initial Catalog=rpg_system;" +
+                "Persist Security Info=False;" +
+                "User ID=rpg_system;" +
+                "Password=Seila1234!;" +
+                "MultipleActiveResultSets=False;" +
+                "Encrypt=True;" +
+                "TrustServerCertificate=False;" +
+                "Connection Timeout=30;";
 
             optionsBuilder.UseSqlServer(connectionString, sqlOptions =>
             {

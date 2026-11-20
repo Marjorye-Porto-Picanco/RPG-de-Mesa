@@ -1,3 +1,4 @@
+/* CSS for SessaoIniciar component */
 *, *::before, *::after {
     box-sizing: border-box;
 }
@@ -8,6 +9,8 @@
     --gold: #d1a951;
     --line: rgba(217, 184, 120, .25);
     --muted: #b7a78c;
+    --scroll-thumb: rgba(209, 169, 81, 0.28);
+    --scroll-thumb-hover: rgba(209, 169, 81, 0.65);
 }
 
 button, a, input, select, textarea {
@@ -32,7 +35,7 @@ select {
         }
 
 .app-shell {
-    min-height: 100vh;
+    min-height: 100dvh;
     background: #1b120e;
     color: #f2e6cf;
     font-family: Cambria, Georgia, "Times New Roman", serif;
@@ -68,7 +71,7 @@ select {
 .app-content {
     width: min(1360px, 100%);
     margin: 0 auto;
-    padding: 32px clamp(16px, 3vw, 42px) 52px;
+    padding: 28px clamp(16px, 3vw, 42px) 48px;
 }
 
 .session-layout {
@@ -76,12 +79,14 @@ select {
     grid-template-columns: 225px minmax(0, 1fr);
     align-items: start;
     gap: 22px;
+    min-height: 0;
 }
 
 .session-sidebar {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    min-width: 0;
 }
 
 .session-nav {
@@ -145,8 +150,11 @@ select {
         font-size: 10px;
     }
 
-.preview-content {
+.preview-content,
+.session-page-content,
+.configuration-content {
     min-width: 0;
+    min-height: 0;
 }
 
 .page-heading {
@@ -176,11 +184,11 @@ select {
 }
 
 .session-summary {
-    padding: 28px;
+    padding: 20px 24px;
     border: 1px solid rgba(207, 174, 109, .45);
     border-top: 3px solid var(--gold);
     background: rgba(44, 33, 25, .88);
-    min-height: 330px;
+    min-height: 270px;
     margin: 0;
 }
 
@@ -248,19 +256,11 @@ select {
         background: #a98239;
     }
 
-.session-page-content {
-    display: block;
-    min-width: 0;
-}
-
-.configuration-content {
-    min-width: 0;
-}
-
 .configuration-heading {
     display: flex;
     align-items: end;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 14px;
 }
@@ -276,19 +276,35 @@ select {
         font-size: 11px;
     }
 
+/* ============================================================
+   Aba Configurações — Grid contido e painéis reduzidos
+   ============================================================ */
 .configuration-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px;
+    min-height: 0;
+    max-height: calc(100dvh - 300px);
+    overflow: hidden;
 }
 
 .resource-browser,
 .resource-editor {
     min-width: 0;
-    padding: 17px;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    padding: 12px 14px;
     border: 1px solid rgba(205, 167, 95, .42);
     background: rgba(44, 33, 25, .78);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.resource-browser {
+    display: flex;
+    flex-direction: column;
 }
 
     .resource-browser h3,
@@ -327,7 +343,7 @@ select {
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
     gap: 5px;
-    margin: 0 0 10px;
+    margin: 10px 0;
     padding: 4px;
     border: 1px solid rgba(151, 168, 195, .2);
     background: rgba(16, 24, 39, .55);
@@ -379,14 +395,23 @@ select {
     padding: 1px 2px 2px 1px;
 }
 
-    .resource-list[hidden],
-    .catalog-results[hidden] {
-        display: none;
-    }
+.resource-browser .resource-list {
+    flex: 1 1 auto;
+    align-content: start;
+    min-height: 160px;
+    max-height: 320px;
+    margin-top: 14px;
+    overflow-y: auto;
+}
+
+.resource-list[hidden],
+.catalog-results[hidden] {
+    display: none;
+}
 
 .search-label {
     display: block;
-    margin: 17px 0 7px;
+    margin: 16px 0 7px;
     color: #e5d2ad;
     font-size: 11px;
 }
@@ -397,6 +422,7 @@ select {
     align-items: center;
     gap: 8px;
     padding: 0 10px;
+    margin-bottom: 12px;
     border: 1px solid rgba(217, 184, 120, .36);
     background: rgba(25, 17, 13, .66);
     color: var(--gold);
@@ -433,8 +459,9 @@ select {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
     .editor-heading .page-kicker {
@@ -456,7 +483,7 @@ select {
     min-width: 0;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 13px;
+    margin-bottom: 12px;
     color: #d2bd94;
     font-size: 11px;
 }
@@ -480,7 +507,7 @@ select {
         }
 
     .form-field textarea {
-        min-height: 145px;
+        min-height: 140px;
         resize: vertical;
         line-height: 1.5;
     }
@@ -499,6 +526,7 @@ select {
 .editor-actions {
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 3px;
 }
@@ -561,207 +589,6 @@ select {
         background: rgba(86, 71, 126, .72);
     }
 
-.history-content {
-    display: grid;
-    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
-    align-items: start;
-    gap: 14px;
-}
-
-.history-editor,
-.history-list-panel {
-    min-width: 0;
-    padding: 18px;
-    border: 1px solid rgba(205, 167, 95, .42);
-    background: rgba(44, 33, 25, .8);
-}
-
-.history-list-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-    .history-list-heading .page-kicker {
-        margin-bottom: 5px;
-    }
-
-    .history-list-heading h2 {
-        margin: 0;
-        color: #f0e3c8;
-        font-size: 16px;
-        font-weight: 500;
-    }
-
-    .history-list-heading > span {
-        color: var(--muted);
-        font-size: 11px;
-        white-space: nowrap;
-    }
-
-.history-fields-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-}
-
-    .history-fields-row select option {
-        background-color: #131a29;
-        color: #f5eedf;
-    }
-
-.history-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.history-list {
-    display: grid;
-    gap: 8px;
-    max-height: 650px;
-    overflow: auto;
-}
-
-.history-entry {
-    display: grid;
-    width: 100%;
-    gap: 9px;
-    padding: 13px;
-    border: 1px solid rgba(217, 184, 120, .22);
-    background: rgba(25, 17, 13, .44);
-    color: #e5d2ad;
-    text-align: left;
-    cursor: pointer;
-}
-
-    .history-entry:hover {
-        border-color: var(--gold);
-        background: rgba(112, 81, 35, .25);
-    }
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid #f0d17f;
-    outline-offset: 2px;
-}
-
-@media (max-width: 960px) {
-    .history-content {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .history-list {
-        max-height: 380px;
-    }
-
-    .configuration-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-@media (max-width: 760px) {
-    .app-content {
-        padding: 24px 14px 40px;
-    }
-
-    .session-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .session-nav {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .session-nav-link {
-        justify-content: center;
-        padding: 0 6px;
-        text-align: center;
-    }
-
-    .session-players {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 480px) {
-    .topbar {
-        min-height: 56px;
-    }
-
-    .topbar-label {
-        font-size: 10px;
-    }
-
-    .app-content {
-        padding: 20px 12px 32px;
-    }
-
-    .page-heading h1 {
-        font-size: 27px;
-    }
-
-    .session-nav {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .session-nav-link {
-        justify-content: flex-start;
-    }
-
-    .session-players,
-    .summary-details,
-    .history-fields-row {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .session-summary {
-        padding: 20px;
-    }
-
-    .editor-row {
-        grid-template-columns: minmax(0, 1fr) 94px;
-    }
-}
-
-
-/* ============================================================
-   Correções — Sessão do Mestre (aba Configurações)
-   ============================================================ */
-
-/* Os dois painéis passam a ter a mesma altura e o de vínculo cresce junto com o formulário. */
-.configuration-layout {
-    align-items: stretch;
-}
-
-.resource-browser {
-    display: flex;
-    flex-direction: column;
-    min-height: 520px;
-}
-
-    .resource-browser .search-box {
-        margin-bottom: 12px;
-    }
-
-    .resource-browser .link-tabs {
-        margin-top: 10px;
-    }
-
-    .resource-browser .resource-list {
-        flex: 1 1 auto;
-        align-content: start;
-        min-height: 360px;
-        max-height: none;
-        margin-top: 15px;
-        overflow-y: auto;
-    }
-
 .resource-row {
     justify-content: space-between;
     gap: 10px;
@@ -812,16 +639,94 @@ textarea:focus-visible {
         color: #f2fff4;
     }
 
-@media (max-width: 960px) {
-    .resource-browser {
-        min-height: 0;
+/* ============================================================
+   Histórico
+   ============================================================ */
+.history-content {
+    display: grid;
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+    align-items: start;
+    gap: 14px;
+    min-height: 0;
+}
+
+.history-editor,
+.history-list-panel {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid rgba(205, 167, 95, .42);
+    background: rgba(44, 33, 25, .8);
+}
+
+.history-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+    .history-list-heading .page-kicker {
+        margin-bottom: 5px;
     }
 
-        .resource-browser .resource-list {
-            min-height: 0;
-            max-height: 60vh;
-        }
+    .history-list-heading h2 {
+        margin: 0;
+        color: #f0e3c8;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .history-list-heading > span {
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+.history-fields-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
 }
+
+    .history-fields-row select option {
+        background-color: #131a29;
+        color: #f5eedf;
+    }
+
+.history-actions {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.history-list {
+    display: grid;
+    gap: 8px;
+    max-height: min(650px, 65dvh);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.history-entry {
+    display: grid;
+    width: 100%;
+    gap: 9px;
+    padding: 13px;
+    border: 1px solid rgba(217, 184, 120, .22);
+    background: rgba(25, 17, 13, .44);
+    color: #e5d2ad;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .history-entry:hover {
+        border-color: var(--gold);
+        background: rgba(112, 81, 35, .25);
+    }
+
 /* ============================================================
    Aba Fichas dos Jogadores & Inspeção Completa (Mestre)
    ============================================================ */
@@ -864,6 +769,7 @@ textarea:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
     .ficha-mestre-info strong {
@@ -944,7 +850,6 @@ textarea:focus-visible {
     color: #493519;
 }
 
-/* Pergaminho de Inspeção da Ficha (Abre Abaixo da Lista) */
 .ficha-pergaminho-inspecao {
     position: relative;
     padding: 26px clamp(18px, 2.5vw, 36px);
@@ -1202,12 +1107,209 @@ textarea:focus-visible {
             color: #fff8e7;
         }
 
-@media (max-width: 760px) {
-    .atributos-grid-inspecao {
-        grid-template-columns: repeat(3, 1fr);
+/* ============================================================
+   Scroll Minimalista Transparente (Firefox & WebKit/WebView2)
+   ============================================================ */
+.resource-browser,
+.resource-editor,
+.resource-list,
+.catalog-results,
+.history-list {
+    color-scheme: dark;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+    .resource-browser::-webkit-scrollbar,
+    .resource-editor::-webkit-scrollbar,
+    .resource-list::-webkit-scrollbar,
+    .catalog-results::-webkit-scrollbar,
+    .history-list::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+        background: transparent !important;
     }
 
-    .grid-2-inspecao, .grid-4-inspecao {
-        grid-template-columns: 1fr;
+    .resource-browser::-webkit-scrollbar-track,
+    .resource-editor::-webkit-scrollbar-track,
+    .resource-list::-webkit-scrollbar-track,
+    .catalog-results::-webkit-scrollbar-track,
+    .history-list::-webkit-scrollbar-track,
+    .resource-browser::-webkit-scrollbar-track-piece,
+    .resource-editor::-webkit-scrollbar-track-piece,
+    .resource-list::-webkit-scrollbar-track-piece,
+    .catalog-results::-webkit-scrollbar-track-piece,
+    .history-list::-webkit-scrollbar-track-piece {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+    }
+
+    .resource-browser::-webkit-scrollbar-button,
+    .resource-editor::-webkit-scrollbar-button,
+    .resource-list::-webkit-scrollbar-button,
+    .catalog-results::-webkit-scrollbar-button,
+    .history-list::-webkit-scrollbar-button,
+    .resource-browser::-webkit-scrollbar-corner,
+    .resource-editor::-webkit-scrollbar-corner,
+    .resource-list::-webkit-scrollbar-corner,
+    .catalog-results::-webkit-scrollbar-corner,
+    .history-list::-webkit-scrollbar-corner {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        background: transparent !important;
+    }
+
+    .resource-browser::-webkit-scrollbar-thumb,
+    .resource-editor::-webkit-scrollbar-thumb,
+    .resource-list::-webkit-scrollbar-thumb,
+    .catalog-results::-webkit-scrollbar-thumb,
+    .history-list::-webkit-scrollbar-thumb {
+        background: var(--scroll-thumb);
+        border-radius: 999px;
+    }
+
+        .resource-browser::-webkit-scrollbar-thumb:hover,
+        .resource-editor::-webkit-scrollbar-thumb:hover,
+        .resource-list::-webkit-scrollbar-thumb:hover,
+        .catalog-results::-webkit-scrollbar-thumb:hover,
+        .history-list::-webkit-scrollbar-thumb:hover {
+            background: var(--scroll-thumb-hover);
+        }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #f0d17f;
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   Responsividade
+   ============================================================ */
+@media (max-width: 960px) {
+    .history-content {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .history-list {
+        max-height: 360px;
+    }
+
+    .configuration-layout {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .resource-browser,
+    .resource-editor {
+        height: auto;
+        max-height: 62dvh;
+    }
+
+        .resource-browser .resource-list {
+            min-height: 140px;
+            max-height: 220px;
+        }
+}
+
+@media (max-width: 760px) {
+    .app-content {
+        padding: 20px 14px 36px;
+    }
+
+    .session-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .session-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .session-nav-link {
+        justify-content: center;
+        padding: 0 6px;
+        text-align: center;
+    }
+
+    .session-players {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .resource-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .atributos-grid-inspecao {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-2-inspecao,
+    .grid-4-inspecao {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ficha-cabecalho-inspecao {
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .retrato-inspecao {
+        width: 76px;
+        height: 76px;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        min-height: 56px;
+    }
+
+    .topbar-label {
+        font-size: 10px;
+    }
+
+    .app-content {
+        padding: 18px 12px 32px;
+    }
+
+    .page-heading h1 {
+        font-size: 26px;
+    }
+
+    .session-nav,
+    .session-players,
+    .summary-details,
+    .history-fields-row,
+    .link-tabs {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .session-nav-link {
+        justify-content: flex-start;
+    }
+
+    .session-summary {
+        padding: 20px;
+    }
+
+    .editor-row {
+        grid-template-columns: minmax(0, 1fr) 94px;
+    }
+
+    .resource-browser,
+    .resource-editor {
+        max-height: 68dvh;
+        padding: 14px;
+    }
+
+    .save-button {
+        margin-left: 0;
+        flex: 1 1 auto;
     }
 }

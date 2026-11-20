@@ -1,0 +1,321 @@
+﻿@page "/npc-criar"
+@using System.Globalization
+@using RPGdeMesa.Domain.Npcs
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Presentation.Services
+@inject NpcService NpcService
+@inject SessaoUsuarioService SessaoUsuario
+@inject IJSRuntime JS
+
+<main class="npc-create-page">
+    <div class="app-content">
+        <header class="top-bar">
+            <button type="button" class="voltar-link" @onclick="VoltarAsync">
+                <span aria-hidden="true">←</span> Voltar
+            </button>
+            <p class="page-kicker">FICHA DO ELEMENTO</p>
+            <h1 class="page-title">Cadastrar NPC</h1>
+        </header>
+
+        <form class="form-layout" @onsubmit="SalvarAsync" @onsubmit:preventDefault="true">
+            <section class="ficha-pergaminho" aria-label="Ficha do NPC">
+                <div class="ficha-conteudo">
+                    <div class="form-grid-2">
+                        <div class="campo-foto full-width">
+                            <span class="campo-rotulo">Foto do NPC</span>
+                            <div class="foto-linha">
+                                <div class="foto-preview" aria-hidden="true">
+                                    @if (TemFoto)
+                                    {
+                                        <img src="@Npc.Imagem" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <text>@Inicial</text>
+                                    }
+                                </div>
+                                <div class="foto-acoes">
+                                    <div class="foto-botoes">
+                                        <label class="btn-foto">
+                                            ↑ @(TemFoto ? "Trocar foto" : "Escolher foto")
+                                            <InputFile @key="_chaveInputFoto" OnChange="CarregarFotoAsync" accept="image/*" aria-label="Escolher foto do NPC" />
+                                        </label>
+                                        @if (TemFoto)
+                                        {
+                                            <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
+                                        }
+                                    </div>
+                                    <p class="foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
+                                    @if (!string.IsNullOrWhiteSpace(ErroImagem))
+                                    {
+                                        <p class="foto-erro" role="alert">@ErroImagem</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <label class="campo-ficha full-width">
+                            <span>Nome do NPC</span>
+                            <input type="text" @bind="Npc.Nome" @bind:event="oninput" maxlength="100" required autocomplete="off" placeholder="Ex.: Aldeão" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Raça</span>
+                            <select @bind="Npc.RacaTexto">
+                                <option value="Humano">Humano</option><option value="Elfo">Elfo</option><option value="Anão">Anão</option>
+                                <option value="Halfling">Halfling</option><option value="Meio-elfo">Meio-elfo</option><option value="Tiefling">Tiefling</option><option value="Orc">Orc</option><option value="Outra">Outra</option>
+                            </select>
+                        </label>
+                        <label class="campo-ficha">
+                            <span>Classe</span>
+                            <select @bind="Npc.ClasseTexto">
+                                <option value="Guerreiro">Guerreiro</option><option value="Bárbaro">Bárbaro</option><option value="Bardo">Bardo</option>
+                                <option value="Clérigo">Clérigo</option><option value="Druida">Druida</option><option value="Ladino">Ladino</option>
+                                <option value="Mago">Mago</option><option value="Paladino">Paladino</option><option value="Patrulheiro">Patrulheiro</option>
+                                <option value="Bruxo">Bruxo</option><option value="Civil / Plebeu">Civil / Plebeu</option>
+                            </select>
+                        </label>
+                        <label class="campo-ficha">
+                            <span>Nível</span>
+                            <input type="number" min="1" max="20" inputmode="numeric" value="@Npc.Nivel"
+                                   @oninput="e => AoDigitarNumero(e, 1, 20, v => Npc.Nivel = v)" />
+                        </label>
+                        <label class="campo-ficha">
+                            <span>Tendência</span>
+                            <select @bind="Npc.Tendencia">
+                                <option value="Neutra">Neutra</option><option value="Leal e boa">Leal e boa</option><option value="Neutra e boa">Neutra e boa</option>
+                                <option value="Caótica e boa">Caótica e boa</option><option value="Leal e neutra">Leal e neutra</option><option value="Caótica e neutra">Caótica e neutra</option>
+                                <option value="Leal e má">Leal e má</option><option value="Neutra e má">Neutra e má</option><option value="Caótica e má">Caótica e má</option>
+                            </select>
+                        </label>
+                        <label class="campo-ficha full-width">
+                            <span>Antecedente</span>
+                            <input type="text" @bind="Npc.AntecedenteTexto" @bind:event="oninput" maxlength="50" autocomplete="off" placeholder="Ex.: Batedor" />
+                        </label>
+
+                        <div class="form-divider">Atributos</div>
+                        <div class="atributos-cards">
+                            @foreach (var atributo in Atributos)
+                            {
+                                <div class="atributo-box" @key="atributo.Sigla">
+                                    <span>@atributo.Sigla</span>
+                                    <input type="number" min="1" max="30" inputmode="numeric" value="@atributo.Obter()"
+                                           @oninput="e => AoDigitarNumero(e, 1, 30, atributo.Definir)" aria-label="Atributo @atributo.Sigla" />
+                                    <small class="@ClasseModificador(atributo.Obter())">@FormatarModificador(atributo.Obter())</small>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-divider">História e detalhes</div>
+                        <div class="painel-historia">
+                            <label for="npc-historia">História e anotações</label>
+                            <textarea id="npc-historia" @bind="Npc.Historia" rows="5" placeholder="Detalhes do NPC..."></textarea>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Mensagem))
+                    {
+                        <p class="feedback @(Sucesso ? "ok" : "erro")" role="status">@Mensagem</p>
+                    }
+                    <footer class="form-footer">
+                        <button type="submit" class="action-primary" disabled="@Processando">@(Processando ? "Salvando..." : "Cadastrar NPC")</button>
+                    </footer>
+                </div>
+            </section>
+
+            <aside class="form-aside" aria-label="Resumo do NPC">
+                <div class="npc-preview-card">
+                    <div class="npc-avatar-circle">
+                        @if (TemFoto)
+                        {
+                            <img src="@Npc.Imagem" alt="Foto de @NomePreview" />
+                        }
+                        else
+                        {
+                            <text>@Inicial</text>
+                        }
+                    </div>
+                    <h3>@NomePreview</h3>
+                    <p>@Texto(Npc.RacaTexto, "Humano") • @Texto(Npc.ClasseTexto, "Guerreiro") (Nível @Npc.Nivel)</p>
+                    <p class="preview-extra">@Texto(Npc.AntecedenteTexto, "Batedor") • @Texto(Npc.Tendencia, "Neutra")</p>
+                    <div class="preview-stats-mini">
+                        @foreach (var atributo in Atributos)
+                        {
+                            <div><b>@atributo.Sigla</b><span>@atributo.Obter()</span></div>
+                        }
+                    </div>
+                </div>
+            </aside>
+        </form>
+    </div>
+</main>
+
+@code {
+    private sealed record AtributoCampo(string Sigla, Func<int> Obter, Action<int> Definir);
+
+    private NPC Npc { get; set; } = new()
+    {
+        Nome = "",
+        RacaTexto = "Humano",
+        ClasseTexto = "Guerreiro",
+        Nivel = 1,
+        AntecedenteTexto = "",
+        Tendencia = "Neutra",
+        Forca = 10,
+        Destreza = 10,
+        Constituicao = 10,
+        Inteligencia = 10,
+        Sabedoria = 10,
+        Carisma = 10,
+        Historia = ""
+    };
+
+    private AtributoCampo[]? _atributos;
+    private AtributoCampo[] Atributos => _atributos ??= new[]
+    {
+        new AtributoCampo("FOR", () => Npc.Forca, v => Npc.Forca = v),
+        new AtributoCampo("DES", () => Npc.Destreza, v => Npc.Destreza = v),
+        new AtributoCampo("CON", () => Npc.Constituicao, v => Npc.Constituicao = v),
+        new AtributoCampo("INT", () => Npc.Inteligencia, v => Npc.Inteligencia = v),
+        new AtributoCampo("SAB", () => Npc.Sabedoria, v => Npc.Sabedoria = v),
+        new AtributoCampo("CAR", () => Npc.Carisma, v => Npc.Carisma = v)
+    };
+
+    private static readonly string? ImagemPadrao = new NPC().Imagem;
+    private const int LadoMaximoFoto = 512;
+    private const long LimiteOriginalBytes = 10 * 1024 * 1024;
+    private const long LimiteFinalBytes = 2 * 1024 * 1024;
+
+    private int _chaveInputFoto;
+    private string? ErroImagem { get; set; }
+    private bool TemFoto => Npc.Imagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
+
+    private bool Processando { get; set; }
+    private bool Sucesso { get; set; }
+    private string Mensagem { get; set; } = "";
+
+    [SupplyParameterFromQuery(Name = "idCampanha")]
+    public int? IdCampanha { get; set; }
+
+    private string NomePreview => string.IsNullOrWhiteSpace(Npc.Nome) ? "Aldeão" : Npc.Nome.Trim();
+    private string Inicial => StringInfo.GetNextTextElement(NomePreview).ToUpperInvariant();
+
+    private async Task VoltarAsync() => await JS.InvokeVoidAsync("history.back");
+
+    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+    {
+        ErroImagem = null;
+        var arquivo = evento.File;
+
+        if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
+            !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            ErroImagem = "Selecione um arquivo de imagem válido.";
+            return;
+        }
+
+        if (arquivo.Size > LimiteOriginalBytes)
+        {
+            ErroImagem = "A imagem deve ter no máximo 10 MB.";
+            return;
+        }
+
+        try
+        {
+            // Reduz a foto no próprio aparelho para não guardar imagens enormes no banco.
+            // Se o redimensionamento não estiver disponível, só aceita a original se for pequena.
+            IBrowserFile origem = arquivo;
+            try
+            {
+                var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
+                    ? "image/jpeg"
+                    : "image/png";
+                origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
+            }
+            catch (Exception) when (arquivo.Size <= LimiteFinalBytes)
+            {
+                origem = arquivo;
+            }
+
+            await using var leitura = origem.OpenReadStream(LimiteFinalBytes);
+            using var memoria = new MemoryStream();
+            await leitura.CopyToAsync(memoria);
+
+            Npc.Imagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+        }
+        catch (Exception)
+        {
+            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+        }
+    }
+
+    private void RemoverFoto()
+    {
+        Npc.Imagem = ImagemPadrao;
+        ErroImagem = null;
+        _chaveInputFoto++; // recria o seletor para permitir escolher o mesmo arquivo de novo
+    }
+
+    private static string Texto(string? valor, string padrao) =>
+        string.IsNullOrWhiteSpace(valor) ? padrao : valor.Trim();
+
+    // Atualiza o valor enquanto digita; valores inválidos (campo vazio, "-") são ignorados
+    // para não apagar o que a pessoa está digitando.
+    private static void AoDigitarNumero(ChangeEventArgs e, int min, int max, Action<int> definir)
+    {
+        if (int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor))
+            definir(Math.Clamp(valor, min, max));
+    }
+
+    private static int Modificador(int valor) => (int)Math.Floor((valor - 10) / 2.0);
+
+    private static string FormatarModificador(int valor)
+    {
+        var modificador = Modificador(valor);
+        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
+    }
+
+    private static string ClasseModificador(int valor) => Modificador(valor) switch
+    {
+        > 0 => "mod-pos",
+        < 0 => "mod-neg",
+        _ => ""
+    };
+
+    private async Task SalvarAsync()
+    {
+        if (Processando) return;
+        var idUsuario = SessaoUsuario.IdUsuarioLogado;
+        if (idUsuario <= 0)
+        {
+            Sucesso = false;
+            Mensagem = "Usuário não identificado. Faça login novamente.";
+            return;
+        }
+
+        Processando = true;
+        Mensagem = "";
+        try
+        {
+            var resultado = await NpcService.CriarNpcAsync(idUsuario, Npc);
+            Sucesso = resultado.Sucesso;
+            Mensagem = resultado.Mensagem;
+            if (Sucesso && IdCampanha is > 0)
+            {
+                var vinculo = await NpcService.VincularNpcACampanhaAsync(Npc.IdNpc, IdCampanha.Value);
+                Sucesso = vinculo.Sucesso;
+                Mensagem = vinculo.Sucesso
+                    ? "NPC cadastrado e vinculado à campanha com sucesso!"
+                    : $"NPC salvo, mas não foi possível vincular à campanha: {vinculo.Mensagem}";
+            }
+            if (Sucesso)
+                await Task.Delay(700);
+        }
+        finally
+        {
+            Processando = false;
+        }
+    }
+}

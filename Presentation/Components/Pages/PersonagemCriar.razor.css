@@ -1964,12 +1964,14 @@ textarea:focus-visible {
         display: block;
         overflow-wrap: anywhere;
         line-height: 1.25;
+        color: #c5b79d;
     }
 
     .aside-summary .aside-meta {
         display: block;
         overflow-wrap: anywhere;
         line-height: 1.4;
+        color: #c5b79d;
     }
 
     .aside-summary .aside-divider {
@@ -1990,6 +1992,7 @@ textarea:focus-visible {
 .preview-actions .field-error {
     min-width: 0;
     overflow-wrap: anywhere;
+    color: #c5b79d;
 }
 
 /* Etapas: o texto não quebra letra a letra; rótulos longos recebem reticências. */

@@ -205,7 +205,7 @@ body {
    ============================================================ */
 .grade-personagens {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     gap: 18px;
 }
 
@@ -235,7 +235,7 @@ body {
 .retrato-personagem {
     position: relative;
     display: grid;
-    height: 145px;
+    aspect-ratio: 5 / 4;
     place-items: center;
     overflow: hidden;
     background: radial-gradient(circle at 50% 75%, #7e613a, #38291c 72%);
@@ -244,17 +244,56 @@ body {
     .retrato-personagem::after {
         position: absolute;
         inset: 8px;
+        z-index: 1;
         border: 1px solid rgba(225, 192, 125, 0.62);
         content: "";
         pointer-events: none;
     }
 
+    /* Foto enviada pelo usuário: preenche todo o retrato, mantendo o rosto em foco. */
     .retrato-personagem img {
-        width: 84px;
-        height: 84px;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 20%;
+        transition: transform 220ms ease;
+    }
+
+    /* Leve degradê embaixo para as iniciais continuarem legíveis sobre a foto. */
+    .retrato-personagem.com-foto::before {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: linear-gradient(to top, rgba(20, 12, 8, 0.6), transparent 45%);
+        content: "";
+        pointer-events: none;
+    }
+
+    /* Ilustração padrão (ícone de armadura): continua inteira e centralizada. */
+    .retrato-personagem.padrao img {
+        position: static;
+        width: clamp(56px, 42%, 96px);
+        height: auto;
+        aspect-ratio: 1;
         object-fit: contain;
         filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.55));
-        transition: transform 220ms ease;
+    }
+
+    /* Imagem quebrada ou inválida: some o ícone feio e entram as iniciais em destaque. */
+    .retrato-personagem.sem-imagem img {
+        display: none;
+    }
+
+    .retrato-personagem.sem-imagem::before {
+        display: none;
+    }
+
+    .retrato-personagem.sem-imagem > span {
+        position: static;
+        font-size: clamp(24px, 3vw, 34px);
+        letter-spacing: 3px;
     }
 
 .cartao-personagem:hover .retrato-personagem img {
@@ -263,8 +302,10 @@ body {
 
 .retrato-personagem > span {
     position: absolute;
+    z-index: 2;
     right: 12px;
     bottom: 9px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
     color: rgba(255, 241, 211, 0.82);
     font-size: 10px;
     letter-spacing: 1px;
@@ -373,15 +414,8 @@ body {
 /* ============================================================
    RESPONSIVIDADE (MEDIA QUERIES)
    ============================================================ */
-@media (max-width: 1050px) {
-    .grade-personagens {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
 @media (max-width: 780px) {
     .grade-personagens {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 13px;
     }
 }
@@ -434,12 +468,8 @@ body {
     }
 
     .grade-personagens {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 11px;
-    }
-
-    .retrato-personagem {
-        height: 115px;
     }
 
     .info-personagem {
