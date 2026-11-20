@@ -9,9 +9,24 @@
     {
         @foreach (var npc in Npcs)
         {
+            var imagemUrl = ObterUrlImagem(npc.Imagem);
+            var inicial = string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant();
+
             <div class="npc-card-wrap">
                 <button class="npc-card" type="button" @onclick="() => OnSelecionar.InvokeAsync(npc)">
-                    <span class="npc-avatar" aria-hidden="true">@(string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant())</span>
+                    <span class="npc-avatar" aria-hidden="true">
+                        @if (!string.IsNullOrWhiteSpace(imagemUrl))
+                        {
+                            <img src="@imagemUrl"
+                                 alt=""
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
+                            <span style="display: none;">@inicial</span>
+                        }
+                        else
+                        {
+                            <span>@inicial</span>
+                        }
+                    </span>
                     <span class="npc-info">
                         <strong>@npc.Nome</strong>
                         <small>@(npc.RacaTexto ?? "Aventureiro") · @(npc.ClasseTexto ?? npc.Ocupacao ?? "Civil")</small>
@@ -37,6 +52,8 @@
 
 @if (ExibirModal && NpcSelecionado is not null)
 {
+    var imagemModalUrl = ObterUrlImagem(NpcSelecionado.Imagem);
+
     <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
         <div class="modal-content-custom" @onclick:stopPropagation="true">
             <button class="modal-close-btn" type="button" @onclick="OnFecharModal">×</button>
@@ -116,9 +133,9 @@
 
                 <aside class="form-aside">
                     <div class="aside-portrait">
-                        @if (!string.IsNullOrWhiteSpace(NpcSelecionado.Imagem))
+                        @if (!string.IsNullOrWhiteSpace(imagemModalUrl))
                         {
-                            <img src="@NpcSelecionado.Imagem" alt="Retrato de @NpcSelecionado.Nome" />
+                            <img src="@imagemModalUrl" alt="Retrato de @NpcSelecionado.Nome" />
                         }
                     </div>
                     <div class="aside-note">
@@ -141,4 +158,17 @@
     [Parameter] public EventCallback<NPC> OnSelecionar { get; set; }
     [Parameter] public EventCallback OnFecharModal { get; set; }
     [Parameter] public EventCallback<(int Id, string Nome)> OnPedirExclusao { get; set; }
+
+    private static string? ObterUrlImagem(string? caminho)
+    {
+        if (string.IsNullOrWhiteSpace(caminho))
+            return null;
+
+        var limpo = caminho.Trim();
+
+        if (limpo.StartsWith("~/", StringComparison.Ordinal))
+            return limpo[2..];
+
+        return limpo;
+    }
 }

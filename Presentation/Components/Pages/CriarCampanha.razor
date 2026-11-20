@@ -1,169 +1,193 @@
 @page "/criar-campanha"
-@layout Layout.EmptyLayout
 @implements IDisposable
+@using RPGdeMesa.Presentation.Components.Layout
 @inject CampanhaService CampanhaService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject SessaoUsuarioService SessaoUsuario
 
-<main class="tela-rpg editor-campanha">
-    <a class="voltar-campanhas" href="/campanhas"><span aria-hidden="true">←</span> Voltar às campanhas</a>
+<NavMenu />
 
-    <div class="cabecalho-editor">
-        <p class="sobretitulo-rpg">Abra os portões da aventura</p>
-        <h1>Nova campanha</h1>
-        <p class="texto-apoio">Prepare o cenário e reúna seu grupo.</p>
-    </div>
+<div class="app-shell">
+    <main class="app-content">
+        <a class="voltar-link" href="/campanhas"><span aria-hidden="true">←</span> Voltar às campanhas</a>
 
-    <div class="painel-editor">
-        <section class="formulario-campanha" aria-label="Detalhes da campanha">
+        <header class="page-heading">
+            <p class="page-kicker">Abra os portões da aventura</p>
+            <h1>Nova campanha</h1>
+            <p class="page-description">Prepare o cenário e reúna seu grupo.</p>
+        </header>
 
-            <label class="campo-campanha campo-nome">
-                <span>Nome da campanha*</span>
-                <input type="text" @bind="viewModel.Nome" placeholder="Ex.: As Crônicas de Eldoria" />
-            </label>
+        <div class="campanha-layout">
+            <!-- ===== Formulário principal ===== -->
+            <section class="painel" aria-labelledby="titulo-detalhes">
+                <div class="painel-heading">
+                    <p class="page-kicker">Ficha da campanha</p>
+                    <h2 id="titulo-detalhes">Detalhes da campanha</h2>
+                </div>
 
-            <div class="recursos-campanha">
-                <!-- MONSTROS -->
-                <div class="campo-campanha">
-                    <label for="monstros">Monstros</label>
-                    <div class="entrada-com-acao-tags">
-                        <div class="tags-container" id="monstros">
-                            @if (!viewModel.ListaMonstros.Any())
-                            {
-                                <span class="placeholder-texto">Clique no + para vincular criaturas salvas</span>
-                            }
-                            @foreach (var m in viewModel.ListaMonstros)
-                            {
-                                <span class="tag-item-embutido" @onclick="() => viewModel.AbrirDetalhesMonstro(m)">
-                                    👾 @m.Nome
-                                    <button type="button" class="btn-remover-tag" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverMonstro(m)">×</button>
-                                </span>
-                            }
+                <div class="form-field">
+                    <label for="nome">Nome da campanha*</label>
+                    <input id="nome" type="text" @bind="viewModel.Nome" placeholder="Ex.: As Crônicas de Eldoria" />
+                </div>
+
+                <div class="recursos-campanha">
+                    <!-- MONSTROS -->
+                    <div class="form-field" role="group" aria-labelledby="rotulo-monstros">
+                        <span id="rotulo-monstros" class="rotulo">Monstros</span>
+                        <div class="campo-tags">
+                            <div class="tags-container">
+                                @if (!viewModel.ListaMonstros.Any())
+                                {
+                                    <span class="placeholder-texto">Clique no + para vincular criaturas salvas</span>
+                                }
+                                @foreach (var m in viewModel.ListaMonstros)
+                                {
+                                    <span class="tag-item" @onclick="() => viewModel.AbrirDetalhesMonstro(m)">
+                                        @m.Nome
+                                        <button type="button" class="btn-remover-tag" aria-label="Remover @m.Nome" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverMonstro(m)">×</button>
+                                    </span>
+                                }
+                            </div>
+                            <button type="button" class="btn-adicionar" aria-label="Vincular monstro" @onclick="viewModel.AbrirModalSelecionarMonstro">+</button>
                         </div>
-                        <button type="button" aria-label="Vincular monstro" @onclick="viewModel.AbrirModalSelecionarMonstro">+</button>
+                    </div>
+
+                    <!-- NPCS -->
+                    <div class="form-field" role="group" aria-labelledby="rotulo-npcs">
+                        <span id="rotulo-npcs" class="rotulo">NPCs</span>
+                        <div class="campo-tags">
+                            <div class="tags-container">
+                                @if (!viewModel.ListaNPCs.Any())
+                                {
+                                    <span class="placeholder-texto">Clique no + para vincular NPCs salvos</span>
+                                }
+                                @foreach (var n in viewModel.ListaNPCs)
+                                {
+                                    <span class="tag-item" @onclick="() => viewModel.AbrirDetalhesNPC(n)">
+                                        @n.Nome
+                                        <button type="button" class="btn-remover-tag" aria-label="Remover @n.Nome" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverNPC(n)">×</button>
+                                    </span>
+                                }
+                            </div>
+                            <button type="button" class="btn-adicionar" aria-label="Vincular NPC" @onclick="viewModel.AbrirModalSelecionarNPC">+</button>
+                        </div>
+                    </div>
+
+                    <!-- ITENS -->
+                    <div class="form-field" role="group" aria-labelledby="rotulo-itens">
+                        <span id="rotulo-itens" class="rotulo">Itens</span>
+                        <div class="campo-tags">
+                            <div class="tags-container">
+                                @if (!viewModel.ListaItensCampanha.Any())
+                                {
+                                    <span class="placeholder-texto">Clique no + para vincular itens salvos</span>
+                                }
+                                @foreach (var i in viewModel.ListaItensCampanha)
+                                {
+                                    <span class="tag-item" @onclick="() => viewModel.AbrirDetalhesItem(i)">
+                                        @i.Nome
+                                        <button type="button" class="btn-remover-tag" aria-label="Remover @i.Nome" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverItem(i)">×</button>
+                                    </span>
+                                }
+                            </div>
+                            <button type="button" class="btn-adicionar" aria-label="Vincular item" @onclick="viewModel.AbrirModalSelecionarItem">+</button>
+                        </div>
+                    </div>
+
+                    <!-- MAPAS DA CAMPANHA -->
+                    <div class="form-field">
+                        <label for="mapa">Mapas da campanha</label>
+                        <InputFile id="mapa" class="entrada-arquivo" OnChange="viewModel.AdicionarMapas" multiple accept="image/*" />
+
+                        @if (viewModel.ListaMapas.Any())
+                        {
+                            <div class="lista-mapas">
+                                @foreach (var mapa in viewModel.ListaMapas)
+                                {
+                                    <div class="mapa-item">
+                                        <span>@mapa.Name</span>
+                                        <button type="button" class="btn-remover-tag" aria-label="Remover mapa @mapa.Name" @onclick="() => viewModel.RemoverMapa(mapa)">×</button>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
 
-                <!-- NPCS -->
-                <div class="campo-campanha">
-                    <label for="npcs">NPCs</label>
-                    <div class="entrada-com-acao-tags">
-                        <div class="tags-container" id="npcs">
-                            @if (!viewModel.ListaNPCs.Any())
-                            {
-                                <span class="placeholder-texto">Clique no + para vincular NPCs salvos</span>
-                            }
-                            @foreach (var n in viewModel.ListaNPCs)
-                            {
-                                <span class="tag-item-embutido npc-tag" @onclick="() => viewModel.AbrirDetalhesNPC(n)">
-                                    👤 @n.Nome
-                                    <button type="button" class="btn-remover-tag" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverNPC(n)">×</button>
-                                </span>
-                            }
-                        </div>
-                        <button type="button" aria-label="Vincular NPC" @onclick="viewModel.AbrirModalSelecionarNPC">+</button>
+                <div class="form-field">
+                    <label for="notas">Notas da campanha</label>
+                    <textarea id="notas" @bind="viewModel.Notas" rows="3" placeholder="Anote os primeiros detalhes da aventura..."></textarea>
+                </div>
+
+                <div class="form-field">
+                    <label for="capa">Capa da campanha</label>
+                    <InputFile id="capa" class="entrada-arquivo" OnChange="@(e => viewModel.ArquivoCapa = e.File)" accept="image/*" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
+                {
+                    <p class="form-status @(viewModel.Sucesso ? "ok" : "erro")" role="status" aria-live="polite">@viewModel.MensagemFeedback</p>
+                }
+
+                <div class="form-actions">
+                    <a class="action-secondary" href="/campanhas">Cancelar</a>
+                    <button class="action-primary" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@viewModel.IsProcessing">
+                        @(viewModel.IsProcessing ? "Criando..." : "Criar campanha") <span aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ===== Coluna lateral ===== -->
+            <aside class="coluna-lateral">
+                <section class="painel" aria-labelledby="titulo-convite">
+                    <div class="painel-heading">
+                        <p class="page-kicker">Convide seu grupo</p>
+                        <h2 id="titulo-convite">Código de convite</h2>
                     </div>
-                </div>
 
-                <!-- ITENS -->
-                <div class="campo-campanha">
-                    <label for="itens">Itens</label>
-                    <div class="entrada-com-acao-tags">
-                        <div class="tags-container" id="itens">
-                            @if (!viewModel.ListaItensCampanha.Any())
-                            {
-                                <span class="placeholder-texto">Clique no + para vincular itens salvos</span>
-                            }
-                            @foreach (var i in viewModel.ListaItensCampanha)
-                            {
-                                <span class="tag-item-embutido item-tag" @onclick="() => viewModel.AbrirDetalhesItem(i)">
-                                    ⚔️ @i.Nome
-                                    <button type="button" class="btn-remover-tag" @onclick:stopPropagation="true" @onclick="() => viewModel.RemoverItem(i)">×</button>
-                                </span>
-                            }
-                        </div>
-                        <button type="button" aria-label="Vincular item" @onclick="viewModel.AbrirModalSelecionarItem">+</button>
+                    <div class="codigo-convite">
+                        <strong>@viewModel.CodigoConvite</strong>
+                        <button type="button" class="btn-copiar" aria-label="Copiar código" @onclick="viewModel.CopiarCodigoAsync">Copiar</button>
                     </div>
-                </div>
 
-                <!-- MAPAS DA CAMPANHA -->
-                <div class="campo-campanha">
-                    <label for="mapa">Mapas da campanha</label>
-                    <InputFile id="mapa" class="entrada-arquivo" OnChange="viewModel.AdicionarMapas" multiple accept="image/*" />
-                    
-                    @if (viewModel.ListaMapas.Any())
-                    {
-                        <div class="lista-mapas-container">
-                            @foreach (var mapa in viewModel.ListaMapas)
-                            {
-                                <div class="mapa-item-linha">
-                                    <span>🗺️ @mapa.Name</span>
-                                    <button type="button" class="botao-remover-mapa" @onclick="() => viewModel.RemoverMapa(mapa)">×</button>
-                                </div>
-                            }
+                    <p class="texto-apoio">Compartilhe este código com seus jogadores.</p>
+                </section>
+
+                <section class="painel" aria-labelledby="titulo-jogadores">
+                    <div class="painel-heading painel-heading-linha">
+                        <h2 id="titulo-jogadores">Jogadores</h2>
+                        <span>1</span>
+                    </div>
+
+                    <div class="jogador-campanha">
+                        <span class="avatar-jogador" aria-hidden="true">M</span>
+                        <div>
+                            <strong>Mestre da mesa</strong>
+                            <small>Organizador</small>
                         </div>
-                    }
-                </div>
-            </div>
+                        <a href="/personagem-lib">Ver ficha</a>
+                    </div>
 
-            <div class="campo-campanha">
-                <label for="notas">Notas da campanha</label>
-                <textarea id="notas" @bind="viewModel.Notas" rows="3" placeholder="Anote os primeiros detalhes da aventura..."></textarea>
-            </div>
+                    <div class="vaga-jogador"><span aria-hidden="true">+</span> Aguardando jogadores</div>
+                </section>
 
-            <fieldset class="seletor-capas">
-                <legend>Capa da campanha</legend>
-                <InputFile id="capa" class="entrada-arquivo" OnChange="@(e => viewModel.ArquivoCapa = e.File)" accept="image/*" />
-            </fieldset>
+                <p class="nota-editor"><span aria-hidden="true">✦</span> Você poderá editar os detalhes da campanha depois.</p>
+            </aside>
+        </div>
+    </main>
+</div>
 
-            @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))
-            {
-                <p style="color: @(viewModel.Sucesso ? "#28a745" : "#dc3545"); text-align: center; margin: 10px 0; font-weight: bold;">
-                    @viewModel.MensagemFeedback
-                </p>
-            }
-
-            <button class="botao-dourado botao-criar" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@viewModel.IsProcessing">
-                @(viewModel.IsProcessing ? "Criando..." : "Criar campanha") <span aria-hidden="true">→</span>
-            </button>
-        </section>
-
-        <aside class="painel-grupo">
-            <div class="convite-campanha">
-                <p class="sobretitulo-rpg">Convide seu grupo</p>
-                <h2>Código de convite</h2>
-                
-                <div class="codigo-convite">
-                    <strong>@viewModel.CodigoConvite</strong>
-                    <button type="button" aria-label="Copiar código" @onclick="viewModel.CopiarCodigoAsync">▢</button>
-                </div>
-
-                <p class="texto-apoio">Compartilhe este código com seus jogadores.</p>
-            </div>
-            <div class="lista-jogadores">
-                <h2>Jogadores <span>1</span></h2>
-                <div class="jogador-campanha">
-                    <span class="avatar-jogador">M</span>
-                    <div><strong>Mestre da mesa</strong><small>Organizador</small></div>
-                    <a href="/personagens">Ver ficha</a>
-                </div>
-                <div class="vaga-jogador"><span aria-hidden="true">+</span> Aguardando jogadores</div>
-            </div>
-            <div class="nota-editor"><span aria-hidden="true">✦</span> Você poderá editar os detalhes da campanha depois.</div>
-        </aside>
-    </div>
-</main>
-
-<!-- MODAIS DE SELEÇÃO -->
+<!-- ===== MODAIS DE SELEÇÃO ===== -->
 @if (viewModel.ExibirModalSelecionarMonstro)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">Vincular Monstro</h2>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-monstro-titulo">
+            <p class="page-kicker">Bestiário</p>
+            <h2 id="modal-monstro-titulo" class="modal-titulo">Vincular monstro</h2>
             <p class="modal-texto">Escolha uma criatura cadastrada no seu bestiário:</p>
-            <div class="modal-grupo-select">
-                <select @bind="viewModel.IdMonstroSelecionadoNaLista" class="modal-select">
+            <div class="form-field">
+                <select @bind="viewModel.IdMonstroSelecionadoNaLista" aria-label="Criatura">
                     <option value="0">Selecione uma criatura...</option>
                     @foreach (var m in viewModel.MonstrosDisponiblesBiblioteca)
                     {
@@ -172,8 +196,8 @@
                 </select>
             </div>
             <div class="modal-acoes">
-                <button type="button" class="botao-cancelar-modal" @onclick="viewModel.FecharModalSelecionarMonstro">Cancelar</button>
-                <button type="button" class="botao-dourado" @onclick="ConfirmarSelecaoMonstro">Vincular</button>
+                <button type="button" class="action-secondary" @onclick="viewModel.FecharModalSelecionarMonstro">Cancelar</button>
+                <button type="button" class="action-primary" @onclick="ConfirmarSelecaoMonstro">Vincular</button>
             </div>
         </div>
     </div>
@@ -182,11 +206,12 @@
 @if (viewModel.ExibirModalSelecionarNPC)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">Vincular NPC</h2>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-npc-titulo">
+            <p class="page-kicker">Personagens do mestre</p>
+            <h2 id="modal-npc-titulo" class="modal-titulo">Vincular NPC</h2>
             <p class="modal-texto">Escolha um NPC cadastrado:</p>
-            <div class="modal-grupo-select">
-                <select @bind="viewModel.IdNPCSelecionadoNaLista" class="modal-select">
+            <div class="form-field">
+                <select @bind="viewModel.IdNPCSelecionadoNaLista" aria-label="NPC">
                     <option value="0">Selecione um NPC...</option>
                     @foreach (var n in viewModel.NPCsDisponiveisBiblioteca)
                     {
@@ -195,8 +220,8 @@
                 </select>
             </div>
             <div class="modal-acoes">
-                <button type="button" class="botao-cancelar-modal" @onclick="viewModel.FecharModalSelecionarNPC">Cancelar</button>
-                <button type="button" class="botao-dourado" @onclick="ConfirmarSelecaoNPC">Vincular</button>
+                <button type="button" class="action-secondary" @onclick="viewModel.FecharModalSelecionarNPC">Cancelar</button>
+                <button type="button" class="action-primary" @onclick="ConfirmarSelecaoNPC">Vincular</button>
             </div>
         </div>
     </div>
@@ -205,11 +230,12 @@
 @if (viewModel.ExibirModalSelecionarItem)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">Vincular Item</h2>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-item-titulo">
+            <p class="page-kicker">Biblioteca</p>
+            <h2 id="modal-item-titulo" class="modal-titulo">Vincular item</h2>
             <p class="modal-texto">Escolha um item cadastrado:</p>
-            <div class="modal-grupo-select">
-                <select @bind="viewModel.IdItemSelecionadoNaLista" class="modal-select">
+            <div class="form-field">
+                <select @bind="viewModel.IdItemSelecionadoNaLista" aria-label="Item">
                     <option value="0">Selecione um item...</option>
                     @foreach (var i in viewModel.ItensDisponiveisBiblioteca)
                     {
@@ -218,25 +244,28 @@
                 </select>
             </div>
             <div class="modal-acoes">
-                <button type="button" class="botao-cancelar-modal" @onclick="viewModel.FecharModalSelecionarItem">Cancelar</button>
-                <button type="button" class="botao-dourado" @onclick="ConfirmarSelecaoItem">Vincular</button>
+                <button type="button" class="action-secondary" @onclick="viewModel.FecharModalSelecionarItem">Cancelar</button>
+                <button type="button" class="action-primary" @onclick="ConfirmarSelecaoItem">Vincular</button>
             </div>
         </div>
     </div>
 }
 
+<!-- ===== MODAIS DE DETALHES ===== -->
 @if (viewModel.MonstroSelecionadoParaVer != null)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">👾 @viewModel.MonstroSelecionadoParaVer.Nome</h2>
-            <hr class="modal-divisor" />
-            <p><strong>Tipo:</strong> @viewModel.MonstroSelecionadoParaVer.Tipo</p>
-            <p><strong>Tamanho:</strong> @viewModel.MonstroSelecionadoParaVer.Tamanho</p>
-            <p><strong>Pontos de Vida (PV):</strong> @viewModel.MonstroSelecionadoParaVer.Vida</p>
-            <p><strong>Classe de Armadura (CA):</strong> @viewModel.MonstroSelecionadoParaVer.Defesa</p>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detalhe-monstro-titulo">
+            <p class="page-kicker">Ficha do monstro</p>
+            <h2 id="detalhe-monstro-titulo" class="modal-titulo">@viewModel.MonstroSelecionadoParaVer.Nome</h2>
+            <dl class="detalhes">
+                <div><dt>Tipo</dt><dd>@viewModel.MonstroSelecionadoParaVer.Tipo</dd></div>
+                <div><dt>Tamanho</dt><dd>@viewModel.MonstroSelecionadoParaVer.Tamanho</dd></div>
+                <div><dt>Pontos de Vida (PV)</dt><dd>@viewModel.MonstroSelecionadoParaVer.Vida</dd></div>
+                <div><dt>Classe de Armadura (CA)</dt><dd>@viewModel.MonstroSelecionadoParaVer.Defesa</dd></div>
+            </dl>
             <div class="modal-acoes">
-                <button type="button" class="botao-dourado" @onclick="viewModel.FecharDetalhesMonstro">Fechar</button>
+                <button type="button" class="action-primary" @onclick="viewModel.FecharDetalhesMonstro">Fechar</button>
             </div>
         </div>
     </div>
@@ -245,15 +274,17 @@
 @if (viewModel.NPCSelecionadoParaVer != null)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">👤 @viewModel.NPCSelecionadoParaVer.Nome</h2>
-            <hr class="modal-divisor" />
-            <p><strong>Ocupação:</strong> @viewModel.NPCSelecionadoParaVer.Ocupacao</p>
-            <p><strong>Alinhamento:</strong> @viewModel.NPCSelecionadoParaVer.Alinhamento</p>
-            <p><strong>Localização:</strong> @viewModel.NPCSelecionadoParaVer.Localizacao</p>
-            <p><strong>Descrição:</strong> @viewModel.NPCSelecionadoParaVer.Descricao</p>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detalhe-npc-titulo">
+            <p class="page-kicker">Ficha do NPC</p>
+            <h2 id="detalhe-npc-titulo" class="modal-titulo">@viewModel.NPCSelecionadoParaVer.Nome</h2>
+            <dl class="detalhes">
+                <div><dt>Ocupação</dt><dd>@viewModel.NPCSelecionadoParaVer.Ocupacao</dd></div>
+                <div><dt>Alinhamento</dt><dd>@viewModel.NPCSelecionadoParaVer.Alinhamento</dd></div>
+                <div><dt>Localização</dt><dd>@viewModel.NPCSelecionadoParaVer.Localizacao</dd></div>
+                <div><dt>Descrição</dt><dd>@viewModel.NPCSelecionadoParaVer.Descricao</dd></div>
+            </dl>
             <div class="modal-acoes">
-                <button type="button" class="botao-dourado" @onclick="viewModel.FecharDetalhesNPC">Fechar</button>
+                <button type="button" class="action-primary" @onclick="viewModel.FecharDetalhesNPC">Fechar</button>
             </div>
         </div>
     </div>
@@ -262,19 +293,21 @@
 @if (viewModel.ItemSelecionadoParaVer != null)
 {
     <div class="modal-overlay">
-        <div class="modal-card">
-            <h2 class="modal-titulo">⚔️ @viewModel.ItemSelecionadoParaVer.Nome</h2>
-            <hr class="modal-divisor" />
-            <p><strong>Tipo:</strong> @viewModel.ItemSelecionadoParaVer.Tipo</p>
-            <p><strong>Preço:</strong> @viewModel.ItemSelecionadoParaVer.Preco po</p>
-            <p><strong>Peso:</strong> @viewModel.ItemSelecionadoParaVer.Peso kg</p>
-            @if (!string.IsNullOrEmpty(viewModel.ItemSelecionadoParaVer.Dano))
-            {
-                <p><strong>Dano:</strong> @viewModel.ItemSelecionadoParaVer.Dano (@viewModel.ItemSelecionadoParaVer.TipoDano)</p>
-            }
-            <p><strong>Descrição:</strong> @viewModel.ItemSelecionadoParaVer.Descricao</p>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="detalhe-item-titulo">
+            <p class="page-kicker">Ficha do item</p>
+            <h2 id="detalhe-item-titulo" class="modal-titulo">@viewModel.ItemSelecionadoParaVer.Nome</h2>
+            <dl class="detalhes">
+                <div><dt>Tipo</dt><dd>@viewModel.ItemSelecionadoParaVer.Tipo</dd></div>
+                <div><dt>Preço</dt><dd>@viewModel.ItemSelecionadoParaVer.Preco po</dd></div>
+                <div><dt>Peso</dt><dd>@viewModel.ItemSelecionadoParaVer.Peso kg</dd></div>
+                @if (!string.IsNullOrEmpty(viewModel.ItemSelecionadoParaVer.Dano))
+                {
+                    <div><dt>Dano</dt><dd>@viewModel.ItemSelecionadoParaVer.Dano (@viewModel.ItemSelecionadoParaVer.TipoDano)</dd></div>
+                }
+                <div><dt>Descrição</dt><dd>@viewModel.ItemSelecionadoParaVer.Descricao</dd></div>
+            </dl>
             <div class="modal-acoes">
-                <button type="button" class="botao-dourado" @onclick="viewModel.FecharDetalhesItem">Fechar</button>
+                <button type="button" class="action-primary" @onclick="viewModel.FecharDetalhesItem">Fechar</button>
             </div>
         </div>
     </div>

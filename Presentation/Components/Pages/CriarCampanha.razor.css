@@ -1,377 +1,425 @@
-/* Os modais de seleção e detalhes possuem overlay fixo próprio para garantir sobreposição. */
-* {
+/* ============================================================
+   Nova campanha — mesmo padrão visual da tela "Configurações da sessão"
+   (fundo madeira, painéis marrons com borda dourada, campos escuros)
+   ============================================================ */
+
+*, *::before, *::after {
     box-sizing: border-box;
 }
 
-body {
-    margin: 0;
-    background: #1b120e;
-    color: #f5e9cf;
-    font-family: Georgia, "Times New Roman", serif;
+:root {
+    color-scheme: dark;
+    --wood: #1b120e;
+    --gold: #d1a951;
+    --line: rgba(217, 184, 120, .25);
+    --muted: #b7a78c;
 }
 
-.tela-rpg {
-    min-width: 100%;
-    min-height: 100vh;
-    background: #20150f;
-}
-
-.barra-rpg {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    min-height: 60px;
-    align-items: center;
-    gap: 36px;
-    padding: 0 5%;
-    border-bottom: 1px solid rgba(220, 181, 102, 0.25);
-    background: rgba(24, 16, 12, 0.9);
-    color: #ead6ad;
-}
-
-.marca-rpg {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    color: inherit;
-    font-size: 17px;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-    .marca-rpg span {
-        color: #d4aa56;
-        font-size: 22px;
-    }
-
-.nav-rpg {
-    display: flex;
-    align-self: stretch;
-    align-items: center;
-    gap: 25px;
-}
-
-    .nav-rpg a {
-        display: flex;
-        height: 100%;
-        align-items: center;
-        border-bottom: 2px solid transparent;
-        color: #c5b79d;
-        font-size: 14px;
-        text-decoration: none;
-    }
-
-        .nav-rpg a:hover,
-        .nav-rpg a.selecionado {
-            border-bottom-color: #d3ac60;
-            color: #f5e4bf;
-        }
-
-.mesa-atual {
-    margin-left: auto;
-    color: #c5b79d;
-    font-size: 13px;
-}
-
-    .mesa-atual span {
-        padding-left: 8px;
-        color: #d4aa56;
-    }
-
-.sobretitulo-rpg {
-    margin: 0 0 5px;
-    color: #d1ad67;
-    font-size: 10px;
-    letter-spacing: 1.3px;
-    text-transform: uppercase;
-}
-
-.texto-apoio {
-    margin: 7px 0 0;
-    color: #c5b79d;
-    font-size: 13px;
-}
-
-.botao-dourado {
-    display: inline-flex;
-    min-height: 42px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 17px;
-    border: 1px solid #dfbd6b;
-    border-radius: 4px;
-    background: #a47a2d;
-    color: #fff2d4;
+button, a, input, select, textarea {
     font: inherit;
-    font-size: 13px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 160ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-    .botao-dourado:hover {
-        transform: translateY(-1px);
-        background: #bd9140;
-    }
+/* ---------- Estrutura da página ---------- */
+.app-shell {
+    min-height: 100vh;
+    background: #1b120e;
+    color: #f2e6cf;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+}
 
-    .botao-dourado span {
-        font-size: 18px;
-    }
-
-.editor-campanha {
-    width: min(1120px, 100%);
+.app-content {
+    width: min(1360px, 100%);
     margin: 0 auto;
-    padding: 26px clamp(18px, 4vw, 52px) 52px;
+    padding: 32px clamp(16px, 3vw, 42px) 52px;
 }
 
-.voltar-campanhas {
+.voltar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: #d5c29e;
     font-size: 12px;
     text-decoration: none;
 }
 
-    .voltar-campanhas:hover {
+    .voltar-link:hover {
         color: #f1d58f;
     }
 
-    .voltar-campanhas span {
-        padding-right: 5px;
-        color: #d5b367;
+    .voltar-link span {
+        color: var(--gold);
     }
 
-.cabecalho-editor {
+.page-heading {
     margin: 18px 0 22px;
 }
 
-    .cabecalho-editor h1 {
+.page-kicker {
+    margin: 0 0 7px;
+    color: var(--gold);
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.page-heading h1 {
+    margin: 0;
+    color: #f3e7ce;
+    font-size: 32px;
+    font-weight: 500;
+}
+
+.page-description {
+    margin: 8px 0 0;
+    color: #c5b79d;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.campanha-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: 14px;
+}
+
+.coluna-lateral {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ---------- Painéis ---------- */
+.painel {
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid rgba(205, 167, 95, .42);
+    background: rgba(44, 33, 25, .78);
+}
+
+.painel-heading {
+    margin-bottom: 18px;
+}
+
+    .painel-heading .page-kicker {
+        margin-bottom: 5px;
+    }
+
+    .painel-heading h2 {
         margin: 0;
-        color: #f1e4c9;
-        font-size: 30px;
+        color: #f0e3c8;
+        font-size: 17px;
         font-weight: 500;
     }
 
-.painel-editor {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(230px, 0.8fr);
-    border: 1px solid rgba(207, 167, 91, 0.62);
-    background: linear-gradient(rgba(249, 235, 204, 0.96), rgba(228, 204, 157, 0.97)), url("img/papelantigo.png") center / cover;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36);
-}
-
-.formulario-campanha {
+.painel-heading-linha {
     display: flex;
-    flex-direction: column;
-    gap: 17px;
-    padding: clamp(18px, 3vw, 30px);
-    color: #493519;
+    align-items: baseline;
+    justify-content: space-between;
 }
 
-.campo-campanha {
+    .painel-heading-linha span {
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+/* ---------- Campos ---------- */
+.form-field {
     display: flex;
     min-width: 0;
     flex-direction: column;
     gap: 6px;
-    color: #77592c;
-    font-size: 12px;
+    margin-bottom: 14px;
+    color: #d2bd94;
+    font-size: 11px;
 }
 
-    .campo-campanha input,
-    .campo-campanha textarea {
+    .form-field input[type="text"],
+    .form-field select,
+    .form-field textarea {
         width: 100%;
-        min-height: 39px;
-        padding: 9px 11px;
-        border: 1px solid rgba(137, 102, 47, 0.43);
+        min-height: 38px;
+        padding: 9px 10px;
+        border: 1px solid rgba(151, 168, 195, .28);
         border-radius: 3px;
-        outline: none;
-        background: rgba(255, 251, 239, 0.72);
-        color: #43321e;
-        font: inherit;
+        background: rgba(13, 20, 34, .82);
+        color: #e9e2d4;
         font-size: 12px;
     }
 
-        .campo-campanha input:focus,
-        .campo-campanha textarea:focus {
-            border-color: #a87b32;
-            box-shadow: 0 0 0 2px rgba(168, 123, 50, 0.13);
+        .form-field input::placeholder,
+        .form-field textarea::placeholder {
+            color: #998b74;
         }
 
-        .campo-campanha input::placeholder,
-        .campo-campanha textarea::placeholder {
-            color: #9b8969;
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus {
+            outline: none;
+            border-color: #d4b364;
+            box-shadow: 0 0 0 2px rgba(209, 169, 81, .18);
         }
 
-    .campo-campanha textarea {
-        min-height: 76px;
+        .form-field select option {
+            background-color: #131a29;
+            color: #f5eedf;
+        }
+
+    .form-field textarea {
+        min-height: 110px;
         resize: vertical;
+        line-height: 1.5;
     }
 
 .recursos-campanha {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 13px 16px;
+    column-gap: 14px;
 }
 
-.entrada-com-acao {
+/* Campo com chips + botão "+" (Monstros, NPCs, Itens) */
+.campo-tags {
     display: flex;
-    gap: 6px;
+    align-items: stretch;
+    min-height: 38px;
+    overflow: hidden;
+    border: 1px solid rgba(151, 168, 195, .28);
+    border-radius: 3px;
+    background: rgba(13, 20, 34, .82);
 }
 
-    .entrada-com-acao button {
-        width: 40px;
-        flex: 0 0 40px;
-        border: 1px solid #aa813c;
-        background: #a47a2d;
-        color: #fff2d4;
-        font-size: 19px;
-        cursor: pointer;
-    }
-
-.entrada-arquivo {
-    padding: 5px !important;
-    font-size: 11px !important;
-}
-
-    .entrada-arquivo::file-selector-button {
-        min-height: 26px;
-        margin-right: 8px;
-        border: 1px solid #aa813c;
-        background: #eee0c2;
-        color: #63491f;
-        cursor: pointer;
-    }
-
-.seletor-capas {
+.tags-container {
+    display: flex;
     min-width: 0;
-    margin: 0;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+}
+
+.placeholder-texto {
+    color: #998b74;
+    font-size: 12px;
+    user-select: none;
+}
+
+.tag-item {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px 3px 10px;
+    border: 1px solid rgba(217, 184, 120, .36);
+    border-radius: 3px;
+    background: rgba(70, 52, 31, .9);
+    color: #f0e3c8;
+    font-size: 11px;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+    .tag-item:hover {
+        border-color: var(--gold);
+    }
+
+.btn-remover-tag {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    place-items: center;
     padding: 0;
     border: 0;
-}
-
-    .seletor-capas legend {
-        margin-bottom: 9px;
-        color: #77592c;
-        font-size: 12px;
-    }
-
-.grade-capas {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.opcao-capa {
-    position: relative;
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 4px;
-    padding: 3px;
-    border: 1px solid rgba(137, 102, 47, 0.35);
-    background: rgba(255, 251, 239, 0.48);
-    color: #785a2e;
-    font-size: 9px;
-    text-align: center;
+    border-radius: 50%;
+    background: transparent;
+    color: #f2b5a8;
+    font-size: 14px;
+    line-height: 1;
     cursor: pointer;
 }
 
-    .opcao-capa input {
-        position: absolute;
-        top: 5px;
-        left: 5px;
-        z-index: 1;
-        width: 14px;
-        min-height: 14px;
-        margin: 0;
-        accent-color: #9e762e;
+    .btn-remover-tag:hover {
+        background: #8c2f22;
+        color: #fff1ec;
     }
 
-        .opcao-capa input:checked + img {
-            outline: 2px solid #edcb75;
-            outline-offset: -3px;
+.btn-adicionar {
+    display: grid;
+    width: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border: 0;
+    border-left: 1px solid #d4b364;
+    background: #94702f;
+    color: #fff2d4;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 150ms ease;
+}
+
+    .btn-adicionar:hover {
+        background: #a98239;
+    }
+
+/* Seletor de arquivo: InputFile é componente filho, por isso ::deep */
+.form-field ::deep .entrada-arquivo {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid rgba(151, 168, 195, .28);
+    border-radius: 3px;
+    background: rgba(13, 20, 34, .82);
+    color: #c5b79d;
+    font-size: 11px;
+}
+
+    .form-field ::deep .entrada-arquivo::file-selector-button {
+        min-height: 28px;
+        margin-right: 10px;
+        padding: 0 12px;
+        border: 1px solid #b38b40;
+        border-radius: 3px;
+        background: #80602b;
+        color: #f0e3c8;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+        .form-field ::deep .entrada-arquivo::file-selector-button:hover {
+            background: #94702f;
         }
 
-    .opcao-capa img {
-        width: 100%;
-        aspect-ratio: 0.84;
-        object-fit: cover;
-    }
-
-.botao-criar {
-    align-self: flex-start;
-}
-
-.painel-grupo {
+.lista-mapas {
     display: flex;
     flex-direction: column;
-    border-left: 1px solid rgba(137, 102, 47, 0.27);
-    background: rgba(119, 87, 42, 0.08);
-    color: #493519;
+    gap: 4px;
+    margin-top: 4px;
 }
 
-.convite-campanha,
-.lista-jogadores {
-    padding: 24px 20px;
+.mapa-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 6px 5px 10px;
+    border: 1px solid var(--line);
+    background: rgba(25, 17, 13, .66);
+    color: #f0e3c8;
+    font-size: 11px;
 }
 
-.convite-campanha {
-    border-bottom: 1px solid rgba(137, 102, 47, 0.24);
-}
-
-    .convite-campanha .sobretitulo-rpg {
-        color: #967039;
+    .mapa-item span {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
-    .convite-campanha h2,
-    .lista-jogadores h2 {
-        margin: 0 0 13px;
-        color: #44321d;
-        font-size: 17px;
-        font-weight: 500;
+/* ---------- Botões e mensagens ---------- */
+.form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.action-primary,
+.action-secondary {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 3px;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.action-primary {
+    border: 1px solid #d4b364;
+    background: #94702f;
+    color: #fff2d4;
+}
+
+    .action-primary:hover:not(:disabled) {
+        background: #a98239;
     }
 
+    .action-primary:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
+.action-secondary {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: #f0e3c8;
+}
+
+    .action-secondary:hover {
+        background: rgba(217, 184, 120, .12);
+    }
+
+.form-status {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+}
+
+    .form-status.ok {
+        color: #7ccf8b;
+    }
+
+    .form-status.erro {
+        color: #f1a08f;
+    }
+
+/* ---------- Coluna lateral ---------- */
 .codigo-convite {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
     padding: 10px 12px;
-    border: 1px dashed #a27a38;
-    background: rgba(255, 249, 231, 0.58);
-    color: #604519;
+    border: 1px dashed rgba(209, 169, 81, .7);
+    background: rgba(25, 17, 13, .66);
+    color: #f3e7ce;
     letter-spacing: 2px;
 }
 
-    .codigo-convite button {
-        border: 0;
-        background: transparent;
-        color: #785a2e;
-        font-size: 18px;
-        cursor: pointer;
+.btn-copiar {
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: transparent;
+    color: #d7b968;
+    font-size: 11px;
+    letter-spacing: 0;
+    cursor: pointer;
+}
+
+    .btn-copiar:hover {
+        background: rgba(217, 184, 120, .12);
     }
 
-.convite-campanha .texto-apoio {
-    color: #7d6744;
+.texto-apoio {
+    margin: 10px 0 0;
+    color: var(--muted);
     font-size: 11px;
     line-height: 1.5;
 }
-
-.lista-jogadores h2 {
-    display: flex;
-    justify-content: space-between;
-}
-
-    .lista-jogadores h2 span {
-        color: #8c6b35;
-        font-size: 12px;
-    }
 
 .jogador-campanha {
     display: grid;
     grid-template-columns: 36px minmax(0, 1fr);
     align-items: center;
-    gap: 9px;
-    padding: 11px 0;
-    border-bottom: 1px solid rgba(137, 102, 47, 0.2);
+    gap: 4px 10px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid var(--line);
 }
 
 .avatar-jogador {
@@ -379,10 +427,10 @@ body {
     width: 34px;
     aspect-ratio: 1;
     place-items: center;
-    border: 1px solid #9d7737;
+    border: 1px solid #d4b364;
     border-radius: 50%;
-    background: #624b2d;
-    color: #f4e5c5;
+    background: rgba(70, 52, 31, .9);
+    color: #f3e7ce;
 }
 
 .jogador-campanha div {
@@ -392,38 +440,38 @@ body {
 }
 
 .jogador-campanha strong {
-    color: #4b3820;
-    font-size: 11px;
+    color: #f0e3c8;
+    font-size: 12px;
     font-weight: 500;
 }
 
 .jogador-campanha small {
-    color: #89704a;
+    color: var(--muted);
     font-size: 10px;
 }
 
 .jogador-campanha a {
     grid-column: 2;
-    color: #86652f;
-    font-size: 10px;
-    text-decoration: none;
+    color: #d7b968;
+    font-size: 11px;
+    text-decoration: underline;
 }
 
 .vaga-jogador {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-top: 13px;
-    color: #8a7653;
-    font-size: 10px;
+    padding-top: 12px;
+    color: var(--muted);
+    font-size: 11px;
 }
 
     .vaga-jogador span {
         display: grid;
-        width: 23px;
+        width: 24px;
         aspect-ratio: 1;
         place-items: center;
-        border: 1px dashed #a88a56;
+        border: 1px dashed rgba(209, 169, 81, .6);
         border-radius: 50%;
         font-size: 15px;
     }
@@ -431,99 +479,18 @@ body {
 .nota-editor {
     display: flex;
     gap: 8px;
-    margin: auto 20px 20px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(137, 102, 47, 0.24);
-    color: #806b48;
-    font-size: 10px;
+    margin: 0;
+    padding: 0 4px;
+    color: var(--muted);
+    font-size: 11px;
     line-height: 1.5;
 }
 
     .nota-editor span {
-        color: #a27a38;
+        color: var(--gold);
     }
 
-.entrada-com-acao-tags {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 42px;
-    border: 1px solid rgba(216, 181, 112, 0.35);
-    border-radius: 4px;
-    background: rgba(33, 24, 18, 0.86);
-    overflow: hidden;
-}
-
-    .entrada-com-acao-tags .tags-container {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px;
-        flex: 1;
-        padding: 6px 10px;
-        min-height: 40px;
-    }
-
-    .entrada-com-acao-tags .placeholder-texto {
-        color: #998664;
-        font-size: 12px;
-        user-select: none;
-    }
-
-    .entrada-com-acao-tags button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 42px;
-        height: 42px;
-        background: #94702f;
-        border: none;
-        color: #fff2d4;
-        font-size: 18px;
-        cursor: pointer;
-        transition: background 150ms ease;
-    }
-
-        .entrada-com-acao-tags button:hover {
-            background: #a98239;
-        }
-
-.tag-item-embutido {
-    background: #3a2d4c;
-    color: #d4af37;
-    border: 1px solid #d4af37;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-
-    .tag-item-embutido.npc-tag {
-        background: #2d3a4c;
-    }
-
-    .tag-item-embutido.item-tag {
-        background: #4c3a2d;
-    }
-
-.btn-remover-tag {
-    background: none !important;
-    border: none !important;
-    color: #ff4d4d !important;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 13px !important;
-    min-width: unset !important;
-    height: unset !important;
-    padding: 0 !important;
-}
-
-/* ============================================================
-   MODAIS DE SELEÇÃO E DETALHES (OVERLAY FIXO CENTRALIZADO)
-   ============================================================ */
+/* ---------- Modais (mesmo painel marrom com borda dourada) ---------- */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -532,42 +499,34 @@ body {
     align-items: center;
     justify-content: center;
     padding: 16px;
-    background: rgba(10, 6, 4, 0.82);
+    background: rgba(10, 6, 4, .82);
     backdrop-filter: blur(3px);
 }
 
 .modal-card {
-    background: #1e1e24;
-    border: 1px solid #d4af37;
+    width: min(460px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
     padding: 24px;
-    border-radius: 6px;
-    width: 90%;
-    max-width: 450px;
-    color: #fff;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(205, 167, 95, .6);
+    border-top: 3px solid var(--gold);
+    background: #2c2119;
+    color: #f2e6cf;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .75);
 }
 
 .modal-titulo {
-    color: #d4af37;
-    margin-top: 0;
+    margin: 0 0 8px;
+    color: #f3e7ce;
+    font-size: 20px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
 }
 
 .modal-texto {
+    margin: 0 0 14px;
+    color: #c5b79d;
     font-size: 13px;
-    color: #bbb;
-}
-
-.modal-grupo-select {
-    margin: 15px 0;
-}
-
-.modal-select {
-    width: 100%;
-    padding: 10px;
-    background: #121214;
-    border: 1px solid #444;
-    color: #fff;
-    border-radius: 4px;
 }
 
 .modal-acoes {
@@ -577,129 +536,70 @@ body {
     margin-top: 20px;
 }
 
-.botao-cancelar-modal {
-    background: #555;
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font: inherit;
-    font-size: 13px;
+.detalhes {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0 0;
 }
 
-    .botao-cancelar-modal:hover {
-        background: #666;
+    .detalhes div {
+        display: grid;
+        gap: 3px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--line);
     }
 
-.modal-divisor {
-    border-color: #333;
-    margin: 10px 0;
+    .detalhes dt {
+        color: var(--gold);
+        font-family: "Trebuchet MS", sans-serif;
+        font-size: 10px;
+        text-transform: uppercase;
+    }
+
+    .detalhes dd {
+        margin: 0;
+        color: #f0e3c8;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+/* ---------- Acessibilidade ---------- */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #f0d17f;
+    outline-offset: 2px;
 }
 
-.lista-mapas-container {
-    margin-top: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+/* ---------- Responsivo ---------- */
+@media (max-width: 960px) {
+    .campanha-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
-.mapa-item-linha {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #2a2a2a;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-}
-
-.botao-remover-mapa {
-    background: none;
-    border: none;
-    color: #ff4d4d;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-@media (max-width: 780px) {
-    .painel-editor {
+@media (max-width: 640px) {
+    .recursos-campanha {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .painel-grupo {
-        border-top: 1px solid rgba(137, 102, 47, 0.27);
-        border-left: 0;
-    }
-
-    .nota-editor {
-        margin-top: 0;
-    }
-}
-
-@media (max-width: 540px) {
-    .barra-rpg {
-        min-height: 54px;
-        gap: 17px;
-        padding: 0 15px;
-    }
-
-    .marca-rpg {
-        gap: 6px;
-        font-size: 13px;
-    }
-
-        .marca-rpg span {
-            font-size: 18px;
-        }
-
-    .nav-rpg {
-        gap: 12px;
-    }
-
-        .nav-rpg a {
-            font-size: 11px;
-        }
-
-    .mesa-atual {
-        display: none;
-    }
-
-    .editor-campanha {
-        padding: 21px 14px 35px;
-    }
-
-    .cabecalho-editor h1 {
+    .page-heading h1 {
         font-size: 27px;
     }
 
-    .formulario-campanha {
-        gap: 14px;
-        padding: 17px 14px;
+    .painel {
+        padding: 16px 14px;
     }
 
-    .recursos-campanha {
-        gap: 12px 10px;
+    .form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
     }
 
-    .grade-capas {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 5px;
+    .modal-acoes {
+        flex-direction: column-reverse;
     }
-
-    .opcao-capa {
-        padding: 2px;
-        font-size: 8px;
-    }
-
-        .opcao-capa img {
-            aspect-ratio: 0.7;
-        }
-
-        .opcao-capa input {
-            top: 3px;
-            left: 3px;
-            width: 12px;
-            min-height: 12px;
-        }
 }
