@@ -4,9 +4,9 @@
     <a class="cartao-campanha"
        href="@UrlDestino"
        aria-label="@($"{(ComoJogador ? "Entrar na" : "Abrir painel da")} campanha {Campanha.Nome}")">
-        <img src="@ImagemCapa"
+        <img src="@_imagemAtual"
              alt="Capa da campanha @Campanha.Nome"
-             onerror="this.onerror=null;this.src='img/capacampanha1.png';" />
+             @onerror="UsarCapaPadrao" />
         <span class="estado-campanha @(ComoJogador ? "tag-jogador" : "tag-mestre")">
             @(ComoJogador ? "Jogador" : "Mestre")
         </span>
@@ -27,6 +27,7 @@
 
 @code {
     private const string CapaPadrao = "img/capacampanha1.png";
+    private string _imagemAtual = CapaPadrao;
 
     [Parameter, EditorRequired] public Campanha Campanha { get; set; } = default!;
     [Parameter] public bool ComoJogador { get; set; }
@@ -38,26 +39,32 @@
 
     private string TextoBotaoRemover => ComoJogador ? "Sair" : "Excluir";
 
-    private string ImagemCapa
+    protected override void OnParametersSet()
     {
-        get
+        _imagemAtual = ResolverImagemCapa();
+    }
+
+    private void UsarCapaPadrao()
+    {
+        _imagemAtual = CapaPadrao;
+    }
+
+    private string ResolverImagemCapa()
+    {
+        if (string.IsNullOrWhiteSpace(Campanha?.Capa))
+            return CapaPadrao;
+
+        var capa = Campanha.Capa.Trim();
+
+        if (capa.StartsWith("data:image", StringComparison.OrdinalIgnoreCase) ||
+            capa.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            capa.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            capa.StartsWith("/") ||
+            capa.StartsWith("img/", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(Campanha.Capa))
-                return CapaPadrao;
-
-            var capa = Campanha.Capa.Trim();
-
-            if (capa.StartsWith("data:image", StringComparison.OrdinalIgnoreCase) ||
-                capa.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                capa.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                capa.StartsWith("/") ||
-                capa.StartsWith("img/", StringComparison.OrdinalIgnoreCase))
-            {
-                return capa;
-            }
-
-            // Fallback caso o Base64 tenha sido salvo sem o prefixo data:image
-            return $"data:image/png;base64,{capa}";
+            return capa;
         }
+
+        return $"data:image/png;base64,{capa}";
     }
 }

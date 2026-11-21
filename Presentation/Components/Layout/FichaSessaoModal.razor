@@ -1,0 +1,293 @@
+@using System.Globalization
+@using RPGdeMesa.Domain.Personagens
+@using RPGdeMesa.Domain.ValueObjects
+
+<div class="modal-backdrop" @onclick="FecharModal"></div>
+
+<section class="ficha-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha-modal" @onclick:stopPropagation="true">
+    <header class="ficha-modal-header">
+        <div class="ficha-modal-identidade">
+            <img class="ficha-modal-retrato"
+                 src="@(string.IsNullOrWhiteSpace(Personagem.Imagem) ? "img/armaduraprata.png" : Personagem.Imagem)"
+                 alt="@Personagem.Nome" />
+            <div>
+                <p class="ficha-modal-sub">Ficha na Sessão</p>
+                <h2 id="titulo-ficha-modal">@Personagem.Nome</h2>
+                <small>@(Personagem.RacaTexto ?? "Raça") • @ObterResumoClasses() • Nível @Personagem.Nivel</small>
+            </div>
+        </div>
+
+        <div class="ficha-modal-header-acoes">
+            <div class="ficha-modal-pv">
+                <span>PV</span>
+                <strong>@Personagem.PvAtual / @Personagem.PvMaximo</strong>
+            </div>
+            <button class="ficha-modal-close" type="button" aria-label="Fechar ficha" @onclick="FecharModal">×</button>
+        </div>
+    </header>
+
+    <nav class="ficha-modal-abas" role="tablist">
+        <button type="button" class="ficha-modal-aba @(_abaAtiva == "atributos" ? "ativa" : "")" @onclick='() => _abaAtiva = "atributos"'>Atributos & Perícias</button>
+        <button type="button" class="ficha-modal-aba @(_abaAtiva == "personagem" ? "ativa" : "")" @onclick='() => _abaAtiva = "personagem"'>Personagem</button>
+        <button type="button" class="ficha-modal-aba @(_abaAtiva == "inventario" ? "ativa" : "")" @onclick='() => _abaAtiva = "inventario"'>Inventário</button>
+        <button type="button" class="ficha-modal-aba @(_abaAtiva == "grimorio" ? "ativa" : "")" @onclick='() => _abaAtiva = "grimorio"'>Grimório (@Personagem.PersonagemMagias.Count)</button>
+    </nav>
+
+    <div class="ficha-modal-corpo">
+        @if (_abaAtiva == "atributos")
+        {
+            <div class="fm-grid-atributos">
+                @foreach (var attr in ObterAtributos())
+                {
+                    <div class="fm-attr-card">
+                        <span>@attr.Nome</span>
+                        <strong>@attr.Valor</strong>
+                        <small>@FormatarMod(attr.Valor)</small>
+                    </div>
+                }
+            </div>
+
+            <div class="fm-grid-2">
+                <div class="fm-box-escuro">
+                    <h3>Salvaguardas Treinadas</h3>
+                    @if (Personagem.Salvaguardas.Any())
+                    {
+                        <div class="fm-tags">
+                            @foreach (var s in Personagem.Salvaguardas)
+                            {
+                                <span class="fm-tag">@s.Atributo</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="fm-vazio">Nenhuma salvaguarda treinada.</p>
+                    }
+
+                    <h3 style="margin-top: 14px;">Perícias Treinadas</h3>
+                    @if (Personagem.Pericias.Any())
+                    {
+                        <div class="fm-tags">
+                            @foreach (var p in Personagem.Pericias)
+                            {
+                                <span class="fm-tag">@p.NomePericia</span>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="fm-vazio">Nenhuma perícia treinada.</p>
+                    }
+                </div>
+
+                <div class="fm-coluna-notas">
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Traços de Personalidade</h3>
+                        <p>@(string.IsNullOrWhiteSpace(Personagem.TracosPersonalidade) ? "—" : Personagem.TracosPersonalidade)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Ponto de Vista Atual</h3>
+                        <p>@(string.IsNullOrWhiteSpace(Personagem.PontoDeVista) ? "—" : Personagem.PontoDeVista)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Ideais / Ligações / Defeitos / Idiomas</h3>
+                        <p><strong>Ideais:</strong> @(string.IsNullOrWhiteSpace(Personagem.Ideais) ? "—" : Personagem.Ideais)</p>
+                        <p><strong>Ligações:</strong> @(string.IsNullOrWhiteSpace(Personagem.Ligacoes) ? "—" : Personagem.Ligacoes)</p>
+                        <p><strong>Defeitos:</strong> @(string.IsNullOrWhiteSpace(Personagem.Defeitos) ? "—" : Personagem.Defeitos)</p>
+                        <p><strong>Idiomas:</strong> @(string.IsNullOrWhiteSpace(Personagem.Idiomas) ? "—" : Personagem.Idiomas)</p>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (_abaAtiva == "personagem")
+        {
+            <div class="fm-dados-pessoais">
+                <div><span>Antecedente</span><strong>@(Personagem.AntecedenteTexto ?? "—")</strong></div>
+                <div><span>Tendência</span><strong>@(Personagem.Tendencia ?? "Neutra")</strong></div>
+                <div><span>Idade</span><strong>@(Personagem.Idade ?? "—")</strong></div>
+                <div><span>Gênero</span><strong>@(Personagem.Genero ?? "—")</strong></div>
+                <div><span>Altura</span><strong>@(Personagem.Altura ?? "—")</strong></div>
+                <div><span>Peso</span><strong>@(Personagem.Peso ?? "—")</strong></div>
+                <div><span>Deslocamento</span><strong>@(Personagem.Deslocamento ?? 9)m</strong></div>
+                <div><span>XP</span><strong>@Personagem.ExperienciaXp.ToString("N0")</strong></div>
+            </div>
+
+            <div class="fm-grid-2">
+                <div class="fm-bloco-pergaminho">
+                    <h3>Aparência</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Personagem.Aparencia) ? "—" : Personagem.Aparencia)</p>
+                </div>
+                <div class="fm-bloco-pergaminho">
+                    <h3>Aliados e Organizações</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Personagem.Aliados) ? "—" : Personagem.Aliados)</p>
+                </div>
+                <div class="fm-bloco-pergaminho fm-span-2">
+                    <h3>História do Personagem</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Personagem.Historia) ? "—" : Personagem.Historia)</p>
+                </div>
+                <div class="fm-bloco-pergaminho">
+                    <h3>Características e Habilidades</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Personagem.Caracteristicas) ? "—" : Personagem.Caracteristicas)</p>
+                </div>
+                <div class="fm-box-escuro">
+                    <h3>Tesouro Pessoal</h3>
+                    <p>@(string.IsNullOrWhiteSpace(Personagem.Tesouro) ? "—" : Personagem.Tesouro)</p>
+                </div>
+            </div>
+        }
+        else if (_abaAtiva == "inventario")
+        {
+            var inv = Personagem.Inventario;
+            var itens = inv?.Itens?.Where(ii => ii.Item != null).ToList() ?? new List<InventarioItem>();
+            decimal pesoCalculado = itens.Sum(ii => (ii.Item!.Peso ?? 0m) * ii.Quantidade);
+            decimal capacidade = inv?.CapacidadeCarga ?? (Personagem.Forca * 7.5m);
+
+            <div class="fm-inv-layout">
+                <div class="fm-inv-lista">
+                    <h3>Itens na Mochila (@itens.Count)</h3>
+                    @if (itens.Any())
+                    {
+                        <table class="fm-tabela">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Tipo</th>
+                                    <th>Qtd</th>
+                                    <th>Peso</th>
+                                    <th>Preço</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ii in itens)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@ii.Item!.Nome</strong>
+                                            @if (!string.IsNullOrWhiteSpace(ii.Item.Dano))
+                                            {
+                                                <small class="fm-item-extra">Dano: @ii.Item.Dano @ii.Item.TipoDano</small>
+                                            }
+                                            @if (ii.Item.CaBonus > 0)
+                                            {
+                                                <small class="fm-item-extra">CA +@ii.Item.CaBonus</small>
+                                            }
+                                        </td>
+                                        <td>@(ii.Item.Tipo ?? "—")</td>
+                                        <td>@ii.Quantidade</td>
+                                        <td>@(((ii.Item.Peso ?? 0m) * ii.Quantidade).ToString("0.0")) kg</td>
+                                        <td>@(ii.Item.Preco.HasValue ? $"{ii.Item.Preco:0.##} PO" : "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="fm-vazio-claro">Nenhum item cadastrado no inventário desta ficha.</p>
+                    }
+                </div>
+
+                <aside class="fm-inv-resumo">
+                    <div class="fm-box-escuro">
+                        <h3>Moedas</h3>
+                        <div class="fm-moedas">
+                            <div><span>PC</span><strong>@(inv?.MoedasPC ?? 0)</strong></div>
+                            <div><span>PP</span><strong>@(inv?.MoedasPP ?? 0)</strong></div>
+                            <div><span>PE</span><strong>@(inv?.MoedasPE ?? 0)</strong></div>
+                            <div><span>PO</span><strong>@(inv?.MoedasPO ?? 0)</strong></div>
+                            <div><span>PL</span><strong>@(inv?.MoedasPL ?? 0)</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="fm-box-escuro">
+                        <h3>Carga</h3>
+                        <p class="fm-carga-texto"><strong>@pesoCalculado.ToString("0.0") kg</strong> / @capacidade.ToString("0.0") kg</p>
+                        <progress max="@capacidade.ToString("0.0", CultureInfo.InvariantCulture)"
+                                  value="@Math.Min(pesoCalculado, capacidade).ToString("0.0", CultureInfo.InvariantCulture)"></progress>
+                    </div>
+
+                    <div class="fm-box-escuro">
+                        <h3>Notas do Inventário</h3>
+                        <p>@(string.IsNullOrWhiteSpace(inv?.Notas) ? "Sem anotações." : inv.Notas)</p>
+                    </div>
+                </aside>
+            </div>
+        }
+        else if (_abaAtiva == "grimorio")
+        {
+            var magias = Personagem.PersonagemMagias
+                .Where(pm => pm.Magia != null)
+                .Select(pm => pm.Magia!)
+                .OrderBy(m => m.CirculoNivel)
+                .ThenBy(m => m.Nome)
+                .ToList();
+
+            if (magias.Any())
+            {
+                <div class="fm-magias-grid">
+                    @foreach (var m in magias)
+                    {
+                        <article class="fm-magia-card">
+                            <header>
+                                <strong>@m.Nome</strong>
+                                <span>@(m.CirculoNivel == 0 ? "Truque" : $"{m.CirculoNivel}º Círculo")</span>
+                            </header>
+                            <small>@(m.Escola ?? "Escola não informada") • @(m.TempoConjuracao ?? "—") • @(m.Alcance ?? "—")</small>
+                            @if (!string.IsNullOrWhiteSpace(m.DanoEfeito))
+                            {
+                                <p>@m.DanoEfeito</p>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="fm-vazio-claro">Nenhuma magia preparada no grimório desta ficha.</p>
+            }
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public Personagem Personagem { get; set; } = new();
+
+    [Parameter]
+    public string AbaInicial { get; set; } = "atributos";
+
+    [Parameter]
+    public EventCallback FecharModal { get; set; }
+
+    private string _abaAtiva = "atributos";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(AbaInicial))
+            _abaAtiva = AbaInicial;
+    }
+
+    private IEnumerable<(string Nome, int Valor)> ObterAtributos() =>
+    [
+        ("Força", Personagem.Forca),
+        ("Destreza", Personagem.Destreza),
+        ("Constituição", Personagem.Constituicao),
+        ("Inteligência", Personagem.Inteligencia),
+        ("Sabedoria", Personagem.Sabedoria),
+        ("Carisma", Personagem.Carisma)
+    ];
+
+    private static string FormatarMod(int valor)
+    {
+        int mod = AtributosBase.CalcularModificador(valor);
+        return mod >= 0 ? $"+{mod}" : mod.ToString();
+    }
+
+    private string ObterResumoClasses()
+    {
+        if (Personagem.PersonagemClasses.Any(pc => pc.Classe != null))
+            return string.Join(" / ", Personagem.PersonagemClasses.Where(pc => pc.Classe != null).Select(pc => $"{pc.Classe!.Nome} {pc.NivelNaClasse}"));
+
+        return string.IsNullOrWhiteSpace(Personagem.ClasseTexto) ? "Classe" : Personagem.ClasseTexto;
+    }
+}

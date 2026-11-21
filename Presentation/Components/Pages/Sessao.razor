@@ -1,125 +1,496 @@
-﻿@page "/sessao"
+﻿@page "/sessao/{IdCampanha:int}"
+@page "/sessao/{IdCampanha:int}/{IdPersonagem:int}"
+@using Microsoft.AspNetCore.Components.Web
+@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Presentation.ViewModel
+@inject SessaoViewModel ViewModel
+@implements IAsyncDisposable
 
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-<section class="base">
-    <header class="titulo">Titulo da sessão/Campanha</header>
-    <!-- BARRA LATERAL ESQUERDA -->
-    <aside class="sidebar-left">
-        <div class="sidebar-icons">
-            <a href="#"><i class="bi bi-person-fill"></i></a>
-            <a href="#"><i class="bi bi-dice-6"></i></a>
-            <a href="#"><i class="bi bi-shield-shaded"></i></a>
-            <a href="#"><i class="bi bi-book"></i></a>
-            <a href="#"><i class="bi bi-map"></i></a>
-            <a href="#"><i class="bi bi-droplet-half"></i></a>
+@if (ViewModel.Carregando)
+{
+    <div class="sala-jogo sala-estado">
+        <p>Preparando a mesa da sessão...</p>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(ViewModel.ErroCarregamento))
+{
+    <div class="sala-jogo sala-estado">
+        <h2>Não foi possível abrir a sessão</h2>
+        <p>@ViewModel.ErroCarregamento</p>
+        <button type="button" class="game-exit" @onclick="ViewModel.SairDaSessaoENavegarAsync">
+            Voltar para campanhas
+        </button>
+    </div>
+}
+else
+{
+    <div class="sala-jogo">
+        <header class="game-header">
+            <button type="button"
+                    class="game-home"
+                    aria-label="Voltar às campanhas"
+                    title="Voltar às campanhas"
+                    @onclick="ViewModel.SairDaSessaoENavegarAsync">
+                ←
+            </button>
+
+            <div class="game-heading">
+                <p>@(ViewModel.Estado.EhMestre ? "Mesa do Mestre" : "Sessão em andamento")</p>
+                <h1>@ViewModel.Estado.NomeCampanha</h1>
+            </div>
+
+            <div class="game-presence">
+                <span class="presence-light"></span>
+                Mesa aberta
+                <span class="presence-divider">·</span>
+                @ContarOnline() @(ContarOnline() == 1 ? "conectado" : "conectados")
+            </div>
+
+            <button type="button" class="game-exit" @onclick="ViewModel.SairDaSessaoENavegarAsync">
+                Sair da mesa
+            </button>
+        </header>
+
+        <div class="game-layout">
+            <!-- BARRA LATERAL DE FERRAMENTAS -->
+            <aside class="game-toolbar" aria-label="Ferramentas da mesa">
+                <button class="toolbar-user @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalInicial != "inventario" ? "selecionada" : "")"
+                        type="button"
+                        title="Visualizar Ficha"
+                        aria-label="Visualizar Ficha"
+                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
+                    <span class="toolbar-avatar">@ObterIniciaisUsuarioLogado()</span>
+                </button>
+
+                <button class="toolbar-dice @(ViewModel.ExibirModalDados ? "selecionada" : "")"
+                        type="button"
+                        title="Rolar dados"
+                        aria-label="Abrir dados para rolar"
+                        @onclick="ViewModel.AbrirModalDados">
+                    <span aria-hidden="true">⚄</span>
+                </button>
+
+                <span class="toolbar-separator" aria-hidden="true"></span>
+
+                <button class="toolbar-tool @(!ViewModel.ExibirModalDados && !ViewModel.ExibirModalFicha ? "selecionada" : "")"
+                        type="button"
+                        title="Mapa"
+                        aria-label="Exibir mapa"
+                        @onclick="ViewModel.FocarMapa">
+                    <span aria-hidden="true">▦</span>
+                </button>
+
+                <button class="toolbar-tool desabilitada"
+                        type="button"
+                        title="Combate (em breve)"
+                        aria-label="Combate em breve"
+                        disabled>
+                    <span aria-hidden="true">⚔</span>
+                </button>
+
+                <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalInicial != "inventario" ? "selecionada" : "")"
+                        type="button"
+                        title="Ficha do Personagem"
+                        aria-label="Abrir ficha do personagem"
+                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
+                    <span aria-hidden="true">▤</span>
+                </button>
+
+                <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalInicial == "inventario" ? "selecionada" : "")"
+                        type="button"
+                        title="Inventário"
+                        aria-label="Abrir inventário"
+                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("inventario")'>
+                    <span aria-hidden="true">◇</span>
+                </button>
+
+                <span class="toolbar-spacer"></span>
+
+                <button class="toolbar-tool @(_mostrarCoordenadas ? "selecionada" : "")"
+                        type="button"
+                        title="Alternar coordenadas da grade 20×20"
+                        aria-label="Alternar coordenadas da grade"
+                        aria-pressed="@_mostrarCoordenadas.ToString().ToLowerInvariant()"
+                        @onclick="AlternarCoordenadas">
+                    <span aria-hidden="true">▧</span>
+                </button>
+            </aside>
+
+            <!-- ÁREA PRINCIPAL: MAPA + CONSOLE -->
+            <main class="game-main">
+                <div class="map-toolbar">
+                    <div class="map-location">
+                        <span class="location-mark" aria-hidden="true">⌖</span>
+                        <span>
+                            <strong>@(ViewModel.Estado.MapaAtivo?.NomeRegiao ?? "Nenhum mapa selecionado")</strong>
+                            <small>
+                                Grade 20×20 · 1,5m/quadrado (30m×30m)
+                                @if (!string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo?.Escala))
+                                {
+                                    <text> · @ViewModel.Estado.MapaAtivo.Escala</text>
+                                }
+                            </small>
+                        </span>
+                    </div>
+
+                    <div class="map-controls" aria-label="Controles do mapa">
+                        @if (ViewModel.Estado.EhMestre)
+                        {
+                            <select class="map-select-mestre"
+                                    aria-label="Selecionar mapa da campanha"
+                                    value="@(ViewModel.Estado.IdMapaAtivo?.ToString() ?? "")"
+                                    @onchange="ViewModel.SelecionarMapaAsync">
+                                <option value="">Sem mapa selecionado</option>
+                                @foreach (var mapa in ViewModel.Estado.MapasDisponiveis)
+                                {
+                                    <option value="@mapa.IdMapa">@mapa.NomeRegiao</option>
+                                }
+                            </select>
+                        }
+
+                        <button type="button" title="Diminuir zoom" aria-label="Diminuir zoom" @onclick="ViewModel.DiminuirZoom">−</button>
+                        <span id="nivel-zoom">@($"{Math.Round(ViewModel.NivelZoom * 100)}%")</span>
+                        <button type="button" title="Aumentar zoom" aria-label="Aumentar zoom" @onclick="ViewModel.AumentarZoom">+</button>
+                        <button type="button" title="Ajustar mapa" aria-label="Ajustar mapa" @onclick="ViewModel.ResetarZoom">⤢</button>
+                    </div>
+                </div>
+
+                <!-- PALCO DO MAPA COM MALHA 20x20 E ZOOM -->
+                <section class="map-stage" aria-label="Mapa da sessão">
+                    @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAcao))
+                    {
+                        <div class="map-alert" role="status">
+                            <span>@ViewModel.FeedbackAcao</span>
+                            <button type="button" aria-label="Fechar aviso" @onclick="ViewModel.LimparFeedback">×</button>
+                        </div>
+                    }
+
+                    <div class="map-viewport" @onwheel="AoRolarMouseMapa">
+                        @{
+                            int tamanhoPx = (int)Math.Round(SessaoViewModel.TamanhoBaseMapaPx * ViewModel.NivelZoom);
+                        }
+                        <div class="map-art" style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
+                            @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
+                            {
+                                <img src="@ViewModel.Estado.MapaAtivo.ImagemUrl"
+                                     alt="@ViewModel.Estado.MapaAtivo.NomeRegiao" />
+                            }
+                            else
+                            {
+                                <div class="map-empty">
+                                    <p>
+                                        @(ViewModel.Estado.EhMestre
+                                            ? "Selecione um mapa vinculado à campanha na barra superior."
+                                            : "Aguardando o Mestre selecionar o mapa da sessão.")
+                                    </p>
+                                </div>
+                            }
+
+                            <!-- GRADE TÁTICA D&D 20x20 (1,5m cada quadrado) -->
+                            <div class="mapa-grade-20x20" aria-label="Grade tática 20 por 20">
+                                @for (int linha = 0; linha < SessaoViewModel.GradeLinhas; linha++)
+                                {
+                                    @for (int col = 0; col < SessaoViewModel.GradeColunas; col++)
+                                    {
+                                        char letraCol = (char)('A' + col);
+                                        int numLinha = linha + 1;
+                                        <div class="celula-grade"
+                                             data-col="@col"
+                                             data-row="@linha"
+                                             title="@($"{letraCol}{numLinha} (1,5m)")">
+                                            @if (_mostrarCoordenadas && linha == 0)
+                                            {
+                                                <span class="coord-topo">@letraCol</span>
+                                            }
+                                            @if (_mostrarCoordenadas && col == 0)
+                                            {
+                                                <span class="coord-esq">@numLinha</span>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="map-caption">
+                        <span class="map-caption-dot"></span>
+                        Cena atual
+                        <span>·</span>
+                        @(ViewModel.Estado.MapaAtivo?.NomeRegiao ?? "Aguardando mapa")
+                    </div>
+                </section>
+
+                <!-- CONSOLE: CHAT & AÇÕES RÁPIDAS -->
+                <section class="game-console">
+                    <div class="chat-panel">
+                        <div class="chat-tabs" role="tablist" aria-label="Canais da mesa">
+                            <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Chat ? "ativa" : "")"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Chat)"
+                                    @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Chat)">
+                                Chat
+                            </button>
+                            <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Registro ? "ativa" : "")"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Registro)"
+                                    @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Registro)">
+                                Registro
+                            </button>
+                            <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Npc ? "ativa" : "")"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Npc)"
+                                    @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Npc)">
+                                NPCs
+                            </button>
+                            <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Combate ? "ativa" : "")"
+                                    type="button"
+                                    role="tab"
+                                    aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Combate)"
+                                    @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Combate)">
+                                Combate
+                            </button>
+                        </div>
+
+                        <div class="chat-feed" aria-live="polite">
+                            @if (ViewModel.AbaChatAtiva == CanaisSessao.Npc)
+                            {
+                                <p class="chat-placeholder">Canal de NPCs reservado para próximas atualizações.</p>
+                            }
+                            else if (ViewModel.AbaChatAtiva == CanaisSessao.Combate)
+                            {
+                                <p class="chat-placeholder">Histórico de dano recebido e infligido (em breve).</p>
+                            }
+                            else if (!ViewModel.MensagensAbaAtiva.Any())
+                            {
+                                <p class="chat-placeholder">
+                                    @(ViewModel.AbaChatAtiva == CanaisSessao.Registro
+                                        ? "Nenhuma rolagem registrada ainda."
+                                        : "Nenhuma mensagem enviada ainda.")
+                                </p>
+                            }
+                            else
+                            {
+                                @foreach (var msg in ViewModel.MensagensAbaAtiva)
+                                {
+                                    <p @key="msg.IdMensagem" class="chat-line @(msg.EhSistema ? "dice-line" : "")">
+                                        <strong class="chat-name @(msg.EhSistema ? "sistema" : (msg.Autor == ViewModel.Estado.Mestre.Username ? "mestre" : ""))">
+                                            @(msg.EhSistema ? "Sistema" : msg.Autor)
+                                        </strong>
+                                        <span>@msg.Conteudo</span>
+                                        <time>@msg.DataEnvioLocal.ToString("HH:mm")</time>
+                                    </p>
+                                }
+                            }
+                        </div>
+
+                        @if (ViewModel.AbaChatAtiva == CanaisSessao.Chat)
+                        {
+                            <form class="chat-compose" @onsubmit="ViewModel.EnviarMensagemChatAsync" @onsubmit:preventDefault="true">
+                                <input type="text"
+                                       maxlength="240"
+                                       placeholder="Escreva para a mesa..."
+                                       aria-label="Mensagem para a mesa"
+                                       autocomplete="off"
+                                       @bind="ViewModel.TextoMensagem"
+                                       @bind:event="oninput"
+                                       disabled="@ViewModel.EnviandoMensagem" />
+                                <button type="submit"
+                                        aria-label="Enviar mensagem"
+                                        title="Enviar mensagem"
+                                        disabled="@(ViewModel.EnviandoMensagem || string.IsNullOrWhiteSpace(ViewModel.TextoMensagem))">
+                                    ↑
+                                </button>
+                            </form>
+                        }
+                    </div>
+
+                    <!-- AÇÕES RÁPIDAS (SEM LÓGICA NO MOMENTO) -->
+                    <div class="action-panel">
+                        <div class="action-heading"><span>Ações rápidas</span><small>Em breve</small></div>
+                        <div class="action-slots">
+                            <button class="action-slot" type="button"><span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small></button>
+                            <button class="action-slot" type="button"><span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small></button>
+                            <button class="action-slot" type="button"><span class="slot-icon">◷</span><span>Disparada</span><small>Movimento</small></button>
+                            <button class="action-slot" type="button"><span class="slot-icon">↺</span><span>Desengajar</span><small>Ação</small></button>
+                            <button class="action-slot" type="button"><span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small></button>
+                            <button class="action-slot" type="button"><span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small></button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- PAINEL LATERAL DIREITO: MESTRE E JOGADORES -->
+            <aside class="players-panel" aria-labelledby="jogadores-titulo">
+                <div class="players-heading">
+                    <div>
+                        <p class="panel-kicker">Na mesa</p>
+                        <h2 id="jogadores-titulo">Jogadores</h2>
+                    </div>
+                    <span class="players-count">@ContarOnline()</span>
+                </div>
+
+                <div class="players-list">
+                    @{
+                        var mestre = ViewModel.Estado.Mestre;
+                    }
+                    <article class="player-card mestre-card @(mestre.Online ? "online-card" : "offline-card")">
+                        <span class="player-avatar avatar-mestre">
+                            @if (!string.IsNullOrWhiteSpace(mestre.AvatarUrl))
+                            {
+                                <img src="@mestre.AvatarUrl" alt="@mestre.Username" />
+                            }
+                            else
+                            {
+                                @ObterIniciais(mestre.Username)
+                            }
+                        </span>
+                        <div class="player-info">
+                            <strong>@mestre.Username</strong>
+                            <span class="player-class">Mestre</span>
+                        </div>
+                        <span class="mic-status @(mestre.Online ? "" : "desconectado")"
+                              title="@(mestre.Online ? "Conectado" : "Fora da sessão")"
+                              aria-label="@(mestre.Online ? "Conectado" : "Fora da sessão")">●</span>
+                    </article>
+
+                    <div class="players-divider" aria-hidden="true"></div>
+
+                    @foreach (var jogador in ViewModel.Estado.Jogadores)
+                    {
+                        bool podeAbrirFicha = jogador.IdPersonagem.HasValue
+                            && (ViewModel.Estado.EhMestre || jogador.IdPersonagem == ViewModel.Estado.IdPersonagemLogado);
+
+                        <article @key="jogador.IdAccount"
+                                 class="player-card @(jogador.Online ? "online-card" : "offline-card") @(podeAbrirFicha ? "clicavel" : "")"
+                                 title="@(podeAbrirFicha ? "Clique para abrir a ficha" : jogador.Username)"
+                                 @onclick="() => ViewModel.AbrirFichaParticipanteAsync(jogador)">
+                            <span class="player-avatar">
+                                @if (!string.IsNullOrWhiteSpace(jogador.AvatarUrl))
+                                {
+                                    <img src="@jogador.AvatarUrl" alt="@jogador.Username" />
+                                }
+                                else
+                                {
+                                    @ObterIniciais(jogador.Username)
+                                }
+                            </span>
+                            <div class="player-info">
+                                <strong>@jogador.Username</strong>
+                                <span class="player-sheet">@jogador.SubtituloLinha1</span>
+                                @if (!string.IsNullOrWhiteSpace(jogador.SubtituloLinha2))
+                                {
+                                    <span class="player-class">@jogador.SubtituloLinha2</span>
+                                }
+                            </div>
+                            <span class="mic-status @(jogador.Online ? "" : "desconectado")"
+                                  title="@(jogador.Online ? "Conectado" : "Fora da sessão")"
+                                  aria-label="@(jogador.Online ? "Conectado" : "Fora da sessão")">●</span>
+                        </article>
+                    }
+                </div>
+
+                <div class="players-footer">
+                    <span class="presence-light"></span>
+                    @ContarOnline() / @(ViewModel.Estado.Jogadores.Count + 1) conectados
+                </div>
+            </aside>
         </div>
-        <div class="config-btn">
-            <a href="#"><i class="bi bi-gear-fill"></i></a>
-        </div>
-    </aside>
+    </div>
 
-    <section class="lado-esquerdo">
-        <!-- sla -->
-        <div class="espaco">
-            <h1>não sei para que vou usar isso</h1>
-        </div>
+    <!-- MINI JANELA: ROLAR DADOS -->
+    @if (ViewModel.ExibirModalDados)
+    {
+        <Dadopopup FecharModal="ViewModel.FecharModalDados"
+                   OnRolagemRealizada="ViewModel.RegistrarRolagemAsync" />
+    }
 
-        <!-- chat -->
-        <div class="chat-box">
-            <div class="chat-abas">
-                <span>Chat</span>
-                <span>Log</span>
-                <span>NPC</span>
-                <span>Geral</span>
-            </div>
+    <!-- MINI JANELA: FICHA & INVENTÁRIO -->
+    @if (ViewModel.ExibirModalFicha && ViewModel.FichaEmVisualizacao != null)
+    {
+        <FichaSessaoModal Personagem="ViewModel.FichaEmVisualizacao"
+                          AbaInicial="@ViewModel.AbaFichaModalInicial"
+                          FecharModal="ViewModel.FecharModalFicha" />
+    }
+}
 
-            <div class="chat-mensagens">
-                <p><strong>Mestre:</strong> Bem-vindos a Faerong!</p>
-                <p><strong>KXrj:</strong> Rolo percepção?</p>
-            </div>
-        </div>
-    </section>
+@code {
+    [Parameter]
+    public int IdCampanha { get; set; }
 
-    <section class="centro-conteudo">
-        <div class="mapa-container">
-            <!-- tem que por a malha por cima daqui e carregar a imagem por baixo -->
-            <img src="https://images.unsplash.com/photo-1524654458049-e36be0721fa2?auto=format&fit=crop&w=1200&q=80"
-                 alt="Mapa da Sessão" />
-        </div>
+    [Parameter]
+    public int? IdPersonagem { get; set; }
 
-        <div class="acoes-turno">
-            <div class="botoes-container">
-                <button class="btn-rpg">Atacar</button>
-                <button class="btn-rpg">Conjurar Magia</button>
-                <button class="btn-rpg">Disparada</button>
-                <button class="btn-rpg">Desengajar</button>
-                <button class="btn-rpg">Esquivar</button>
-                <button class="btn-rpg">Esconder</button>
-            </div>
-        </div>
-    </section>
+    private int _ultimoIdCampanha = -1;
+    private int? _ultimoIdPersonagem;
+    private bool _mostrarCoordenadas = true;
 
-    <aside class="painel-jogadores">
-        <!-- Jogador 1 (Mestre) -->
-        <div class="card-jogador">
-            <div class="avatar">
-                <img src="caminho/para/imagem-mestre.png" alt="Cleverson" />
-            </div>
-            <div class="info-jogador">
-                <h3>Cleverson</h3>
-                <span class="classe">Mestre</span>
-            </div>
-        </div>
+    protected override void OnInitialized()
+    {
+        ViewModel.OnChange += AtualizarUi;
+    }
 
-        <!-- Divisória Dourada após o Mestre -->
-        <div class="linha-dourada"></div>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IdCampanha != _ultimoIdCampanha || IdPersonagem != _ultimoIdPersonagem)
+        {
+            _ultimoIdCampanha = IdCampanha;
+            _ultimoIdPersonagem = IdPersonagem;
+            await ViewModel.InicializarAsync(IdCampanha, IdPersonagem);
+        }
+    }
 
-        <!-- Jogador 2 -->
-        <div class="card-jogador">
-            <div class="avatar">
-                <img src="caminho/para/imagem-kxrj.png" alt="KXrj" />
-            </div>
-            <div class="info-jogador">
-                <h3>KXrj</h3>
-                <span class="classe">Nada</span>
-            </div>
-        </div>
+    private void AtualizarUi()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
 
-        <!-- Jogador 3 -->
-        <div class="card-jogador">
-            <div class="avatar">
-                <img src="caminho/para/imagem-mj.png" alt="M.J" />
-            </div>
-            <div class="info-jogador">
-                <h3>M.J</h3>
-                <span class="classe">Maga</span>
-            </div>
-        </div>
+    private void AlternarCoordenadas()
+    {
+        _mostrarCoordenadas = !_mostrarCoordenadas;
+    }
 
-        <!-- Jogador 4 -->
-        <div class="card-jogador">
-            <div class="avatar">
-                <img src="caminho/para/imagem-ecoz.png" alt="Ecoz" />
-            </div>
-            <div class="info-jogador">
-                <h3>Ecoz</h3>
-                <span class="classe">Pistoleiro</span>
-            </div>
-        </div>
+    private int ContarOnline()
+    {
+        int total = ViewModel.Estado.Mestre.Online ? 1 : 0;
+        total += ViewModel.Estado.Jogadores.Count(j => j.Online);
+        return total;
+    }
 
-        <!-- Jogador 5 -->
-        <div class="card-jogador">
-            <div class="avatar avatar-vazio"></div>
-            <div class="info-jogador">
-                <h3>Fulanitz08</h3>
-                <span class="classe">Escudeiro</span>
-            </div>
-        </div>
-    </aside>
+    private string ObterIniciaisUsuarioLogado()
+    {
+        if (ViewModel.Estado.EhMestre)
+            return ObterIniciais(ViewModel.Estado.Mestre.Username);
 
-    <style>
-               
+        var eu = ViewModel.Estado.Jogadores.FirstOrDefault(j => j.IdPersonagem == ViewModel.Estado.IdPersonagemLogado);
+        return ObterIniciais(eu?.NomePersonagem ?? eu?.Username ?? "J");
+    }
 
-    </style>
-</section>
+    private static string ObterIniciais(string? texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return "?";
+        var partes = texto.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length == 1)
+            return partes[0][..Math.Min(2, partes[0].Length)].ToUpperInvariant();
+        return $"{char.ToUpperInvariant(partes[0][0])}{char.ToUpperInvariant(partes[^1][0])}";
+    }
+
+    private void AoRolarMouseMapa(WheelEventArgs e)
+    {
+        if (!e.CtrlKey) return;
+
+        if (e.DeltaY < 0)
+            ViewModel.AumentarZoom();
+        else if (e.DeltaY > 0)
+            ViewModel.DiminuirZoom();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        ViewModel.OnChange -= AtualizarUi;
+        await ViewModel.DisposeAsync();
+    }
+}

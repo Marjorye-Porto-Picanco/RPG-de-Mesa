@@ -67,7 +67,7 @@
                             <div><dt>Fichas Pendentes</dt><dd>@ViewModel.FichasPendentes.Count() aguardando avaliação</dd></div>
                         </dl>
                         <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                            <a class="action-primary" href="/saladojogo">Abrir Sala de Jogo <span aria-hidden="true">→</span></a>
+                            <a class="action-primary" href="@($"/sessao/{IdCampanha}")">Abrir Sala de Jogo <span aria-hidden="true">→</span></a>
                             @if (ViewModel.FichasPendentes.Any())
                             {
                                 <button type="button" class="action-primary" style="background:#6f5296; border-color:#a28acb;" @onclick="ViewModel.AbrirFichas">
@@ -95,7 +95,7 @@
                                 <div><p class="page-kicker">Encontro atual</p><h2>@(ViewModel.CampanhaAtual?.Nome)</h2></div>
                             </div>
                             <div class="configuration-layout">
-                                <!-- LADO ESQUERDO: Navegador de Recursos (mesma altura do formulário, com scroll interno) -->
+                                <!-- LADO ESQUERDO: Navegador de Recursos -->
                                 <section class="resource-browser" aria-labelledby="titulo-recursos">
                                     <div class="resource-browser-inner">
                                         <h3 id="titulo-recursos">Elementos da sessão</h3>
@@ -188,7 +188,7 @@
                                     </div>
                                 </section>
 
-                                <!-- LADO DIREITO: Formulário Dinâmico (altura total sem scroll interno) -->
+                                <!-- LADO DIREITO: Formulário Dinâmico -->
                                 <form class="resource-editor" @onsubmit="ViewModel.SalvarRegistroAsync">
                                     <div class="editor-heading">
                                         <div><p class="page-kicker">Ficha do elemento</p><h3>Cadastrar e Vincular @ViewModel.CategoriaSelecionada.ToUpper()</h3></div>
