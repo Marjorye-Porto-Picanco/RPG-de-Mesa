@@ -1,4 +1,6 @@
-﻿namespace RPGdeMesa.Domain.Personagens;
+﻿using RPGdeMesa.Domain.Magias;
+
+namespace RPGdeMesa.Domain.Personagens;
 
 public interface IPersonagemRepository
 {

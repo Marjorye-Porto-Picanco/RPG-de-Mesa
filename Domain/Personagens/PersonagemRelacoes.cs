@@ -1,4 +1,5 @@
 ﻿using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Domain.Personagens;
 
@@ -91,19 +92,6 @@ public class InventarioItem
 
     public virtual Inventario? Inventario { get; set; }
     public virtual Item? Item { get; set; }
-}
-
-public class Magia
-{
-    public int IdMagia { get; set; }
-    public string Nome { get; set; } = string.Empty;
-    public int CirculoNivel { get; set; }
-    public string? Escola { get; set; }
-    public string? TempoConjuracao { get; set; }
-    public string? Alcance { get; set; }
-    public string? Componentes { get; set; }
-    public string? Duracao { get; set; }
-    public string? DanoEfeito { get; set; }
 }
 
 public class PersonagemMagia

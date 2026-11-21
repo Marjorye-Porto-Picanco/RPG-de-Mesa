@@ -2,6 +2,7 @@
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Domain.ValueObjects;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Domain.Personagens;
 

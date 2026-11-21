@@ -5,6 +5,7 @@ using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Infrastructure.Persistence;
 
@@ -374,7 +375,7 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(pm => pm.Magia)
-             .WithMany()
+             .WithMany(m => m.PersonagemMagias) 
              .HasForeignKey(pm => pm.IdMagia)
              .OnDelete(DeleteBehavior.Cascade);
         });

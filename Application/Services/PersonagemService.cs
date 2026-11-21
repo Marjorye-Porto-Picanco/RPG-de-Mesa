@@ -1,5 +1,6 @@
 ﻿using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Application.Services;
 

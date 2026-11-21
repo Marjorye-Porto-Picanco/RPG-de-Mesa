@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Presentation.Services;
 
@@ -16,17 +17,20 @@ public sealed record ExclusaoPendente(string Tipo, int Id, string Nome);
 public class BibliotecaGeralViewModel
 {
     private readonly ItemService _itemService;
+    private readonly MagiaService _magiaService;
     private readonly MonstroService _monstroService;
     private readonly NpcService _npcService;
     private readonly SessaoUsuarioService _sessaoUsuario;
 
     public BibliotecaGeralViewModel(
         ItemService itemService,
+        MagiaService magiaService,
         MonstroService monstroService,
         NpcService npcService,
         SessaoUsuarioService sessaoUsuario)
     {
         _itemService = itemService;
+        _magiaService = magiaService;
         _monstroService = monstroService;
         _npcService = npcService;
         _sessaoUsuario = sessaoUsuario;
@@ -43,9 +47,50 @@ public class BibliotecaGeralViewModel
         new("npcs", "NPCs")
     ];
 
+    public IReadOnlyList<CategoriaItem> OpcoesTipoItem { get; } =
+    [
+        new("", "Todos os tipos"),
+        new("armas", "Armas"),
+        new("armaduras", "Armaduras"),
+        new("equipamentos", "Equipamentos de Aventura"),
+        new("ferramentas", "Ferramentas"),
+        new("montarias", "Montarias e Veículos"),
+        new("pocoes", "Poções"),
+        new("aneis", "Anéis"),
+        new("cajados", "Cajados"),
+        new("bastoes", "Bastões"),
+        new("varinhas", "Varinhas"),
+        new("pergaminhos", "Pergaminhos"),
+        new("maravilhosos", "Itens Maravilhosos")
+    ];
+
+    public IReadOnlyList<CategoriaItem> OpcoesCirculoMagia { get; } =
+    [
+        new("", "Todos os círculos"),
+        new("0", "Truque"),
+        new("1", "1º Círculo"),
+        new("2", "2º Círculo"),
+        new("3", "3º Círculo"),
+        new("4", "4º Círculo"),
+        new("5", "5º Círculo"),
+        new("6", "6º Círculo"),
+        new("7", "7º Círculo"),
+        new("8", "8º Círculo"),
+        new("9", "9º Círculo")
+    ];
+
+    public IEnumerable<string> OpcoesEscolaMagia => EntradasMagias
+        .Select(m => m.Escola?.Trim())
+        .Where(e => !string.IsNullOrWhiteSpace(e))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(e => e)
+        .Cast<string>();
+
     public string CategoriaAtual { get; private set; } = "itens";
     public string TermoBusca { get; set; } = string.Empty;
     public string FiltroTipoItem { get; set; } = string.Empty;
+    public string FiltroCirculoMagia { get; set; } = string.Empty;
+    public string FiltroEscolaMagia { get; set; } = string.Empty;
     public int LimiteVisivel { get; private set; } = 30;
     public bool Carregando { get; private set; }
     public bool TemErro { get; private set; }
@@ -53,6 +98,7 @@ public class BibliotecaGeralViewModel
 
     // Coleções carregadas
     public List<Item> EntradasItens { get; private set; } = new();
+    public List<Magia> EntradasMagias { get; private set; } = new();
     public List<Monstro> EntradasMonstros { get; private set; } = new();
     public List<NPC> EntradasNpcs { get; private set; } = new();
 
@@ -60,6 +106,8 @@ public class BibliotecaGeralViewModel
     public bool ExibirModalCriacao { get; private set; }
     public Item? ItemSelecionado { get; private set; }
     public bool ExibirModalItem { get; private set; }
+    public Magia? MagiaSelecionada { get; private set; }
+    public bool ExibirModalMagia { get; private set; }
     public Monstro? MonstroSelecionado { get; private set; }
     public bool ExibirModalMonstro { get; private set; }
     public NPC? NpcSelecionado { get; private set; }
@@ -72,12 +120,24 @@ public class BibliotecaGeralViewModel
 
     // Filtros Calculados
     public IEnumerable<Item> ItensFiltrados => EntradasItens
-        .Where(item => PertenceACategoria(item, CategoriaAtual))
-        .Where(item => CategoriaAtual != "itens" || CorrespondeAoTipoSelecionado(item, FiltroTipoItem))
+        .Where(item => CorrespondeAoTipoSelecionado(item, FiltroTipoItem))
         .Where(item => string.IsNullOrWhiteSpace(TermoBusca) ||
             item.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
             item.Tipo?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            ObterRotuloMeta(item).Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
             item.Descricao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
+
+    public IEnumerable<Magia> MagiasFiltradas => EntradasMagias
+        .Where(m => string.IsNullOrWhiteSpace(FiltroCirculoMagia) ||
+            (int.TryParse(FiltroCirculoMagia, out int circulo) && m.CirculoNivel == circulo))
+        .Where(m => string.IsNullOrWhiteSpace(FiltroEscolaMagia) ||
+            string.Equals(m.Escola?.Trim(), FiltroEscolaMagia.Trim(), StringComparison.OrdinalIgnoreCase))
+        .Where(m => string.IsNullOrWhiteSpace(TermoBusca) ||
+            m.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
+            m.Escola?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            m.DanoEfeito?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            m.Alcance?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
+            ObterRotuloCirculo(m.CirculoNivel).Contains(TermoBusca, StringComparison.OrdinalIgnoreCase));
 
     public IEnumerable<Monstro> MonstrosFiltrados => EntradasMonstros
         .Where(m => string.IsNullOrWhiteSpace(TermoBusca) ||
@@ -90,11 +150,11 @@ public class BibliotecaGeralViewModel
             n.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
             n.ClasseTexto?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
             n.RacaTexto?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
-            n.Ocupacao?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true ||
             n.Historia?.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) == true);
 
     public bool PodeMostrarMais => CategoriaAtual switch
     {
+        "magias" => MagiasFiltradas.Count() > LimiteVisivel,
         "monstros" => MonstrosFiltrados.Count() > LimiteVisivel,
         "npcs" => NpcsFiltrados.Count() > LimiteVisivel,
         _ => ItensFiltrados.Count() > LimiteVisivel
@@ -112,6 +172,7 @@ public class BibliotecaGeralViewModel
             if (!EstaLogado)
             {
                 EntradasItens.Clear();
+                EntradasMagias.Clear();
                 EntradasMonstros.Clear();
                 EntradasNpcs.Clear();
                 StatusMensagem = "Faça login para visualizar a biblioteca.";
@@ -119,10 +180,12 @@ public class BibliotecaGeralViewModel
             }
 
             var itens = await _itemService.ObterItensPorUsuarioAsync(IdUsuarioLogado);
+            var magias = await _magiaService.ObterTodasMagiasAsync();
             var monstros = await _monstroService.ObterMonstrosPorUsuarioAsync(IdUsuarioLogado);
             var npcs = await _npcService.ObterNpcsPorUsuarioAsync(IdUsuarioLogado);
 
             EntradasItens = itens.OrderBy(i => i.Nome).ToList();
+            EntradasMagias = magias;
             EntradasMonstros = monstros.OrderBy(m => m.Nome).ToList();
             EntradasNpcs = npcs.OrderBy(n => n.Nome).ToList();
 
@@ -142,18 +205,23 @@ public class BibliotecaGeralViewModel
 
     public void TrocarCategoria(string categoria)
     {
-        // Caso algum link antigo passe ?categoria=armas, redireciona para a aba unificada "itens" já filtrada por armas
         if (string.Equals(categoria, "armas", StringComparison.OrdinalIgnoreCase))
         {
             CategoriaAtual = "itens";
             FiltroTipoItem = "armas";
+            FiltroCirculoMagia = string.Empty;
+            FiltroEscolaMagia = string.Empty;
         }
         else
         {
             CategoriaAtual = categoria;
             if (categoria != "itens")
-            {
                 FiltroTipoItem = string.Empty;
+
+            if (categoria != "magias")
+            {
+                FiltroCirculoMagia = string.Empty;
+                FiltroEscolaMagia = string.Empty;
             }
         }
 
@@ -166,8 +234,9 @@ public class BibliotecaGeralViewModel
     {
         StatusMensagem = CategoriaAtual switch
         {
-            "monstros" => $"{EntradasMonstros.Count} monstro(s) cadastrado(s).",
-            "npcs" => $"{EntradasNpcs.Count} NPC(s) cadastrado(s).",
+            "magias" => $"{MagiasFiltradas.Count()} magia(s) exibida(s).",
+            "monstros" => $"{MonstrosFiltrados.Count()} monstro(s) exibido(s).",
+            "npcs" => $"{NpcsFiltrados.Count()} NPC(s) exibido(s).",
             _ => $"{ItensFiltrados.Count()} item(ns) exibido(s)."
         };
     }
@@ -187,6 +256,9 @@ public class BibliotecaGeralViewModel
     public void AbrirModalItem(Item item) { ItemSelecionado = item; ExibirModalItem = true; }
     public void FecharModalItem() { ExibirModalItem = false; ItemSelecionado = null; }
 
+    public void AbrirModalMagia(Magia magia) { MagiaSelecionada = magia; ExibirModalMagia = true; }
+    public void FecharModalMagia() { ExibirModalMagia = false; MagiaSelecionada = null; }
+
     public void AbrirModalMonstro(Monstro monstro) { MonstroSelecionado = monstro; ExibirModalMonstro = true; }
     public void FecharModalMonstro() { ExibirModalMonstro = false; MonstroSelecionado = null; }
 
@@ -196,6 +268,7 @@ public class BibliotecaGeralViewModel
     private void FecharTodosModaisDetalhes()
     {
         FecharModalItem();
+        FecharModalMagia();
         FecharModalMonstro();
         FecharModalNpc();
     }
@@ -249,43 +322,83 @@ public class BibliotecaGeralViewModel
         }
     }
 
-    // Regras Auxiliares de Exibição/Categoria
-    public static bool PertenceACategoria(Item item, string categoria)
-    {
-        var tipo = item.Tipo ?? string.Empty;
-        var descricao = item.Descricao ?? string.Empty;
-        var ehArma = !string.IsNullOrWhiteSpace(item.Dano) || ContemTermo(tipo, "arma", "weapon", "armamento");
-        var ehMagia = ContemTermo(tipo, "magia", "mágica", "spell") || ContemTermo(descricao, "magia", "mágica", "spell");
-
-        return categoria switch
-        {
-            "magias" => ehMagia && !ehArma,
-            // Na aba "itens", exibe tanto os itens gerais quanto tudo o que antes aparecia na aba "armas"
-            _ => ehArma || !ehMagia
-        };
-    }
-
+    // Regras Auxiliares de Filtro e Rótulos
     private static bool CorrespondeAoTipoSelecionado(Item item, string filtroTipo)
     {
         if (string.IsNullOrWhiteSpace(filtroTipo))
             return true;
 
+        var filtro = filtroTipo.Trim().ToLowerInvariant();
         var tipoItem = item.Tipo?.Trim() ?? string.Empty;
+        var ehArmadura = ContemTermo(tipoItem, "armadura", "armor", "escudo", "shield");
 
-        // Se o filtro for "armas", contempla tanto o tipo "armas" quanto itens que possuam Dano ou termo de arma
-        if (string.Equals(filtroTipo, "armas", StringComparison.OrdinalIgnoreCase))
+        return filtro switch
         {
-            return string.Equals(tipoItem, "armas", StringComparison.OrdinalIgnoreCase) ||
-                   !string.IsNullOrWhiteSpace(item.Dano) ||
-                   ContemTermo(tipoItem, "arma", "weapon", "armamento");
-        }
+            "armas" => !ehArmadura && (
+                !string.IsNullOrWhiteSpace(item.Dano) ||
+                ContemTermo(tipoItem, "arma", "weapon", "armamento", "ammunition", "munição", "municao")),
 
-        return string.Equals(tipoItem, filtroTipo.Trim(), StringComparison.OrdinalIgnoreCase) ||
-               tipoItem.Contains(filtroTipo.Trim(), StringComparison.OrdinalIgnoreCase);
+            "armaduras" => ehArmadura,
+
+            "equipamentos" => ContemTermo(tipoItem, "equipamento", "adventuring gear", "gear"),
+
+            "ferramentas" => ContemTermo(tipoItem, "ferramenta", "tool"),
+
+            "montarias" => ContemTermo(tipoItem, "montaria", "veículo", "veiculo", "mount", "vehicle"),
+
+            "pocoes" => ContemTermo(tipoItem, "poção", "pocao", "poções", "pocoes", "potion"),
+
+            "aneis" => ContemTermo(tipoItem, "anel", "anéis", "aneis", "ring"),
+
+            "cajados" => ContemTermo(tipoItem, "cajado", "staff"),
+
+            "bastoes" => ContemTermo(tipoItem, "bastão", "bastao", "bastões", "bastoes", "rod"),
+
+            "varinhas" => ContemTermo(tipoItem, "varinha", "wand"),
+
+            "pergaminhos" => ContemTermo(tipoItem, "pergaminho", "scroll"),
+
+            "maravilhosos" => ContemTermo(tipoItem, "maravilhoso", "wondrous"),
+
+            _ => tipoItem.Contains(filtro, StringComparison.OrdinalIgnoreCase)
+        };
     }
 
-    public static string ObterRotuloMeta(Item item) =>
-        !string.IsNullOrWhiteSpace(item.Tipo) ? item.Tipo : "Item";
+    public static string ObterRotuloMeta(Item item)
+    {
+        var tipo = item.Tipo?.Trim();
+        if (string.IsNullOrWhiteSpace(tipo))
+            return "Item";
+
+        return tipo.ToLowerInvariant() switch
+        {
+            "weapon" or "arma" or "armas" => "Arma",
+            "armor" or "armadura" or "armaduras" => "Armadura",
+            "adventuring gear" => "Equipamento de Aventura",
+            "ammunition" => "Munição",
+            "tools" or "tool" => "Ferramenta",
+            "mounts and vehicles" => "Montaria e Veículo",
+            "potion" or "poções" => "Poção",
+            "ring" or "anéis" => "Anel",
+            "staff" or "cajados" => "Cajado",
+            "rod" or "bastões" => "Bastão",
+            "wand" or "varinhas" => "Varinha",
+            "scroll" or "pergaminhos" => "Pergaminho",
+            "wondrous items" or "wondrous item" or "itens maravilhosos" => "Item Maravilhoso",
+            _ => char.ToUpper(tipo[0]) + tipo[1..]
+        };
+    }
+
+    public static string ObterRotuloCirculo(int circuloNivel) =>
+        circuloNivel <= 0 ? "Truque" : $"{circuloNivel}º Círculo";
+
+    public static string ObterRotuloMetaMagia(Magia magia)
+    {
+        var circulo = ObterRotuloCirculo(magia.CirculoNivel);
+        return string.IsNullOrWhiteSpace(magia.Escola)
+            ? circulo
+            : $"{circulo} · {magia.Escola}";
+    }
 
     private static bool ContemTermo(string texto, params string[] termos) =>
         termos.Any(t => texto.Contains(t, StringComparison.OrdinalIgnoreCase));
