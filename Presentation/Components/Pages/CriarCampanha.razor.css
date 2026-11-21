@@ -315,6 +315,21 @@ button, a, input, select, textarea {
         overflow-wrap: anywhere;
     }
 
+.preview-capa {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+    .preview-capa img {
+        width: 100%;
+        max-height: 180px;
+        object-fit: cover;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+    }
+
 /* ---------- Botões e mensagens ---------- */
 .form-actions {
     display: flex;

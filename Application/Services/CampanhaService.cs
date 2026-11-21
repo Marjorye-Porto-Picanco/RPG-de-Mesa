@@ -24,7 +24,12 @@ public class CampanhaService
         _npcRepo = npcRepo;
     }
 
-    public async Task<(bool Sucesso, string Mensagem)> CriarCampanhaAsync(int idAccount, string nome, string descricao, string codigoConvite)
+    public async Task<(bool Sucesso, string Mensagem)> CriarCampanhaAsync(
+        int idAccount,
+        string nome,
+        string descricao,
+        string codigoConvite,
+        string? capa = null)
     {
         try
         {
@@ -32,6 +37,7 @@ public class CampanhaService
                 return (false, "Código de convite gerado já existe. Tente salvar novamente.");
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
+            novaCampanha.Capa = capa;
 
             var todosItens = await _campanhaRepo.ListarTodosItensAsync();
             foreach (var itemPadrao in todosItens.Where(i => i.IdAccount == null))
@@ -65,9 +71,11 @@ public class CampanhaService
         string nome,
         string descricao,
         string codigoConvite,
+        string? capa,
         List<Monstro> monstros,
         List<NPC> npcs,
         List<Item> itens,
+        List<Mapa>? mapas = null,
         List<Personagem>? personagens = null)
     {
         try
@@ -76,6 +84,7 @@ public class CampanhaService
                 return (false, "Código de convite gerado já existe. Tente salvar novamente.");
 
             var novaCampanha = new Campanha(idAccount, nome, descricao, codigoConvite);
+            novaCampanha.Capa = capa;
 
             var todosItens = await _campanhaRepo.ListarTodosItensAsync();
             foreach (var itemPadrao in todosItens.Where(i => i.IdAccount == null))
@@ -127,6 +136,20 @@ public class CampanhaService
                 {
                     npc.PrepararNovoNpc(idAccount, npc.Nome, novaCampanha.IdCampanha);
                     await _npcRepo.AdicionarAsync(npc);
+                }
+            }
+
+            if (mapas != null)
+            {
+                foreach (var mapa in mapas)
+                {
+                    if (mapa.IdMapa <= 0)
+                    {
+                        mapa.IdAccount ??= idAccount;
+                        await _campanhaRepo.AdicionarMapaAsync(mapa);
+                    }
+
+                    await _campanhaRepo.AdicionarMapaCampanhaAsync(novaCampanha.IdCampanha, mapa.IdMapa);
                 }
             }
 
@@ -219,6 +242,12 @@ public class CampanhaService
         return todos.Where(i => i.IdAccount == null || i.IdAccount == idAccount).ToList();
     }
 
+    public async Task<List<Mapa>> ObterMapasDoUsuarioAsync(int idAccount)
+    {
+        var todos = await _campanhaRepo.ListarTodosMapasAsync();
+        return todos.Where(m => m.IdAccount == idAccount).ToList();
+    }
+
     public async Task<Campanha?> BuscarPorCodigoAsync(string codigoConvite)
     {
         if (string.IsNullOrWhiteSpace(codigoConvite)) return null;
@@ -301,6 +330,38 @@ public class CampanhaService
         catch (Exception ex)
         {
             return (false, $"Erro ao vincular item: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> AdicionarMapaNaCampanhaAsync(int idCampanha, int idMapa)
+    {
+        try
+        {
+            await _campanhaRepo.AdicionarMapaCampanhaAsync(idCampanha, idMapa);
+            return (true, "Mapa vinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao vincular mapa: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> CriarEVincularMapaNaCampanhaAsync(int idCampanha, Mapa mapa)
+    {
+        try
+        {
+            var campanha = await _campanhaRepo.ObterPorIdComDetalhesAsync(idCampanha);
+            if (campanha == null) return (false, "Campanha não encontrada.");
+
+            mapa.IdAccount ??= campanha.IdAccount;
+            await _campanhaRepo.AdicionarMapaAsync(mapa);
+            await _campanhaRepo.AdicionarMapaCampanhaAsync(idCampanha, mapa.IdMapa);
+
+            return (true, "Mapa criado e vinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao criar mapa: {ex.Message}");
         }
     }
 
@@ -438,6 +499,19 @@ public class CampanhaService
         catch (Exception ex)
         {
             return (false, $"Erro ao desvincular item: {ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverMapaDaCampanhaAsync(int idCampanha, int idMapa)
+    {
+        try
+        {
+            await _campanhaRepo.RemoverMapaCampanhaAsync(idCampanha, idMapa);
+            return (true, "Mapa desvinculado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao desvincular mapa: {ex.Message}");
         }
     }
 

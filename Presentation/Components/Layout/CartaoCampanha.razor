@@ -4,7 +4,9 @@
     <a class="cartao-campanha"
        href="@UrlDestino"
        aria-label="@($"{(ComoJogador ? "Entrar na" : "Abrir painel da")} campanha {Campanha.Nome}")">
-        <img src="img/capacampanha1.png" alt="Capa da campanha @Campanha.Nome" />
+        <img src="@ImagemCapa"
+             alt="Capa da campanha @Campanha.Nome"
+             onerror="this.onerror=null;this.src='img/capacampanha1.png';" />
         <span class="estado-campanha @(ComoJogador ? "tag-jogador" : "tag-mestre")">
             @(ComoJogador ? "Jogador" : "Mestre")
         </span>
@@ -24,6 +26,8 @@
 </div>
 
 @code {
+    private const string CapaPadrao = "img/capacampanha1.png";
+
     [Parameter, EditorRequired] public Campanha Campanha { get; set; } = default!;
     [Parameter] public bool ComoJogador { get; set; }
     [Parameter] public EventCallback<Campanha> OnRemover { get; set; }
@@ -33,4 +37,27 @@
         : $"/sessao-iniciar/{Campanha.IdCampanha}";
 
     private string TextoBotaoRemover => ComoJogador ? "Sair" : "Excluir";
+
+    private string ImagemCapa
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Campanha.Capa))
+                return CapaPadrao;
+
+            var capa = Campanha.Capa.Trim();
+
+            if (capa.StartsWith("data:image", StringComparison.OrdinalIgnoreCase) ||
+                capa.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                capa.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                capa.StartsWith("/") ||
+                capa.StartsWith("img/", StringComparison.OrdinalIgnoreCase))
+            {
+                return capa;
+            }
+
+            // Fallback caso o Base64 tenha sido salvo sem o prefixo data:image
+            return $"data:image/png;base64,{capa}";
+        }
+    }
 }

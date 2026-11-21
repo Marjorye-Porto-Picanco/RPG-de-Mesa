@@ -17,6 +17,7 @@ public interface ICampanhaRepository
     Task<List<NPC>> ListarTodosNpcsAsync();
     Task<List<Item>> ListarTodosItensAsync();
     Task<List<Monstro>> ListarTodosMonstrosAsync();
+    Task<List<Mapa>> ListarTodosMapasAsync();
     Task AdicionarAsync(Campanha campanha);
     Task AtualizarAsync(Campanha campanha);
     Task RemoverCampanhaAsync(int idCampanha);
@@ -27,9 +28,12 @@ public interface ICampanhaRepository
     Task AdicionarMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task AdicionarNpcCampanhaAsync(int idCampanha, int idNpc);
     Task AdicionarItemCampanhaAsync(int idCampanha, int idItem);
+    Task AdicionarMapaAsync(Mapa mapa);
+    Task AdicionarMapaCampanhaAsync(int idCampanha, int idMapa);
     Task RemoverMonstroCampanhaAsync(int idCampanha, int idMonstro);
     Task RemoverNpcCampanhaAsync(int idCampanha, int idNpc);
     Task RemoverItemCampanhaAsync(int idCampanha, int idItem);
+    Task RemoverMapaCampanhaAsync(int idCampanha, int idMapa);
     Task RemoverNpcAsync(int idNpc);
-
+    Task RemoverMapaAsync(int idMapa);
 }

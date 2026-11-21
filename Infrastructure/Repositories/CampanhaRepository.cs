@@ -29,6 +29,7 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
             .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
+            .Include(c => c.MapaCampanhas).ThenInclude(mc => mc.Mapa)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
@@ -117,12 +118,14 @@ public class CampanhaRepository : ICampanhaRepository
         var campanha = await _contexto.Campanhas.FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
         if (campanha is null) return;
 
+        var mapas = await _contexto.MapaCampanhas.Where(mc => mc.IdCampanha == idCampanha).ToListAsync();
         var usuarios = await _contexto.UsuariosCampanha.Where(uc => uc.IdCampanha == idCampanha).ToListAsync();
         var personagens = await _contexto.PersonagensCampanha.Where(pc => pc.IdCampanha == idCampanha).ToListAsync();
         var monstros = await _contexto.MonstroCampanhas.Where(mc => mc.IdCampanha == idCampanha).ToListAsync();
         var npcs = await _contexto.NpcCampanhas.Where(nc => nc.IdCampanha == idCampanha).ToListAsync();
         var itens = await _contexto.ItemCampanhas.Where(ic => ic.IdCampanha == idCampanha).ToListAsync();
 
+        _contexto.MapaCampanhas.RemoveRange(mapas);
         _contexto.UsuariosCampanha.RemoveRange(usuarios);
         _contexto.PersonagensCampanha.RemoveRange(personagens);
         _contexto.MonstroCampanhas.RemoveRange(monstros);
@@ -301,4 +304,56 @@ public class CampanhaRepository : ICampanhaRepository
             await _contexto.SaveChangesAsync();
         }
     }
+
+    public async Task<List<Mapa>> ListarTodosMapasAsync() =>
+    await _contexto.Mapas.AsNoTracking().ToListAsync();
+
+    public async Task AdicionarMapaCampanhaAsync(int idCampanha, int idMapa)
+    {
+        _contexto.ChangeTracker.Clear();
+        bool jaExiste = await _contexto.MapaCampanhas
+            .AsNoTracking()
+            .AnyAsync(mc => mc.IdCampanha == idCampanha && mc.IdMapa == idMapa);
+
+        if (!jaExiste)
+        {
+            await _contexto.MapaCampanhas.AddAsync(new MapaCampanha
+            {
+                IdCampanha = idCampanha,
+                IdMapa = idMapa
+            });
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoverMapaCampanhaAsync(int idCampanha, int idMapa)
+    {
+        _contexto.ChangeTracker.Clear();
+        var vinculo = await _contexto.MapaCampanhas
+            .FirstOrDefaultAsync(mc => mc.IdCampanha == idCampanha && mc.IdMapa == idMapa);
+
+        if (vinculo != null)
+        {
+            _contexto.MapaCampanhas.Remove(vinculo);
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
+    public async Task AdicionarMapaAsync(Mapa mapa)
+    {
+        _contexto.Mapas.Add(mapa);
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task RemoverMapaAsync(int idMapa)
+    {
+        _contexto.ChangeTracker.Clear();
+        var mapa = await _contexto.Mapas.FirstOrDefaultAsync(m => m.IdMapa == idMapa);
+        if (mapa != null)
+        {
+            _contexto.Mapas.Remove(mapa);
+            await _contexto.SaveChangesAsync();
+        }
+    }
+
 }

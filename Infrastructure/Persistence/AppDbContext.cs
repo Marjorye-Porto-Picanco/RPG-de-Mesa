@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Perfil> Perfis { get; set; }
     public DbSet<Campanha> Campanhas { get; set; }
+    public DbSet<Mapa> Mapas { get; set; }
     public DbSet<Personagem> Personagens { get; set; }
     public DbSet<Raca> Racas { get; set; }
     public DbSet<Antecedente> Antecedentes { get; set; }
@@ -43,6 +44,7 @@ public class AppDbContext : DbContext
     public DbSet<MonstroCampanha> MonstroCampanhas { get; set; }
     public DbSet<NpcCampanha> NpcCampanhas { get; set; }
     public DbSet<ItemCampanha> ItemCampanhas { get; set; }
+    public DbSet<MapaCampanha> MapaCampanhas { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -112,7 +114,7 @@ public class AppDbContext : DbContext
         });
 
         // =====================================================================
-        // 2. CAMPANHA
+        // 2. CAMPANHA E MAPA
         // =====================================================================
         modelBuilder.Entity<Campanha>(e =>
         {
@@ -124,6 +126,7 @@ public class AppDbContext : DbContext
             e.Property(c => c.DataCriacao).HasColumnName("data_criacao");
             e.Property(c => c.Descricao).HasColumnName("descricao");
             e.Property(c => c.CodigoConvite).HasColumnName("codigo_convite").HasMaxLength(20);
+            e.Property(c => c.Capa).HasColumnName("capa").HasColumnType("varchar(max)");
 
             e.HasOne(c => c.UsuarioMestre)
              .WithMany()
@@ -138,6 +141,22 @@ public class AppDbContext : DbContext
             e.Ignore(c => c.FichasAceitas);
             e.Ignore(c => c.Npcs);
             e.Ignore(c => c.Itens);
+        });
+
+        modelBuilder.Entity<Mapa>(e =>
+        {
+            e.ToTable("Mapa");
+            e.HasKey(m => m.IdMapa);
+            e.Property(m => m.IdMapa).HasColumnName("id_mapa");
+            e.Property(m => m.IdAccount).HasColumnName("id_account");
+            e.Property(m => m.NomeRegiao).HasColumnName("nome_regiao").HasMaxLength(100).IsRequired();
+            e.Property(m => m.Escala).HasColumnName("escala").HasMaxLength(20);
+            e.Property(m => m.ImagemUrl).HasColumnName("imagem_url").HasColumnType("varchar(max)");
+
+            e.HasOne(m => m.Usuario)
+             .WithMany()
+             .HasForeignKey(m => m.IdAccount)
+             .IsRequired(false);
         });
 
         // =====================================================================
@@ -412,11 +431,13 @@ public class AppDbContext : DbContext
             e.Property(n => n.Sabedoria).HasColumnName("sabedoria");
             e.Property(n => n.Carisma).HasColumnName("carisma");
             e.Property(n => n.Historia).HasColumnName("historia");
-            e.Property(n => n.Imagem).HasColumnName("imagem").HasMaxLength(255);
-            e.Property(n => n.Ocupacao).HasColumnName("ocupacao").HasMaxLength(50);
-            e.Property(n => n.Alinhamento).HasColumnName("alinhamento").HasMaxLength(50);
-            e.Property(n => n.Localizacao).HasColumnName("localizacao").HasMaxLength(100);
-            e.Property(n => n.Descricao).HasColumnName("descricao");
+            e.Property(n => n.Imagem).HasColumnName("imagem").HasColumnType("varchar(max)");
+
+            // Colunas removidas do banco (ignoradas pelo EF Core)
+            e.Ignore(n => n.Ocupacao);
+            e.Ignore(n => n.Alinhamento);
+            e.Ignore(n => n.Localizacao);
+            e.Ignore(n => n.Descricao);
 
             e.HasOne(n => n.Usuario)
              .WithMany()
@@ -526,6 +547,24 @@ public class AppDbContext : DbContext
             e.HasOne(ic => ic.Campanha)
              .WithMany(c => c.ItemCampanhas)
              .HasForeignKey(ic => ic.IdCampanha);
+        });
+
+        modelBuilder.Entity<MapaCampanha>(e =>
+        {
+            e.ToTable("Mapa_Campanha");
+            e.HasKey(mc => new { mc.IdMapa, mc.IdCampanha });
+            e.Property(mc => mc.IdMapa).HasColumnName("id_mapa");
+            e.Property(mc => mc.IdCampanha).HasColumnName("id_campanha");
+
+            e.HasOne(mc => mc.Mapa)
+             .WithMany(m => m.MapaCampanhas)
+             .HasForeignKey(mc => mc.IdMapa)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(mc => mc.Campanha)
+             .WithMany(c => c.MapaCampanhas)
+             .HasForeignKey(mc => mc.IdCampanha)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

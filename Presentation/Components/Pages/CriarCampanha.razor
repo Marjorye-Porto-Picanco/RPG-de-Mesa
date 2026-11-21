@@ -98,7 +98,7 @@
                     <!-- MAPAS DA CAMPANHA -->
                     <div class="form-field">
                         <label for="mapa">Mapas da campanha</label>
-                        <InputFile id="mapa" class="entrada-arquivo" OnChange="viewModel.AdicionarMapas" multiple accept="image/*" />
+                        <InputFile id="mapa" class="entrada-arquivo" OnChange="viewModel.AdicionarMapasAsync" multiple accept="image/*" />
 
                         @if (viewModel.ListaMapas.Any())
                         {
@@ -106,8 +106,8 @@
                                 @foreach (var mapa in viewModel.ListaMapas)
                                 {
                                     <div class="mapa-item">
-                                        <span>@mapa.Name</span>
-                                        <button type="button" class="btn-remover-tag" aria-label="Remover mapa @mapa.Name" @onclick="() => viewModel.RemoverMapa(mapa)">×</button>
+                                        <span>@mapa.NomeRegiao</span>
+                                        <button type="button" class="btn-remover-tag" aria-label="Remover mapa @mapa.NomeRegiao" @onclick="() => viewModel.RemoverMapa(mapa)">×</button>
                                     </div>
                                 }
                             </div>
@@ -122,7 +122,18 @@
 
                 <div class="form-field">
                     <label for="capa">Capa da campanha</label>
-                    <InputFile id="capa" class="entrada-arquivo" OnChange="@(e => viewModel.ArquivoCapa = e.File)" accept="image/*" />
+                    <InputFile id="capa" class="entrada-arquivo" OnChange="viewModel.SelecionarCapaAsync" accept="image/*" />
+
+                    <!--@if (!string.IsNullOrEmpty(viewModel.CapaBase64))
+                    {
+                        <div class="preview-capa">
+                            <img src="@viewModel.CapaBase64" alt="Pré-visualização da capa" />
+                            <div class="mapa-item">
+                                <span>@viewModel.NomeArquivoCapa</span>
+                                <button type="button" class="btn-remover-tag" aria-label="Remover capa" @onclick="viewModel.RemoverCapa">×</button>
+                            </div>
+                        </div>
+                    }-->
                 </div>
 
                 @if (!string.IsNullOrEmpty(viewModel.MensagemFeedback))

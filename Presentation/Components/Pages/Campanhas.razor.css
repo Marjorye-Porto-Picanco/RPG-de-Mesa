@@ -126,7 +126,14 @@ body {
     align-items: center;
     gap: 12px;
 }
-
+.tela-rpg ::deep .cartao-campanha > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 220ms ease;
+}
 /* Botão principal de ação */
 .botao-dourado,
 .tela-rpg ::deep .botao-dourado {

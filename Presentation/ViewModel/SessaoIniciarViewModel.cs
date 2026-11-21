@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
@@ -14,6 +16,12 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class SessaoIniciarViewModel
     {
+        private const long TamanhoMaximoMapa = 5 * 1024 * 1024; // 5 MB
+        private const int LadoMaximoFotoNpc = 512;
+        private const long LimiteOriginalFotoNpc = 10 * 1024 * 1024; // 10 MB
+        private const long LimiteFinalFotoNpc = 2 * 1024 * 1024; // 2 MB
+        private static readonly string? ImagemPadraoNpc = new NPC().Imagem;
+
         private readonly CampanhaService _campanhaService;
         private readonly PersonagemService _personagemService;
         private readonly NpcService _npcService;
@@ -39,12 +47,23 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
         public List<NPC> NpcsDisponiveis { get; private set; } = new();
         public List<Item> ItensDisponiveis { get; private set; } = new();
+        public List<Mapa> MapasDisponiveis { get; private set; } = new();
         public string TermoBusca { get; set; } = string.Empty;
 
         public string AbaMenu { get; set; } = "iniciar";
         public string CategoriaAtiva { get; set; } = "todos";
         public string ModoVisualizacao { get; set; } = "vinculados";
         public string CategoriaSelecionada { get; set; } = "npc";
+
+        // Mapas da Campanha
+        public string AbaMapas { get; set; } = "vinculados";
+        public string TermoBuscaMapa { get; set; } = string.Empty;
+        public Mapa? MapaSelecionadoParaVer { get; private set; }
+        public string NovoMapaNome { get; set; } = string.Empty;
+        public string NovoMapaEscala { get; set; } = string.Empty;
+        public string? NovoMapaImagemBase64 { get; private set; }
+        public string? NovoMapaNomeArquivo { get; private set; }
+        public string MensagemFeedbackMapas { get; private set; } = string.Empty;
 
         // Fichas do Mestre
         public string FiltroFichasMestre { get; set; } = "pendentes";
@@ -56,7 +75,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int IdPersonagemParaRecusar { get; set; } = 0;
         public string TextoMotivoRecusa { get; set; } = string.Empty;
 
-        // Form Fields - NPC
+        // Form Fields - NPC (espelhando dbo.NPC e NpcCriar.razor)
         public string NpcNome { get; set; } = string.Empty;
         public string NpcRaca { get; set; } = "Humano";
         public string NpcClasse { get; set; } = "Guerreiro";
@@ -70,6 +89,10 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int NpcInteligencia { get; set; } = 10;
         public int NpcSabedoria { get; set; } = 10;
         public int NpcCarisma { get; set; } = 10;
+        public string? NpcImagem { get; set; } = ImagemPadraoNpc;
+        public string? ErroImagemNpc { get; private set; }
+        public int ChaveInputFotoNpc { get; private set; }
+        public bool TemFotoNpc => NpcImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 
         // Form Fields - Monstro
         public string MonstroNome { get; set; } = string.Empty;
@@ -114,11 +137,27 @@ namespace RPGdeMesa.Presentation.ViewModel
             CampanhaAtual?.PersonagemCampanhas
                 .FirstOrDefault(pc => pc.IdPersonagem == FichaInspecionada?.IdPersonagem)?.StatusAprovacao ?? "Pendente";
 
+        public IEnumerable<Mapa> MapasVinculadosFiltrados =>
+            (CampanhaAtual?.MapaCampanhas ?? Enumerable.Empty<MapaCampanha>())
+                .Where(mc => mc.Mapa != null)
+                .Select(mc => mc.Mapa!)
+                .Where(m =>
+                    string.IsNullOrWhiteSpace(TermoBuscaMapa) ||
+                    m.NomeRegiao.Contains(TermoBuscaMapa, StringComparison.OrdinalIgnoreCase) ||
+                    (m.Escala != null && m.Escala.Contains(TermoBuscaMapa, StringComparison.OrdinalIgnoreCase)));
+
+        public IEnumerable<Mapa> MapasDisponiveisFiltrados =>
+            MapasDisponiveis.Where(m =>
+                string.IsNullOrWhiteSpace(TermoBuscaMapa) ||
+                m.NomeRegiao.Contains(TermoBuscaMapa, StringComparison.OrdinalIgnoreCase) ||
+                (m.Escala != null && m.Escala.Contains(TermoBuscaMapa, StringComparison.OrdinalIgnoreCase)));
+
         public IEnumerable<NPC> NpcsVinculadosFiltrados =>
             (CampanhaAtual?.Npcs ?? Array.Empty<NPC>()).Where(n =>
                 string.IsNullOrWhiteSpace(TermoBusca) ||
                 n.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
                 (n.ClasseTexto != null && n.ClasseTexto.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)) ||
+                (n.AntecedenteTexto != null && n.AntecedenteTexto.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)) ||
                 (n.Ocupacao != null && n.Ocupacao.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)));
 
         public IEnumerable<MonstroCampanha> MonstrosVinculadosFiltrados =>
@@ -142,6 +181,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 string.IsNullOrWhiteSpace(TermoBusca) ||
                 n.Nome.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase) ||
                 (n.ClasseTexto != null && n.ClasseTexto.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)) ||
+                (n.AntecedenteTexto != null && n.AntecedenteTexto.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)) ||
                 (n.Ocupacao != null && n.Ocupacao.Contains(TermoBusca, StringComparison.OrdinalIgnoreCase)));
 
         public IEnumerable<Monstro> MonstrosDisponiveisFiltrados =>
@@ -175,11 +215,207 @@ namespace RPGdeMesa.Presentation.ViewModel
                     var todosItens = await _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
                     var idsItensVinculados = CampanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
                     ItensDisponiveis = todosItens.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
+
+                    var todosMapasUsuario = await _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
+                    var idsMapasVinculados = CampanhaAtual.MapaCampanhas.Select(mc => mc.IdMapa).ToList();
+                    MapasDisponiveis = todosMapasUsuario.Where(m => !idsMapasVinculados.Contains(m.IdMapa)).ToList();
+
+                    if (MapaSelecionadoParaVer != null && !idsMapasVinculados.Contains(MapaSelecionadoParaVer.IdMapa))
+                    {
+                        MapaSelecionadoParaVer = null;
+                    }
                 }
             }
             NotifyStateChanged();
         }
 
+        // --- FOTO DO NPC ---
+        public async Task SelecionarFotoNpcAsync(InputFileChangeEventArgs evento)
+        {
+            ErroImagemNpc = null;
+            var arquivo = evento.File;
+
+            if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
+                !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                ErroImagemNpc = "Selecione um arquivo de imagem válido.";
+                NotifyStateChanged();
+                return;
+            }
+
+            if (arquivo.Size > LimiteOriginalFotoNpc)
+            {
+                ErroImagemNpc = "A imagem deve ter no máximo 10 MB.";
+                NotifyStateChanged();
+                return;
+            }
+
+            try
+            {
+                IBrowserFile origem = arquivo;
+                try
+                {
+                    var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
+                        ? "image/jpeg"
+                        : "image/png";
+                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFotoNpc, LadoMaximoFotoNpc);
+                }
+                catch (Exception) when (arquivo.Size <= LimiteFinalFotoNpc)
+                {
+                    origem = arquivo;
+                }
+
+                await using var leitura = origem.OpenReadStream(LimiteFinalFotoNpc);
+                using var memoria = new MemoryStream();
+                await leitura.CopyToAsync(memoria);
+
+                NpcImagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            }
+            catch (Exception)
+            {
+                ErroImagemNpc = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public void RemoverFotoNpc()
+        {
+            NpcImagem = ImagemPadraoNpc;
+            ErroImagemNpc = null;
+            ChaveInputFotoNpc++;
+            NotifyStateChanged();
+        }
+
+        private void LimparFormularioNpc()
+        {
+            NpcNome = string.Empty;
+            NpcRaca = "Humano";
+            NpcClasse = "Guerreiro";
+            NpcNivel = 1;
+            NpcTendencia = "Neutra";
+            NpcAntecedente = string.Empty;
+            NpcForca = 10;
+            NpcDestreza = 10;
+            NpcConstituicao = 10;
+            NpcInteligencia = 10;
+            NpcSabedoria = 10;
+            NpcCarisma = 10;
+            NpcHistoria = string.Empty;
+            NpcImagem = ImagemPadraoNpc;
+            ErroImagemNpc = null;
+            ChaveInputFotoNpc++;
+        }
+
+        // --- MÉTODOS DE MAPAS ---
+        public void SelecionarMapaParaVisualizar(Mapa? mapa)
+        {
+            if (mapa != null && MapaSelecionadoParaVer?.IdMapa == mapa.IdMapa)
+                MapaSelecionadoParaVer = null;
+            else
+                MapaSelecionadoParaVer = mapa;
+
+            NotifyStateChanged();
+        }
+
+        public async Task SelecionarImagemNovoMapaAsync(InputFileChangeEventArgs e)
+        {
+            var arquivo = e.File;
+            if (arquivo is null) return;
+
+            try
+            {
+                using var stream = arquivo.OpenReadStream(TamanhoMaximoMapa);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+
+                NovoMapaImagemBase64 = $"data:{arquivo.ContentType};base64,{base64}";
+                NovoMapaNomeArquivo = arquivo.Name;
+
+                if (string.IsNullOrWhiteSpace(NovoMapaNome))
+                    NovoMapaNome = Path.GetFileNameWithoutExtension(arquivo.Name);
+
+                MensagemFeedbackMapas = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                MensagemFeedbackMapas = $"Erro ao carregar imagem (máx. 5MB): {ex.Message}";
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task CriarEVincularNovoMapaAsync()
+        {
+            if (CampanhaAtual == null) return;
+
+            if (string.IsNullOrWhiteSpace(NovoMapaNome))
+            {
+                MensagemFeedbackMapas = "Informe o nome da região/mapa.";
+                NotifyStateChanged();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(NovoMapaImagemBase64))
+            {
+                MensagemFeedbackMapas = "Selecione uma imagem para o mapa.";
+                NotifyStateChanged();
+                return;
+            }
+
+            var novoMapa = new Mapa
+            {
+                IdAccount = CampanhaAtual.IdAccount,
+                NomeRegiao = NovoMapaNome.Trim(),
+                Escala = string.IsNullOrWhiteSpace(NovoMapaEscala) ? null : NovoMapaEscala.Trim(),
+                ImagemUrl = NovoMapaImagemBase64
+            };
+
+            var resultado = await _campanhaService.CriarEVincularMapaNaCampanhaAsync(IdCampanha, novoMapa);
+            MensagemFeedbackMapas = resultado.Mensagem;
+
+            if (resultado.Sucesso)
+            {
+                NovoMapaNome = string.Empty;
+                NovoMapaEscala = string.Empty;
+                NovoMapaImagemBase64 = null;
+                NovoMapaNomeArquivo = null;
+                AbaMapas = "vinculados";
+                await CarregarDadosCampanhaAsync(IdCampanha);
+                MapaSelecionadoParaVer = CampanhaAtual?.MapaCampanhas
+                    .Select(mc => mc.Mapa)
+                    .FirstOrDefault(m => m != null && m.IdMapa == novoMapa.IdMapa);
+                NotifyStateChanged();
+            }
+            else
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public async Task VincularMapaExistenteAsync(int idMapa)
+        {
+            var resultado = await _campanhaService.AdicionarMapaNaCampanhaAsync(IdCampanha, idMapa);
+            MensagemFeedbackMapas = resultado.Mensagem;
+            await CarregarDadosCampanhaAsync(IdCampanha);
+        }
+
+        public async Task DesvincularMapaAsync(int idMapa)
+        {
+            var resultado = await _campanhaService.RemoverMapaDaCampanhaAsync(IdCampanha, idMapa);
+            MensagemFeedbackMapas = resultado.Mensagem;
+            if (MapaSelecionadoParaVer?.IdMapa == idMapa)
+                MapaSelecionadoParaVer = null;
+
+            await CarregarDadosCampanhaAsync(IdCampanha);
+        }
+
+        // --- FICHAS ---
         public async Task InspecionarFichaNaAbaAsync(int idPersonagem)
         {
             AbaMenu = "fichas";
@@ -229,6 +465,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             await CarregarDadosCampanhaAsync(IdCampanha);
         }
 
+        // --- CONFIGURAÇÕES (NPC, MONSTRO, ITEM) ---
         public async Task SalvarRegistroAsync()
         {
             if (CampanhaAtual == null) return;
@@ -242,22 +479,26 @@ namespace RPGdeMesa.Presentation.ViewModel
                         nome: NpcNome,
                         racaTexto: NpcRaca,
                         classeTexto: NpcClasse,
-                        nivel: NpcNivel,
+                        nivel: Math.Clamp(NpcNivel, 1, 20),
                         antecedenteTexto: NpcAntecedente,
                         tendencia: NpcTendencia,
-                        forca: NpcForca,
-                        destreza: NpcDestreza,
-                        constituicao: NpcConstituicao,
-                        inteligencia: NpcInteligencia,
-                        sabedoria: NpcSabedoria,
-                        carisma: NpcCarisma,
+                        forca: Math.Clamp(NpcForca, 1, 30),
+                        destreza: Math.Clamp(NpcDestreza, 1, 30),
+                        constituicao: Math.Clamp(NpcConstituicao, 1, 30),
+                        inteligencia: Math.Clamp(NpcInteligencia, 1, 30),
+                        sabedoria: Math.Clamp(NpcSabedoria, 1, 30),
+                        carisma: Math.Clamp(NpcCarisma, 1, 30),
                         historia: NpcHistoria,
+                        imagem: NpcImagem,
                         idCampanha: IdCampanha
                     );
 
                     var resultado = await _npcService.CriarNpcAsync(CampanhaAtual.IdAccount, novoNpc, IdCampanha);
                     MensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
-                    if (resultado.Sucesso) { NpcNome = NpcAntecedente = NpcHistoria = string.Empty; }
+                    if (resultado.Sucesso)
+                    {
+                        LimparFormularioNpc();
+                    }
                 }
                 else if (CategoriaSelecionada == "monstro")
                 {
@@ -380,6 +621,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void AbrirIniciar() { AbaMenu = "iniciar"; NotifyStateChanged(); }
         public void AbrirConfig() { AbaMenu = "config"; NotifyStateChanged(); }
+        public void AbrirMapas() { AbaMenu = "mapas"; NotifyStateChanged(); }
         public void AbrirFichas()
         {
             AbaMenu = "fichas";

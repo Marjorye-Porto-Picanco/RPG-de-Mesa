@@ -9,6 +9,7 @@ using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -16,6 +17,8 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class CriarCampanhaViewModel
     {
+        private const long TamanhoMaximoImagem = 5 * 1024 * 1024; // 5 MB
+
         private readonly CampanhaService _campanhaService;
         private readonly NavigationManager _navigation;
         private readonly IJSRuntime _jsRuntime;
@@ -51,8 +54,9 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int IdNPCSelecionadoNaLista { get; set; }
         public int IdItemSelecionadoNaLista { get; set; }
 
-        public List<IBrowserFile> ListaMapas { get; set; } = new();
-        public IBrowserFile? ArquivoCapa { get; set; }
+        public List<Mapa> ListaMapas { get; set; } = new();
+        public string? CapaBase64 { get; set; }
+        public string? NomeArquivoCapa { get; set; }
 
         public bool ExibirModalSelecionarMonstro { get; set; } = false;
         public bool ExibirModalSelecionarNPC { get; set; } = false;
@@ -212,16 +216,72 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // --- MAPAS E CAPA ---
-        public void AdicionarMapas(InputFileChangeEventArgs e)
+        private async Task<string> ConverterParaBase64Async(IBrowserFile arquivo)
         {
-            foreach (var arquivo in e.GetMultipleFiles(10))
+            using var stream = arquivo.OpenReadStream(TamanhoMaximoImagem);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            return $"data:{arquivo.ContentType};base64,{base64}";
+        }
+
+        public async Task SelecionarCapaAsync(InputFileChangeEventArgs e)
+        {
+            var arquivo = e.File;
+            if (arquivo is null) return;
+
+            try
             {
-                ListaMapas.Add(arquivo);
+                CapaBase64 = await ConverterParaBase64Async(arquivo);
+                NomeArquivoCapa = arquivo.Name;
+                MensagemFeedback = "";
             }
+            catch (Exception ex)
+            {
+                Sucesso = false;
+                MensagemFeedback = $"Erro ao carregar capa (máx. 5MB): {ex.Message}";
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public void RemoverCapa()
+        {
+            CapaBase64 = null;
+            NomeArquivoCapa = null;
             NotifyStateChanged();
         }
 
-        public void RemoverMapa(IBrowserFile mapa)
+        public async Task AdicionarMapasAsync(InputFileChangeEventArgs e)
+        {
+            try
+            {
+                foreach (var arquivo in e.GetMultipleFiles(10))
+                {
+                    var base64 = await ConverterParaBase64Async(arquivo);
+                    ListaMapas.Add(new Mapa
+                    {
+                        IdAccount = _sessaoUsuario.IdUsuarioLogado,
+                        NomeRegiao = Path.GetFileNameWithoutExtension(arquivo.Name),
+                        ImagemUrl = base64
+                    });
+                }
+                MensagemFeedback = "";
+            }
+            catch (Exception ex)
+            {
+                Sucesso = false;
+                MensagemFeedback = $"Erro ao carregar mapa (máx. 5MB): {ex.Message}";
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public void RemoverMapa(Mapa mapa)
         {
             ListaMapas.Remove(mapa);
             NotifyStateChanged();
@@ -281,9 +341,11 @@ namespace RPGdeMesa.Presentation.ViewModel
                     Nome,
                     Notas,
                     CodigoConvite,
+                    CapaBase64,
                     ListaMonstros,
                     ListaNPCs,
-                    ListaItensCampanha
+                    ListaItensCampanha,
+                    ListaMapas
                 );
 
                 Sucesso = resultado.Sucesso;

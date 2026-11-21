@@ -128,6 +128,10 @@ public class Campanha : IAggregateRoot
             _itemCampanhas.Remove(vinculo);
     }
 
+    public string? Capa { get; set; }
+    public ICollection<MapaCampanha> MapaCampanhas { get; set; } = new List<MapaCampanha>();
+
     private static string GerarCodigoConvitePadrao() =>
         Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 }
+
