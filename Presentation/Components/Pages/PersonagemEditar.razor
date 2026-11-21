@@ -301,35 +301,241 @@
             @if (ViewModel.AbaAtiva == "grimorio")
             {
                 <div class="edicao-conteudo">
-                    <div class="categoria-itens-edicao">
-                        <div class="titulo-categoria-edicao">
-                            <h3>⌁ Magias Conhecidas / Preparadas</h3>
-                            <button type="button" class="btn-add-item-edicao" @onclick="ViewModel.AdicionarMagia">+</button>
-                        </div>
-                        <div class="cabecalho-linha-edicao" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
-                            <span>Nome da Magia</span>
-                            <span>Círculo</span>
-                            <span>Dano / Efeito</span>
-                            <span>Alcance / Notas</span>
-                            <span></span>
-                        </div>
-                        @foreach (var magia in ViewModel.Magias)
-                        {
-                            <div class="item-linha-edicao" style="grid-template-columns: 1.3fr 110px 110px 1fr 26px;">
-                                <input type="text" @bind="magia.Nome" placeholder="Ex.: Mísseis Mágicos" />
-                                <select @bind="magia.Circulo">
-                                    <option value="Truque">Truque</option>
-                                    <option value="1º Círculo">1º Círculo</option>
-                                    <option value="2º Círculo">2º Círculo</option>
-                                    <option value="3º Círculo">3º Círculo</option>
-                                    <option value="4º Círculo">4º Círculo</option>
-                                    <option value="5º Círculo">5º Círculo</option>
-                                </select>
-                                <input type="text" @bind="magia.Efeito" placeholder="Ex.: 3d4+3 Energia" />
-                                <input type="text" @bind="magia.AlcanceNotas" placeholder="Ex.: 36m · Ação" />
-                                <button type="button" class="remover-item-edicao" @onclick="() => ViewModel.RemoverMagia(magia)">×</button>
+                    <div class="corpo-inventario-edicao">
+                        <!-- COLUNA ESQUERDA: Catálogo + Magias Equipadas -->
+                        <div>
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>⌁ Catálogo de Magias</h3>
+                                    <button type="button"
+                                            class="btn-magia-manual-edicao"
+                                            @onclick="ViewModel.AlternarFormNovaMagia">
+                                        @(ViewModel.ExibirFormNovaMagia ? "Fechar cadastro manual" : "+ Magia personalizada")
+                                    </button>
+                                </div>
+
+                                <div class="magia-filtros-edicao">
+                                    <input type="search"
+                                           class="magia-busca-edicao"
+                                           @bind="ViewModel.TermoBuscaMagia"
+                                           @bind:event="oninput"
+                                           placeholder="Buscar magia por nome, escola ou efeito..."
+                                           autocomplete="off" />
+
+                                    <select class="magia-filtro-edicao" @bind="ViewModel.FiltroCirculoMagia" aria-label="Filtrar por círculo">
+                                        <option value="todos">Todos os círculos</option>
+                                        <option value="0">Truque (0)</option>
+                                        <option value="1">1º Círculo</option>
+                                        <option value="2">2º Círculo</option>
+                                        <option value="3">3º Círculo</option>
+                                        <option value="4">4º Círculo</option>
+                                        <option value="5">5º Círculo</option>
+                                        <option value="6">6º Círculo</option>
+                                        <option value="7">7º Círculo</option>
+                                        <option value="8">8º Círculo</option>
+                                        <option value="9">9º Círculo</option>
+                                    </select>
+                                </div>
+
+                                <div class="magia-catalogo-lista-edicao">
+                                    @if (ViewModel.MagiasCatalogoFiltradas.Any())
+                                    {
+                                        @foreach (var magia in ViewModel.MagiasCatalogoFiltradas)
+                                        {
+                                            <div class="magia-catalogo-linha-edicao" @onclick="() => ViewModel.VisualizarMagiaCatalogo(magia)">
+                                                <div class="magia-catalogo-info-edicao">
+                                                    <strong>@magia.Nome</strong>
+                                                    <small>
+                                                        @MagiaGrimorioEntry.ConverterNivelParaTexto(magia.CirculoNivel)
+                                                        @if (!string.IsNullOrWhiteSpace(magia.Escola))
+                                                        {
+                                                            <text> · @magia.Escola</text>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(magia.TempoConjuracao))
+                                                        {
+                                                            <text> · @magia.TempoConjuracao</text>
+                                                        }
+                                                    </small>
+                                                </div>
+                                                <button type="button"
+                                                        class="btn-add-item-edicao"
+                                                        title="Equipar @magia.Nome no grimório"
+                                                        aria-label="Equipar @magia.Nome"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => ViewModel.VincularMagiaDoCatalogo(magia)">
+                                                    +
+                                                </button>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p class="magia-vazia-edicao">Nenhuma magia encontrada no catálogo com esse filtro.</p>
+                                    }
+                                </div>
+
+                                @if (ViewModel.ExibirFormNovaMagia)
+                                {
+                                    <div class="magia-manual-box-edicao">
+                                        <div class="form-grid-2-edicao">
+                                            <label class="campo-ficha-edicao full-width">
+                                                <span>Nome da Magia*</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.Nome" maxlength="100" placeholder="Ex.: Mísseis Mágicos" />
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Círculo / Nível</span>
+                                                <select @bind="ViewModel.NovaMagiaManual.Circulo">
+                                                    @foreach (var c in ViewModel.ListaCirculos)
+                                                    {
+                                                        <option value="@c">@c</option>
+                                                    }
+                                                </select>
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Escola</span>
+                                                <select @bind="ViewModel.NovaMagiaManual.Escola">
+                                                    <option value="">Selecionar...</option>
+                                                    @foreach (var esc in ViewModel.ListaEscolasMagia)
+                                                    {
+                                                        <option value="@esc">@esc</option>
+                                                    }
+                                                </select>
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Tempo de Conjuração</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.TempoConjuracao" maxlength="50" placeholder="Ex.: 1 ação" />
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Alcance</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.Alcance" maxlength="50" placeholder="Ex.: 36 metros" />
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Componentes</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.Componentes" maxlength="100" placeholder="Ex.: V, S" />
+                                            </label>
+                                            <label class="campo-ficha-edicao">
+                                                <span>Duração</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.Duracao" maxlength="50" placeholder="Ex.: Instantânea" />
+                                            </label>
+                                            <label class="campo-ficha-edicao full-width">
+                                                <span>Dano / Efeito</span>
+                                                <input type="text" @bind="ViewModel.NovaMagiaManual.DanoEfeito" maxlength="100" placeholder="Ex.: 3d4+3 de energia" />
+                                            </label>
+                                        </div>
+                                        <div class="magia-manual-acoes-edicao">
+                                            <button type="button" class="action-primary" @onclick="ViewModel.AdicionarMagiaManual">Adicionar ao Grimório</button>
+                                        </div>
+                                    </div>
+                                }
                             </div>
-                        }
+
+                            <!-- Magias Equipadas no Grimório (com scroll interno) -->
+                            <div class="categoria-itens-edicao">
+                                <div class="titulo-categoria-edicao">
+                                    <h3>✦ Magias Equipadas no Grimório (@ViewModel.Magias.Count)</h3>
+                                </div>
+
+                                @if (ViewModel.Magias.Any())
+                                {
+                                    <div class="cabecalho-linha-edicao magia-equipada-grid-edicao">
+                                        <span>Nome</span>
+                                        <span>Círculo</span>
+                                        <span>Escola</span>
+                                        <span>Dano / Efeito</span>
+                                        <span></span>
+                                    </div>
+                                    <div class="lista-magias-equipadas-edicao">
+                                        @foreach (var magia in ViewModel.Magias)
+                                        {
+                                            bool selecionada = ViewModel.MagiaEmVisualizacao == magia;
+                                            <div class="item-linha-edicao magia-equipada-grid-edicao magia-equipada-row-edicao @(selecionada ? "selecionada" : "")"
+                                                 @onclick="() => ViewModel.VisualizarMagia(magia)">
+                                                <strong class="magia-cell-nome-edicao">@magia.Nome</strong>
+                                                <span>@magia.Circulo</span>
+                                                <span>@(string.IsNullOrWhiteSpace(magia.Escola) ? "—" : magia.Escola)</span>
+                                                <span>@(string.IsNullOrWhiteSpace(magia.DanoEfeito) ? "—" : magia.DanoEfeito)</span>
+                                                <button type="button"
+                                                        class="remover-item-edicao"
+                                                        title="Remover magia"
+                                                        aria-label="Remover @magia.Nome"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => ViewModel.RemoverMagia(magia)">
+                                                    ×
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="magia-vazia-edicao">Nenhuma magia equipada ainda. Clique no <strong>+</strong> em uma magia do catálogo acima.</p>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- COLUNA DIREITA: Resumo + Visualização Completa de todos os campos da Magia -->
+                        <aside class="resumo-inventario-edicao" aria-label="Resumo e detalhes da magia">
+                            <div class="painel-moedas-edicao">
+                                <h3>Resumo do Grimório</h3>
+                                <div class="grimorio-resumo-grid-edicao">
+                                    <div>
+                                        <span>Total</span>
+                                        <strong>@ViewModel.Magias.Count</strong>
+                                    </div>
+                                    <div>
+                                        <span>Truques</span>
+                                        <strong>@ViewModel.Magias.Count(m => m.ObterNivelCirculo() == 0)</strong>
+                                    </div>
+                                    <div>
+                                        <span>1º–9º</span>
+                                        <strong>@ViewModel.Magias.Count(m => m.ObterNivelCirculo() > 0)</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="painel-carga-edicao">
+                                <h3>Visualização da Magia</h3>
+                                @if (ViewModel.MagiaEmVisualizacao != null)
+                                {
+                                    var m = ViewModel.MagiaEmVisualizacao;
+                                    <strong class="magia-detalhe-titulo-edicao">@m.Nome</strong>
+                                    <dl class="magia-detalhe-lista-edicao">
+                                        <div>
+                                            <dt>Círculo / Nível</dt>
+                                            <dd>@m.Circulo (Nível @m.ObterNivelCirculo())</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Escola</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.Escola) ? "Não informada" : m.Escola)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Tempo de Conjuração</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.TempoConjuracao) ? "Não informado" : m.TempoConjuracao)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Alcance</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.Alcance) ? "Não informado" : m.Alcance)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Componentes</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.Componentes) ? "Não informados" : m.Componentes)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Duração</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.Duracao) ? "Não informada" : m.Duracao)</dd>
+                                        </div>
+                                        <div>
+                                            <dt>Dano / Efeito</dt>
+                                            <dd>@(string.IsNullOrWhiteSpace(m.DanoEfeito) ? "Não informado" : m.DanoEfeito)</dd>
+                                        </div>
+                                    </dl>
+                                }
+                                else
+                                {
+                                    <p class="magia-detalhe-vazio-edicao">Clique em qualquer magia do catálogo ou do grimório para visualizar escola, tempo de conjuração, alcance, componentes, duração e dano/efeito.</p>
+                                }
+                            </div>
+                        </aside>
                     </div>
                 </div>
             }
@@ -371,6 +577,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
         await ViewModel.CarregarPersonagemAsync(Id);
     }

@@ -470,7 +470,7 @@ body {
         outline: none;
     }
 
-/* INVENTÁRIO NA EDIÇÃO */
+/* INVENTÁRIO E GRIMÓRIO NA EDIÇÃO */
 .corpo-inventario-edicao {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.85fr);
@@ -508,6 +508,11 @@ body {
     font-weight: bold;
     cursor: pointer;
 }
+
+    .btn-add-item-edicao:hover {
+        background: #a87a2d;
+        color: #fff8e8;
+    }
 
 .cabecalho-linha-edicao,
 .item-linha-edicao {
@@ -639,6 +644,230 @@ body {
     border-radius: 6px;
 }
 
+/* CATÁLOGO, GRIMÓRIO E VISUALIZAÇÃO COMPLETA DE MAGIAS */
+.btn-magia-manual-edicao {
+    padding: 5px 10px;
+    border: 1px solid #ae812f;
+    border-radius: 6px;
+    background: rgba(176, 128, 38, 0.14);
+    color: #593d14;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+    .btn-magia-manual-edicao:hover {
+        background: #a87a2d;
+        color: #fff8e8;
+    }
+
+.magia-filtros-edicao {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 155px;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.magia-busca-edicao,
+.magia-filtro-edicao {
+    width: 100%;
+    min-height: 35px;
+    padding: 6px 10px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
+    border-radius: 6px;
+    background: #fffdf8;
+    color: #392819;
+    font-size: 12px;
+}
+
+.magia-catalogo-lista-edicao,
+.lista-magias-equipadas-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(152, 113, 45, 0.55) transparent;
+}
+
+    .magia-catalogo-lista-edicao::-webkit-scrollbar,
+    .lista-magias-equipadas-edicao::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .magia-catalogo-lista-edicao::-webkit-scrollbar-track,
+    .lista-magias-equipadas-edicao::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .magia-catalogo-lista-edicao::-webkit-scrollbar-thumb,
+    .lista-magias-equipadas-edicao::-webkit-scrollbar-thumb {
+        background: rgba(152, 113, 45, 0.5);
+        border-radius: 999px;
+    }
+
+        .magia-catalogo-lista-edicao::-webkit-scrollbar-thumb:hover,
+        .lista-magias-equipadas-edicao::-webkit-scrollbar-thumb:hover {
+            background: rgba(152, 113, 45, 0.85);
+        }
+
+.magia-catalogo-linha-edicao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(126, 87, 31, 0.28);
+    border-radius: 7px;
+    background: rgba(255, 253, 246, 0.85);
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .magia-catalogo-linha-edicao:hover {
+        border-color: #a77a32;
+        background: #fffdf4;
+    }
+
+.magia-catalogo-info-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+    .magia-catalogo-info-edicao strong {
+        color: #392819;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .magia-catalogo-info-edicao small {
+        color: #795924;
+        font-size: 11px;
+    }
+
+.magia-manual-box-edicao {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(126, 87, 31, 0.35);
+}
+
+.magia-manual-acoes-edicao {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.magia-equipada-grid-edicao {
+    grid-template-columns: minmax(110px, 1.3fr) 84px 96px minmax(90px, 1fr) 28px;
+}
+
+.magia-equipada-row-edicao {
+    padding: 6px 8px;
+    border: 1px solid rgba(126, 87, 31, 0.22);
+    border-radius: 6px;
+    background: rgba(255, 253, 246, 0.72);
+    color: #392819;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 0;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .magia-equipada-row-edicao:hover,
+    .magia-equipada-row-edicao.selecionada {
+        border-color: #a77a32;
+        background: rgba(241, 205, 104, 0.45);
+    }
+
+.magia-cell-nome-edicao {
+    overflow-wrap: anywhere;
+}
+
+.magia-vazia-edicao {
+    margin: 6px 0 2px;
+    color: #795924;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.grimorio-resumo-grid-edicao {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    text-align: center;
+}
+
+    .grimorio-resumo-grid-edicao div {
+        padding: 8px 6px;
+        border-radius: 8px;
+        background: rgba(30, 20, 12, 0.32);
+        border: 1px solid rgba(247, 218, 159, 0.22);
+    }
+
+    .grimorio-resumo-grid-edicao span {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #f7dfa4;
+    }
+
+    .grimorio-resumo-grid-edicao strong {
+        font-size: 18px;
+        color: #fff6dc;
+    }
+
+.magia-detalhe-titulo-edicao {
+    display: block;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(247, 218, 159, 0.28);
+    color: #ffe8af;
+    font-size: 17px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.magia-detalhe-lista-edicao {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+    .magia-detalhe-lista-edicao div {
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(247, 218, 159, 0.14);
+    }
+
+    .magia-detalhe-lista-edicao dt {
+        color: #f7dfa4;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .magia-detalhe-lista-edicao dd {
+        margin: 2px 0 0;
+        color: #fff6dc;
+        font-size: 12px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+.magia-detalhe-vazio-edicao {
+    margin: 4px 0 0;
+    color: rgba(255, 240, 202, 0.8);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
 /* BOTÕES DE AÇÃO E MODAL */
 .action-primary,
 .action-secondary {
@@ -728,6 +957,21 @@ body {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+@media (max-width: 620px) {
+    .magia-filtros-edicao {
+        grid-template-columns: 1fr;
+    }
+
+    .magia-equipada-grid-edicao {
+        grid-template-columns: minmax(90px, 1fr) 70px 76px 26px;
+    }
+
+        .magia-equipada-grid-edicao > :nth-child(4) {
+            display: none;
+        }
+}
+
 .campo-bloqueado {
     background: rgba(126, 87, 31, 0.14);
     border-style: dashed;
