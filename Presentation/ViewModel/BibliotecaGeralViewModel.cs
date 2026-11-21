@@ -16,24 +16,32 @@ public sealed record ExclusaoPendente(string Tipo, int Id, string Nome);
 
 public class BibliotecaGeralViewModel
 {
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+
     private readonly ItemService _itemService;
     private readonly MagiaService _magiaService;
     private readonly MonstroService _monstroService;
     private readonly NpcService _npcService;
     private readonly SessaoUsuarioService _sessaoUsuario;
+    private readonly AppCacheService _cache;
+    private readonly HomeCacheService _homeCache;
 
     public BibliotecaGeralViewModel(
         ItemService itemService,
         MagiaService magiaService,
         MonstroService monstroService,
         NpcService npcService,
-        SessaoUsuarioService sessaoUsuario)
+        SessaoUsuarioService sessaoUsuario,
+        AppCacheService cache,
+        HomeCacheService homeCache)
     {
         _itemService = itemService;
         _magiaService = magiaService;
         _monstroService = monstroService;
         _npcService = npcService;
         _sessaoUsuario = sessaoUsuario;
+        _cache = cache;
+        _homeCache = homeCache;
     }
 
     public int IdUsuarioLogado => _sessaoUsuario.IdUsuarioLogado;
@@ -160,25 +168,42 @@ public class BibliotecaGeralViewModel
         _ => ItensFiltrados.Count() > LimiteVisivel
     };
 
-    public async Task CarregarDadosAsync()
+    public Task CarregarDadosAsync() => CarregarDadosAsync(false);
+
+    public async Task CarregarDadosAsync(bool forcarAtualizacao)
     {
-        Carregando = true;
         TemErro = false;
-        StatusMensagem = "Carregando registros do banco de dados...";
         LimiteVisivel = 30;
+
+        if (!EstaLogado)
+        {
+            EntradasItens.Clear();
+            EntradasMagias.Clear();
+            EntradasMonstros.Clear();
+            EntradasNpcs.Clear();
+            StatusMensagem = "Faça login para visualizar a biblioteca.";
+            return;
+        }
+
+        var snapshot = _cache.ObterBiblioteca(IdUsuarioLogado);
+        if (snapshot is not null)
+        {
+            EntradasItens = snapshot.Itens;
+            EntradasMagias = snapshot.Magias;
+            EntradasMonstros = snapshot.Monstros;
+            EntradasNpcs = snapshot.Npcs;
+            AtualizarMensagemStatus();
+
+            if (!forcarAtualizacao && !_cache.BibliotecaExpirada(IdUsuarioLogado, ValidadeCache))
+                return;
+        }
+
+        Carregando = snapshot is null;
+        if (Carregando)
+            StatusMensagem = "Carregando registros do banco de dados...";
 
         try
         {
-            if (!EstaLogado)
-            {
-                EntradasItens.Clear();
-                EntradasMagias.Clear();
-                EntradasMonstros.Clear();
-                EntradasNpcs.Clear();
-                StatusMensagem = "Faça login para visualizar a biblioteca.";
-                return;
-            }
-
             var itens = await _itemService.ObterItensPorUsuarioAsync(IdUsuarioLogado);
             var magias = await _magiaService.ObterTodasMagiasAsync();
             var monstros = await _monstroService.ObterMonstrosPorUsuarioAsync(IdUsuarioLogado);
@@ -188,6 +213,16 @@ public class BibliotecaGeralViewModel
             EntradasMagias = magias;
             EntradasMonstros = monstros.OrderBy(m => m.Nome).ToList();
             EntradasNpcs = npcs.OrderBy(n => n.Nome).ToList();
+
+            _cache.SalvarBiblioteca(new BibliotecaCacheSnapshot
+            {
+                IdUsuario = IdUsuarioLogado,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                Itens = EntradasItens,
+                Magias = EntradasMagias,
+                Monstros = EntradasMonstros,
+                Npcs = EntradasNpcs
+            });
 
             AtualizarMensagemStatus();
         }
@@ -295,7 +330,8 @@ public class BibliotecaGeralViewModel
         ErroExclusao = null;
         try
         {
-            var resultado = ExclusaoAtual.Tipo switch
+            var tipoExcluido = ExclusaoAtual.Tipo;
+            var resultado = tipoExcluido switch
             {
                 "monstro" => await _monstroService.RemoverMonstroAsync(IdUsuarioLogado, ExclusaoAtual.Id),
                 "npc" => await _npcService.RemoverNpcAsync(ExclusaoAtual.Id),
@@ -310,7 +346,12 @@ public class BibliotecaGeralViewModel
 
             ExclusaoAtual = null;
             FecharTodosModaisDetalhes();
-            await CarregarDadosAsync();
+            _cache.InvalidarBiblioteca();
+            if (tipoExcluido == "npc")
+                _cache.InvalidarPersonagensLib();
+            _homeCache.Limpar();
+
+            await CarregarDadosAsync(forcarAtualizacao: true);
         }
         catch (Exception ex)
         {

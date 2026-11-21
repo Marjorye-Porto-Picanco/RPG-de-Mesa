@@ -1,10 +1,13 @@
 @page "/personagem-lib"
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.Services
 @using RPGdeMesa.Domain.Npcs
 @using RPGdeMesa.Domain.Personagens
 @inject PersonagemService PersonagemService
 @inject NpcService NpcService
 @inject SessaoUsuarioService SessaoUsuario
+@inject AppCacheService AppCache
+@inject HomeCacheService HomeCache
 @implements IDisposable
 
 <NavMenu />
@@ -21,8 +24,6 @@
                 <span aria-hidden="true">+</span> @(abaAtiva == "personagens" ? "Novo personagem" : "Novo NPC")
             </a>
         </div>
-
-       
 
         @if (abaAtiva == "personagens")
         {
@@ -43,20 +44,20 @@
                         string iniciais = ObterIniciais(personagem.Nome);
                         bool temFoto = !string.IsNullOrWhiteSpace(personagem.Imagem);
                         <div class="cartao-wrap" @key="personagem.IdPersonagem">
-                        <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
-                            <div class="retrato-personagem @(temFoto ? "com-foto" : "padrao")">
-                                <img src="@(temFoto ? personagem.Imagem : "img/armaduraprata.png")" alt="Retrato de @personagem.Nome" loading="lazy"
-                                     onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
-                                <span>@iniciais</span>
-                            </div>
-                            <div class="info-personagem">
-                                <span class="status-personagem">Aventureiro</span>
-                                <h2>@personagem.Nome</h2>
-                                <p>@(string.IsNullOrEmpty(personagem.RacaTexto) ? "Raça desconhecida" : personagem.RacaTexto) • @(string.IsNullOrEmpty(personagem.ClasseTexto) ? "Classe" : personagem.ClasseTexto) nível @personagem.Nivel</p>
-                                <small>Pronto para a aventura</small>
-                            </div>
-                        </a>
-                        <BotaoExcluir Titulo="@($"Excluir {personagem.Nome}")" OnClick='() => PedirExclusao("personagem", personagem.IdPersonagem, personagem.Nome)' />
+                            <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
+                                <div class="retrato-personagem @(temFoto ? "com-foto" : "padrao")">
+                                    <img src="@(temFoto ? personagem.Imagem : "img/armaduraprata.png")" alt="Retrato de @personagem.Nome" loading="lazy"
+                                         onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
+                                    <span>@iniciais</span>
+                                </div>
+                                <div class="info-personagem">
+                                    <span class="status-personagem">Aventureiro</span>
+                                    <h2>@personagem.Nome</h2>
+                                    <p>@(string.IsNullOrEmpty(personagem.RacaTexto) ? "Raça desconhecida" : personagem.RacaTexto) • @(string.IsNullOrEmpty(personagem.ClasseTexto) ? "Classe" : personagem.ClasseTexto) nível @personagem.Nivel</p>
+                                    <small>Pronto para a aventura</small>
+                                </div>
+                            </a>
+                            <BotaoExcluir Titulo="@($"Excluir {personagem.Nome}")" OnClick='() => PedirExclusao("personagem", personagem.IdPersonagem, personagem.Nome)' />
                         </div>
                     }
 
@@ -121,6 +122,8 @@
                    OnCancelar="CancelarExclusao" />
 
 @code {
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+
     private List<Personagem>? personagens;
     private List<NPC>? npcs;
     private string abaAtiva = "personagens";
@@ -163,9 +166,23 @@
             }
 
             if (exclusaoPendente.Tipo == "npc")
+            {
                 npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+                AppCache.InvalidarBiblioteca();
+            }
             else
+            {
                 personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+            }
+
+            AppCache.SalvarPersonagensLib(new PersonagensLibCacheSnapshot
+            {
+                IdUsuario = idUsuario,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                Personagens = personagens ?? new(),
+                Npcs = npcs ?? new()
+            });
+            HomeCache.Limpar();
 
             exclusaoPendente = null;
         }
@@ -182,16 +199,33 @@
     protected override async Task OnInitializedAsync()
     {
         int idUsuario = SessaoUsuario.IdUsuarioLogado;
-        if (idUsuario > 0)
-        {
-            personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
-            npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
-        }
-        else
+        if (idUsuario <= 0)
         {
             personagens = new();
             npcs = new();
+            return;
         }
+
+        var snapshot = AppCache.ObterPersonagensLib(idUsuario);
+        if (snapshot is not null)
+        {
+            personagens = snapshot.Personagens;
+            npcs = snapshot.Npcs;
+
+            if (!AppCache.PersonagensLibExpirados(idUsuario, ValidadeCache))
+                return;
+        }
+
+        personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+        npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+
+        AppCache.SalvarPersonagensLib(new PersonagensLibCacheSnapshot
+        {
+            IdUsuario = idUsuario,
+            AtualizadoEmUtc = DateTime.UtcNow,
+            Personagens = personagens,
+            Npcs = npcs
+        });
     }
 
     private string ObterIniciais(string nome)

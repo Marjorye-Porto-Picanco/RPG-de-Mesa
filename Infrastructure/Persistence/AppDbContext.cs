@@ -118,7 +118,7 @@ public class AppDbContext : DbContext
             e.Property(p => p.IdPerfil).HasColumnName("id_perfil");
             e.Property(p => p.IdAccount).HasColumnName("id_account");
             e.Property(p => p.Biografia).HasColumnName("biografia");
-            e.Property(p => p.AvatarUrl).HasColumnName("avatar_url");
+            e.Property(p => p.AvatarUrl).HasColumnName("avatar_url").HasColumnType("varchar(max)");
             e.Property(p => p.DataCriacao).HasColumnName("data_criacao");
         });
 

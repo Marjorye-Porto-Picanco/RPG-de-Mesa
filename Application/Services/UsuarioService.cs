@@ -1,8 +1,9 @@
-﻿using System.Security.Cryptography;
+﻿using RPGdeMesa.Domain.Common;
+using RPGdeMesa.Domain.Usuarios;
+using RPGdeMesa.Infrastructure.Repositories;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using RPGdeMesa.Domain.Common;
-using RPGdeMesa.Domain.Usuarios;
 
 namespace RPGdeMesa.Application.Services;
 
@@ -172,6 +173,39 @@ public class UsuarioService
         using var sha256 = SHA256.Create();
         byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(texto));
         return Convert.ToHexString(bytes);
+    }
+
+    public async Task<Usuario?> ObterPorIdAsync(int idAccount)
+    {
+        return await _usuarioRepo.ObterPorIdAsync(idAccount);
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> AtualizarPerfilAsync(int idAccount, string novoUsername, string? biografia, string? avatarUrl)
+    {
+        var usuario = await _usuarioRepo.ObterPorIdAsync(idAccount);
+        if (usuario is null)
+            return (false, "Usuário não encontrado.");
+
+        string usernameLimpo = novoUsername?.Trim() ?? string.Empty;
+        if (!ValidarNomeUsuario(usernameLimpo))
+            return (false, "O nome de usuário deve ter entre 3 e 20 caracteres e conter apenas letras, números e sublinhado (_).");
+
+        bool alterouUsername = !string.Equals(usuario.UsarName, usernameLimpo, StringComparison.OrdinalIgnoreCase);
+        if (alterouUsername && await _usuarioRepo.ExisteUsernameAsync(usernameLimpo))
+            return (false, "Este nome de usuário já está em uso.");
+
+        try
+        {
+            usuario.AlterarUsername(usernameLimpo);
+            usuario.AtualizarPerfil(biografia?.Trim(), avatarUrl);
+            await _usuarioRepo.AtualizarAsync(usuario);
+
+            return (true, "Perfil atualizado com sucesso!");
+        }
+        catch (DomainException dex)
+        {
+            return (false, dex.Message);
+        }
     }
 
     private bool ValidarEmail(string email) =>

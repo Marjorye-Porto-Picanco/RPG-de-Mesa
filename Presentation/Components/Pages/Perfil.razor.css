@@ -3,6 +3,14 @@
 * {
     box-sizing: border-box;
 }
+.upload-imagem-botao ::deep input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
 
 .app-shell {
     color-scheme: dark;

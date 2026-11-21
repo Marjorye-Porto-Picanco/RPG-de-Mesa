@@ -13,7 +13,7 @@ body {
    ========================================================================== */
 .barra-rpg {
     position: relative;
-    z-index: 10;
+    z-index: 100;
     display: flex;
     width: 100%;
     min-height: 60px;
@@ -35,7 +35,8 @@ body {
     }
 
         .barra-rpg ::deep a:focus-visible,
-        .barra-rpg a:focus-visible {
+        .barra-rpg a:focus-visible,
+        .barra-rpg button:focus-visible {
             outline: 2px solid #f0d17f;
             outline-offset: 2px;
         }
@@ -97,25 +98,43 @@ body {
         }
 
     /* ==========================================================================
-   PERFIL (DIREITA)
+   PERFIL E COMBOBOX (DIREITA)
    ========================================================================== */
+    .barra-rpg .perfil-dropdown-wrap {
+        position: relative;
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+
     .barra-rpg .perfil-rpg {
         display: inline-flex;
-        flex: 0 0 auto;
         align-items: center;
         gap: 8px;
-        margin-left: auto;
+        padding: 4px 8px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
         color: #e2ceaa !important;
+        font-family: inherit;
         font-size: 12px;
         white-space: nowrap;
         cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease;
     }
+
+        .barra-rpg .perfil-rpg:hover,
+        .barra-rpg .perfil-rpg.aberto {
+            border-color: rgba(212, 170, 86, 0.35);
+            background: rgba(212, 170, 86, 0.1);
+        }
 
     .barra-rpg .perfil-iniciais {
         display: grid;
         width: 32px;
+        height: 32px;
         aspect-ratio: 1;
         place-items: center;
+        overflow: hidden;
         border: 1px solid #9e7b3e;
         border-radius: 50%;
         background: #344239;
@@ -123,6 +142,76 @@ body {
         font-size: 10px;
         font-weight: bold;
     }
+
+    .barra-rpg .perfil-avatar-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .barra-rpg .perfil-seta {
+        color: #c5b79d;
+        font-size: 10px;
+        transition: transform 0.15s ease;
+    }
+
+    .barra-rpg .perfil-rpg.aberto .perfil-seta {
+        transform: rotate(180deg);
+    }
+
+    .barra-rpg .perfil-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 90;
+        background: transparent;
+    }
+
+    .barra-rpg .perfil-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 110;
+        min-width: 155px;
+        display: flex;
+        flex-direction: column;
+        padding: 5px;
+        border: 1px solid rgba(212, 170, 86, 0.45);
+        border-radius: 6px;
+        background: #1d140f;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+    }
+
+    .barra-rpg .perfil-menu-item {
+        width: 100%;
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: #f0dfbb;
+        font-family: inherit;
+        font-size: 12px;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+
+        .barra-rpg .perfil-menu-item:hover {
+            background: rgba(212, 170, 86, 0.16);
+            color: #fff3d6;
+        }
+
+        .barra-rpg .perfil-menu-item.sair {
+            margin-top: 2px;
+            border-top: 1px solid rgba(212, 170, 86, 0.15);
+            color: #e89c8e;
+        }
+
+            .barra-rpg .perfil-menu-item.sair:hover {
+                background: rgba(180, 62, 48, 0.24);
+                color: #ffd5cd;
+            }
 
 /* ==========================================================================
    RESPONSIVIDADE (MOBILE)
@@ -154,5 +243,6 @@ body {
 
         .barra-rpg .perfil-iniciais {
             width: 28px;
+            height: 28px;
         }
 }

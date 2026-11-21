@@ -11,15 +11,23 @@ public sealed record RemocaoCampanhaPendente(int IdCampanha, string Nome, bool C
 
 public class CampanhasViewModel
 {
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+
     private readonly CampanhaService _campanhaService;
     private readonly SessaoUsuarioService _sessaoUsuario;
+    private readonly AppCacheService _cache;
+    private readonly HomeCacheService _homeCache;
 
     public CampanhasViewModel(
         CampanhaService campanhaService,
-        SessaoUsuarioService sessaoUsuario)
+        SessaoUsuarioService sessaoUsuario,
+        AppCacheService cache,
+        HomeCacheService homeCache)
     {
         _campanhaService = campanhaService;
         _sessaoUsuario = sessaoUsuario;
+        _cache = cache;
+        _homeCache = homeCache;
     }
 
     public List<Campanha> CampanhasMestre { get; private set; } = new();
@@ -46,21 +54,42 @@ public class CampanhasViewModel
     public void AbrirModalEntrar() => ExibirModalEntrar = true;
     public void FecharModalEntrar() => ExibirModalEntrar = false;
 
-    public async Task CarregarCampanhasAsync()
+    public Task CarregarCampanhasAsync() => CarregarCampanhasAsync(false);
+
+    public async Task CarregarCampanhasAsync(bool forcarAtualizacao)
     {
         int idUsuario = _sessaoUsuario.IdUsuarioLogado;
-        if (idUsuario > 0)
+        if (idUsuario <= 0) return;
+
+        var snapshot = _cache.ObterCampanhas(idUsuario);
+        if (snapshot is not null)
         {
-            CampanhasMestre = await _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
-            CampanhasJogador = await _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+            CampanhasMestre = snapshot.CampanhasMestre;
+            CampanhasJogador = snapshot.CampanhasJogador;
+
+            if (!forcarAtualizacao && !_cache.CampanhasExpiradas(idUsuario, ValidadeCache))
+                return;
         }
+
+        CampanhasMestre = await _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
+        CampanhasJogador = await _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+
+        _cache.SalvarCampanhas(new CampanhasCacheSnapshot
+        {
+            IdUsuario = idUsuario,
+            AtualizadoEmUtc = DateTime.UtcNow,
+            CampanhasMestre = CampanhasMestre,
+            CampanhasJogador = CampanhasJogador
+        });
     }
 
     public async Task CampanhaEntradaSucessoAsync()
     {
         ExibirModalEntrar = false;
         AbaAtiva = "jogador";
-        await CarregarCampanhasAsync();
+        _cache.InvalidarCampanhas();
+        _homeCache.Limpar();
+        await CarregarCampanhasAsync(forcarAtualizacao: true);
     }
 
     public void PedirRemocaoCampanha(Campanha campanha, bool comoJogador)
@@ -98,7 +127,9 @@ public class CampanhasViewModel
             }
 
             CampanhaPendente = null;
-            await CarregarCampanhasAsync();
+            _cache.InvalidarCampanhas();
+            _homeCache.Limpar();
+            await CarregarCampanhasAsync(forcarAtualizacao: true);
         }
         catch (Exception ex)
         {

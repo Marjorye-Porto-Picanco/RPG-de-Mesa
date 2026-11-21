@@ -36,6 +36,14 @@ public class Usuario : IAggregateRoot
         Perfil = new Perfil(this);
     }
 
+    public void AlterarUsername(string novoUsername)
+    {
+        if (string.IsNullOrWhiteSpace(novoUsername))
+            throw new DomainException("O nome de usuário é obrigatório.");
+
+        UsarName = novoUsername.Trim();
+    }
+
     public void AtualizarPerfil(string? biografia, string? avatarUrl)
     {
         if (Perfil is null)

@@ -1,83 +1,124 @@
 ﻿@page "/perfil"
 @using RPGdeMesa.Presentation.Components.Layout
-@inject NavigationManager Navigation
-<NavMenu />
-<div class="app-shell">
+@using RPGdeMesa.Presentation.ViewModel
+@inject PerfilViewModel ViewModel
+@implements IDisposable
 
+<NavMenu />
+
+<div class="app-shell">
     <main class="app-content">
         <div class="page-heading">
-            <div><p class="page-kicker">Sua conta na mesa</p><h1 class="page-title">Perfil e preferências</h1><p class="page-description">Mantenha suas informações pessoais e preferências organizadas.</p></div>
+            <div>
+                <p class="page-kicker">Sua conta na mesa</p>
+                <h1 class="page-title">Perfil</h1>
+                <p class="page-description">Visualize os dados da sua conta e personalize seu nome de usuário, biografia e foto.</p>
+            </div>
         </div>
 
         <div class="profile-layout">
             <aside class="profile-summary" aria-label="Resumo do perfil">
-                <div class="profile-avatar" aria-hidden="true"><span data-avatar-perfil>MM</span><img id="imagem-perfil-preview" class="profile-photo-preview" alt="" hidden /></div>
-                <div><h2 data-nome-resumo>Mestre da mesa</h2><p data-usuario-resumo></p></div>
-                <div class="profile-metrics">
-                    <div><strong id="total-personagens">0</strong><small>personagens</small></div>
-                    <div><strong id="total-monstros">0</strong><small>criaturas próprias</small></div>
+                <div class="profile-avatar" aria-hidden="true">
+                    <span>@ViewModel.Iniciais</span>
+                    @if (ViewModel.TemAvatar)
+                    {
+                        <img class="profile-photo-preview" src="@ViewModel.AvatarUrl" alt="Foto de perfil" />
+                    }
                 </div>
+
+                <div>
+                    <h2>@ViewModel.NomeExibicao</h2>
+                    <p>@ViewModel.Email</p>
+                </div>
+
+                <div class="profile-metrics">
+                    <div>
+                        <strong>@ViewModel.TotalPersonagens</strong>
+                        <small>personagens</small>
+                    </div>
+                    <div>
+                        <strong>@ViewModel.TotalMonstros</strong>
+                        <small>criaturas próprias</small>
+                    </div>
+                </div>
+
                 <div class="upload-imagem profile-image-upload">
-                    <label class="upload-imagem-botao"><span aria-hidden="true">↑</span> Escolher foto de perfil<input id="imagem-perfil" type="file" accept="image/*" aria-label="Escolher foto de perfil" /></label>
-                    <p class="upload-imagem-status" data-upload-status role="status" aria-live="polite"></p>
+                    <label class="upload-imagem-botao">
+                        <span aria-hidden="true">↑</span> @(ViewModel.TemAvatar ? "Trocar foto de perfil" : "Escolher foto de perfil")
+                        <InputFile @key="ViewModel.ChaveInputAvatar" OnChange="ViewModel.SelecionarAvatarAsync" accept="image/*" aria-label="Escolher foto de perfil" />
+                    </label>
+                    @if (ViewModel.TemAvatar)
+                    {
+                        <button type="button" class="action-quiet" @onclick="ViewModel.RemoverAvatar">Remover foto</button>
+                    }
+                    <p class="upload-imagem-status" role="status" aria-live="polite">@ViewModel.StatusUpload</p>
                 </div>
             </aside>
 
-            <form class="profile-settings form-panel" id="form-perfil">
-                <input name="imagem" type="hidden" />
+            <form class="profile-settings form-panel" @onsubmit="ViewModel.SalvarPerfilAsync" @onsubmit:preventDefault="true">
                 <section class="settings-section">
-                    <h2>Informações pessoais</h2>
+                    <h2>Informações da conta</h2>
                     <div class="form-grid">
-                        <label class="form-field">Nome de exibição<input name="nome" required maxlength="60" value="Mestre da mesa" /></label>
-                        <label class="form-field">Nome de usuário<input name="usuario" required maxlength="30" value="mestre" /></label>
-                        <label class="form-field">E-mail<input name="email" type="email" maxlength="100" placeholder="mestre@exemplo.com" /></label>
-                        <label class="form-field">Fuso horário<select name="fuso"><option value="America/Sao_Paulo">Brasília (GMT-3)</option><option value="America/Manaus">Manaus (GMT-4)</option><option value="America/Belem">Belém (GMT-3)</option><option value="Europe/Lisbon">Lisboa (GMT+0)</option></select></label>
-                        <label class="form-field full-width">Sobre você<textarea name="bio" maxlength="280" placeholder="Conte um pouco sobre seu estilo de jogo."></textarea></label>
+                        <label class="form-field">
+                            Nome de usuário
+                            <input @bind="ViewModel.NomeUsuario" maxlength="20" required placeholder="Seu nome de usuário" />
+                            <span class="field-hint">3 a 20 caracteres (letras, números e _).</span>
+                        </label>
+                        <label class="form-field">
+                            E-mail
+                            <input type="email" value="@ViewModel.Email" readonly disabled />
+                        </label>
+                        <label class="form-field">
+                            Status da conta
+                            <input value="@ViewModel.StatusConta" readonly disabled />
+                        </label>
+                        <label class="form-field">
+                            Membro desde
+                            <input value="@(ViewModel.DataCadastro?.ToString("dd/MM/yyyy") ?? "—")" readonly disabled />
+                        </label>
+                        <label class="form-field full-width">
+                            Sobre você (Biografia)
+                            <textarea @bind="ViewModel.Biografia" maxlength="500" placeholder="Conte um pouco sobre seu estilo de jogo."></textarea>
+                        </label>
                     </div>
-                </section>
-
-                <section class="settings-section">
-                    <h2>Preferências da mesa</h2>
-                    <div class="form-grid">
-                        <label class="form-field">Idioma<select name="idioma"><option value="pt-BR">Português (Brasil)</option><option value="pt-PT">Português (Portugal)</option><option value="en">English</option></select></label>
-                    </div>
-                    <label class="setting-toggle"><span>Novidades da campanha<small>Receber lembretes sobre sessões e atualizações.</small></span><input name="notificacoes" type="checkbox" checked /></label>
-                    <label class="setting-toggle"><span>Resumo semanal<small>Receber um panorama das suas mesas e personagens.</small></span><input name="resumo" type="checkbox" /></label>
                 </section>
 
                 <div class="form-footer">
-                    <p id="status-perfil" class="form-status" role="status" aria-live="polite">As informações deste perfil ficam salvas neste navegador.</p>
-                    @* O cancelamento pede confirmação antes de abandonar as alterações do perfil. *@
-                    <button class="action-secondary" type="button" @onclick="() => ExibirAvisoSaida = true">Cancelar</button>
-                    <button class="action-primary" type="submit">Salvar perfil</button>
+                    <p class="form-status" role="status" aria-live="polite">@ViewModel.MensagemStatus</p>
+                    <button class="action-secondary" type="button" disabled="@ViewModel.Salvando" @onclick="ViewModel.AbrirAvisoSaida">Cancelar</button>
+                    <button class="action-primary" type="submit" disabled="@(ViewModel.Carregando || ViewModel.Salvando)">
+                        @(ViewModel.Salvando ? "Salvando..." : "Salvar perfil")
+                    </button>
                 </div>
             </form>
         </div>
     </main>
 </div>
 
-@* Mostra o aviso somente enquanto a confirmação de saída está ativa. *@
-@if (ExibirAvisoSaida)
+@if (ViewModel.ExibirAvisoSaida)
 {
-    <div class="confirm-overlay" role="presentation" @onclick="FecharAvisoSaida">
+    <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
         <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-aviso-perfil" aria-describedby="mensagem-aviso-perfil" @onclick:stopPropagation="true">
             <h2 id="titulo-aviso-perfil">Sair sem salvar?</h2>
             <p id="mensagem-aviso-perfil">As alterações feitas no perfil serão perdidas.</p>
             <div class="confirm-actions">
-                <button class="confirm-exit" type="button" @onclick="SairDoPerfil">Sim</button>
-                <button class="confirm-cancel" type="button" @onclick="FecharAvisoSaida">Não</button>
+                <button class="confirm-exit" type="button" @onclick="ViewModel.ConfirmarSaida">Sim</button>
+                <button class="confirm-cancel" type="button" @onclick="ViewModel.FecharAvisoSaida">Não</button>
             </div>
         </section>
     </div>
 }
 
 @code {
-    // Estado de visibilidade do aviso de alterações não salvas.
-    private bool ExibirAvisoSaida { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        ViewModel.OnChange -= StateHasChanged;
+        ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarPerfilAsync();
+    }
 
-    // Fecha o aviso sem sair, permitindo continuar editando o perfil.
-    private void FecharAvisoSaida() => ExibirAvisoSaida = false;
-
-    // Confirma a saída e volta à página inicial.
-    private void SairDoPerfil() => Navigation.NavigateTo("/home");
+    public void Dispose()
+    {
+        ViewModel.OnChange -= StateHasChanged;
+    }
 }

@@ -1,4 +1,13 @@
-﻿<header class="barra-rpg">
+﻿@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Presentation.Services
+@inject SessaoUsuarioService SessaoUsuario
+@inject UsuarioService UsuarioService
+@inject AppCacheService AppCache
+@inject HomeCacheService HomeCache
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<header class="barra-rpg">
     <NavLink class="marca-rpg" href="/home" Match="NavLinkMatch.All" aria-label="Salão da Mesa, início">
         <span class="marca-icone" aria-hidden="true">⚔</span>
         <span>Salão da Mesa</span>
@@ -19,8 +28,101 @@
         </NavLink>
     </nav>
 
-    <NavLink class="perfil-rpg" href="/perfil" aria-label="Abrir perfil">
-        <span class="perfil-iniciais">MM</span>
-        <span class="perfil-nome">Mestre da mesa</span>
-    </NavLink>
+    <div class="perfil-dropdown-wrap">
+        <button type="button"
+                class="perfil-rpg @(MenuAberto ? "aberto" : "")"
+                @onclick="AlternarMenu"
+                aria-haspopup="menu"
+                aria-expanded="@MenuAberto"
+                aria-label="Menu do usuário">
+            <span class="perfil-iniciais">
+                @if (!string.IsNullOrWhiteSpace(SessaoUsuario.AvatarUrl))
+                {
+                    <img class="perfil-avatar-img" src="@SessaoUsuario.AvatarUrl" alt="Foto de perfil de @NomeUsuarioExibido" />
+                }
+                else
+                {
+                    @IniciaisUsuario
+                }
+            </span>
+            <span class="perfil-nome">@NomeUsuarioExibido</span>
+            <span class="perfil-seta" aria-hidden="true">▾</span>
+        </button>
+
+        @if (MenuAberto)
+        {
+            <div class="perfil-backdrop" @onclick="FecharMenu"></div>
+            <div class="perfil-menu" role="menu">
+                <button type="button" class="perfil-menu-item" role="menuitem" @onclick="IrParaPerfil">
+                    Perfil
+                </button>
+                <button type="button" class="perfil-menu-item sair" role="menuitem" @onclick="Sair">
+                    Sair
+                </button>
+            </div>
+        }
+    </div>
 </header>
+
+@code {
+    private bool MenuAberto { get; set; }
+
+    private string NomeUsuarioExibido =>
+        string.IsNullOrWhiteSpace(SessaoUsuario.NomeUsuario)
+            ? "Mestre da mesa"
+            : SessaoUsuario.NomeUsuario.Trim();
+
+    private string IniciaisUsuario
+    {
+        get
+        {
+            var partes = NomeUsuarioExibido.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (partes.Length == 0) return "MM";
+            if (partes.Length == 1) return partes[0][..Math.Min(2, partes[0].Length)].ToUpperInvariant();
+            return $"{char.ToUpperInvariant(partes[0][0])}{char.ToUpperInvariant(partes[1][0])}";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SessaoUsuario.OnChange += AtualizarUi;
+
+        if (!SessaoUsuario.EstaLogado || SessaoUsuario.AvatarCarregado)
+            return;
+
+        try
+        {
+            var usuario = await UsuarioService.ObterPorIdAsync(SessaoUsuario.IdUsuarioLogado);
+            SessaoUsuario.AtualizarAvatar(usuario?.Perfil?.AvatarUrl);
+        }
+        catch
+        {
+            SessaoUsuario.AtualizarAvatar(null);
+        }
+    }
+
+    private void AtualizarUi() => _ = InvokeAsync(StateHasChanged);
+
+    private void AlternarMenu() => MenuAberto = !MenuAberto;
+    private void FecharMenu() => MenuAberto = false;
+
+    private void IrParaPerfil()
+    {
+        MenuAberto = false;
+        Navigation.NavigateTo("/perfil");
+    }
+
+    private void Sair()
+    {
+        MenuAberto = false;
+        AppCache.LimparTudo();
+        HomeCache.Limpar();
+        SessaoUsuario.FazerLogout();
+        Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        SessaoUsuario.OnChange -= AtualizarUi;
+    }
+}

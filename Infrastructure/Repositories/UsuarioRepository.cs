@@ -10,8 +10,12 @@ public class UsuarioRepository : IUsuarioRepository
 
     public UsuarioRepository(AppDbContext context) => _context = context;
 
-    public async Task<Usuario?> ObterPorIdAsync(int idAccount) =>
-        await _context.Usuarios.Include(u => u.Perfil).FirstOrDefaultAsync(u => u.IdAccount == idAccount);
+    public async Task<Usuario?> ObterPorIdAsync(int idAccount)
+    {
+        return await _context.Usuarios
+            .Include(u => u.Perfil)
+            .FirstOrDefaultAsync(u => u.IdAccount == idAccount);
+    }
 
     public async Task<Usuario?> ObterPorEmailAsync(string email) =>
         await _context.Usuarios.FirstOrDefaultAsync(u => u.EMail.ToLower() == email.ToLower());

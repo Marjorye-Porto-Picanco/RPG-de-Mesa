@@ -6,12 +6,12 @@ using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Infrastructure.Persistence;
 using RPGdeMesa.Infrastructure.Repositories;
 using RPGdeMesa.Presentation.Services;
 using RPGdeMesa.Presentation.ViewModel;
-using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa
 {
@@ -55,12 +55,13 @@ namespace RPGdeMesa
             builder.Services.AddScoped<MagiaService>();
             builder.Services.AddScoped<SessaoService>();
 
-            // 3. CAMADA DE PRESENTATION / UI (Auth, Storage de Sessão e ViewModels)
-            builder.Services.AddScoped<SessaoCampanhaStorageService>(); // Scoped/Singleton atende bem gerenciamento de storage local
+            // 3. CAMADA DE PRESENTATION / UI (Auth, Storage de Sessão e Cache)
+            builder.Services.AddScoped<SessaoCampanhaStorageService>();
             builder.Services.AddTransient<AuthService>();
             builder.Services.AddSingleton<HomeCacheService>();
+            builder.Services.AddSingleton<AppCacheService>();
 
-            // ViewModels (Todas Transient para que cada abertura de página recrie o estado limpo)
+            // ViewModels (Transient para que cada abertura de página recrie o estado limpo)
             builder.Services.AddTransient<CriarCampanhaViewModel>();
             builder.Services.AddTransient<LoginViewModel>();
             builder.Services.AddTransient<RegisterViewModel>();
@@ -72,9 +73,9 @@ namespace RPGdeMesa
             builder.Services.AddTransient<SessaoEntrarViewModel>();
             builder.Services.AddTransient<SessaoIniciarViewModel>();
             builder.Services.AddTransient<ItemCriarViewModel>();
-            builder.Services.AddScoped<HomeViewModel>();
+            builder.Services.AddTransient<HomeViewModel>();
+            builder.Services.AddTransient<PerfilViewModel>();
             builder.Services.AddScoped<SessaoViewModel>();
-
 
             return builder.Build();
         }
