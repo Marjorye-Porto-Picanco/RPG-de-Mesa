@@ -26,6 +26,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly PersonagemService _personagemService;
         private readonly NpcService _npcService;
         private readonly ItemService _itemService;
+        private readonly SessaoService _sessaoService;
         private readonly NavigationManager _navigation;
 
         public SessaoIniciarViewModel(
@@ -33,12 +34,14 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemService personagemService,
             NpcService npcService,
             ItemService itemService,
+            SessaoService sessaoService,
             NavigationManager navigation)
         {
             _campanhaService = campanhaService;
             _personagemService = personagemService;
             _npcService = npcService;
             _itemService = itemService;
+            _sessaoService = sessaoService;
             _navigation = navigation;
         }
 
@@ -54,6 +57,20 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string CategoriaAtiva { get; set; } = "todos";
         public string ModoVisualizacao { get; set; } = "vinculados";
         public string CategoriaSelecionada { get; set; } = "npc";
+
+        // Histórico de Sessões
+        public List<HistoricoSessaoDto> HistoricoSessoes { get; private set; } = new();
+        public HistoricoSessaoDto? SessaoHistoricoSelecionada { get; private set; }
+        public string TituloHistoricoEdicao { get; set; } = string.Empty;
+        public string ResumoHistoricoEdicao { get; set; } = string.Empty;
+        public bool SalvandoHistorico { get; private set; }
+        public string MensagemFeedbackHistorico { get; private set; } = string.Empty;
+
+        // Chat da Sessão no Histórico
+        public bool ExibirChatHistorico { get; private set; }
+        public bool CarregandoChatHistorico { get; private set; }
+        public List<MensagemSessaoDto> ChatHistoricoMensagens { get; private set; } = new();
+        private int _idSessaoChatCarregado;
 
         // Mapas da Campanha
         public string AbaMapas { get; set; } = "vinculados";
@@ -75,7 +92,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int IdPersonagemParaRecusar { get; set; } = 0;
         public string TextoMotivoRecusa { get; set; } = string.Empty;
 
-        // Form Fields - NPC (espelhando dbo.NPC e NpcCriar.razor)
+        // Form Fields - NPC
         public string NpcNome { get; set; } = string.Empty;
         public string NpcRaca { get; set; } = "Humano";
         public string NpcClasse { get; set; } = "Guerreiro";
@@ -224,9 +241,121 @@ namespace RPGdeMesa.Presentation.ViewModel
                     {
                         MapaSelecionadoParaVer = null;
                     }
+
+                    await CarregarHistoricoInternoAsync();
                 }
             }
             NotifyStateChanged();
+        }
+
+        private async Task CarregarHistoricoInternoAsync()
+        {
+            int? idSelecionadoAntes = SessaoHistoricoSelecionada?.IdSessao;
+            HistoricoSessoes = await _sessaoService.ObterHistoricoSessoesAsync(IdCampanha);
+
+            if (idSelecionadoAntes.HasValue)
+            {
+                SessaoHistoricoSelecionada = HistoricoSessoes.FirstOrDefault(s => s.IdSessao == idSelecionadoAntes.Value)
+                    ?? HistoricoSessoes.FirstOrDefault();
+            }
+            else
+            {
+                SessaoHistoricoSelecionada = HistoricoSessoes.FirstOrDefault();
+            }
+
+            if (SessaoHistoricoSelecionada != null)
+            {
+                TituloHistoricoEdicao = SessaoHistoricoSelecionada.Titulo;
+                ResumoHistoricoEdicao = SessaoHistoricoSelecionada.Resumo ?? string.Empty;
+            }
+            else
+            {
+                TituloHistoricoEdicao = string.Empty;
+                ResumoHistoricoEdicao = string.Empty;
+            }
+
+            if (SessaoHistoricoSelecionada?.IdSessao != _idSessaoChatCarregado)
+            {
+                ExibirChatHistorico = false;
+                ChatHistoricoMensagens.Clear();
+                _idSessaoChatCarregado = 0;
+            }
+        }
+
+        public void SelecionarSessaoHistorico(HistoricoSessaoDto sessao)
+        {
+            SessaoHistoricoSelecionada = sessao;
+            TituloHistoricoEdicao = sessao.Titulo;
+            ResumoHistoricoEdicao = sessao.Resumo ?? string.Empty;
+            MensagemFeedbackHistorico = string.Empty;
+            ExibirChatHistorico = false;
+            ChatHistoricoMensagens.Clear();
+            _idSessaoChatCarregado = 0;
+            NotifyStateChanged();
+        }
+
+        public async Task AlternarChatHistoricoAsync()
+        {
+            if (SessaoHistoricoSelecionada == null)
+                return;
+
+            if (ExibirChatHistorico)
+            {
+                ExibirChatHistorico = false;
+                NotifyStateChanged();
+                return;
+            }
+
+            ExibirChatHistorico = true;
+
+            if (_idSessaoChatCarregado != SessaoHistoricoSelecionada.IdSessao)
+            {
+                CarregandoChatHistorico = true;
+                NotifyStateChanged();
+
+                try
+                {
+                    ChatHistoricoMensagens = await _sessaoService.ObterChatHistoricoSessaoAsync(SessaoHistoricoSelecionada.IdSessao);
+                    _idSessaoChatCarregado = SessaoHistoricoSelecionada.IdSessao;
+                }
+                finally
+                {
+                    CarregandoChatHistorico = false;
+                }
+            }
+
+            NotifyStateChanged();
+        }
+
+        public async Task SalvarResumoHistoricoAsync()
+        {
+            if (CampanhaAtual == null || SessaoHistoricoSelecionada == null || SalvandoHistorico)
+                return;
+
+            SalvandoHistorico = true;
+            MensagemFeedbackHistorico = string.Empty;
+            NotifyStateChanged();
+
+            try
+            {
+                var (sucesso, mensagem) = await _sessaoService.SalvarResumoHistoricoAsync(
+                    IdCampanha,
+                    SessaoHistoricoSelecionada.IdSessao,
+                    CampanhaAtual.IdAccount,
+                    TituloHistoricoEdicao,
+                    ResumoHistoricoEdicao);
+
+                MensagemFeedbackHistorico = mensagem;
+                if (sucesso)
+                {
+                    await CarregarHistoricoInternoAsync();
+                }
+            }
+            finally
+            {
+                SalvandoHistorico = false;
+                NotifyStateChanged();
+            }
         }
 
         // --- FOTO DO NPC ---
@@ -628,6 +757,15 @@ namespace RPGdeMesa.Presentation.ViewModel
             FiltroFichasMestre = FichasPendentes.Any() ? "pendentes" : "aceitas";
             NotifyStateChanged();
         }
-        public void AbrirHist() { AbaMenu = "hist"; NotifyStateChanged(); }
+        public async Task AbrirHistAsync()
+        {
+            AbaMenu = "hist";
+            MensagemFeedbackHistorico = string.Empty;
+            if (IdCampanha > 0)
+            {
+                await CarregarHistoricoInternoAsync();
+            }
+            NotifyStateChanged();
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
+using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 
@@ -8,11 +9,18 @@ namespace RPGdeMesa.Application.Services;
 public class SessaoService
 {
     private readonly ISessaoRepository _sessaoRepo;
+    private readonly IPersonagemRepository _personagemRepo;
 
-    public SessaoService(ISessaoRepository sessaoRepo)
+    public SessaoService(
+        ISessaoRepository sessaoRepo,
+        IPersonagemRepository personagemRepo)
     {
         _sessaoRepo = sessaoRepo;
+        _personagemRepo = personagemRepo;
     }
+
+    public Task<bool> VerificarSessaoAtivaAsync(int idCampanha) =>
+        _sessaoRepo.SessaoEstaAtivaAsync(idCampanha);
 
     public async Task<(bool Sucesso, string Mensagem, SessaoEstadoDto? Estado)> EntrarNaSessaoAsync(
         int idCampanha,
@@ -34,11 +42,23 @@ public class SessaoService
             if (!participa)
                 return (false, "Você não tem permissão para entrar nesta sessão.", null);
 
-            int? idMapaInicial = campanha.MapaCampanhas
-                .Select(mc => (int?)mc.IdMapa)
-                .FirstOrDefault();
+            SessaoMesa? sessao;
+            if (ehMestre)
+            {
+                int? idMapaInicial = campanha.MapaCampanhas
+                    .Select(mc => (int?)mc.IdMapa)
+                    .FirstOrDefault();
 
-            var sessao = await _sessaoRepo.ObterOuCriarSessaoPorCampanhaAsync(idCampanha, idMapaInicial);
+                sessao = await _sessaoRepo.AbrirOuReabrirSessaoAsync(idCampanha, idMapaInicial);
+            }
+            else
+            {
+                sessao = await _sessaoRepo.ObterSessaoPorCampanhaAsync(idCampanha);
+                if (sessao == null || !sessao.Ativa)
+                {
+                    return (false, "Nenhuma sessão ativa no momento. Aguarde o Mestre abrir a mesa.", null);
+                }
+            }
 
             int? idPersonagemJogador = null;
             if (!ehMestre)
@@ -69,11 +89,15 @@ public class SessaoService
             if (precisaAnunciarEntrada)
             {
                 string apelido = string.IsNullOrWhiteSpace(nomeUsuario) ? $"Usuário #{idAccount}" : nomeUsuario;
+                string textoEntrada = ehMestre
+                    ? $"{apelido} (Mestre) abriu a Sessão #{sessao.NumeroSessao}."
+                    : $"{apelido} conectou-se à sessão.";
+
                 await _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(
                     sessao.IdSessao,
                     idAccount: null,
                     CanaisSessao.Chat,
-                    $"{apelido} conectou-se à sessão."));
+                    textoEntrada));
             }
 
             var estado = await MontarEstadoSessaoAsync(campanha, sessao.IdSessao, idAccount);
@@ -92,7 +116,11 @@ public class SessaoService
 
     public async Task<SessaoEstadoDto?> SincronizarSessaoAsync(int idCampanha, int idSessao, int idAccount)
     {
-        await _sessaoRepo.AtualizarHeartbeatAsync(idSessao, idAccount);
+        var sessaoAtual = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+        if (sessaoAtual != null && sessaoAtual.Ativa)
+        {
+            await _sessaoRepo.AtualizarHeartbeatAsync(idSessao, idAccount);
+        }
 
         var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
         if (campanha == null) return null;
@@ -117,6 +145,38 @@ public class SessaoService
         }
         catch
         {
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> FinalizarSessaoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        string nomeMestre)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode finalizar a sessão.");
+
+            await _sessaoRepo.FinalizarSessaoAsync(idSessao);
+
+            string apelido = string.IsNullOrWhiteSpace(nomeMestre) ? "O Mestre" : nomeMestre;
+            await _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(
+                idSessao,
+                idAccount: null,
+                CanaisSessao.Chat,
+                $"{apelido} finalizou a sessão. Todos os participantes foram desconectados."));
+
+            return (true, "Sessão finalizada! Revisando fichas dos jogadores.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao finalizar sessão: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
@@ -182,11 +242,19 @@ public class SessaoService
                     ? $" - {Math.Abs(rolagem.Modificador)}"
                     : string.Empty;
 
-            string textoSistema =
-                $"{nomeExibicao} rolou {rolagem.Expressao} ({rolagem.Contexto}): Total {rolagem.Total} [{dadosIndividuais}]{modTexto}";
+            string contextoTexto = string.IsNullOrWhiteSpace(rolagem.Contexto)
+                ? string.Empty
+                : $" ({rolagem.Contexto.Trim()})";
 
-            var msg = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Registro, textoSistema);
-            await _sessaoRepo.AdicionarMensagemAsync(msg);
+            string textoSistema =
+                $"🎲 {nomeExibicao} rolou {rolagem.Expressao}{contextoTexto}: Total {rolagem.Total} [{dadosIndividuais}]{modTexto}";
+
+            var msgChat = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Chat, textoSistema);
+            await _sessaoRepo.AdicionarMensagemAsync(msgChat);
+
+            var msgRegistro = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Registro, textoSistema);
+            await _sessaoRepo.AdicionarMensagemAsync(msgRegistro);
+
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -197,6 +265,242 @@ public class SessaoService
 
     public Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem) =>
         _sessaoRepo.ObterFichaCompletaAsync(idPersonagem);
+
+    public async Task<(bool Sucesso, string Mensagem)> SalvarFichaNaSessaoAsync(
+        int idCampanha,
+        int idAccount,
+        Personagem ficha,
+        Inventario dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)> itens)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            bool ehMestre = campanha.IdAccount == idAccount;
+            if (!ehMestre && ficha.IdAccount != idAccount)
+                return (false, "Você não tem permissão para alterar esta ficha.");
+
+            await _personagemRepo.AtualizarAsync(ficha);
+            await _personagemRepo.SalvarInventarioPersonagem3FNAsync(ficha.IdPersonagem, dadosInventario, itens);
+
+            return (true, "Alterações salvas na ficha da sessão!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao salvar ficha: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem, RevisaoPosSessaoDto? Dados)> ObterDadosRevisaoPosSessaoAsync(
+        int idCampanha,
+        int idAccountMestre)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.", null);
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode realizar a revisão pós-sessão.", null);
+
+            var fichas = await _sessaoRepo.ListarFichasAceitasCompletasAsync(idCampanha);
+            var itens = await _sessaoRepo.ListarItensCampanhaAsync(idCampanha);
+
+            return (true, string.Empty, new RevisaoPosSessaoDto
+            {
+                IdCampanha = campanha.IdCampanha,
+                NomeCampanha = campanha.Nome,
+                Fichas = fichas,
+                ItensCampanha = itens
+            });
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao carregar revisão pós-sessão: {ex.InnerException?.Message ?? ex.Message}", null);
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> ConcluirRevisaoPosSessaoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        IEnumerable<RevisaoFichaSalvarDto> fichasRevisadas,
+        string? tituloSessao,
+        string? resumoSessao)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode concluir a revisão das fichas.");
+
+            int xpTotalDistribuido = 0;
+
+            foreach (var item in fichasRevisadas)
+            {
+                int xpGanho = Math.Max(0, item.XpGanhoSessao);
+                xpTotalDistribuido += xpGanho;
+
+                item.Personagem.ExperienciaXp = Math.Max(0, item.Personagem.ExperienciaXp + xpGanho);
+                item.Personagem.PvMaximo = Math.Max(1, item.Personagem.PvMaximo);
+                item.Personagem.PvAtual = Math.Clamp(item.Personagem.PvAtual, 0, item.Personagem.PvMaximo);
+                item.Personagem.Nivel = Math.Clamp(item.Personagem.Nivel, 1, 20);
+
+                await _personagemRepo.AtualizarAsync(item.Personagem);
+                await _personagemRepo.SalvarInventarioPersonagem3FNAsync(
+                    item.Personagem.IdPersonagem,
+                    item.DadosInventario,
+                    item.Itens);
+            }
+
+            if (idSessao > 0)
+            {
+                await _sessaoRepo.AtualizarResumoSessaoAsync(
+                    idSessao,
+                    tituloSessao,
+                    resumoSessao,
+                    xpTotalDistribuido);
+            }
+
+            return (true, "Revisão concluída! Fichas, XPs e resumo da sessão foram salvos.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao concluir revisão: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    public async Task<List<HistoricoSessaoDto>> ObterHistoricoSessoesAsync(int idCampanha)
+    {
+        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+        if (campanha == null)
+            return new List<HistoricoSessaoDto>();
+
+        var sessoes = await _sessaoRepo.ListarHistoricoSessoesAsync(idCampanha);
+        if (!sessoes.Any())
+            return new List<HistoricoSessaoDto>();
+
+        var contagens = await _sessaoRepo.ContarAtividadePorSessoesAsync(sessoes.Select(s => s.IdSessao));
+
+        var resultado = new List<HistoricoSessaoDto>();
+        foreach (var s in sessoes)
+        {
+            var inicioLocal = DateTime.SpecifyKind(s.DataInicio, DateTimeKind.Utc).ToLocalTime();
+            DateTime? fimLocal = s.DataFim.HasValue
+                ? DateTime.SpecifyKind(s.DataFim.Value, DateTimeKind.Utc).ToLocalTime()
+                : null;
+
+            var fimParaDuracao = s.DataFim ?? (s.Ativa ? DateTime.UtcNow : s.DataAtualizacao);
+            var duracao = fimParaDuracao - s.DataInicio;
+            if (duracao < TimeSpan.Zero) duracao = TimeSpan.Zero;
+
+            contagens.TryGetValue(s.IdSessao, out var atividade);
+
+            var participantes = s.Participantes
+                .OrderByDescending(p => p.IdAccount == campanha.IdAccount)
+                .ThenBy(p => p.Usuario?.UsarName)
+                .Select(p => new ParticipanteHistoricoDto
+                {
+                    IdAccount = p.IdAccount,
+                    NomeUsuario = p.Usuario?.UsarName ?? $"Usuário #{p.IdAccount}",
+                    EhMestre = p.IdAccount == campanha.IdAccount,
+                    NomePersonagem = p.Personagem?.Nome,
+                    ClasseNivel = p.Personagem != null
+                        ? $"{p.Personagem.ClasseTexto ?? "Aventureiro"} (Nv. {p.Personagem.Nivel})"
+                        : null
+                })
+                .ToList();
+
+            resultado.Add(new HistoricoSessaoDto
+            {
+                IdSessao = s.IdSessao,
+                NumeroSessao = s.NumeroSessao,
+                Titulo = string.IsNullOrWhiteSpace(s.Titulo) ? $"Sessão #{s.NumeroSessao}" : s.Titulo,
+                Ativa = s.Ativa,
+                DataInicioLocal = inicioLocal,
+                DataFimLocal = fimLocal,
+                DuracaoFormatada = FormatarDuracao(duracao),
+                MapaUtilizado = s.MapaAtivo?.NomeRegiao,
+                Resumo = s.Resumo,
+                XpTotalDistribuido = s.XpTotalDistribuido,
+                TotalMensagensChat = atividade.TotalMensagensChat,
+                TotalRolagens = atividade.TotalRolagens,
+                Participantes = participantes
+            });
+        }
+
+        return resultado;
+    }
+
+    public async Task<List<MensagemSessaoDto>> ObterChatHistoricoSessaoAsync(int idSessao)
+    {
+        if (idSessao <= 0)
+            return new List<MensagemSessaoDto>();
+
+        var mensagens = await _sessaoRepo.ListarMensagensAsync(idSessao, 500);
+
+        return mensagens
+            .Where(m => string.Equals(m.Canal, CanaisSessao.Chat, StringComparison.OrdinalIgnoreCase))
+            .Select(m => new MensagemSessaoDto
+            {
+                IdMensagem = m.IdMensagem,
+                Canal = m.Canal,
+                EhSistema = m.IdAccount == null,
+                Autor = m.IdAccount == null
+                    ? "Sistema"
+                    : (m.Usuario?.UsarName ?? $"Usuário #{m.IdAccount}"),
+                Conteudo = m.Conteudo,
+                DataEnvioLocal = DateTime.SpecifyKind(m.DataEnvio, DateTimeKind.Utc).ToLocalTime()
+            })
+            .ToList();
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> SalvarResumoHistoricoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        string? titulo,
+        string? resumo)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode editar o histórico desta campanha.");
+
+            await _sessaoRepo.AtualizarResumoSessaoAsync(idSessao, titulo, resumo);
+            return (true, "Resumo da sessão atualizado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao salvar resumo: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    private static string FormatarDuracao(TimeSpan duracao)
+    {
+        if (duracao.TotalMinutes < 1)
+            return "Menos de 1 min";
+
+        int horas = (int)duracao.TotalHours;
+        int minutos = duracao.Minutes;
+
+        if (horas > 0 && minutos > 0)
+            return $"{horas}h {minutos}min";
+        if (horas > 0)
+            return $"{horas}h";
+        return $"{minutos} min";
+    }
 
     private async Task<SessaoEstadoDto> MontarEstadoSessaoAsync(Campanha campanha, int idSessao, int idAccountLogado)
     {
@@ -213,6 +517,12 @@ public class SessaoService
                 ImagemUrl = mc.Mapa.ImagemUrl
             })
             .OrderBy(m => m.NomeRegiao)
+            .ToList();
+
+        var itensCampanha = campanha.ItemCampanhas
+            .Where(ic => ic.Item != null)
+            .Select(ic => ic.Item!)
+            .OrderBy(i => i.Nome)
             .ToList();
 
         int? idMapaAtivo = sessaoCompleta?.IdMapaAtivo;
@@ -301,13 +611,17 @@ public class SessaoService
         return new SessaoEstadoDto
         {
             IdSessao = idSessao,
+            NumeroSessao = sessaoCompleta?.NumeroSessao ?? 1,
+            TituloSessao = sessaoCompleta?.Titulo ?? $"Sessão #{sessaoCompleta?.NumeroSessao ?? 1}",
             IdCampanha = campanha.IdCampanha,
             NomeCampanha = campanha.Nome,
+            SessaoAtiva = sessaoCompleta?.Ativa ?? false,
             EhMestre = campanha.IdAccount == idAccountLogado,
             IdPersonagemLogado = idPersonagemAtual,
             IdMapaAtivo = idMapaAtivo,
             MapaAtivo = mapaAtivo,
             MapasDisponiveis = mapasDisponiveis,
+            ItensCampanha = itensCampanha,
             Mestre = mestreDto,
             Jogadores = jogadoresDto,
             Mensagens = mensagensDto
@@ -334,16 +648,46 @@ public class SessaoService
 public class SessaoEstadoDto
 {
     public int IdSessao { get; set; }
+    public int NumeroSessao { get; set; } = 1;
+    public string TituloSessao { get; set; } = string.Empty;
     public int IdCampanha { get; set; }
     public string NomeCampanha { get; set; } = string.Empty;
+    public bool SessaoAtiva { get; set; }
     public bool EhMestre { get; set; }
     public int? IdPersonagemLogado { get; set; }
     public int? IdMapaAtivo { get; set; }
     public MapaSessaoDto? MapaAtivo { get; set; }
     public List<MapaSessaoDto> MapasDisponiveis { get; set; } = new();
+    public List<Item> ItensCampanha { get; set; } = new();
     public ParticipanteSessaoDto Mestre { get; set; } = new();
     public List<ParticipanteSessaoDto> Jogadores { get; set; } = new();
     public List<MensagemSessaoDto> Mensagens { get; set; } = new();
+}
+
+public class HistoricoSessaoDto
+{
+    public int IdSessao { get; set; }
+    public int NumeroSessao { get; set; }
+    public string Titulo { get; set; } = string.Empty;
+    public bool Ativa { get; set; }
+    public DateTime DataInicioLocal { get; set; }
+    public DateTime? DataFimLocal { get; set; }
+    public string DuracaoFormatada { get; set; } = string.Empty;
+    public string? MapaUtilizado { get; set; }
+    public string? Resumo { get; set; }
+    public int XpTotalDistribuido { get; set; }
+    public int TotalMensagensChat { get; set; }
+    public int TotalRolagens { get; set; }
+    public List<ParticipanteHistoricoDto> Participantes { get; set; } = new();
+}
+
+public class ParticipanteHistoricoDto
+{
+    public int IdAccount { get; set; }
+    public string NomeUsuario { get; set; } = string.Empty;
+    public bool EhMestre { get; set; }
+    public string? NomePersonagem { get; set; }
+    public string? ClasseNivel { get; set; }
 }
 
 public class MapaSessaoDto
@@ -386,4 +730,20 @@ public class ResultadoRolagemDto
     public List<int> ResultadosIndividuais { get; set; } = new();
     public int Total { get; set; }
     public string Expressao { get; set; } = string.Empty;
+}
+
+public class RevisaoPosSessaoDto
+{
+    public int IdCampanha { get; set; }
+    public string NomeCampanha { get; set; } = string.Empty;
+    public List<Personagem> Fichas { get; set; } = new();
+    public List<Item> ItensCampanha { get; set; } = new();
+}
+
+public class RevisaoFichaSalvarDto
+{
+    public Personagem Personagem { get; set; } = new();
+    public int XpGanhoSessao { get; set; }
+    public Inventario DadosInventario { get; set; } = new();
+    public List<(int IdItem, int Quantidade)> Itens { get; set; } = new();
 }

@@ -22,7 +22,7 @@
                             <span class="badge-pendentes">@ViewModel.FichasPendentes.Count()</span>
                         }
                     </a>
-                    <a class="session-nav-link @(ViewModel.AbaMenu == "hist" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirHist">Histórico</a>
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "hist" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirHistAsync">Histórico</a>
                 </nav>
 
                 <section class="session-players-panel" aria-labelledby="titulo-jogadores">
@@ -946,10 +946,215 @@
                 @if (ViewModel.AbaMenu == "hist")
                 {
                     <header class="page-heading">
-                        <div><p class="page-kicker">Memória da campanha</p><h1>Histórico das sessões</h1><p class="page-description">Acompanhe os registros desta mesa.</p></div>
+                        <div>
+                            <p class="page-kicker">Memória da campanha</p>
+                            <h1>Histórico das sessões</h1>
+                            <p class="page-description">Veja todas as sessões realizadas, quem participou, quanto durou e os resumos registrados.</p>
+                        </div>
                     </header>
+
                     <div class="session-page-content">
-                        <p class="aviso-vazio">Diário de bordo ativo para <strong>@(ViewModel.CampanhaAtual?.Nome)</strong>.</p>
+                        @if (!ViewModel.HistoricoSessoes.Any())
+                        {
+                            <div class="history-list-panel">
+                                <p class="empty-message">Nenhuma sessão foi iniciada nesta campanha ainda. Ao abrir a Sala de Jogo, o registro aparecerá aqui automaticamente.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="history-content">
+                                <!-- LISTA DE SESSÕES -->
+                                <section class="history-list-panel" aria-label="Sessões registradas">
+                                    <div class="history-list-heading">
+                                        <div>
+                                            <p class="page-kicker">Registros da mesa</p>
+                                            <h2>Sessões realizadas</h2>
+                                        </div>
+                                        <span>@ViewModel.HistoricoSessoes.Count @(ViewModel.HistoricoSessoes.Count == 1 ? "sessão" : "sessões")</span>
+                                    </div>
+
+                                    <div class="history-list">
+                                        @foreach (var s in ViewModel.HistoricoSessoes)
+                                        {
+                                            bool selecionada = ViewModel.SessaoHistoricoSelecionada?.IdSessao == s.IdSessao;
+                                            <button type="button"
+                                                    class="history-entry @(selecionada ? "selecionada" : "")"
+                                                    @onclick="() => ViewModel.SelecionarSessaoHistorico(s)">
+                                                <div class="history-entry-top">
+                                                    <strong>#@s.NumeroSessao · @s.Titulo</strong>
+                                                    <span class="history-status @(s.Ativa ? "ativa" : "finalizada")">
+                                                        @(s.Ativa ? "Em andamento" : "Finalizada")
+                                                    </span>
+                                                </div>
+
+                                                <div class="history-entry-meta">
+                                                    <span>@s.DataInicioLocal.ToString("dd/MM/yyyy HH:mm")</span>
+                                                    <span>Duração: @s.DuracaoFormatada</span>
+                                                    <span>@s.Participantes.Count participante(s)</span>
+                                                </div>
+
+                                                @if (!string.IsNullOrWhiteSpace(s.Resumo))
+                                                {
+                                                    <p class="history-entry-preview">@s.Resumo</p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="history-entry-preview sem-resumo">Sem resumo registrado.</p>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                </section>
+
+                                <!-- DETALHES E RESUMO DA SESSÃO SELECIONADA -->
+                                @if (ViewModel.SessaoHistoricoSelecionada != null)
+                                {
+                                    var sel = ViewModel.SessaoHistoricoSelecionada;
+                                    <section class="history-editor" aria-label="Detalhes da sessão selecionada">
+                                        <div class="history-list-heading">
+                                            <div>
+                                                <p class="page-kicker">Sessão #@sel.NumeroSessao</p>
+                                                <h2>@sel.Titulo</h2>
+                                            </div>
+                                            <span class="history-status @(sel.Ativa ? "ativa" : "finalizada")">
+                                                @(sel.Ativa ? "Em andamento" : "Finalizada")
+                                            </span>
+                                        </div>
+
+                                        <div class="history-stats-grid">
+                                            <div class="history-stat-box">
+                                                <span>Início</span>
+                                                <strong>@sel.DataInicioLocal.ToString("dd/MM/yyyy HH:mm")</strong>
+                                            </div>
+                                            <div class="history-stat-box">
+                                                <span>Término</span>
+                                                <strong>@(sel.DataFimLocal.HasValue ? sel.DataFimLocal.Value.ToString("dd/MM/yyyy HH:mm") : "Em aberto")</strong>
+                                            </div>
+                                            <div class="history-stat-box">
+                                                <span>Duração</span>
+                                                <strong>@sel.DuracaoFormatada</strong>
+                                            </div>
+                                            <div class="history-stat-box">
+                                                <span>XP Distribuído</span>
+                                                <strong>@sel.XpTotalDistribuido.ToString("N0") XP</strong>
+                                            </div>
+                                            <div class="history-stat-box">
+                                                <span>Mapa Principal</span>
+                                                <strong>@(string.IsNullOrWhiteSpace(sel.MapaUtilizado) ? "Nenhum" : sel.MapaUtilizado)</strong>
+                                            </div>
+                                            <div class="history-stat-box">
+                                                <span>Atividade</span>
+                                                <strong>@sel.TotalMensagensChat msg · @sel.TotalRolagens dado(s)</strong>
+                                            </div>
+                                        </div>
+
+                                        <div class="history-participants-block">
+                                            <h3>Participantes que entraram (@sel.Participantes.Count)</h3>
+                                            @if (sel.Participantes.Any())
+                                            {
+                                                <div class="history-participants-list">
+                                                    @foreach (var part in sel.Participantes)
+                                                    {
+                                                        <div class="history-participant-chip @(part.EhMestre ? "mestre" : "")">
+                                                            <strong>@part.NomeUsuario</strong>
+                                                            @if (part.EhMestre)
+                                                            {
+                                                                <span>Mestre</span>
+                                                            }
+                                                            else if (!string.IsNullOrWhiteSpace(part.NomePersonagem))
+                                                            {
+                                                                <span>@part.NomePersonagem · @part.ClasseNivel</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span>Jogador</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <p class="empty-message">Nenhum participante registrado nesta sessão.</p>
+                                            }
+                                        </div>
+
+                                        <!-- HISTÓRICO DE CHAT DA SESSÃO (ABRIR / FECHAR) -->
+                                        <div class="history-chat-block">
+                                            <button type="button"
+                                                    class="btn-toggle-chat @(ViewModel.ExibirChatHistorico ? "aberto" : "")"
+                                                    aria-expanded="@ViewModel.ExibirChatHistorico.ToString().ToLowerInvariant()"
+                                                    @onclick="ViewModel.AlternarChatHistoricoAsync">
+                                                <span>@(ViewModel.ExibirChatHistorico ? "Ocultar histórico do chat" : "Ver histórico do chat")</span>
+                                                <span class="btn-toggle-chat-meta">
+                                                    @sel.TotalMensagensChat msg · @sel.TotalRolagens dado(s) @(ViewModel.ExibirChatHistorico ? "▲" : "▼")
+                                                </span>
+                                            </button>
+
+                                            @if (ViewModel.ExibirChatHistorico)
+                                            {
+                                                <div class="history-chat-feed" aria-live="polite">
+                                                    @if (ViewModel.CarregandoChatHistorico)
+                                                    {
+                                                        <p class="empty-message">Carregando mensagens da sessão...</p>
+                                                    }
+                                                    else if (!ViewModel.ChatHistoricoMensagens.Any())
+                                                    {
+                                                        <p class="empty-message">Nenhuma mensagem registrada nesta sessão.</p>
+                                                    }
+                                                    else
+                                                    {
+                                                        var nomeMestre = ViewModel.CampanhaAtual?.UsuarioMestre?.UsarName;
+                                                        @foreach (var msg in ViewModel.ChatHistoricoMensagens)
+                                                        {
+                                                            bool ehMestreMsg = !msg.EhSistema &&
+                                                                !string.IsNullOrWhiteSpace(nomeMestre) &&
+                                                                string.Equals(msg.Autor, nomeMestre, StringComparison.OrdinalIgnoreCase);
+
+                                                            <p @key="msg.IdMensagem" class="history-chat-line @(msg.EhSistema ? "sistema" : "")">
+                                                                <strong class="history-chat-author @(msg.EhSistema ? "sistema" : (ehMestreMsg ? "mestre" : ""))">
+                                                                    @(msg.EhSistema ? "Sistema" : msg.Autor)
+                                                                </strong>
+                                                                <span>@msg.Conteudo</span>
+                                                                <time>@msg.DataEnvioLocal.ToString("HH:mm")</time>
+                                                            </p>
+                                                        }
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <form class="history-summary-form" @onsubmit="ViewModel.SalvarResumoHistoricoAsync">
+                                            <label class="form-field">
+                                                Título da sessão
+                                                <input type="text"
+                                                       maxlength="150"
+                                                       @bind="ViewModel.TituloHistoricoEdicao"
+                                                       placeholder="Ex.: O Covil do Necromante" />
+                                            </label>
+
+                                            <label class="form-field">
+                                                Resumo do que aconteceu na sessão
+                                                <textarea rows="6"
+                                                          @bind="ViewModel.ResumoHistoricoEdicao"
+                                                          placeholder="Escreva ou atualize o resumo desta sessão..."></textarea>
+                                            </label>
+
+                                            <div class="history-actions">
+                                                <button type="submit" class="save-button" disabled="@ViewModel.SalvandoHistorico">
+                                                    @(ViewModel.SalvandoHistorico ? "Salvando..." : "Salvar Resumo")
+                                                </button>
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(ViewModel.MensagemFeedbackHistorico))
+                                            {
+                                                <p class="save-status" role="status" style="color: #d4af37;">@ViewModel.MensagemFeedbackHistorico</p>
+                                            }
+                                        </form>
+                                    </section>
+                                }
+                            </div>
+                        }
                     </div>
                 }
             </section>
