@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Infrastructure.Persistence;
@@ -22,34 +23,61 @@ public class SessaoRepository : ISessaoRepository
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Usuario).ThenInclude(u => u.Perfil)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.PersonagemClasses).ThenInclude(pcl => pcl.Classe)
             .Include(c => c.MapaCampanhas).ThenInclude(mc => mc.Mapa)
+            .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
-    public async Task<SessaoMesa> ObterOuCriarSessaoPorCampanhaAsync(int idCampanha, int? idMapaInicial = null)
+    public async Task<bool> SessaoEstaAtivaAsync(int idCampanha)
+    {
+        return await _contexto.SessoesMesa
+            .AsNoTracking()
+            .AnyAsync(s => s.IdCampanha == idCampanha && s.Ativa);
+    }
+
+    public async Task<SessaoMesa?> ObterSessaoPorCampanhaAsync(int idCampanha)
+    {
+        return await _contexto.SessoesMesa
+            .AsNoTracking()
+            .Where(s => s.IdCampanha == idCampanha)
+            .OrderByDescending(s => s.Ativa)
+            .ThenByDescending(s => s.IdSessao)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<SessaoMesa?> ObterSessaoPorIdAsync(int idSessao)
+    {
+        return await _contexto.SessoesMesa
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+    }
+
+    public async Task<SessaoMesa> AbrirOuReabrirSessaoAsync(int idCampanha, int? idMapaInicial = null)
     {
         _contexto.ChangeTracker.Clear();
 
-        var existente = await _contexto.SessoesMesa
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.IdCampanha == idCampanha);
+        // Se já existe uma sessão ativa, reutiliza ela (evita duplicar ao recarregar a página)
+        var sessaoAtiva = await _contexto.SessoesMesa
+            .Where(s => s.IdCampanha == idCampanha && s.Ativa)
+            .OrderByDescending(s => s.IdSessao)
+            .FirstOrDefaultAsync();
 
-        if (existente != null)
-            return existente;
-
-        try
+        if (sessaoAtiva != null)
         {
-            var novaSessao = new SessaoMesa(idCampanha, idMapaInicial);
-            await _contexto.SessoesMesa.AddAsync(novaSessao);
+            sessaoAtiva.AbrirSessao(idMapaInicial);
             await _contexto.SaveChangesAsync();
-            return novaSessao;
+            return sessaoAtiva;
         }
-        catch (DbUpdateException)
-        {
-            _contexto.ChangeTracker.Clear();
-            return await _contexto.SessoesMesa
-                .AsNoTracking()
-                .FirstAsync(s => s.IdCampanha == idCampanha);
-        }
+
+        // Caso contrário, cria uma NOVA sessão com chat limpo e histórico próprio
+        int ultimoNumero = await _contexto.SessoesMesa
+            .AsNoTracking()
+            .Where(s => s.IdCampanha == idCampanha)
+            .MaxAsync(s => (int?)s.NumeroSessao) ?? 0;
+
+        var novaSessao = new SessaoMesa(idCampanha, ultimoNumero + 1, idMapaInicial);
+        await _contexto.SessoesMesa.AddAsync(novaSessao);
+        await _contexto.SaveChangesAsync();
+        return novaSessao;
     }
 
     public async Task<SessaoMesa?> ObterSessaoCompletaAsync(int idSessao)
@@ -117,6 +145,38 @@ public class SessaoRepository : ISessaoRepository
         return true;
     }
 
+    public async Task FinalizarSessaoAsync(int idSessao)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var sessao = await _contexto.SessoesMesa
+            .Include(s => s.Participantes)
+            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+
+        if (sessao == null) return;
+
+        sessao.FinalizarSessao();
+        foreach (var participante in sessao.Participantes)
+        {
+            participante.Desconectar();
+        }
+
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task AtualizarResumoSessaoAsync(int idSessao, string? titulo, string? resumo, int? xpTotalDistribuido = null)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var sessao = await _contexto.SessoesMesa
+            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+
+        if (sessao == null) return;
+
+        sessao.AtualizarResumo(titulo, resumo, xpTotalDistribuido);
+        await _contexto.SaveChangesAsync();
+    }
+
     public async Task AtualizarMapaAtivoAsync(int idSessao, int? idMapa)
     {
         _contexto.ChangeTracker.Clear();
@@ -151,11 +211,50 @@ public class SessaoRepository : ISessaoRepository
         return recentes;
     }
 
+    public async Task<List<SessaoMesa>> ListarHistoricoSessoesAsync(int idCampanha)
+    {
+        return await _contexto.SessoesMesa
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(s => s.MapaAtivo)
+            .Include(s => s.Participantes).ThenInclude(p => p.Usuario)
+            .Include(s => s.Participantes).ThenInclude(p => p.Personagem)
+            .Where(s => s.IdCampanha == idCampanha)
+            .OrderByDescending(s => s.NumeroSessao)
+            .ThenByDescending(s => s.IdSessao)
+            .ToListAsync();
+    }
+
+    public async Task<Dictionary<int, (int TotalMensagensChat, int TotalRolagens)>> ContarAtividadePorSessoesAsync(
+        IEnumerable<int> idsSessao)
+    {
+        var ids = idsSessao.Distinct().ToList();
+        if (!ids.Any())
+            return new Dictionary<int, (int, int)>();
+
+        var agrupado = await _contexto.SessaoMensagens
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.IdSessao))
+            .GroupBy(m => m.IdSessao)
+            .Select(g => new
+            {
+                IdSessao = g.Key,
+                MensagensChat = g.Count(m => m.Canal == CanaisSessao.Chat && m.IdAccount != null),
+                Rolagens = g.Count(m => m.Canal == CanaisSessao.Registro)
+            })
+            .ToListAsync();
+
+        return agrupado.ToDictionary(
+            x => x.IdSessao,
+            x => (x.MensagensChat, x.Rolagens));
+    }
+
     public async Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem)
     {
         var personagem = await _contexto.Personagens
             .AsNoTracking()
             .AsSplitQuery()
+            .Include(p => p.Usuario)
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
             .Include(p => p.PersonagemClasses).ThenInclude(pc => pc.Classe)
@@ -174,5 +273,51 @@ public class SessaoRepository : ISessaoRepository
         }
 
         return personagem;
+    }
+
+    public async Task<List<Personagem>> ListarFichasAceitasCompletasAsync(int idCampanha)
+    {
+        var idsAceitos = await _contexto.PersonagensCampanha
+            .AsNoTracking()
+            .Where(pc => pc.IdCampanha == idCampanha &&
+                        (string.IsNullOrEmpty(pc.StatusAprovacao) || pc.StatusAprovacao == "Aceita"))
+            .Select(pc => pc.IdPersonagem)
+            .ToListAsync();
+
+        if (!idsAceitos.Any())
+            return new List<Personagem>();
+
+        var personagens = await _contexto.Personagens
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(p => p.Usuario)
+            .Include(p => p.Raca)
+            .Include(p => p.Antecedente)
+            .Include(p => p.PersonagemClasses).ThenInclude(pc => pc.Classe)
+            .Include(p => p.Salvaguardas)
+            .Include(p => p.Pericias)
+            .Include(p => p.Inventario).ThenInclude(inv => inv!.Itens).ThenInclude(ii => ii.Item)
+            .Include(p => p.PersonagemMagias).ThenInclude(pm => pm.Magia)
+            .Where(p => idsAceitos.Contains(p.IdPersonagem))
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
+
+        foreach (var p in personagens)
+        {
+            if (p.Raca != null) p.RacaTexto = p.Raca.Nome;
+            if (p.Antecedente != null) p.AntecedenteTexto = p.Antecedente.Nome;
+        }
+
+        return personagens;
+    }
+
+    public async Task<List<Item>> ListarItensCampanhaAsync(int idCampanha)
+    {
+        return await _contexto.ItemCampanhas
+            .AsNoTracking()
+            .Where(ic => ic.IdCampanha == idCampanha && ic.Item != null)
+            .Select(ic => ic.Item!)
+            .OrderBy(i => i.Nome)
+            .ToListAsync();
     }
 }

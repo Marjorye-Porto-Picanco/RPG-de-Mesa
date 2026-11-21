@@ -12,9 +12,6 @@ namespace RPGdeMesa.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
-    // =========================================================================
-    // DBSETS: ENTIDADES PRINCIPAIS E CATÁLOGOS 3FN
-    // =========================================================================
     public DbSet<Usuario> Usuarios { get; set; }
     public DbSet<Perfil> Perfis { get; set; }
     public DbSet<Campanha> Campanhas { get; set; }
@@ -29,18 +26,12 @@ public class AppDbContext : DbContext
     public DbSet<Magia> Magias { get; set; }
     public DbSet<Inventario> Inventarios { get; set; }
 
-    // =========================================================================
-    // DBSETS: RELAÇÕES 3FN DO PERSONAGEM
-    // =========================================================================
     public DbSet<PersonagemClasse> PersonagemClasses { get; set; }
     public DbSet<PersonagemSalvaguarda> PersonagemSalvaguardas { get; set; }
     public DbSet<PersonagemPericia> PersonagemPericias { get; set; }
     public DbSet<PersonagemMagia> PersonagemMagias { get; set; }
     public DbSet<InventarioItem> InventarioItens { get; set; }
 
-    // =========================================================================
-    // DBSETS: TABELAS ASSOCIATIVAS DE CAMPANHA (N:N)
-    // =========================================================================
     public DbSet<UsuarioCampanha> UsuariosCampanha { get; set; }
     public DbSet<PersonagemCampanha> PersonagensCampanha { get; set; }
     public DbSet<MonstroCampanha> MonstroCampanhas { get; set; }
@@ -48,9 +39,6 @@ public class AppDbContext : DbContext
     public DbSet<ItemCampanha> ItemCampanhas { get; set; }
     public DbSet<MapaCampanha> MapaCampanhas { get; set; }
 
-    // =========================================================================
-    // DBSETS: SESSÃO DE MESA EM TEMPO REAL
-    // =========================================================================
     public DbSet<SessaoMesa> SessoesMesa { get; set; }
     public DbSet<SessaoParticipante> SessaoParticipantes { get; set; }
     public DbSet<SessaoMensagem> SessaoMensagens { get; set; }
@@ -88,9 +76,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // =====================================================================
-        // 1. USUÁRIO E PERFIL
-        // =====================================================================
         modelBuilder.Entity<Usuario>(e =>
         {
             e.ToTable("Usuario");
@@ -122,9 +107,6 @@ public class AppDbContext : DbContext
             e.Property(p => p.DataCriacao).HasColumnName("data_criacao");
         });
 
-        // =====================================================================
-        // 2. CAMPANHA E MAPA
-        // =====================================================================
         modelBuilder.Entity<Campanha>(e =>
         {
             e.ToTable("Campanha");
@@ -168,9 +150,6 @@ public class AppDbContext : DbContext
              .IsRequired(false);
         });
 
-        // =====================================================================
-        // 3. CATÁLOGOS BASE DE PERSONAGEM (RAÇA, ANTECEDENTES E CLASSE)
-        // =====================================================================
         modelBuilder.Entity<Raca>(e =>
         {
             e.ToTable("Raca");
@@ -202,9 +181,6 @@ public class AppDbContext : DbContext
             e.Property(c => c.AtributoPrimario).HasColumnName("atributo_primario").HasMaxLength(50);
         });
 
-        // =====================================================================
-        // 4. PERSONAGEM (ENTIDADE PRINCIPAL)
-        // =====================================================================
         modelBuilder.Entity<Personagem>(e =>
         {
             e.ToTable("Personagem");
@@ -262,9 +238,6 @@ public class AppDbContext : DbContext
              .IsRequired(false);
         });
 
-        // =====================================================================
-        // 5. RELAÇÕES 3FN DO PERSONAGEM
-        // =====================================================================
         modelBuilder.Entity<PersonagemClasse>(e =>
         {
             e.ToTable("Personagem_Classe");
@@ -384,9 +357,6 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =====================================================================
-        // 6. MONSTRO, NPC E ITEM
-        // =====================================================================
         modelBuilder.Entity<Monstro>(e =>
         {
             e.ToTable("Monstro");
@@ -468,9 +438,6 @@ public class AppDbContext : DbContext
             e.Property(i => i.Sintonizacao).HasColumnName("sintonizacao").HasMaxLength(50);
         });
 
-        // =====================================================================
-        // 7. TABELAS ASSOCIATIVAS DE CAMPANHA (N:N)
-        // =====================================================================
         modelBuilder.Entity<UsuarioCampanha>(e =>
         {
             e.ToTable("Usuario_Campanha");
@@ -571,19 +538,23 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // =====================================================================
-        // 8. SESSÃO DE MESA (PRESENÇA, MAPA ATIVO E CHAT)
-        // =====================================================================
         modelBuilder.Entity<SessaoMesa>(e =>
         {
             e.ToTable("Sessao_Mesa");
             e.HasKey(s => s.IdSessao);
             e.Property(s => s.IdSessao).HasColumnName("id_sessao");
             e.Property(s => s.IdCampanha).HasColumnName("id_campanha");
+            e.Property(s => s.NumeroSessao).HasColumnName("numero_sessao");
+            e.Property(s => s.Titulo).HasColumnName("titulo").HasMaxLength(150);
             e.Property(s => s.IdMapaAtivo).HasColumnName("id_mapa_ativo");
+            e.Property(s => s.Ativa).HasColumnName("ativa");
+            e.Property(s => s.DataInicio).HasColumnName("data_inicio");
+            e.Property(s => s.DataFim).HasColumnName("data_fim");
             e.Property(s => s.DataAtualizacao).HasColumnName("data_atualizacao");
+            e.Property(s => s.Resumo).HasColumnName("resumo");
+            e.Property(s => s.XpTotalDistribuido).HasColumnName("xp_total_distribuido");
 
-            e.HasIndex(s => s.IdCampanha).IsUnique();
+            e.HasIndex(s => new { s.IdCampanha, s.Ativa });
 
             e.HasOne(s => s.Campanha)
              .WithMany()

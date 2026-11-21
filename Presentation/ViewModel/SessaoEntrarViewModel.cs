@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Presentation.Services;
-using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -31,17 +31,20 @@ namespace RPGdeMesa.Presentation.ViewModel
     {
         private readonly CampanhaService _campanhaService;
         private readonly PersonagemService _personagemService;
+        private readonly SessaoService _sessaoService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
 
         public SessaoEntrarViewModel(
             CampanhaService campanhaService,
             PersonagemService personagemService,
+            SessaoService sessaoService,
             SessaoUsuarioService sessaoUsuario,
             NavigationManager navigation)
         {
             _campanhaService = campanhaService;
             _personagemService = personagemService;
+            _sessaoService = sessaoService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
         }
@@ -52,6 +55,9 @@ namespace RPGdeMesa.Presentation.ViewModel
         public bool Carregando { get; set; }
         public bool ModoAdicionarNovaFicha { get; set; }
         public bool ModoReenviarRecusada { get; set; }
+        public bool SessaoAtiva { get; private set; }
+
+        public bool PodeConectarNaSessao => StatusFichaAtual == "Aceita" && SessaoAtiva;
 
         public Campanha? CampanhaAtual { get; private set; }
         public List<Personagem> PersonagensDisponiveis { get; private set; } = new();
@@ -176,6 +182,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 if (idAlvo > 0)
                 {
                     CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(idAlvo);
+                    SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(idAlvo);
                     await SincronizarVinculosDoJogadorAsync();
                 }
             }
@@ -308,9 +315,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             foreach (var pm in p.PersonagemMagias)
             {
                 if (pm.Magia != null)
-                {
                     MagiasEdicao.Add(MagiaGrimorioEntry.DeEntidade(pm.Magia));
-                }
             }
 
             MagiaEmVisualizacaoEdicao = MagiasEdicao.FirstOrDefault();
@@ -698,6 +703,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 }
 
                 CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
+                SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(CampanhaAtual.IdCampanha);
                 ModoAdicionarNovaFicha = false;
                 ModoReenviarRecusada = false;
                 PersonagemEmPreparacao = null;
@@ -726,10 +732,15 @@ namespace RPGdeMesa.Presentation.ViewModel
             {
                 int? idAtual = VinculoSelecionado?.IdPersonagem;
                 CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
+                SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(CampanhaAtual.IdCampanha);
                 await SincronizarVinculosDoJogadorAsync(idAtual);
-                Mensagem = StatusFichaAtual == "Aceita"
-                    ? "Ficha aprovada! Você já pode conectar na sessão."
-                    : "Status atualizado.";
+
+                if (StatusFichaAtual == "Aceita" && SessaoAtiva)
+                    Mensagem = "Ficha aprovada e sessão aberta pelo Mestre! Você já pode conectar.";
+                else if (StatusFichaAtual == "Aceita" && !SessaoAtiva)
+                    Mensagem = "Ficha aprovada, mas o Mestre ainda não abriu a sessão.";
+                else
+                    Mensagem = "Status atualizado.";
             }
             finally
             {
@@ -738,7 +749,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             }
         }
 
-        public void ConectarNaSala()
+        public async Task ConectarNaSalaAsync()
         {
             if (CampanhaAtual is null)
             {
@@ -758,14 +769,36 @@ namespace RPGdeMesa.Presentation.ViewModel
                 return;
             }
 
-            _navigation.NavigateTo($"/sessao/{CampanhaAtual.IdCampanha}/{VinculoSelecionado.IdPersonagem}");
+            Carregando = true;
+            LimparMensagem();
+            NotifyStateChanged();
+            try
+            {
+                SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(CampanhaAtual.IdCampanha);
+                if (!SessaoAtiva)
+                {
+                    DefinirErro("O Mestre ainda não abriu uma sessão para esta campanha.");
+                    return;
+                }
+
+                _navigation.NavigateTo($"/sessao/{CampanhaAtual.IdCampanha}/{VinculoSelecionado.IdPersonagem}");
+            }
+            finally
+            {
+                Carregando = false;
+                NotifyStateChanged();
+            }
         }
 
-        public void IrParaEtapa(int etapa)
+        public async Task IrParaEtapaAsync(int etapa)
         {
-            if (etapa == 2 && StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
+            if (etapa == 2)
             {
-                _ = SelecionarVinculoExistenteAsync(FichasAceitasDoJogador.First());
+                if (CampanhaAtual != null)
+                    SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(CampanhaAtual.IdCampanha);
+
+                if (StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
+                    await SelecionarVinculoExistenteAsync(FichasAceitasDoJogador.First());
             }
 
             EtapaAtual = etapa;

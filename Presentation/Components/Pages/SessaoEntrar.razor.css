@@ -15,7 +15,7 @@
 }
 
 /* ============================================================
-   CABEÇALHO DA PÁGINA
+   CABEÇALHO DA PÁGINA E INDICADOR DE SESSÃO ATIVA
    ============================================================ */
 .join-page-heading {
     display: flex;
@@ -61,6 +61,88 @@
         .join-page-heading .botao-voltar:hover {
             background: rgba(50, 36, 26, 0.85);
         }
+
+.sessao-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+    .sessao-pill.ativa {
+        border: 1px solid rgba(120, 190, 130, 0.65);
+        background: rgba(28, 65, 36, 0.78);
+        color: #c7f0cd;
+    }
+
+    .sessao-pill.inativa {
+        border: 1px solid rgba(214, 96, 80, 0.55);
+        background: rgba(75, 24, 18, 0.78);
+        color: #f5bfb7;
+    }
+
+.sessao-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+}
+
+.sessao-pill.ativa .sessao-dot,
+.sessao-banner.ativa .sessao-dot {
+    background: #78be82;
+    box-shadow: 0 0 8px rgba(120, 190, 130, 0.85);
+}
+
+.sessao-pill.inativa .sessao-dot,
+.sessao-banner.inativa .sessao-dot {
+    background: #d96b5c;
+    box-shadow: 0 0 8px rgba(217, 107, 92, 0.6);
+}
+
+.sessao-banner {
+    padding: 13px 16px;
+    margin-bottom: 18px;
+    border-radius: 6px;
+}
+
+    .sessao-banner.ativa {
+        border: 1px solid rgba(120, 190, 130, 0.5);
+        border-left: 4px solid #6ec27b;
+        background: rgba(30, 68, 38, 0.45);
+        color: #dcf5df;
+    }
+
+    .sessao-banner.inativa {
+        border: 1px solid rgba(214, 96, 80, 0.45);
+        border-left: 4px solid #d96b5c;
+        background: rgba(82, 28, 22, 0.45);
+        color: #f7d5d0;
+    }
+
+.sessao-banner-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+    .sessao-banner-info strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 3px;
+    }
+
+    .sessao-banner-info small {
+        display: block;
+        font-size: 11px;
+        opacity: 0.9;
+        line-height: 1.4;
+    }
 
 /* ============================================================
    SELETOR DE CAMPANHA ATIVA (CASO PARTICIPE DE MAIS DE UMA)
@@ -554,7 +636,7 @@
    ETAPA 2: RESUMO E BOTÕES DE AÇÃO
    ============================================================ */
 .join-session-name {
-    margin: -6px 0 20px;
+    margin: -6px 0 16px;
     color: #c7b27a;
     font-size: 12px;
 }
@@ -566,26 +648,30 @@
     margin: 0;
 }
 
-    .join-review > div {
-        min-width: 0;
-        padding: 13px;
-        border: 1px solid rgba(217, 184, 120, 0.22);
-        background: rgba(26, 20, 15, 0.5);
-    }
+.join-review-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 
-    .join-review dt {
-        margin-bottom: 8px;
-        color: #d7bd77;
-        font-size: 10px;
-    }
+.join-review > div {
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid rgba(217, 184, 120, 0.22);
+    background: rgba(26, 20, 15, 0.5);
+}
 
-    .join-review dd {
-        margin: 0;
-        overflow-wrap: anywhere;
-        color: #e5d7ba;
-        font-size: 11px;
-        line-height: 1.55;
-    }
+.join-review dt {
+    margin-bottom: 8px;
+    color: #d7bd77;
+    font-size: 10px;
+}
+
+.join-review dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #e5d7ba;
+    font-size: 11px;
+    line-height: 1.55;
+}
 
 .join-status {
     min-height: 17px;
@@ -691,6 +777,7 @@
 
     .character-options,
     .join-review,
+    .join-review-4,
     .tags-row-preview,
     .diario-grid-preview {
         grid-template-columns: minmax(0, 1fr);

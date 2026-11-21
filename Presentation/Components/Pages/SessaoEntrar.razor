@@ -14,9 +14,21 @@
     <main class="app-content join-content">
         <header class="page-heading join-page-heading">
             <div>
-                <p class="page-kicker">Aventureiros, a mesa está aberta</p>
+                <p class="page-kicker">
+                    @if (ViewModel.CampanhaAtual != null)
+                    {
+                        <span class="sessao-pill @(ViewModel.SessaoAtiva ? "ativa" : "inativa")">
+                            <span class="sessao-dot"></span>
+                            @(ViewModel.SessaoAtiva ? "Sessão aberta pelo Mestre" : "Nenhuma sessão ativa no momento")
+                        </span>
+                    }
+                    else
+                    {
+                        <text>Preparação do Aventureiro</text>
+                    }
+                </p>
                 <h1 class="page-title">@(ViewModel.CampanhaAtual?.Nome ?? "Entrar em sessão")</h1>
-                <p class="page-description">Escolha sua ficha, monte seu inventário inicial da campanha e conecte-se na sala.</p>
+                <p class="page-description">Escolha sua ficha, confira suas atualizações da campanha e conecte-se quando o Mestre abrir a mesa.</p>
             </div>
             <button class="botao-voltar" type="button" @onclick="ViewModel.VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
         </header>
@@ -24,13 +36,13 @@
         <!-- 2 ETAPAS INDEPENDENTES -->
         <ol class="join-progress join-progress-2" aria-label="Etapas para entrar na sessão">
             <li class="@(ViewModel.EtapaAtual == 1 ? "ativa" : ViewModel.PossuiAlgumaFichaAceita ? "concluida" : "")">
-                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 1 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapa(1)">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 1 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapaAsync(1)">
                     <span>@(ViewModel.PossuiAlgumaFichaAceita ? "✓" : "1")</span>
                     <strong>1. Ficha e Inventário na Campanha (@ViewModel.VinculosDoJogador.Count)</strong>
                 </button>
             </li>
             <li class="@(ViewModel.EtapaAtual == 2 ? "ativa" : "")">
-                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 2 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapa(2)">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 2 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapaAsync(2)">
                     <span>2</span>
                     <strong>2. Conectar na Sessão</strong>
                 </button>
@@ -50,9 +62,6 @@
         }
         else if (ViewModel.EtapaAtual == 1)
         {
-            <!-- =========================================================================
-                 ETAPA 1: VISUALIZAR FICHAS ENVIADAS OU ENVIAR/AJUSTAR FICHA NA CAMPANHA
-                 ========================================================================= -->
             <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
                 <div class="step-header-row">
                     <div>
@@ -70,7 +79,6 @@
 
                 @if (ViewModel.VinculosDoJogador.Any() && !ViewModel.ModoAdicionarNovaFicha && !ViewModel.ModoReenviarRecusada)
                 {
-                    <!-- SELETOR DAS FICHAS JÁ VINCULADAS PELO JOGADOR NESTA CAMPANHA -->
                     <fieldset class="character-picker" style="margin-bottom: 18px;">
                         <legend>Selecione uma das suas fichas vinculadas a esta campanha para visualizar ou jogar:</legend>
                         <div class="character-options">
@@ -85,7 +93,7 @@
                                            @onchange="() => ViewModel.SelecionarVinculoExistenteAsync(vinculo)" />
                                     <span class="character-option-copy" style="flex:1;">
                                         <strong>@p.Nome</strong>
-                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
+                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel · @p.ExperienciaXp XP</small>
                                     </span>
                                     <span class="status-badge status-@vinculo.StatusAprovacao.ToLowerInvariant()" style="font-size:10px; padding:3px 8px;">
                                         @(vinculo.StatusAprovacao == "Aceita" ? "✓ Aceita" :
@@ -107,7 +115,7 @@
                         else if (ViewModel.StatusFichaAtual == "Aceita")
                         {
                             <div class="ficha-alert aceita">
-                                <strong>Ficha e equipamentos aprovados pelo Mestre!</strong> O personagem <b>@ViewModel.FichaCompletaVinculada.Nome</b> e seu inventário inicial já foram validados e estão prontos para a partida.
+                                <strong>Ficha e equipamentos aprovados pelo Mestre!</strong> O personagem <b>@ViewModel.FichaCompletaVinculada.Nome</b> e seu inventário já foram validados e estão prontos para a partida.
                             </div>
                         }
                         else if (ViewModel.StatusFichaAtual == "Recusada")
@@ -128,7 +136,6 @@
                             </div>
                         }
 
-                        <!-- VISUALIZAÇÃO SOMENTE LEITURA DA FICHA E DO INVENTÁRIO ENVIADO -->
                         <div class="ficha-preview-pergaminho">
                             <div class="ficha-cabecalho-preview">
                                 <div class="retrato-preview">
@@ -139,6 +146,7 @@
                                     <h3>@ViewModel.FichaCompletaVinculada.Nome</h3>
                                     <p class="subtitulo-preview">@(ViewModel.FichaCompletaVinculada.RacaTexto ?? "Raça") • @(ViewModel.FichaCompletaVinculada.ClasseTexto ?? "Classe") • Nível Total @ViewModel.FichaCompletaVinculada.Nivel</p>
                                     <div class="dados-rapidos-preview">
+                                        <span><b>PV:</b> @ViewModel.FichaCompletaVinculada.PvAtual / @ViewModel.FichaCompletaVinculada.PvMaximo</span>
                                         <span><b>Tendência:</b> @(ViewModel.FichaCompletaVinculada.Tendencia ?? "Neutra")</span>
                                         <span><b>Antecedente:</b> @(ViewModel.FichaCompletaVinculada.AntecedenteTexto ?? "Não informado")</span>
                                         <span><b>XP:</b> @ViewModel.FichaCompletaVinculada.ExperienciaXp.ToString("N0")</span>
@@ -147,8 +155,8 @@
                             </div>
 
                             <div class="abas-ficha-preview" role="tablist">
-                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "atributos"'>Atributos & Diário</button>
-                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "personagem"'>Personagem & Classes</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "atributos"'>Atributos &amp; Diário</button>
+                                <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "personagem"'>Personagem &amp; Classes</button>
                                 <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "inventario"'>Inventário da Campanha</button>
                                 <button type="button" class="aba-btn @(ViewModel.AbaFichaPreview == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.AbaFichaPreview = "grimorio"'>Grimório</button>
                             </div>
@@ -297,16 +305,13 @@
                         {
                             <span></span>
                         }
-                        <button class="action-primary" type="button" @onclick="() => ViewModel.IrParaEtapa(2)">
+                        <button class="action-primary" type="button" @onclick="() => ViewModel.IrParaEtapaAsync(2)">
                             Ir para Etapa 2: Conectar com @(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
                         </button>
                     </div>
                 }
                 else
                 {
-                    <!-- =====================================================================
-                         FORMULÁRIO DE ESCOLHA DA FICHA OU EDIÇÃO COMPLETA DA FICHA RECUSADA
-                         ===================================================================== -->
                     <form @onsubmit="ViewModel.EnviarFichaComInventarioAoMestreAsync" @onsubmit:preventDefault="true">
                         @if (!ViewModel.ModoReenviarRecusada)
                         {
@@ -370,10 +375,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- 4 ABAS EDITÁVEIS DENTRO DO SESSAOENTRAR QUANDO RECUSADA -->
                                     <div class="abas-ficha-preview" role="tablist">
-                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "atributos"'>1. Atributos & Diário</button>
-                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "personagem"'>2. Personagem & Classes</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "atributos"'>1. Atributos &amp; Diário</button>
+                                        <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "personagem"'>2. Personagem &amp; Classes</button>
                                         <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "grimorio"'>3. Grimório</button>
                                         <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "inventario"'>4. Inventário da Campanha</button>
                                     </div>
@@ -388,7 +392,6 @@
                                     </p>
                                 }
 
-                                @* ABA EDITÁVEL 1: ATRIBUTOS, SALVAGUARDAS, PERÍCIAS E DIÁRIO *@
                                 @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "atributos")
                                 {
                                     <div class="preview-tab-body">
@@ -485,7 +488,6 @@
                                     </div>
                                 }
 
-                                @* ABA EDITÁVEL 2: PERSONAGEM, CLASSES E HISTÓRIA *@
                                 @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "personagem")
                                 {
                                     <div class="preview-tab-body">
@@ -537,7 +539,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- CLASSES (MULTICLASSE) -->
                                         <div class="categoria-itens-campanha">
                                             <div class="titulo-categoria-campanha">
                                                 <h4>⌁ Classes do Personagem (Nível Total: @ViewModel.PersonagemEmPreparacao.Nivel)</h4>
@@ -595,12 +596,10 @@
                                     </div>
                                 }
 
-                                @* ABA EDITÁVEL 3: GRIMÓRIO (CATÁLOGO + VISUALIZAÇÃO COMPLETA) *@
                                 @if (ViewModel.ModoReenviarRecusada && ViewModel.AbaEdicaoRecusada == "grimorio")
                                 {
                                     <div class="corpo-inventario-campanha">
                                         <div>
-                                            <!-- Catálogo de Magias (dbo.Magia) -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Catálogo de Magias</h4>
@@ -738,7 +737,6 @@
                                                 }
                                             </div>
 
-                                            <!-- Magias Equipadas no Grimório (com scroll próprio) -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>✦ Magias Equipadas no Grimório (@ViewModel.MagiasEdicao.Count)</h4>
@@ -782,7 +780,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Coluna Direita: Resumo + Visualização Completa da Magia -->
                                         <aside class="resumo-inventario-campanha" aria-label="Resumo e detalhes da magia">
                                             <section class="painel-moedas-campanha">
                                                 <h4>Resumo do Grimório</h4>
@@ -811,19 +808,17 @@
                                                 }
                                                 else
                                                 {
-                                                    <p class="magia-detalhe-vazio-campanha">Clique em qualquer magia do catálogo ou do grimório para visualizar escola, tempo de conjuração, alcance, componentes, duração e dano/efeito.</p>
+                                                    <p class="magia-detalhe-vazio-campanha">Clique em qualquer magia do catálogo ou do grimório para visualizar os detalhes.</p>
                                                 }
                                             </section>
                                         </aside>
                                     </div>
                                 }
 
-                                @* ABA EDITÁVEL 4 (OU PADRÃO AO ENVIAR NOVA FICHA): INVENTÁRIO DA CAMPANHA *@
                                 @if (!ViewModel.ModoReenviarRecusada || ViewModel.AbaEdicaoRecusada == "inventario")
                                 {
                                     <div class="corpo-inventario-campanha">
                                         <div>
-                                            <!-- Armas -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Armas</h4>
@@ -848,7 +843,6 @@
                                                 }
                                             </div>
 
-                                            <!-- Armaduras e Escudos -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Armaduras e Escudos</h4>
@@ -873,7 +867,6 @@
                                                 }
                                             </div>
 
-                                            <!-- Poções e Consumíveis -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Poções e Consumíveis</h4>
@@ -898,7 +891,6 @@
                                                 }
                                             </div>
 
-                                            <!-- Materiais e Outros -->
                                             <div class="categoria-itens-campanha">
                                                 <div class="titulo-categoria-campanha">
                                                     <h4>⌁ Materiais e Outros</h4>
@@ -978,13 +970,25 @@
         }
         else if (ViewModel.EtapaAtual == 2)
         {
-            <!-- =========================================================================
-                 ETAPA 2: ESCOLHER ENTRE AS FICHAS ACEITAS (EXIBE INVENTÁRIO) E CONECTAR
-                 ========================================================================= -->
             <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
                 <p class="page-kicker">Etapa 2 · Sala de Jogo</p>
                 <h2 id="titulo-confirmacao">Conectar na Sessão</h2>
                 <p class="join-session-name">Campanha: <strong>@(ViewModel.CampanhaAtual.Nome)</strong></p>
+
+                <!-- STATUS DA SESSÃO (ABERTA / FECHADA) -->
+                <div class="sessao-banner @(ViewModel.SessaoAtiva ? "ativa" : "inativa")">
+                    <div class="sessao-banner-info">
+                        <span class="sessao-dot"></span>
+                        <div>
+                            <strong>@(ViewModel.SessaoAtiva ? "Sessão ativa! A mesa está aberta pelo Mestre." : "Nenhuma sessão ativa no momento.")</strong>
+                            <small>
+                                @(ViewModel.SessaoAtiva
+                                    ? "Você já pode conectar na sala com sua ficha aprovada."
+                                    : "Só é possível entrar quando o Mestre iniciar a sessão. Aguarde e clique em 'Atualizar Status'.")
+                            </small>
+                        </div>
+                    </div>
+                </div>
 
                 @if (ViewModel.FichasAceitasDoJogador.Count > 1)
                 {
@@ -1002,7 +1006,7 @@
                                            @onchange="() => ViewModel.SelecionarVinculoExistenteAsync(vinculoAceito)" />
                                     <span class="character-option-copy">
                                         <strong>@p.Nome</strong>
-                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</small>
+                                        <small>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel · @p.ExperienciaXp XP</small>
                                     </span>
                                 </label>
                             }
@@ -1010,17 +1014,17 @@
                     </fieldset>
                 }
 
-                <dl class="join-review">
+                <dl class="join-review join-review-4">
                     <div>
                         <dt>Personagem Escolhido</dt>
                         <dd>@(ViewModel.FichaCompletaVinculada?.Nome ?? "Nenhuma ficha selecionada")</dd>
                     </div>
                     <div>
-                        <dt>Raça & Classe</dt>
-                        <dd>@(ViewModel.FichaCompletaVinculada != null ? $"{ViewModel.FichaCompletaVinculada.RacaTexto} · {ViewModel.FichaCompletaVinculada.ClasseTexto} (Nv. {ViewModel.FichaCompletaVinculada.Nivel})" : "—")</dd>
+                        <dt>Raça, Classe &amp; XP</dt>
+                        <dd>@(ViewModel.FichaCompletaVinculada != null ? $"{ViewModel.FichaCompletaVinculada.RacaTexto} · {ViewModel.FichaCompletaVinculada.ClasseTexto} (Nv. {ViewModel.FichaCompletaVinculada.Nivel} · {ViewModel.FichaCompletaVinculada.ExperienciaXp:N0} XP)" : "—")</dd>
                     </div>
                     <div>
-                        <dt>Status de Aprovação</dt>
+                        <dt>Status da Ficha</dt>
                         <dd>
                             @if (ViewModel.StatusFichaAtual == "Aceita")
                             {
@@ -1040,9 +1044,21 @@
                             }
                         </dd>
                     </div>
+                    <div>
+                        <dt>Status da Mesa</dt>
+                        <dd>
+                            @if (ViewModel.SessaoAtiva)
+                            {
+                                <strong style="color: #78be82;">● Sessão Ativa</strong>
+                            }
+                            else
+                            {
+                                <strong style="color: #e88d8d;">○ Aguardando Mestre</strong>
+                            }
+                        </dd>
+                    </div>
                 </dl>
 
-                <!-- EXIBE O INVENTÁRIO VINCULADO DO PERSONAGEM NA ETAPA DE CONECTAR -->
                 @if (ViewModel.FichaCompletaVinculada?.Inventario != null)
                 {
                     <div class="ficha-preview-pergaminho" style="margin-top: 16px;">
@@ -1083,7 +1099,7 @@
                 <p class="join-status @(ViewModel.TemErro ? "erro" : "")" role="status" aria-live="polite">@ViewModel.Mensagem</p>
 
                 <div class="join-actions">
-                    <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="() => ViewModel.IrParaEtapa(1)">
+                    <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="() => ViewModel.IrParaEtapaAsync(1)">
                         ← Voltar para Fichas (Etapa 1)
                     </button>
                     <div style="display: flex; gap: 10px;">
@@ -1092,9 +1108,13 @@
                         </button>
                         <button class="action-primary"
                                 type="button"
-                                disabled="@(ViewModel.Carregando || ViewModel.StatusFichaAtual != "Aceita")"
-                                @onclick="ViewModel.ConectarNaSala">
-                            @(ViewModel.Carregando ? "Conectando..." : $"Conectar com {(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha")} →")
+                                disabled="@(ViewModel.Carregando || !ViewModel.PodeConectarNaSessao)"
+                                @onclick="ViewModel.ConectarNaSalaAsync">
+                            @(ViewModel.Carregando
+                                ? "Conectando..."
+                                : !ViewModel.SessaoAtiva
+                                    ? "Aguardando Mestre abrir a sessão"
+                                    : $"Conectar com {(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha")} →")
                         </button>
                     </div>
                 </div>
@@ -1111,13 +1131,15 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        ViewModel.OnChange -= StateHasChanged;
-        ViewModel.OnChange += StateHasChanged;
+        ViewModel.OnChange -= AtualizarUi;
+        ViewModel.OnChange += AtualizarUi;
         await ViewModel.InicializarAsync(IdCampanha, CampanhaIdQuery);
     }
 
+    private void AtualizarUi() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
-        ViewModel.OnChange -= StateHasChanged;
+        ViewModel.OnChange -= AtualizarUi;
     }
 }
