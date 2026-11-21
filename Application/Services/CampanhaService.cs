@@ -5,6 +5,7 @@ using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Application.Services;
 

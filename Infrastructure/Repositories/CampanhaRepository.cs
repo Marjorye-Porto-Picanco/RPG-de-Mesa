@@ -6,6 +6,7 @@ using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
 using RPGdeMesa.Infrastructure.Persistence;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Infrastructure.Repositories;
 
