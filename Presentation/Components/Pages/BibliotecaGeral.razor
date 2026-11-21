@@ -54,16 +54,35 @@
                         <select class="filter-select"
                                 @bind="VM.FiltroTipoItem"
                                 @bind:after="VM.ResetarPaginacao">
-                            <option value="">Todos os tipos...</option>
-                            <option value="Anéis">Anéis</option>
-                            <option value="Armadura">Armadura</option>
-                            <option value="armas">armas</option>
-                            <option value="Bastões">Bastões</option>
-                            <option value="cajados">cajados</option>
-                            <option value="itens maravilhosos">itens maravilhosos</option>
-                            <option value="pergaminhos">pergaminhos</option>
-                            <option value="poções">poções</option>
-                            <option value="varinhas">varinhas</option>
+                            @foreach (var opcao in VM.OpcoesTipoItem)
+                            {
+                                <option value="@opcao.Chave">@opcao.Nome</option>
+                            }
+                        </select>
+                    </label>
+                }
+                else if (VM.CategoriaAtual == "magias")
+                {
+                    <label class="filter-field" aria-label="Filtrar por círculo da magia">
+                        <select class="filter-select"
+                                @bind="VM.FiltroCirculoMagia"
+                                @bind:after="VM.ResetarPaginacao">
+                            @foreach (var opcao in VM.OpcoesCirculoMagia)
+                            {
+                                <option value="@opcao.Chave">@opcao.Nome</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label class="filter-field" aria-label="Filtrar por escola da magia">
+                        <select class="filter-select"
+                                @bind="VM.FiltroEscolaMagia"
+                                @bind:after="VM.ResetarPaginacao">
+                            <option value="">Todas as escolas</option>
+                            @foreach (var escola in VM.OpcoesEscolaMagia)
+                            {
+                                <option value="@escola">@escola</option>
+                            }
                         </select>
                     </label>
                 }
@@ -92,6 +111,15 @@
                                      OnSelecionar="VM.AbrirModalNpc"
                                      OnFecharModal="VM.FecharModalNpc"
                                      OnPedirExclusao='args => VM.PedirExclusao("npc", args.Id, args.Nome)' />
+            }
+            else if (VM.CategoriaAtual == "magias")
+            {
+                <SecaoMagiasBiblioteca Magias="VM.MagiasFiltradas.Take(VM.LimiteVisivel)"
+                                       Carregando="VM.Carregando"
+                                       MagiaSelecionada="VM.MagiaSelecionada"
+                                       ExibirModal="VM.ExibirModalMagia"
+                                       OnSelecionar="VM.AbrirModalMagia"
+                                       OnFecharModal="VM.FecharModalMagia" />
             }
             else
             {

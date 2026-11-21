@@ -3,6 +3,7 @@ using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
@@ -39,6 +40,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<IPersonagemRepository, PersonagemRepository>();
             builder.Services.AddTransient<INpcRepository, NpcRepository>();
             builder.Services.AddTransient<IItemRepository, ItemRepository>();
+            builder.Services.AddScoped<IMagiaRepository, MagiaRepository>();
 
             // 2. CAMADA DE APPLICATION (Casos de Uso / Services 100% Transient para evitar conflito no EF Core)
             builder.Services.AddTransient<UsuarioService>();
@@ -48,7 +50,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<PersonagemService>();
             builder.Services.AddTransient<NpcService>();
             builder.Services.AddTransient<ItemService>();
-
+            builder.Services.AddScoped<MagiaService>();
             // 3. CAMADA DE PRESENTATION / UI (Auth, Storage de Sessão e ViewModels)
             builder.Services.AddScoped<SessaoCampanhaStorageService>(); // Scoped/Singleton atende bem gerenciamento de storage local
             builder.Services.AddTransient<AuthService>();

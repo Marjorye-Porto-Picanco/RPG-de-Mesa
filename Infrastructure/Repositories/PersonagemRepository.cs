@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Infrastructure.Persistence;
 

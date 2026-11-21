@@ -1,0 +1,83 @@
+@using RPGdeMesa.Domain.Magias
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="library-grid" aria-live="polite">
+    @if (Carregando)
+    {
+        <p class="empty-state library-empty">Carregando magias...</p>
+    }
+    else if (Magias.Any())
+    {
+        @foreach (var magia in Magias)
+        {
+            <div class="library-entry-wrap">
+                <button class="library-entry" type="button" @onclick="() => OnSelecionar.InvokeAsync(magia)">
+                    <strong>@magia.Nome</strong>
+                    <span class="entry-meta">@BibliotecaGeralViewModel.ObterRotuloMetaMagia(magia)</span>
+                    <span class="entry-arrow" aria-hidden="true">↗</span>
+                </button>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-state library-empty">Nenhuma magia encontrada.</p>
+    }
+</div>
+
+@if (ExibirModal && MagiaSelecionada is not null)
+{
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+        <div class="entry-dialog" @onclick:stopPropagation="true">
+            <div class="dialog-heading">
+                <div>
+                    <p class="page-kicker">@BibliotecaGeralViewModel.ObterRotuloMetaMagia(MagiaSelecionada)</p>
+                    <h2>@MagiaSelecionada.Nome</h2>
+                </div>
+                <button class="dialog-close" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
+            </div>
+
+            <div class="dialog-content">
+                <p class="detail-row"><strong>Círculo: </strong>@BibliotecaGeralViewModel.ObterRotuloCirculo(MagiaSelecionada.CirculoNivel)</p>
+
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.Escola))
+                {
+                    <p class="detail-row"><strong>Escola: </strong>@MagiaSelecionada.Escola</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.TempoConjuracao))
+                {
+                    <p class="detail-row"><strong>Tempo de Conjuração: </strong>@MagiaSelecionada.TempoConjuracao</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.Alcance))
+                {
+                    <p class="detail-row"><strong>Alcance: </strong>@MagiaSelecionada.Alcance</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.Componentes))
+                {
+                    <p class="detail-row"><strong>Componentes: </strong>@MagiaSelecionada.Componentes</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.Duracao))
+                {
+                    <p class="detail-row"><strong>Duração: </strong>@MagiaSelecionada.Duracao</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(MagiaSelecionada.DanoEfeito))
+                {
+                    <section class="detail-description">
+                        <h3>Dano / Efeito</h3>
+                        <p>@MagiaSelecionada.DanoEfeito</p>
+                    </section>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<Magia> Magias { get; set; } = Enumerable.Empty<Magia>();
+    [Parameter] public bool Carregando { get; set; }
+    [Parameter] public Magia? MagiaSelecionada { get; set; }
+    [Parameter] public bool ExibirModal { get; set; }
+
+    [Parameter] public EventCallback<Magia> OnSelecionar { get; set; }
+    [Parameter] public EventCallback OnFecharModal { get; set; }
+}

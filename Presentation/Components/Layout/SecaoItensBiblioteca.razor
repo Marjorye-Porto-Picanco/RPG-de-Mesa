@@ -28,7 +28,7 @@
     }
     else
     {
-        <p class="empty-state library-empty">Nenhum registro encontrado nesta categoria.</p>
+        <p class="empty-state library-empty">Nenhum item encontrado nesta categoria.</p>
     }
 </div>
 
@@ -47,27 +47,31 @@
             <div class="dialog-content">
                 @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Tipo))
                 {
-                    <p class="detail-row"><strong>Tipo: </strong>@ItemSelecionado.Tipo</p>
+                    <p class="detail-row"><strong>Tipo: </strong>@BibliotecaGeralViewModel.ObterRotuloMeta(ItemSelecionado)</p>
                 }
                 @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Raridade))
                 {
                     <p class="detail-row"><strong>Raridade: </strong>@ItemSelecionado.Raridade</p>
                 }
-                @if (ItemSelecionado.Dano is not null)
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Sintonizacao))
+                {
+                    <p class="detail-row"><strong>Sintonização: </strong>@ItemSelecionado.Sintonizacao</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Dano))
                 {
                     <p class="detail-row"><strong>Dano: </strong>@ItemSelecionado.Dano @(string.IsNullOrWhiteSpace(ItemSelecionado.TipoDano) ? "" : $"({ItemSelecionado.TipoDano})")</p>
                 }
                 @if (ItemSelecionado.CaBonus > 0)
                 {
-                    <p class="detail-row"><strong>Bônus de CA: </strong>@ItemSelecionado.CaBonus</p>
+                    <p class="detail-row"><strong>Bônus de CA: </strong>+@ItemSelecionado.CaBonus</p>
                 }
                 @if (ItemSelecionado.Peso.HasValue)
                 {
-                    <p class="detail-row"><strong>Peso: </strong>@ItemSelecionado.Peso.Value.ToString("0.##")</p>
+                    <p class="detail-row"><strong>Peso: </strong>@ItemSelecionado.Peso.Value.ToString("0.##") kg</p>
                 }
                 @if (ItemSelecionado.Preco.HasValue)
                 {
-                    <p class="detail-row"><strong>Preço: </strong>@ItemSelecionado.Preco.Value.ToString("0.##")</p>
+                    <p class="detail-row"><strong>Preço: </strong>@ItemSelecionado.Preco.Value.ToString("0.##") PO</p>
                 }
                 @if (!string.IsNullOrWhiteSpace(ItemSelecionado.Propriedades))
                 {

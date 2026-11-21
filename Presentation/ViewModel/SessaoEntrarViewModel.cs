@@ -9,6 +9,7 @@ using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Presentation.Services;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
