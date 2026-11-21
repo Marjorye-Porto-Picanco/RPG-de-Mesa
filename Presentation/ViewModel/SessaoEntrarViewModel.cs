@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
@@ -102,7 +103,29 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<ClasseCampanhaEntry> ClassesEdicao { get; set; } = new();
         public HashSet<string> SalvaguardasEdicao { get; set; } = new();
         public HashSet<string> PericiasEdicao { get; set; } = new();
-        public List<MagiaCampanhaEntry> MagiasEdicao { get; set; } = new();
+
+        // Catálogo e Edição de Magias (dbo.Magia)
+        public List<Magia> MagiasCatalogo { get; private set; } = new();
+        public List<MagiaGrimorioEntry> MagiasEdicao { get; set; } = new();
+        public string TermoBuscaMagiaEdicao { get; set; } = string.Empty;
+        public string FiltroCirculoMagiaEdicao { get; set; } = "todos";
+        public MagiaGrimorioEntry? MagiaEmVisualizacaoEdicao { get; private set; }
+        public bool ExibirFormNovaMagiaEdicao { get; set; } = false;
+        public MagiaGrimorioEntry NovaMagiaManualEdicao { get; set; } = new();
+
+        public IEnumerable<Magia> MagiasCatalogoFiltradasEdicao =>
+            MagiasCatalogo
+                .Where(m => !MagiasEdicao.Any(eq =>
+                    (eq.IdMagia > 0 && eq.IdMagia == m.IdMagia) ||
+                    eq.Nome.Equals(m.Nome, StringComparison.OrdinalIgnoreCase)))
+                .Where(m =>
+                    FiltroCirculoMagiaEdicao == "todos" ||
+                    m.CirculoNivel.ToString(CultureInfo.InvariantCulture) == FiltroCirculoMagiaEdicao)
+                .Where(m =>
+                    string.IsNullOrWhiteSpace(TermoBuscaMagiaEdicao) ||
+                    m.Nome.Contains(TermoBuscaMagiaEdicao, StringComparison.OrdinalIgnoreCase) ||
+                    (m.Escola != null && m.Escola.Contains(TermoBuscaMagiaEdicao, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.DanoEfeito != null && m.DanoEfeito.Contains(TermoBuscaMagiaEdicao, StringComparison.OrdinalIgnoreCase)));
 
         public List<ItemInventarioVinculado> ItensInventarioEdicao { get; set; } = new();
         public int MoedasPC { get; set; } = 0;
@@ -237,6 +260,12 @@ namespace RPGdeMesa.Presentation.ViewModel
             MagiasEdicao.Clear();
             ItensInventarioEdicao.Clear();
 
+            TermoBuscaMagiaEdicao = string.Empty;
+            FiltroCirculoMagiaEdicao = "todos";
+            ExibirFormNovaMagiaEdicao = false;
+            NovaMagiaManualEdicao = new MagiaGrimorioEntry();
+            MagiaEmVisualizacaoEdicao = null;
+
             MoedasPC = 0;
             MoedasPP = 0;
             MoedasPE = 0;
@@ -280,17 +309,11 @@ namespace RPGdeMesa.Presentation.ViewModel
             {
                 if (pm.Magia != null)
                 {
-                    MagiasEdicao.Add(new MagiaCampanhaEntry
-                    {
-                        Nome = pm.Magia.Nome,
-                        Circulo = pm.Magia.CirculoNivel == 0 ? "Truque" : $"{pm.Magia.CirculoNivel}º Círculo",
-                        Efeito = pm.Magia.DanoEfeito ?? string.Empty,
-                        AlcanceNotas = pm.Magia.Alcance ?? string.Empty
-                    });
+                    MagiasEdicao.Add(MagiaGrimorioEntry.DeEntidade(pm.Magia));
                 }
             }
-            if (!MagiasEdicao.Any())
-                MagiasEdicao.Add(new MagiaCampanhaEntry());
+
+            MagiaEmVisualizacaoEdicao = MagiasEdicao.FirstOrDefault();
 
             if (p.Inventario != null)
             {
@@ -347,7 +370,20 @@ namespace RPGdeMesa.Presentation.ViewModel
             NovoPersonagemParaEnviarId = FichaCompletaVinculada.IdPersonagem;
             PersonagemEmPreparacao = await _personagemService.ObterPorIdAsync(FichaCompletaVinculada.IdPersonagem) ?? FichaCompletaVinculada;
             PreencherEditorCompletoComDadosDoPersonagem(PersonagemEmPreparacao);
+            await CarregarMagiasCatalogoAsync();
             NotifyStateChanged();
+        }
+
+        private async Task CarregarMagiasCatalogoAsync()
+        {
+            try
+            {
+                MagiasCatalogo = await _campanhaService.ObterTodasMagiasAsync();
+            }
+            catch
+            {
+                MagiasCatalogo = new List<Magia>();
+            }
         }
 
         public void CancelarModoEdicaoOuAdicao()
@@ -419,15 +455,80 @@ namespace RPGdeMesa.Presentation.ViewModel
                 : string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
         }
 
-        public void AdicionarMagiaEdicao() { MagiasEdicao.Add(new MagiaCampanhaEntry()); NotifyStateChanged(); }
-        public void RemoverMagiaEdicao(MagiaCampanhaEntry magia) { MagiasEdicao.Remove(magia); NotifyStateChanged(); }
-
-        private static int ExtrairCirculoMagia(string circuloTexto)
+        // --- MÉTODOS DE MAGIAS (CATÁLOGO + PERSONALIZADA + VISUALIZAÇÃO) ---
+        public void VincularMagiaCatalogoEdicao(Magia magia)
         {
-            if (string.IsNullOrWhiteSpace(circuloTexto) || circuloTexto.Contains("Truque", StringComparison.OrdinalIgnoreCase))
-                return 0;
-            var digito = new string(circuloTexto.Where(char.IsDigit).ToArray());
-            return int.TryParse(digito, out int c) ? c : 1;
+            if (magia == null) return;
+            if (MagiasEdicao.Any(m => (m.IdMagia > 0 && m.IdMagia == magia.IdMagia) ||
+                                      m.Nome.Equals(magia.Nome, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            var entry = MagiaGrimorioEntry.DeEntidade(magia);
+            MagiasEdicao.Add(entry);
+            MagiaEmVisualizacaoEdicao = entry;
+            NotifyStateChanged();
+        }
+
+        public void AlternarFormNovaMagiaEdicao()
+        {
+            ExibirFormNovaMagiaEdicao = !ExibirFormNovaMagiaEdicao;
+            if (ExibirFormNovaMagiaEdicao)
+                NovaMagiaManualEdicao = new MagiaGrimorioEntry();
+            NotifyStateChanged();
+        }
+
+        public void AdicionarMagiaManualEdicao()
+        {
+            if (string.IsNullOrWhiteSpace(NovaMagiaManualEdicao.Nome))
+            {
+                DefinirErro("Informe o nome da magia para adicionar.");
+                return;
+            }
+
+            LimparMensagem();
+            var nova = new MagiaGrimorioEntry
+            {
+                Nome = NovaMagiaManualEdicao.Nome.Trim(),
+                Circulo = NovaMagiaManualEdicao.Circulo,
+                Escola = NovaMagiaManualEdicao.Escola.Trim(),
+                TempoConjuracao = NovaMagiaManualEdicao.TempoConjuracao.Trim(),
+                Alcance = NovaMagiaManualEdicao.Alcance.Trim(),
+                Componentes = NovaMagiaManualEdicao.Componentes.Trim(),
+                Duracao = NovaMagiaManualEdicao.Duracao.Trim(),
+                DanoEfeito = NovaMagiaManualEdicao.DanoEfeito.Trim()
+            };
+
+            MagiasEdicao.Add(nova);
+            MagiaEmVisualizacaoEdicao = nova;
+            NovaMagiaManualEdicao = new MagiaGrimorioEntry();
+            ExibirFormNovaMagiaEdicao = false;
+            NotifyStateChanged();
+        }
+
+        public void VisualizarMagiaEdicao(MagiaGrimorioEntry? magia)
+        {
+            MagiaEmVisualizacaoEdicao = magia;
+            NotifyStateChanged();
+        }
+
+        public void VisualizarMagiaCatalogoEdicao(Magia magia)
+        {
+            MagiaEmVisualizacaoEdicao = MagiaGrimorioEntry.DeEntidade(magia);
+            NotifyStateChanged();
+        }
+
+        public void AdicionarMagiaEdicao()
+        {
+            MagiasEdicao.Add(new MagiaGrimorioEntry());
+            NotifyStateChanged();
+        }
+
+        public void RemoverMagiaEdicao(MagiaGrimorioEntry magia)
+        {
+            MagiasEdicao.Remove(magia);
+            if (MagiaEmVisualizacaoEdicao == magia)
+                MagiaEmVisualizacaoEdicao = MagiasEdicao.FirstOrDefault();
+            NotifyStateChanged();
         }
 
         public IEnumerable<Item> ObterItensCampanhaPorCategoria(string categoria)
@@ -544,9 +645,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                         .Select(m => new Magia
                         {
                             Nome = m.Nome.Trim(),
-                            CirculoNivel = ExtrairCirculoMagia(m.Circulo),
-                            DanoEfeito = m.Efeito,
-                            Alcance = m.AlcanceNotas
+                            CirculoNivel = m.ObterNivelCirculo(),
+                            Escola = string.IsNullOrWhiteSpace(m.Escola) ? null : m.Escola.Trim(),
+                            TempoConjuracao = string.IsNullOrWhiteSpace(m.TempoConjuracao) ? null : m.TempoConjuracao.Trim(),
+                            Alcance = string.IsNullOrWhiteSpace(m.Alcance) ? null : m.Alcance.Trim(),
+                            Componentes = string.IsNullOrWhiteSpace(m.Componentes) ? null : m.Componentes.Trim(),
+                            Duracao = string.IsNullOrWhiteSpace(m.Duracao) ? null : m.Duracao.Trim(),
+                            DanoEfeito = string.IsNullOrWhiteSpace(m.DanoEfeito) ? null : m.DanoEfeito.Trim()
                         })
                         .ToList();
 

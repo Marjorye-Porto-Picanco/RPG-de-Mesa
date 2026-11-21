@@ -720,6 +720,7 @@
             margin-top: 0;
         }
 }
+
 /* ============================================================
    Construtor de Inventário da Campanha em sessao-entrar
    ============================================================ */
@@ -904,8 +905,236 @@
     resize: vertical;
 }
 
+/* ============================================================
+   Grimório / Catálogo de Magias na edição de ficha recusada
+   ============================================================ */
+.btn-magia-manual-campanha {
+    padding: 4px 10px;
+    border: 1px solid #ae812f;
+    border-radius: 6px;
+    background: rgba(176, 128, 38, 0.16);
+    color: #593d14;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+    .btn-magia-manual-campanha:hover {
+        background: #a87a2d;
+        color: #fff8e8;
+    }
+
+.magia-filtros-campanha {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 145px;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.magia-busca-campanha,
+.magia-filtro-campanha {
+    width: 100%;
+    min-height: 34px;
+    padding: 5px 8px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
+    border-radius: 5px;
+    background: #fffdf8;
+    color: #392819;
+    font-size: 12px;
+}
+
+.magia-catalogo-lista-campanha,
+.lista-magias-equipadas-campanha {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 230px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(152, 113, 45, 0.55) transparent;
+}
+
+    .magia-catalogo-lista-campanha::-webkit-scrollbar,
+    .lista-magias-equipadas-campanha::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .magia-catalogo-lista-campanha::-webkit-scrollbar-track,
+    .lista-magias-equipadas-campanha::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .magia-catalogo-lista-campanha::-webkit-scrollbar-thumb,
+    .lista-magias-equipadas-campanha::-webkit-scrollbar-thumb {
+        background: rgba(152, 113, 45, 0.5);
+        border-radius: 999px;
+    }
+
+        .magia-catalogo-lista-campanha::-webkit-scrollbar-thumb:hover,
+        .lista-magias-equipadas-campanha::-webkit-scrollbar-thumb:hover {
+            background: rgba(152, 113, 45, 0.85);
+        }
+
+.magia-catalogo-linha-campanha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 9px;
+    border: 1px solid rgba(126, 87, 31, 0.28);
+    border-radius: 6px;
+    background: rgba(255, 253, 246, 0.85);
+    cursor: pointer;
+}
+
+    .magia-catalogo-linha-campanha:hover {
+        border-color: #a77a32;
+        background: #fffdf4;
+    }
+
+.magia-catalogo-info-campanha {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+    .magia-catalogo-info-campanha strong {
+        color: #392819;
+        font-size: 12px;
+        overflow-wrap: anywhere;
+    }
+
+    .magia-catalogo-info-campanha small {
+        color: #795924;
+        font-size: 10px;
+    }
+
+.magia-manual-box-campanha {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(126, 87, 31, 0.35);
+}
+
+.magia-equipada-grid-campanha {
+    grid-template-columns: minmax(95px, 1.3fr) 78px 88px minmax(80px, 1fr) 26px;
+}
+
+.magia-equipada-row-campanha {
+    padding: 6px 8px;
+    border: 1px solid rgba(126, 87, 31, 0.22);
+    border-radius: 6px;
+    background: rgba(255, 253, 246, 0.72);
+    color: #392819;
+    font-size: 11px;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+    .magia-equipada-row-campanha:hover,
+    .magia-equipada-row-campanha.selecionada {
+        border-color: #a77a32;
+        background: rgba(241, 205, 104, 0.45);
+    }
+
+.magia-cell-nome-campanha {
+    overflow-wrap: anywhere;
+}
+
+.magia-vazia-campanha {
+    margin: 6px 0 2px;
+    color: #795924;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.grimorio-resumo-grid-campanha {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    text-align: center;
+}
+
+    .grimorio-resumo-grid-campanha div {
+        padding: 6px 4px;
+        border-radius: 6px;
+        background: rgba(30, 20, 12, 0.32);
+        border: 1px solid rgba(247, 218, 159, 0.22);
+    }
+
+    .grimorio-resumo-grid-campanha span {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #f7dfa4;
+    }
+
+    .grimorio-resumo-grid-campanha strong {
+        font-size: 16px;
+        color: #fff6dc;
+    }
+
+.magia-detalhe-titulo-campanha {
+    display: block;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(247, 218, 159, 0.28);
+    color: #ffe8af;
+    font-size: 15px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.magia-detalhe-lista-campanha {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+    .magia-detalhe-lista-campanha div {
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(247, 218, 159, 0.14);
+    }
+
+    .magia-detalhe-lista-campanha dt {
+        color: #f7dfa4;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .magia-detalhe-lista-campanha dd {
+        margin: 2px 0 0;
+        color: #fff6dc;
+        font-size: 11px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+.magia-detalhe-vazio-campanha {
+    margin: 4px 0 0;
+    color: rgba(255, 240, 202, 0.8);
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: center;
+}
+
 @media (max-width: 700px) {
     .corpo-inventario-campanha {
         grid-template-columns: 1fr;
     }
+
+    .magia-filtros-campanha {
+        grid-template-columns: 1fr;
+    }
+
+    .magia-equipada-grid-campanha {
+        grid-template-columns: minmax(80px, 1fr) 68px 74px 26px;
+    }
+
+        .magia-equipada-grid-campanha > :nth-child(4) {
+            display: none;
+        }
 }

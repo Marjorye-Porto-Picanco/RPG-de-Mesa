@@ -32,10 +32,28 @@ namespace RPGdeMesa.Presentation.ViewModel
 
     public class MagiaGrimorioEntry
     {
+        public int IdMagia { get; set; }
         public string Nome { get; set; } = string.Empty;
         public string Circulo { get; set; } = "1º Círculo";
-        public string Efeito { get; set; } = string.Empty;
-        public string AlcanceNotas { get; set; } = string.Empty;
+        public string Escola { get; set; } = string.Empty;
+        public string TempoConjuracao { get; set; } = string.Empty;
+        public string Alcance { get; set; } = string.Empty;
+        public string Componentes { get; set; } = string.Empty;
+        public string Duracao { get; set; } = string.Empty;
+        public string DanoEfeito { get; set; } = string.Empty;
+
+        // Compatibilidade com outras telas que ainda usam Efeito e AlcanceNotas
+        public string Efeito
+        {
+            get => DanoEfeito;
+            set => DanoEfeito = value;
+        }
+
+        public string AlcanceNotas
+        {
+            get => Alcance;
+            set => Alcance = value;
+        }
 
         public int ObterNivelCirculo() => Circulo switch
         {
@@ -45,6 +63,10 @@ namespace RPGdeMesa.Presentation.ViewModel
             "3º Círculo" => 3,
             "4º Círculo" => 4,
             "5º Círculo" => 5,
+            "6º Círculo" => 6,
+            "7º Círculo" => 7,
+            "8º Círculo" => 8,
+            "9º Círculo" => 9,
             _ => 1
         };
 
@@ -56,7 +78,24 @@ namespace RPGdeMesa.Presentation.ViewModel
             3 => "3º Círculo",
             4 => "4º Círculo",
             5 => "5º Círculo",
+            6 => "6º Círculo",
+            7 => "7º Círculo",
+            8 => "8º Círculo",
+            9 => "9º Círculo",
             _ => "1º Círculo"
+        };
+
+        public static MagiaGrimorioEntry DeEntidade(Magia m) => new()
+        {
+            IdMagia = m.IdMagia,
+            Nome = m.Nome,
+            Circulo = ConverterNivelParaTexto(m.CirculoNivel),
+            Escola = m.Escola ?? string.Empty,
+            TempoConjuracao = m.TempoConjuracao ?? string.Empty,
+            Alcance = m.Alcance ?? string.Empty,
+            Componentes = m.Componentes ?? string.Empty,
+            Duracao = m.Duracao ?? string.Empty,
+            DanoEfeito = m.DanoEfeito ?? string.Empty
         };
     }
 
@@ -110,6 +149,18 @@ namespace RPGdeMesa.Presentation.ViewModel
             "Natureza", "Percepção", "Persuasão", "Prestidigitação", "Religião", "Sobrevivência"
         ];
 
+        public IReadOnlyList<string> ListaCirculos { get; } =
+        [
+            "Truque", "1º Círculo", "2º Círculo", "3º Círculo", "4º Círculo",
+            "5º Círculo", "6º Círculo", "7º Círculo", "8º Círculo", "9º Círculo"
+        ];
+
+        public IReadOnlyList<string> ListaEscolasMagia { get; } =
+        [
+            "Abjuração", "Adivinhação", "Conjuração", "Encantamento",
+            "Evocação", "Ilusão", "Necromancia", "Transmutação"
+        ];
+
         // Estado do Personagem e Formulário
         public Personagem PersonagemAtual { get; set; } = new();
         public int? IdCampanhaOpcional { get; set; }
@@ -122,7 +173,16 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public HashSet<string> SalvaguardasSelecionadas { get; set; } = new();
         public HashSet<string> PericiasSelecionadas { get; set; } = new();
+
+        // Catálogo e Grimório de Magias
+        public List<Magia> MagiasCatalogo { get; private set; } = new();
         public List<MagiaGrimorioEntry> Magias { get; set; } = new();
+        public string TermoBuscaMagia { get; set; } = string.Empty;
+        public string FiltroCirculoMagia { get; set; } = "todos";
+        public int IdMagiaSelecionadaCatalogo { get; set; }
+        public MagiaGrimorioEntry? MagiaEmVisualizacao { get; private set; }
+        public bool ExibirFormNovaMagia { get; set; } = false;
+        public MagiaGrimorioEntry NovaMagiaManual { get; set; } = new();
 
         // Estado do Wizard, Imagem e Navegação
         public int EtapaAtual { get; private set; } = 1;
@@ -141,6 +201,20 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public string DestinoPadrao =>
             IdCampanhaOpcional.HasValue && IdCampanhaOpcional.Value > 0 ? "/campanhas" : "/personagem-lib";
+
+        public IEnumerable<Magia> MagiasCatalogoFiltradas =>
+            MagiasCatalogo
+                .Where(m => !Magias.Any(eq =>
+                    (eq.IdMagia > 0 && eq.IdMagia == m.IdMagia) ||
+                    eq.Nome.Equals(m.Nome, StringComparison.OrdinalIgnoreCase)))
+                .Where(m =>
+                    FiltroCirculoMagia == "todos" ||
+                    m.CirculoNivel.ToString(CultureInfo.InvariantCulture) == FiltroCirculoMagia)
+                .Where(m =>
+                    string.IsNullOrWhiteSpace(TermoBuscaMagia) ||
+                    m.Nome.Contains(TermoBuscaMagia, StringComparison.OrdinalIgnoreCase) ||
+                    (m.Escola != null && m.Escola.Contains(TermoBuscaMagia, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.DanoEfeito != null && m.DanoEfeito.Contains(TermoBuscaMagia, StringComparison.OrdinalIgnoreCase)));
 
         public event Action? OnChange;
         public void NotifyStateChanged() => OnChange?.Invoke();
@@ -187,9 +261,28 @@ namespace RPGdeMesa.Presentation.ViewModel
             SalvaguardasSelecionadas.Clear();
             PericiasSelecionadas.Clear();
             Magias.Clear();
+            TermoBuscaMagia = string.Empty;
+            FiltroCirculoMagia = "todos";
+            IdMagiaSelecionadaCatalogo = 0;
+            MagiaEmVisualizacao = null;
+            ExibirFormNovaMagia = false;
+            NovaMagiaManual = new MagiaGrimorioEntry();
 
             MensagemFeedback = "";
             Sucesso = false;
+        }
+
+        public async Task CarregarMagiasCatalogoAsync()
+        {
+            try
+            {
+                MagiasCatalogo = await _campanhaService.ObterTodasMagiasAsync();
+                NotifyStateChanged();
+            }
+            catch
+            {
+                MagiasCatalogo = new List<Magia>();
+            }
         }
 
         // Navegação entre Etapas (Wizard)
@@ -358,15 +451,85 @@ namespace RPGdeMesa.Presentation.ViewModel
             else PericiasSelecionadas.Remove(nome);
         }
 
-        public void AdicionarMagia()
+        // Gerenciamento de Magias
+        public void VincularMagiaDoCatalogo(Magia magia)
         {
-            Magias.Add(new MagiaGrimorioEntry());
+            if (magia == null) return;
+            if (Magias.Any(m => (m.IdMagia > 0 && m.IdMagia == magia.IdMagia) ||
+                                m.Nome.Equals(magia.Nome, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            var entry = MagiaGrimorioEntry.DeEntidade(magia);
+            Magias.Add(entry);
+            MagiaEmVisualizacao = entry;
+            NotifyStateChanged();
+        }
+
+        public void VincularMagiaSelecionadaNoSelect()
+        {
+            if (IdMagiaSelecionadaCatalogo <= 0) return;
+            var magia = MagiasCatalogo.FirstOrDefault(m => m.IdMagia == IdMagiaSelecionadaCatalogo);
+            if (magia != null)
+            {
+                VincularMagiaDoCatalogo(magia);
+                IdMagiaSelecionadaCatalogo = 0;
+            }
+        }
+
+        public void AlternarFormNovaMagia()
+        {
+            ExibirFormNovaMagia = !ExibirFormNovaMagia;
+            if (ExibirFormNovaMagia)
+                NovaMagiaManual = new MagiaGrimorioEntry();
+            NotifyStateChanged();
+        }
+
+        public void AdicionarMagiaManual()
+        {
+            if (string.IsNullOrWhiteSpace(NovaMagiaManual.Nome))
+            {
+                ErroEtapa = "Informe o nome da magia para adicionar.";
+                NotifyStateChanged();
+                return;
+            }
+
+            ErroEtapa = null;
+            var nova = new MagiaGrimorioEntry
+            {
+                Nome = NovaMagiaManual.Nome.Trim(),
+                Circulo = NovaMagiaManual.Circulo,
+                Escola = NovaMagiaManual.Escola.Trim(),
+                TempoConjuracao = NovaMagiaManual.TempoConjuracao.Trim(),
+                Alcance = NovaMagiaManual.Alcance.Trim(),
+                Componentes = NovaMagiaManual.Componentes.Trim(),
+                Duracao = NovaMagiaManual.Duracao.Trim(),
+                DanoEfeito = NovaMagiaManual.DanoEfeito.Trim()
+            };
+
+            Magias.Add(nova);
+            MagiaEmVisualizacao = nova;
+            NovaMagiaManual = new MagiaGrimorioEntry();
+            ExibirFormNovaMagia = false;
+            NotifyStateChanged();
+        }
+
+        public void VisualizarMagia(MagiaGrimorioEntry? magia)
+        {
+            MagiaEmVisualizacao = magia;
+            NotifyStateChanged();
+        }
+
+        public void VisualizarMagiaCatalogo(Magia magia)
+        {
+            MagiaEmVisualizacao = MagiaGrimorioEntry.DeEntidade(magia);
             NotifyStateChanged();
         }
 
         public void RemoverMagia(MagiaGrimorioEntry magia)
         {
             Magias.Remove(magia);
+            if (MagiaEmVisualizacao == magia)
+                MagiaEmVisualizacao = Magias.FirstOrDefault();
             NotifyStateChanged();
         }
 
@@ -498,10 +661,14 @@ namespace RPGdeMesa.Presentation.ViewModel
                     .Where(m => !string.IsNullOrWhiteSpace(m.Nome))
                     .Select(m => new Magia
                     {
-                        Nome = m.Nome,
+                        Nome = m.Nome.Trim(),
                         CirculoNivel = m.ObterNivelCirculo(),
-                        DanoEfeito = m.Efeito,
-                        Alcance = m.AlcanceNotas
+                        Escola = string.IsNullOrWhiteSpace(m.Escola) ? null : m.Escola.Trim(),
+                        TempoConjuracao = string.IsNullOrWhiteSpace(m.TempoConjuracao) ? null : m.TempoConjuracao.Trim(),
+                        Alcance = string.IsNullOrWhiteSpace(m.Alcance) ? null : m.Alcance.Trim(),
+                        Componentes = string.IsNullOrWhiteSpace(m.Componentes) ? null : m.Componentes.Trim(),
+                        Duracao = string.IsNullOrWhiteSpace(m.Duracao) ? null : m.Duracao.Trim(),
+                        DanoEfeito = string.IsNullOrWhiteSpace(m.DanoEfeito) ? null : m.DanoEfeito.Trim()
                     })
                     .ToList();
 

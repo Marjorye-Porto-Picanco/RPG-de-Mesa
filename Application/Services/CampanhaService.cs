@@ -248,6 +248,9 @@ public class CampanhaService
         return todos.Where(m => m.IdAccount == idAccount).ToList();
     }
 
+    public Task<List<Magia>> ObterTodasMagiasAsync() =>
+        _campanhaRepo.ListarTodasMagiasAsync();
+
     public async Task<Campanha?> BuscarPorCodigoAsync(string codigoConvite)
     {
         if (string.IsNullOrWhiteSpace(codigoConvite)) return null;

@@ -695,7 +695,6 @@ button, input, select, textarea {
     }
 }
 
-
 /* Refinamento visual: fantasia medieval com interface mais limpa */
 :root {
     --wood: #100d0b;
@@ -1225,10 +1224,9 @@ textarea:focus-visible {
     }
 }
 
-
 /* ================================================
-           REORGANIZAÇÃO DO TOPO E DA ETAPA 2
-           ================================================ */
+   REORGANIZAÇÃO DO TOPO E DA ETAPA 2
+   ================================================ */
 .top-bar {
     align-items: center;
     margin-bottom: 18px;
@@ -1632,8 +1630,6 @@ textarea:focus-visible {
     }
 }
 
-
-
 /* V3 — fluxo sequencial e indicador de progresso */
 .wizard-progress {
     margin: 0 0 22px;
@@ -1888,12 +1884,9 @@ textarea:focus-visible {
         cursor: pointer;
     }
 
-
 /* ============================================================
    Correções — topo da criação de personagem
    ============================================================ */
-
-/* Botão "Voltar": antes não tinha estilo nenhum e aparecia como botão padrão do navegador. */
 .exit-prompt-link {
     display: inline-flex;
     align-items: center;
@@ -1919,7 +1912,6 @@ textarea:focus-visible {
         outline-offset: 2px;
     }
 
-/* Botões do aviso de saída (também sem estilo antes). */
 .confirm-actions .confirm-exit,
 .confirm-actions .confirm-cancel {
     border-radius: 3px;
@@ -1946,7 +1938,6 @@ textarea:focus-visible {
         background: rgba(156, 120, 61, 0.18);
     }
 
-/* Resumo do herói: nomes longos e textos não estouram mais o cartão. */
 .form-aside {
     min-width: 0;
 }
@@ -1995,7 +1986,6 @@ textarea:focus-visible {
     color: #c5b79d;
 }
 
-/* Etapas: o texto não quebra letra a letra; rótulos longos recebem reticências. */
 .step-pill .step-label {
     min-width: 0;
 }
@@ -2022,4 +2012,250 @@ textarea:focus-visible {
     .step-connector {
         display: none;
     }
+}
+
+/* ============================================================
+   Etapa 4: Catálogo, Grimório e Visualização Completa de Magias
+   ============================================================ */
+.btn-magia-manual {
+    padding: 5px 10px;
+    border: 1px solid #ae812f;
+    border-radius: 6px;
+    background: rgba(176, 128, 38, 0.14);
+    color: #593d14;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+}
+
+    .btn-magia-manual:hover {
+        background: #a87a2d;
+        color: #fff8e8;
+    }
+
+.magia-filtros {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 155px;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.magia-busca-input,
+.magia-filtro-select {
+    width: 100%;
+    min-height: 35px;
+    padding: 6px 10px;
+    border: 1px solid rgba(126, 87, 31, 0.35);
+    border-radius: 6px;
+    background: #fffdf8;
+    color: #392819;
+    font-size: 12px;
+}
+
+.magia-catalogo-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.magia-catalogo-linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(126, 87, 31, 0.28);
+    border-radius: 7px;
+    background: rgba(255, 253, 246, 0.85);
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .magia-catalogo-linha:hover {
+        border-color: #a77a32;
+        background: #fffdf4;
+    }
+
+.magia-catalogo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+    .magia-catalogo-info strong {
+        color: #392819;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+
+    .magia-catalogo-info small {
+        color: #795924;
+        font-size: 11px;
+    }
+
+.magia-manual-box {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(126, 87, 31, 0.35);
+}
+
+.magia-manual-acoes {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.magia-equipada-grid {
+    grid-template-columns: minmax(110px, 1.3fr) 84px 96px minmax(90px, 1fr) 28px;
+}
+
+.magia-equipada-row {
+    padding: 6px 8px;
+    border: 1px solid rgba(126, 87, 31, 0.22);
+    border-radius: 6px;
+    background: rgba(255, 253, 246, 0.72);
+    color: #392819;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 150ms ease, background 150ms ease;
+}
+
+    .magia-equipada-row:hover,
+    .magia-equipada-row.selecionada {
+        border-color: #a77a32;
+        background: rgba(241, 205, 104, 0.45);
+    }
+
+.magia-cell-nome {
+    overflow-wrap: anywhere;
+}
+
+.magia-vazia {
+    margin: 6px 0 2px;
+    color: #795924;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.grimorio-resumo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    text-align: center;
+}
+
+    .grimorio-resumo-grid div {
+        padding: 8px 6px;
+        border-radius: 8px;
+        background: rgba(30, 20, 12, 0.32);
+        border: 1px solid rgba(247, 218, 159, 0.22);
+    }
+
+    .grimorio-resumo-grid span {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        color: #f7dfa4;
+    }
+
+    .grimorio-resumo-grid strong {
+        font-size: 18px;
+        color: #fff6dc;
+    }
+
+.magia-detalhe-titulo {
+    display: block;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(247, 218, 159, 0.28);
+    color: #ffe8af;
+    font-family: Cambria, Georgia, serif;
+    font-size: 17px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.magia-detalhe-lista {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+    .magia-detalhe-lista div {
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(247, 218, 159, 0.14);
+    }
+
+    .magia-detalhe-lista dt {
+        color: #f7dfa4;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .magia-detalhe-lista dd {
+        margin: 2px 0 0;
+        color: #fff6dc;
+        font-size: 12px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+.magia-detalhe-vazio {
+    margin: 4px 0 0;
+    color: rgba(255, 240, 202, 0.8);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Scroll interno para a lista de Magias Equipadas no Grimório */
+#lista-magias {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(152, 113, 45, 0.55) transparent;
+}
+
+    #lista-magias::-webkit-scrollbar,
+    .magia-catalogo-lista::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #lista-magias::-webkit-scrollbar-track,
+    .magia-catalogo-lista::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    #lista-magias::-webkit-scrollbar-thumb,
+    .magia-catalogo-lista::-webkit-scrollbar-thumb {
+        background: rgba(152, 113, 45, 0.5);
+        border-radius: 999px;
+    }
+
+        #lista-magias::-webkit-scrollbar-thumb:hover,
+        .magia-catalogo-lista::-webkit-scrollbar-thumb:hover {
+            background: rgba(152, 113, 45, 0.85);
+        }
+
+@media (max-width: 620px) {
+    .magia-filtros {
+        grid-template-columns: 1fr;
+    }
+
+    .magia-equipada-grid {
+        grid-template-columns: minmax(90px, 1fr) 70px 76px 26px;
+    }
+
+        .magia-equipada-grid > :nth-child(4) {
+            display: none;
+        }
 }
