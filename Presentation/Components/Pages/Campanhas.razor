@@ -14,10 +14,10 @@
                 <p class="texto-apoio">Histórias prontas para continuar ou participar.</p>
             </div>
 
-           <div class="acoes-cabecalho">
-                <button type="button" class="botao-secundario-dourado" @onclick="VM.AbrirModalEntrar">
-                    <span aria-hidden="true"> </span> Inserir convite
-                </button>
+            <div class="acoes-cabecalho">
+                <a class="botao-secundario-dourado" href="/entrar-cod">
+                    <span aria-hidden="true">+</span> Inserir convite
+                </a>
                 <a class="botao-dourado" href="/criar-campanha">
                     <span aria-hidden="true">+</span> Nova campanha
                 </a>
@@ -67,6 +67,12 @@
             }
 
             <div class="grade-campanhas">
+
+                <a class="cartao-adicionar" href="/entrar-cod">
+                    <span class="mais-adicionar" aria-hidden="true">+</span>
+                    <strong>Entrar com código</strong>
+                    <small>Insira o convite do Mestre</small>
+                </a>
                 @foreach (var campanha in VM.CampanhasJogador)
                 {
                     <CartaoCampanha Campanha="campanha"
@@ -74,20 +80,10 @@
                                     OnRemover="c => VM.PedirRemocaoCampanha(c, true)" />
                 }
 
-                <button type="button" class="cartao-adicionar" @onclick="VM.AbrirModalEntrar">
-                    <span class="mais-adicionar" aria-hidden="true">🔑</span>
-                    <strong>Entrar com código</strong>
-                    <small>Insira o convite do Mestre</small>
-                </button>
+                
             </div>
         }
     </main>
-
-    @if (VM.ExibirModalEntrar)
-    {
-        <ModalEntrar OnFechar="VM.FecharModalEntrar"
-                     OnCampanhaEntrada="VM.CampanhaEntradaSucessoAsync" />
-    }
 
     <ConfirmarExclusao Visivel="@(VM.CampanhaPendente is not null)"
                        Processando="VM.ProcessandoRemocao"
