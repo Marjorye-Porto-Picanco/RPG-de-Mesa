@@ -67,20 +67,18 @@
             }
 
             <div class="grade-campanhas">
-
                 <a class="cartao-adicionar" href="/entrar-cod">
                     <span class="mais-adicionar" aria-hidden="true">+</span>
                     <strong>Entrar com código</strong>
                     <small>Insira o convite do Mestre</small>
                 </a>
+
                 @foreach (var campanha in VM.CampanhasJogador)
                 {
                     <CartaoCampanha Campanha="campanha"
                                     ComoJogador="true"
                                     OnRemover="c => VM.PedirRemocaoCampanha(c, true)" />
                 }
-
-                
             </div>
         }
     </main>

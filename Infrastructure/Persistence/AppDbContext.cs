@@ -2,10 +2,11 @@
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Domain.Usuarios;
-using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Infrastructure.Persistence;
 
@@ -46,6 +47,13 @@ public class AppDbContext : DbContext
     public DbSet<NpcCampanha> NpcCampanhas { get; set; }
     public DbSet<ItemCampanha> ItemCampanhas { get; set; }
     public DbSet<MapaCampanha> MapaCampanhas { get; set; }
+
+    // =========================================================================
+    // DBSETS: SESSÃO DE MESA EM TEMPO REAL
+    // =========================================================================
+    public DbSet<SessaoMesa> SessoesMesa { get; set; }
+    public DbSet<SessaoParticipante> SessaoParticipantes { get; set; }
+    public DbSet<SessaoMensagem> SessaoMensagens { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -220,7 +228,6 @@ public class AppDbContext : DbContext
             e.Property(p => p.Historia).HasColumnName("historia");
             e.Property(p => p.Imagem).HasColumnName("imagem").HasColumnType("varchar(max)");
 
-            // Atributos principais
             e.Property(p => p.Forca).HasColumnName("forca");
             e.Property(p => p.Destreza).HasColumnName("destreza");
             e.Property(p => p.Constituicao).HasColumnName("constituicao");
@@ -228,7 +235,6 @@ public class AppDbContext : DbContext
             e.Property(p => p.Sabedoria).HasColumnName("sabedoria");
             e.Property(p => p.Carisma).HasColumnName("carisma");
 
-            // Características físicas e narrativas
             e.Property(p => p.Idade).HasColumnName("idade");
             e.Property(p => p.Genero).HasColumnName("genero");
             e.Property(p => p.Altura).HasColumnName("altura");
@@ -238,7 +244,6 @@ public class AppDbContext : DbContext
             e.Property(p => p.Caracteristicas).HasColumnName("caracteristicas");
             e.Property(p => p.Tesouro).HasColumnName("tesouro");
 
-            // Colunas 3FN de Diário e Personalidade
             e.Property(p => p.TracosPersonalidade).HasColumnName("tracos_personalidade");
             e.Property(p => p.PontoDeVista).HasColumnName("ponto_de_vista");
             e.Property(p => p.Ideais).HasColumnName("ideais");
@@ -246,7 +251,6 @@ public class AppDbContext : DbContext
             e.Property(p => p.Defeitos).HasColumnName("defeitos");
             e.Property(p => p.Idiomas).HasColumnName("idiomas");
 
-            // Chaves Estrangeiras 3FN para Raca e Antecedentes
             e.HasOne(p => p.Raca)
              .WithMany()
              .HasForeignKey(p => p.IdRaca)
@@ -259,7 +263,7 @@ public class AppDbContext : DbContext
         });
 
         // =====================================================================
-        // 5. RELAÇÕES 3FN DO PERSONAGEM (CLASSES, PERÍCIAS, INVENTÁRIO, MAGIAS)
+        // 5. RELAÇÕES 3FN DO PERSONAGEM
         // =====================================================================
         modelBuilder.Entity<PersonagemClasse>(e =>
         {
@@ -375,7 +379,7 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
 
             e.HasOne(pm => pm.Magia)
-             .WithMany(m => m.PersonagemMagias) 
+             .WithMany(m => m.PersonagemMagias)
              .HasForeignKey(pm => pm.IdMagia)
              .OnDelete(DeleteBehavior.Cascade);
         });
@@ -434,7 +438,6 @@ public class AppDbContext : DbContext
             e.Property(n => n.Historia).HasColumnName("historia");
             e.Property(n => n.Imagem).HasColumnName("imagem").HasColumnType("varchar(max)");
 
-            // Colunas removidas do banco (ignoradas pelo EF Core)
             e.Ignore(n => n.Ocupacao);
             e.Ignore(n => n.Alinhamento);
             e.Ignore(n => n.Localizacao);
@@ -566,6 +569,78 @@ public class AppDbContext : DbContext
              .WithMany(c => c.MapaCampanhas)
              .HasForeignKey(mc => mc.IdCampanha)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // =====================================================================
+        // 8. SESSÃO DE MESA (PRESENÇA, MAPA ATIVO E CHAT)
+        // =====================================================================
+        modelBuilder.Entity<SessaoMesa>(e =>
+        {
+            e.ToTable("Sessao_Mesa");
+            e.HasKey(s => s.IdSessao);
+            e.Property(s => s.IdSessao).HasColumnName("id_sessao");
+            e.Property(s => s.IdCampanha).HasColumnName("id_campanha");
+            e.Property(s => s.IdMapaAtivo).HasColumnName("id_mapa_ativo");
+            e.Property(s => s.DataAtualizacao).HasColumnName("data_atualizacao");
+
+            e.HasIndex(s => s.IdCampanha).IsUnique();
+
+            e.HasOne(s => s.Campanha)
+             .WithMany()
+             .HasForeignKey(s => s.IdCampanha)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(s => s.MapaAtivo)
+             .WithMany()
+             .HasForeignKey(s => s.IdMapaAtivo)
+             .IsRequired(false);
+        });
+
+        modelBuilder.Entity<SessaoParticipante>(e =>
+        {
+            e.ToTable("Sessao_Participante");
+            e.HasKey(sp => new { sp.IdSessao, sp.IdAccount });
+            e.Property(sp => sp.IdSessao).HasColumnName("id_sessao");
+            e.Property(sp => sp.IdAccount).HasColumnName("id_account");
+            e.Property(sp => sp.IdPersonagem).HasColumnName("id_personagem");
+            e.Property(sp => sp.Online).HasColumnName("online");
+            e.Property(sp => sp.UltimoHeartbeat).HasColumnName("ultimo_heartbeat");
+
+            e.HasOne(sp => sp.Sessao)
+             .WithMany(s => s.Participantes)
+             .HasForeignKey(sp => sp.IdSessao)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(sp => sp.Usuario)
+             .WithMany()
+             .HasForeignKey(sp => sp.IdAccount);
+
+            e.HasOne(sp => sp.Personagem)
+             .WithMany()
+             .HasForeignKey(sp => sp.IdPersonagem)
+             .IsRequired(false);
+        });
+
+        modelBuilder.Entity<SessaoMensagem>(e =>
+        {
+            e.ToTable("Sessao_Mensagem");
+            e.HasKey(sm => sm.IdMensagem);
+            e.Property(sm => sm.IdMensagem).HasColumnName("id_mensagem");
+            e.Property(sm => sm.IdSessao).HasColumnName("id_sessao");
+            e.Property(sm => sm.IdAccount).HasColumnName("id_account");
+            e.Property(sm => sm.Canal).HasColumnName("canal").HasMaxLength(20).IsRequired();
+            e.Property(sm => sm.Conteudo).HasColumnName("conteudo").IsRequired();
+            e.Property(sm => sm.DataEnvio).HasColumnName("data_envio");
+
+            e.HasOne(sm => sm.Sessao)
+             .WithMany(s => s.Mensagens)
+             .HasForeignKey(sm => sm.IdSessao)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(sm => sm.Usuario)
+             .WithMany()
+             .HasForeignKey(sm => sm.IdAccount)
+             .IsRequired(false);
         });
     }
 }

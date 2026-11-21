@@ -105,7 +105,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public HashSet<string> SalvaguardasEdicao { get; set; } = new();
         public HashSet<string> PericiasEdicao { get; set; } = new();
 
-        // Catálogo e Edição de Magias (dbo.Magia)
         public List<Magia> MagiasCatalogo { get; private set; } = new();
         public List<MagiaGrimorioEntry> MagiasEdicao { get; set; } = new();
         public string TermoBuscaMagiaEdicao { get; set; } = string.Empty;
@@ -456,7 +455,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                 : string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
         }
 
-        // --- MÉTODOS DE MAGIAS (CATÁLOGO + PERSONALIZADA + VISUALIZAÇÃO) ---
         public void VincularMagiaCatalogoEdicao(Magia magia)
         {
             if (magia == null) return;
@@ -742,19 +740,25 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public void ConectarNaSala()
         {
+            if (CampanhaAtual is null)
+            {
+                DefinirErro("Campanha não carregada.");
+                return;
+            }
+
             if (StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
             {
                 VinculoSelecionado = FichasAceitasDoJogador.First();
                 FichaCompletaVinculada = VinculoSelecionado.Personagem;
             }
 
-            if (StatusFichaAtual != "Aceita")
+            if (StatusFichaAtual != "Aceita" || VinculoSelecionado is null)
             {
                 DefinirErro("Selecione uma ficha aprovada pelo Mestre antes de conectar na sessão.");
                 return;
             }
 
-            _navigation.NavigateTo("/saladojogo");
+            _navigation.NavigateTo($"/sessao/{CampanhaAtual.IdCampanha}/{VinculoSelecionado.IdPersonagem}");
         }
 
         public void IrParaEtapa(int etapa)
