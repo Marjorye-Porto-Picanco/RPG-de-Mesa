@@ -333,7 +333,7 @@ public class SessaoRepository : ISessaoRepository
     }
 
     // =========================================================================
-    // PINOS (TOKENS) NO MAPA
+    // PINOS (TOKENS) SALVOS POR MAPA
     // =========================================================================
     public async Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao)
     {
@@ -345,18 +345,19 @@ public class SessaoRepository : ISessaoRepository
             .ToListAsync();
     }
 
-    public async Task SalvarOuMoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel)
+    public async Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
 
         var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.IdMapa == idMapa
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
 
         if (existente == null)
         {
-            var novo = new SessaoPino(idSessao, tipoEntidade, idEntidade, coluna, linha, visivel);
+            var novo = new SessaoPino(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
             await contexto.SessaoPinos.AddAsync(novo);
         }
         else
@@ -368,12 +369,13 @@ public class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
-    public async Task AlterarVisibilidadePinoAsync(int idSessao, string tipoEntidade, int idEntidade, bool visivel)
+    public async Task AlterarVisibilidadePinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, bool visivel)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
 
         var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.IdMapa == idMapa
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
 
@@ -383,12 +385,13 @@ public class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
-    public async Task RemoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade)
+    public async Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
 
         var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.IdMapa == idMapa
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
 

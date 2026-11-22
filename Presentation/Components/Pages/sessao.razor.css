@@ -2883,3 +2883,36 @@ textarea {
     overflow: hidden;
     font-family: Georgia, "Times New Roman", serif;
 }
+/* ==========================================================================
+   ARRASTAR E SOLTAR PINOS NO MAPA (MESTRE)
+   ========================================================================== */
+.sala-jogo.em-arraste-pino,
+.sala-jogo.em-arraste-pino * {
+    user-select: none;
+    cursor: grabbing !important;
+}
+
+.mapa-pino.arrastavel {
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+    .mapa-pino.arrastavel:active {
+        cursor: grabbing;
+    }
+
+    .mapa-pino.arrastavel img {
+        pointer-events: none;
+        -webkit-user-drag: none;
+    }
+
+.mapa-pino.arrastando {
+    opacity: 0.45;
+    transform: scale(0.92);
+}
+
+.celula-grade.celula-drop-alvo {
+    background-color: rgba(212, 180, 96, 0.38) !important;
+    box-shadow: inset 0 0 0 2px #f0d17f;
+}

@@ -1,4 +1,5 @@
-﻿using RPGdeMesa.Domain.Common;
+﻿using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Common;
 
 namespace RPGdeMesa.Domain.Sessoes;
 
@@ -13,6 +14,7 @@ public class SessaoPino
 {
     public int IdPino { get; private set; }
     public int IdSessao { get; private set; }
+    public int? IdMapa { get; private set; }
     public string TipoEntidade { get; private set; } = string.Empty;
     public int IdEntidade { get; private set; }
     public int Coluna { get; private set; }
@@ -20,10 +22,11 @@ public class SessaoPino
     public bool Visivel { get; private set; } = true;
 
     public virtual SessaoMesa Sessao { get; private set; } = null!;
+    public virtual Mapa? Mapa { get; private set; }
 
     protected SessaoPino() { }
 
-    public SessaoPino(int idSessao, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel = true)
+    public SessaoPino(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel = true)
     {
         if (idSessao <= 0)
             throw new DomainException("Sessão inválida.");
@@ -33,6 +36,7 @@ public class SessaoPino
             throw new DomainException("Entidade inválida para o pino.");
 
         IdSessao = idSessao;
+        IdMapa = idMapa;
         TipoEntidade = tipoEntidade.Trim();
         IdEntidade = idEntidade;
         Coluna = Math.Clamp(coluna, 0, 19);
