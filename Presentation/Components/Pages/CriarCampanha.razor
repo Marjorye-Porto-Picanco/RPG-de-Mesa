@@ -1,10 +1,8 @@
 @page "/criar-campanha"
 @implements IDisposable
 @using RPGdeMesa.Presentation.Components.Layout
-@inject CampanhaService CampanhaService
-@inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
-@inject SessaoUsuarioService SessaoUsuario
+@using RPGdeMesa.Presentation.ViewModel
+@inject CriarCampanhaViewModel viewModel
 
 <NavMenu />
 
@@ -154,7 +152,13 @@
                         <!-- MAPAS DA CAMPANHA -->
                         <div class="campo-ficha">
                             <span>Mapas da campanha</span>
-                            <InputFile id="mapa" class="entrada-arquivo" OnChange="viewModel.AdicionarMapasAsync" multiple accept="image/*" />
+                            <button type="button"
+                                    id="mapa"
+                                    class="entrada-arquivo"
+                                    disabled="@viewModel.CarregandoImagem"
+                                    @onclick="viewModel.AdicionarMapasAsync">
+                                @(viewModel.CarregandoImagem ? "Carregando..." : "↑ Selecionar mapas")
+                            </button>
 
                             @if (viewModel.ListaMapas.Any())
                             {
@@ -174,14 +178,19 @@
 
                         <div class="campo-ficha full-width">
                             <span>Capa da campanha</span>
-                            <InputFile id="capa" class="entrada-arquivo" OnChange="viewModel.SelecionarCapaAsync" accept="image/*" />
+                            <button type="button"
+                                    id="capa"
+                                    class="entrada-arquivo"
+                                    disabled="@viewModel.CarregandoImagem"
+                                    @onclick="viewModel.SelecionarCapaAsync">
+                                @(viewModel.CarregandoImagem ? "Carregando..." : (string.IsNullOrEmpty(viewModel.CapaBase64) ? "↑ Selecionar capa" : "↑ Trocar capa"))
+                            </button>
 
                             @if (!string.IsNullOrEmpty(viewModel.CapaBase64))
                             {
-                                <div class="preview-capa">
-                                    <img src="@viewModel.CapaBase64" alt="Pré-visualização da capa" />
+                                <div class="lista-mapas">
                                     <div class="mapa-item">
-                                        <span>@viewModel.NomeArquivoCapa</span>
+                                        <span>@(string.IsNullOrWhiteSpace(viewModel.NomeArquivoCapa) ? "Capa selecionada" : viewModel.NomeArquivoCapa)</span>
                                         <button type="button" class="btn-remover-item" aria-label="Remover capa" @onclick="viewModel.RemoverCapa">×</button>
                                     </div>
                                 </div>
@@ -201,7 +210,7 @@
 
                     <footer class="form-footer">
                         <a class="action-secondary" href="/campanhas">Cancelar</a>
-                        <button class="action-primary" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@viewModel.IsProcessing">
+                        <button class="action-primary" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@(viewModel.IsProcessing || viewModel.CarregandoImagem)">
                             @(viewModel.IsProcessing ? "Criando..." : "Criar campanha →")
                         </button>
                     </footer>
@@ -222,7 +231,7 @@
                     <p class="texto-apoio">Compartilhe este código com seus jogadores.</p>
                 </section>
 
-                <!-- RECURSOS VINCULADOS (NO LUGAR DE JOGADORES) -->
+                <!-- RECURSOS VINCULADOS -->
                 <section class="aside-card" aria-labelledby="titulo-vinculados">
                     <div class="aside-heading-linha">
                         <div>
@@ -300,21 +309,19 @@
 </main>
 
 @code {
-    private CriarCampanhaViewModel viewModel = default!;
     private bool _focoMonstro;
     private bool _focoNpc;
     private bool _focoItem;
 
     protected override async Task OnInitializedAsync()
     {
-        viewModel = new CriarCampanhaViewModel(CampanhaService, Navigation, JSRuntime, SessaoUsuario);
+        viewModel.OnChange -= StateHasChanged;
         viewModel.OnChange += StateHasChanged;
         await viewModel.CarregarBibliotecasAsync();
     }
 
     public void Dispose()
     {
-        if (viewModel != null)
-            viewModel.OnChange -= StateHasChanged;
+        viewModel.OnChange -= StateHasChanged;
     }
 }
