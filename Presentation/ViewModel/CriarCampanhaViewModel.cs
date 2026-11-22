@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.JSInterop;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
+using RPGdeMesa.Presentation.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,23 +16,24 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class CriarCampanhaViewModel
     {
-        private const long TamanhoMaximoImagem = 5 * 1024 * 1024; // 5 MB
-
         private readonly CampanhaService _campanhaService;
         private readonly NavigationManager _navigation;
         private readonly IJSRuntime _jsRuntime;
         private readonly SessaoUsuarioService _sessaoUsuario;
+        private readonly ImagemPickerService _imagemPicker;
 
         public CriarCampanhaViewModel(
             CampanhaService campanhaService,
             NavigationManager navigation,
             IJSRuntime jsRuntime,
-            SessaoUsuarioService sessaoUsuario)
+            SessaoUsuarioService sessaoUsuario,
+            ImagemPickerService imagemPicker)
         {
             _campanhaService = campanhaService;
             _navigation = navigation;
             _jsRuntime = jsRuntime;
             _sessaoUsuario = sessaoUsuario;
+            _imagemPicker = imagemPicker;
 
             CodigoConvite = GerarCodigoConvite();
         }
@@ -61,6 +62,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
+        public bool CarregandoImagem { get; private set; }
 
         public int TotalRecursosVinculados =>
             ListaMonstros.Count + ListaNPCs.Count + ListaItensCampanha.Count;
@@ -166,33 +168,30 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // --- MAPAS E CAPA ---
-        private async Task<string> ConverterParaBase64Async(IBrowserFile arquivo)
+        public async Task SelecionarCapaAsync()
         {
-            using var stream = arquivo.OpenReadStream(TamanhoMaximoImagem);
-            using var ms = new MemoryStream();
-            await stream.CopyToAsync(ms);
-            var base64 = Convert.ToBase64String(ms.ToArray());
-            return $"data:{arquivo.ContentType};base64,{base64}";
-        }
-
-        public async Task SelecionarCapaAsync(InputFileChangeEventArgs e)
-        {
-            var arquivo = e.File;
-            if (arquivo is null) return;
+            if (CarregandoImagem) return;
+            CarregandoImagem = true;
+            NotifyStateChanged();
 
             try
             {
-                CapaBase64 = await ConverterParaBase64Async(arquivo);
-                NomeArquivoCapa = arquivo.Name;
-                MensagemFeedback = "";
-            }
-            catch (Exception ex)
-            {
-                Sucesso = false;
-                MensagemFeedback = $"Erro ao carregar capa (máx. 5MB): {ex.Message}";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 1280);
+                if (res.Erro is not null)
+                {
+                    Sucesso = false;
+                    MensagemFeedback = res.Erro;
+                }
+                else if (res.Imagem is not null)
+                {
+                    CapaBase64 = res.Imagem.DataUrl;
+                    NomeArquivoCapa = res.Imagem.NomeArquivo;
+                    MensagemFeedback = "";
+                }
             }
             finally
             {
+                CarregandoImagem = false;
                 NotifyStateChanged();
             }
         }
@@ -204,29 +203,38 @@ namespace RPGdeMesa.Presentation.ViewModel
             NotifyStateChanged();
         }
 
-        public async Task AdicionarMapasAsync(InputFileChangeEventArgs e)
+        public async Task AdicionarMapasAsync()
         {
+            if (CarregandoImagem) return;
+            CarregandoImagem = true;
+            NotifyStateChanged();
+
             try
             {
-                foreach (var arquivo in e.GetMultipleFiles(10))
+                var res = await _imagemPicker.SelecionarVariasAsync(maxArquivos: 10, ladoMaximo: 1600);
+                foreach (var img in res.Imagens)
                 {
-                    var base64 = await ConverterParaBase64Async(arquivo);
                     ListaMapas.Add(new Mapa
                     {
                         IdAccount = _sessaoUsuario.IdUsuarioLogado,
-                        NomeRegiao = Path.GetFileNameWithoutExtension(arquivo.Name),
-                        ImagemUrl = base64
+                        NomeRegiao = Path.GetFileNameWithoutExtension(img.NomeArquivo),
+                        ImagemUrl = img.DataUrl
                     });
                 }
-                MensagemFeedback = "";
-            }
-            catch (Exception ex)
-            {
-                Sucesso = false;
-                MensagemFeedback = $"Erro ao carregar mapa (máx. 5MB): {ex.Message}";
+
+                if (res.Erro is not null)
+                {
+                    Sucesso = false;
+                    MensagemFeedback = res.Erro;
+                }
+                else if (res.Imagens.Count > 0)
+                {
+                    MensagemFeedback = "";
+                }
             }
             finally
             {
+                CarregandoImagem = false;
                 NotifyStateChanged();
             }
         }

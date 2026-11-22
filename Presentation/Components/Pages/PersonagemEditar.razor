@@ -1,5 +1,4 @@
 ﻿@page "/personagem-editar/{Id:int}"
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
@@ -20,10 +19,13 @@
                              src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)"
                              alt="Retrato do personagem" />
                     </div>
-                    <label class="upload-imagem-botao retrato-upload">
-                        <span aria-hidden="true">↑</span> Foto
-                        <InputFile OnChange="ViewModel.CarregarFotoAsync" accept="image/*" aria-label="Alterar foto do personagem" />
-                    </label>
+                    <button type="button"
+                            class="upload-imagem-botao retrato-upload"
+                            disabled="@ViewModel.CarregandoFoto"
+                            aria-label="Alterar foto do personagem"
+                            @onclick="ViewModel.CarregarFotoAsync">
+                        <span aria-hidden="true">↑</span> @(ViewModel.CarregandoFoto ? "..." : "Foto")
+                    </button>
                 </div>
 
                 <div class="identidade">
@@ -429,7 +431,7 @@
                                 }
                             </div>
 
-                            <!-- Magias Equipadas no Grimório (com scroll interno) -->
+                            <!-- Magias Equipadas no Grimório -->
                             <div class="categoria-itens-edicao">
                                 <div class="titulo-categoria-edicao">
                                     <h3>✦ Magias Equipadas no Grimório (@ViewModel.Magias.Count)</h3>
@@ -473,7 +475,7 @@
                             </div>
                         </div>
 
-                        <!-- COLUNA DIREITA: Resumo + Visualização Completa de todos os campos da Magia -->
+                        <!-- COLUNA DIREITA: Resumo + Visualização Completa -->
                         <aside class="resumo-inventario-edicao" aria-label="Resumo e detalhes da magia">
                             <div class="painel-moedas-edicao">
                                 <h3>Resumo do Grimório</h3>
@@ -549,7 +551,7 @@
 
             <div style="position: relative; z-index: 1; padding-top: 16px; border-top: 1px solid rgba(126, 87, 31, 0.35); display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="action-secondary" type="button" @onclick="ViewModel.AbrirAvisoSaida">Cancelar</button>
-                <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@ViewModel.IsProcessing">
+                <button class="action-primary" type="button" @onclick="ViewModel.SalvarAlteracoesAsync" disabled="@(ViewModel.IsProcessing || ViewModel.CarregandoFoto)">
                     @(ViewModel.IsProcessing ? "Salvando..." : "Salvar Alterações")
                 </button>
             </div>
