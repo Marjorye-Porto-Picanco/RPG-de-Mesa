@@ -45,7 +45,7 @@
                                         </button>
                                         @if (TemFoto)
                                         {
-                                            <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
+                                            <button type="button" class="btn-foto-sec" disabled="@_carregandoFoto" @onclick="RemoverFoto">Remover</button>
                                         }
                                     </div>
                                     <p class="foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
@@ -65,17 +65,30 @@
                         <label class="campo-ficha">
                             <span>Raça</span>
                             <select @bind="Npc.RacaTexto">
-                                <option value="Humano">Humano</option><option value="Elfo">Elfo</option><option value="Anão">Anão</option>
-                                <option value="Halfling">Halfling</option><option value="Meio-elfo">Meio-elfo</option><option value="Tiefling">Tiefling</option><option value="Orc">Orc</option><option value="Outra">Outra</option>
+                                <option value="Humano">Humano</option>
+                                <option value="Elfo">Elfo</option>
+                                <option value="Anão">Anão</option>
+                                <option value="Halfling">Halfling</option>
+                                <option value="Meio-elfo">Meio-elfo</option>
+                                <option value="Tiefling">Tiefling</option>
+                                <option value="Orc">Orc</option>
+                                <option value="Outra">Outra</option>
                             </select>
                         </label>
                         <label class="campo-ficha">
                             <span>Classe</span>
                             <select @bind="Npc.ClasseTexto">
-                                <option value="Guerreiro">Guerreiro</option><option value="Bárbaro">Bárbaro</option><option value="Bardo">Bardo</option>
-                                <option value="Clérigo">Clérigo</option><option value="Druida">Druida</option><option value="Ladino">Ladino</option>
-                                <option value="Mago">Mago</option><option value="Paladino">Paladino</option><option value="Patrulheiro">Patrulheiro</option>
-                                <option value="Bruxo">Bruxo</option><option value="Civil / Plebeu">Civil / Plebeu</option>
+                                <option value="Guerreiro">Guerreiro</option>
+                                <option value="Bárbaro">Bárbaro</option>
+                                <option value="Bardo">Bardo</option>
+                                <option value="Clérigo">Clérigo</option>
+                                <option value="Druida">Druida</option>
+                                <option value="Ladino">Ladino</option>
+                                <option value="Mago">Mago</option>
+                                <option value="Paladino">Paladino</option>
+                                <option value="Patrulheiro">Patrulheiro</option>
+                                <option value="Bruxo">Bruxo</option>
+                                <option value="Civil / Plebeu">Civil / Plebeu</option>
                             </select>
                         </label>
                         <label class="campo-ficha">
@@ -86,9 +99,15 @@
                         <label class="campo-ficha">
                             <span>Tendência</span>
                             <select @bind="Npc.Tendencia">
-                                <option value="Neutra">Neutra</option><option value="Leal e boa">Leal e boa</option><option value="Neutra e boa">Neutra e boa</option>
-                                <option value="Caótica e boa">Caótica e boa</option><option value="Leal e neutra">Leal e neutra</option><option value="Caótica e neutra">Caótica e neutra</option>
-                                <option value="Leal e má">Leal e má</option><option value="Neutra e má">Neutra e má</option><option value="Caótica e má">Caótica e má</option>
+                                <option value="Neutra">Neutra</option>
+                                <option value="Leal e boa">Leal e boa</option>
+                                <option value="Neutra e boa">Neutra e boa</option>
+                                <option value="Caótica e boa">Caótica e boa</option>
+                                <option value="Leal e neutra">Leal e neutra</option>
+                                <option value="Caótica e neutra">Caótica e neutra</option>
+                                <option value="Leal e má">Leal e má</option>
+                                <option value="Neutra e má">Neutra e má</option>
+                                <option value="Caótica e má">Caótica e má</option>
                             </select>
                         </label>
                         <label class="campo-ficha full-width">

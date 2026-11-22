@@ -48,7 +48,7 @@
                     </button>
                     @if (ViewModel.TemAvatar)
                     {
-                        <button type="button" class="action-quiet" @onclick="ViewModel.RemoverAvatar">Remover foto</button>
+                        <button type="button" class="action-quiet" disabled="@ViewModel.CarregandoAvatar" @onclick="ViewModel.RemoverAvatar">Remover foto</button>
                     }
                     <p class="upload-imagem-status" role="status" aria-live="polite">@ViewModel.StatusUpload</p>
                 </div>

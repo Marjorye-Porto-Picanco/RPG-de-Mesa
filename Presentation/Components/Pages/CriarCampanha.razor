@@ -152,7 +152,11 @@
                         <!-- MAPAS DA CAMPANHA -->
                         <div class="campo-ficha">
                             <span>Mapas da campanha</span>
-                            <button type="button" class="entrada-arquivo" disabled="@viewModel.CarregandoImagem" @onclick="viewModel.AdicionarMapasAsync">
+                            <button type="button"
+                                    id="mapa"
+                                    class="entrada-arquivo"
+                                    disabled="@viewModel.CarregandoImagem"
+                                    @onclick="viewModel.AdicionarMapasAsync">
                                 @(viewModel.CarregandoImagem ? "Carregando..." : "↑ Selecionar mapas")
                             </button>
 
@@ -174,16 +178,19 @@
 
                         <div class="campo-ficha full-width">
                             <span>Capa da campanha</span>
-                            <button type="button" class="entrada-arquivo" disabled="@viewModel.CarregandoImagem" @onclick="viewModel.SelecionarCapaAsync">
-                                @(viewModel.CarregandoImagem ? "Carregando..." : "↑ Selecionar capa")
+                            <button type="button"
+                                    id="capa"
+                                    class="entrada-arquivo"
+                                    disabled="@viewModel.CarregandoImagem"
+                                    @onclick="viewModel.SelecionarCapaAsync">
+                                @(viewModel.CarregandoImagem ? "Carregando..." : (string.IsNullOrEmpty(viewModel.CapaBase64) ? "↑ Selecionar capa" : "↑ Trocar capa"))
                             </button>
 
                             @if (!string.IsNullOrEmpty(viewModel.CapaBase64))
                             {
-                                <div class="preview-capa">
-                                    <img src="@viewModel.CapaBase64" alt="Pré-visualização da capa" />
+                                <div class="lista-mapas">
                                     <div class="mapa-item">
-                                        <span>@viewModel.NomeArquivoCapa</span>
+                                        <span>@(string.IsNullOrWhiteSpace(viewModel.NomeArquivoCapa) ? "Capa selecionada" : viewModel.NomeArquivoCapa)</span>
                                         <button type="button" class="btn-remover-item" aria-label="Remover capa" @onclick="viewModel.RemoverCapa">×</button>
                                     </div>
                                 </div>
@@ -203,7 +210,7 @@
 
                     <footer class="form-footer">
                         <a class="action-secondary" href="/campanhas">Cancelar</a>
-                        <button class="action-primary" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@viewModel.IsProcessing">
+                        <button class="action-primary" type="button" @onclick="viewModel.SalvarCampanhaAsync" disabled="@(viewModel.IsProcessing || viewModel.CarregandoImagem)">
                             @(viewModel.IsProcessing ? "Criando..." : "Criar campanha →")
                         </button>
                     </footer>
@@ -224,7 +231,7 @@
                     <p class="texto-apoio">Compartilhe este código com seus jogadores.</p>
                 </section>
 
-                <!-- RECURSOS VINCULADOS (NO LUGAR DE JOGADORES) -->
+                <!-- RECURSOS VINCULADOS -->
                 <section class="aside-card" aria-labelledby="titulo-vinculados">
                     <div class="aside-heading-linha">
                         <div>

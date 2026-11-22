@@ -45,7 +45,7 @@
                                         </button>
                                         @if (TemFoto)
                                         {
-                                            <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
+                                            <button type="button" class="btn-foto-sec" disabled="@_carregandoFoto" @onclick="RemoverFoto">Remover</button>
                                         }
                                     </div>
                                     <p class="foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>

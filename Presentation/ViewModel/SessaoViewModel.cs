@@ -46,6 +46,7 @@ public class SessaoViewModel : IAsyncDisposable
     private CancellationTokenSource? _syncCts;
     private Task? _syncTask;
     private bool _desconectado;
+    private bool _moveuDuranteArraste;
 
     public event Action? OnChange;
 
@@ -84,10 +85,12 @@ public class SessaoViewModel : IAsyncDisposable
     public const int GradeLinhas = 20;
     public const int TamanhoBaseMapaPx = 720;
 
-    // Painel de Pinos (Exclusivo do Mestre)
+    // Painel de Pinos e Arraste por Pointer Events (Exclusivo do Mestre)
     public bool ExibirPainelPinos { get; private set; }
     public string AbaPinosAtiva { get; private set; } = "jogadores";
     public PinoSelecionadoParaColocar? PinoParaPosicionar { get; private set; }
+    public PinoMapaDto? PinoArrastando { get; private set; }
+    public (int Coluna, int Linha)? CelulaDestinoArraste { get; private set; }
     public bool NovoPinoVisivel { get; set; } = true;
 
     // Modais de Ficha de Monstro / NPC (ao clicar no pino)
@@ -118,10 +121,20 @@ public class SessaoViewModel : IAsyncDisposable
     public IEnumerable<MensagemSessaoDto> MensagensAbaAtiva =>
         Estado.Mensagens.Where(m => string.Equals(m.Canal, AbaChatAtiva, StringComparison.OrdinalIgnoreCase));
 
-    public IEnumerable<PinoMapaDto> PinosVisiveisNoMapa =>
-        Estado.EhMestre
-            ? Estado.Pinos
-            : Estado.Pinos.Where(p => p.Visivel);
+    // Exibe apenas os pinos pertencentes ao mapa ativo atual
+    public IEnumerable<PinoMapaDto> PinosVisiveisNoMapa
+    {
+        get
+        {
+            if (!Estado.IdMapaAtivo.HasValue)
+                return Enumerable.Empty<PinoMapaDto>();
+
+            var pinosDoMapa = Estado.Pinos.Where(p => p.IdMapa == Estado.IdMapaAtivo);
+            return Estado.EhMestre
+                ? pinosDoMapa
+                : pinosDoMapa.Where(p => p.Visivel);
+        }
+    }
 
     public SessaoViewModel(
         SessaoService sessaoService,
@@ -152,6 +165,9 @@ public class SessaoViewModel : IAsyncDisposable
         ExibirModalFicha = false;
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
         MonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
         FichaEmVisualizacao = null;
@@ -251,11 +267,14 @@ public class SessaoViewModel : IAsyncDisposable
 
     private async Task SincronizarAgoraAsync(CancellationToken ct = default)
     {
-        if (Estado.IdSessao <= 0 || _desconectado || ModoRevisaoPosSessao) return;
+        if (Estado.IdSessao <= 0 || _desconectado || ModoRevisaoPosSessao || PinoArrastando != null)
+            return;
 
         await _dbLock.WaitAsync(ct);
         try
         {
+            if (PinoArrastando != null) return;
+
             var novoEstado = await _sessaoService.SincronizarSessaoAsync(
                 Estado.IdCampanha,
                 Estado.IdSessao,
@@ -289,7 +308,7 @@ public class SessaoViewModel : IAsyncDisposable
     }
 
     // =========================================================================
-    // PAINEL DE PINOS (MESTRE) E FICHAS DE MONSTRO / NPC
+    // PAINEL DE PINOS POR MAPA, ARRASTE (POINTER EVENTS) E FICHAS DE MONSTRO / NPC
     // =========================================================================
     public void AlternarPainelPinos()
     {
@@ -307,11 +326,44 @@ public class SessaoViewModel : IAsyncDisposable
     }
 
     public PinoMapaDto? ObterPinoNoMapa(string tipoEntidade, int idEntidade) =>
-        Estado.Pinos.FirstOrDefault(p => p.TipoEntidade == tipoEntidade && p.IdEntidade == idEntidade);
+        Estado.IdMapaAtivo.HasValue
+            ? Estado.Pinos.FirstOrDefault(p =>
+                p.IdMapa == Estado.IdMapaAtivo &&
+                p.TipoEntidade == tipoEntidade &&
+                p.IdEntidade == idEntidade)
+            : null;
+
+    public string? ObterResumoOutroMapaDoPino(string tipoEntidade, int idEntidade)
+    {
+        var outros = Estado.Pinos
+            .Where(p => p.IdMapa.HasValue
+                     && p.IdMapa != Estado.IdMapaAtivo
+                     && p.TipoEntidade == tipoEntidade
+                     && p.IdEntidade == idEntidade)
+            .ToList();
+
+        if (!outros.Any()) return null;
+
+        var nomes = outros.Select(p =>
+        {
+            var mapa = Estado.MapasDisponiveis.FirstOrDefault(m => m.IdMapa == p.IdMapa);
+            string nomeMapa = mapa?.NomeRegiao ?? $"Mapa #{p.IdMapa}";
+            return $"{nomeMapa} ({p.CoordenadaTexto})";
+        });
+
+        return $"Salvo em: {string.Join(", ", nomes)}";
+    }
 
     public void SelecionarPinoParaPosicionar(string tipoEntidade, int idEntidade, string nome)
     {
         if (!Estado.EhMestre) return;
+
+        if (!Estado.IdMapaAtivo.HasValue)
+        {
+            FeedbackAcao = "Selecione um mapa na barra superior antes de posicionar pinos.";
+            Notificar();
+            return;
+        }
 
         if (PinoParaPosicionar is not null &&
             PinoParaPosicionar.TipoEntidade == tipoEntidade &&
@@ -323,7 +375,7 @@ public class SessaoViewModel : IAsyncDisposable
         else
         {
             PinoParaPosicionar = new PinoSelecionadoParaColocar(tipoEntidade, idEntidade, nome);
-            FeedbackAcao = $"Clique em uma casa do mapa 20×20 para posicionar \"{nome}\".";
+            FeedbackAcao = $"Clique em uma casa de \"{Estado.MapaAtivo?.NomeRegiao}\" para posicionar \"{nome}\".";
         }
         Notificar();
     }
@@ -335,10 +387,114 @@ public class SessaoViewModel : IAsyncDisposable
         Notificar();
     }
 
+    public void IniciarArrastePino(PinoMapaDto pino)
+    {
+        if (!Estado.EhMestre) return;
+        PinoParaPosicionar = null;
+        PinoArrastando = pino;
+        CelulaDestinoArraste = (pino.Coluna, pino.Linha);
+        _moveuDuranteArraste = false;
+        Notificar();
+    }
+
+    public void AtualizarCelulaDestinoArraste(int coluna, int linha)
+    {
+        if (!Estado.EhMestre || PinoArrastando is null) return;
+        if (CelulaDestinoArraste == (coluna, linha)) return;
+
+        CelulaDestinoArraste = (coluna, linha);
+        if (coluna != PinoArrastando.Coluna || linha != PinoArrastando.Linha)
+            _moveuDuranteArraste = true;
+
+        Notificar();
+    }
+
+    public void FinalizarArrastePino()
+    {
+        if (PinoArrastando is null && CelulaDestinoArraste is null) return;
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
+        Notificar();
+    }
+
+    public async Task SoltarPinoNaCelulaAsync(int coluna, int linha)
+    {
+        if (!Estado.EhMestre || PinoArrastando is null || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue)
+        {
+            FinalizarArrastePino();
+            return;
+        }
+
+        var pino = PinoArrastando;
+        int? idMapaAlvo = Estado.IdMapaAtivo;
+        int colClamped = Math.Clamp(coluna, 0, GradeColunas - 1);
+        int linClamped = Math.Clamp(linha, 0, GradeLinhas - 1);
+
+        bool realmenteMoveu = _moveuDuranteArraste && (pino.Coluna != colClamped || pino.Linha != linClamped);
+
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
+
+        // Se o Mestre apenas clicou sem arrastar para outra casa, abre a ficha do pino
+        if (!realmenteMoveu)
+        {
+            Notificar();
+            await AoClicarPinoMapaAsync(pino);
+            return;
+        }
+
+        // Atualização otimista imediata na tela antes de persistir no banco
+        pino.Coluna = colClamped;
+        pino.Linha = linClamped;
+        FeedbackAcao = null;
+        Notificar();
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (sucesso, erro) = await _sessaoService.PosicionarPinoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                idMapaAlvo,
+                _sessaoUsuario.IdUsuarioLogado,
+                pino.TipoEntidade,
+                pino.IdEntidade,
+                colClamped,
+                linClamped,
+                pino.Visivel);
+
+            if (!sucesso)
+                FeedbackAcao = erro;
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            Notificar();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
     public async Task AoClicarCelulaMapaAsync(int coluna, int linha)
     {
         if (!Estado.EhMestre || PinoParaPosicionar is null || Estado.IdSessao <= 0)
             return;
+
+        if (!Estado.IdMapaAtivo.HasValue)
+        {
+            FeedbackAcao = "Selecione um mapa antes de posicionar pinos.";
+            Notificar();
+            return;
+        }
 
         var alvo = PinoParaPosicionar;
         var existente = ObterPinoNoMapa(alvo.TipoEntidade, alvo.IdEntidade);
@@ -350,6 +506,7 @@ public class SessaoViewModel : IAsyncDisposable
             var (sucesso, erro) = await _sessaoService.PosicionarPinoAsync(
                 Estado.IdCampanha,
                 Estado.IdSessao,
+                Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
                 alvo.TipoEntidade,
                 alvo.IdEntidade,
@@ -385,7 +542,7 @@ public class SessaoViewModel : IAsyncDisposable
 
     public async Task AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade)
     {
-        if (!Estado.EhMestre || Estado.IdSessao <= 0) return;
+        if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
 
         var pino = ObterPinoNoMapa(tipoEntidade, idEntidade);
         if (pino == null) return;
@@ -396,6 +553,7 @@ public class SessaoViewModel : IAsyncDisposable
             var (sucesso, erro) = await _sessaoService.AlterarVisibilidadePinoAsync(
                 Estado.IdCampanha,
                 Estado.IdSessao,
+                Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
                 idEntidade,
@@ -422,7 +580,7 @@ public class SessaoViewModel : IAsyncDisposable
 
     public async Task RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade)
     {
-        if (!Estado.EhMestre || Estado.IdSessao <= 0) return;
+        if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
 
         await _dbLock.WaitAsync();
         try
@@ -430,6 +588,7 @@ public class SessaoViewModel : IAsyncDisposable
             var (sucesso, erro) = await _sessaoService.RemoverPinoAsync(
                 Estado.IdCampanha,
                 Estado.IdSessao,
+                Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
                 idEntidade);
@@ -499,6 +658,15 @@ public class SessaoViewModel : IAsyncDisposable
         int? idMapaSelecionado = int.TryParse(e.Value?.ToString(), out int parsed) && parsed > 0
             ? parsed
             : null;
+
+        PinoParaPosicionar = null;
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
+
+        Estado.IdMapaAtivo = idMapaSelecionado;
+        Estado.MapaAtivo = Estado.MapasDisponiveis.FirstOrDefault(m => m.IdMapa == idMapaSelecionado);
+        Notificar();
 
         await _dbLock.WaitAsync();
         try
@@ -878,6 +1046,10 @@ public class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirPainelPinos = false;
+        PinoParaPosicionar = null;
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
         MonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
         Notificar();

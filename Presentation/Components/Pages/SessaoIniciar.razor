@@ -76,7 +76,6 @@
                                     Avaliar @ViewModel.FichasPendentes.Count() Ficha(s) Pendente(s)
                                 </button>
                             }
-                            @* <a class="action-secondary" href="/campanhas">Voltar para campanhas</a> *@
                         </div>
                     </section>
                 }
@@ -227,7 +226,7 @@
                                                         </button>
                                                         @if (ViewModel.TemFotoNpc)
                                                         {
-                                                            <button type="button" class="btn-foto-npc-sec" @onclick="ViewModel.RemoverFotoNpc">Remover</button>
+                                                            <button type="button" class="btn-foto-npc-sec" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.RemoverFotoNpc">Remover</button>
                                                         }
                                                     </div>
                                                     <p class="npc-foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
@@ -365,7 +364,7 @@
                                                         </button>
                                                         @if (ViewModel.TemFotoMonstro)
                                                         {
-                                                            <button type="button" class="btn-foto-npc-sec" @onclick="ViewModel.RemoverFotoMonstro">Remover</button>
+                                                            <button type="button" class="btn-foto-npc-sec" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.RemoverFotoMonstro">Remover</button>
                                                         }
                                                     </div>
                                                     <p class="npc-foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
@@ -482,7 +481,7 @@
                                     }
 
                                     <div class="editor-actions">
-                                        <button class="save-button" type="submit">Cadastrar e Vincular</button>
+                                        <button class="save-button" type="submit" disabled="@ViewModel.CarregandoImagem">Cadastrar e Vincular</button>
                                     </div>
 
                                     @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
@@ -618,21 +617,24 @@
 
                                     <div class="form-field">
                                         <label for="novo-mapa-arquivo">Imagem do mapa*</label>
-                                        <button type="button" id="novo-mapa-arquivo" class="entrada-arquivo-mapa" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.SelecionarImagemNovoMapaAsync">
-                                            @(ViewModel.CarregandoImagem ? "Carregando..." : "↑ Escolher imagem do mapa")
+                                        <button type="button"
+                                                id="novo-mapa-arquivo"
+                                                class="entrada-arquivo-mapa"
+                                                disabled="@ViewModel.CarregandoImagem"
+                                                @onclick="ViewModel.SelecionarImagemNovoMapaAsync">
+                                            @(ViewModel.CarregandoImagem ? "Carregando..." : (string.IsNullOrWhiteSpace(ViewModel.NovoMapaImagemBase64) ? "↑ Escolher imagem do mapa" : "↑ Trocar imagem do mapa"))
                                         </button>
                                     </div>
 
                                     @if (!string.IsNullOrWhiteSpace(ViewModel.NovoMapaImagemBase64))
                                     {
                                         <div class="mapa-preview-upload">
-                                            <img src="@ViewModel.NovoMapaImagemBase64" alt="Pré-visualização do mapa" />
-                                            <small>@ViewModel.NovoMapaNomeArquivo</small>
+                                            <small>Arquivo selecionado: @(string.IsNullOrWhiteSpace(ViewModel.NovoMapaNomeArquivo) ? "Imagem do mapa" : ViewModel.NovoMapaNomeArquivo)</small>
                                         </div>
                                     }
 
                                     <div class="editor-actions">
-                                        <button type="submit" class="save-button">Cadastrar e Vincular Mapa</button>
+                                        <button type="submit" class="save-button" disabled="@ViewModel.CarregandoImagem">Cadastrar e Vincular Mapa</button>
                                     </div>
                                 </form>
                             }
@@ -710,7 +712,7 @@
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome</strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
-                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) selecionado(s) na campanha</small>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") ·  @qtdItens item(ns) selecionado(s) na campanha</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
                                                 <button type="button" class="btn-inspecionar" @onclick="() => ViewModel.CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
@@ -739,7 +741,7 @@
                                             <div class="ficha-mestre-info">
                                                 <strong>@p.Nome <span class="tag-aceita">✓ Aceita</span></strong>
                                                 <span>@(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe") · Nível @p.Nivel</span>
-                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") · 🎒 @qtdItens item(ns) equipado(s)</small>
+                                                <small>Jogador: @(p.Usuario?.UsarName ?? $"Conta #{p.IdAccount}") ·  @qtdItens item(ns) equipado(s)</small>
                                             </div>
                                             <div class="ficha-mestre-acoes">
                                                 <button type="button" class="btn-inspecionar" @onclick="() => ViewModel.CarregarFichaParaInspecaoAsync(p.IdPersonagem)">
@@ -933,7 +935,7 @@
 
                                 <!-- SEÇÃO FIXA ABAIXO DA FICHA: ITENS DA CAMPANHA ENVIADOS PELO JOGADOR -->
                                 <div class="inspecao-inventario-bloco">
-                                    <h3>🎒 Itens da Campanha e Moedas Selecionados pelo Jogador</h3>
+                                    <h3> Itens da Campanha e Moedas Selecionados pelo Jogador</h3>
 
                                     @if (fichaInspecionada.Inventario != null)
                                     {

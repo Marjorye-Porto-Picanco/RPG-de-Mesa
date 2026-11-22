@@ -41,7 +41,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string Duracao { get; set; } = string.Empty;
         public string DanoEfeito { get; set; } = string.Empty;
 
-        // Compatibilidade com outras telas que ainda usam Efeito e AlcanceNotas
         public string Efeito
         {
             get => DanoEfeito;
@@ -101,11 +100,11 @@ namespace RPGdeMesa.Presentation.ViewModel
     public class PersonagemCriarViewModel
     {
         public const int TotalEtapas = 4;
-        public const long LimiteImagemBytes = 2 * 1024 * 1024;
 
         private readonly PersonagemService _personagemService;
         private readonly CampanhaService _campanhaService;
         private readonly SessaoUsuarioService _sessaoUsuario;
+        private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
         private readonly ImagemPickerService _imagemPicker;
         private readonly AppCacheService _appCache;
@@ -115,14 +114,13 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemService personagemService,
             CampanhaService campanhaService,
             SessaoUsuarioService sessaoUsuario,
-            NavigationManager navigation,
             ImagemPickerService imagemPicker,
-            AppCacheService appCache,
-            HomeCacheService homeCache)
+            NavigationManager navigation)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
             _sessaoUsuario = sessaoUsuario;
+            _imagemPicker = imagemPicker;
             _navigation = navigation;
             _imagemPicker = imagemPicker;
             _appCache = appCache;
@@ -233,6 +231,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             EtapaAtual = 1;
             ErroEtapa = null;
             ErroImagem = null;
+            CarregandoFoto = false;
             ExibirAvisoSaida = false;
             LiberarProximaNavegacao = false;
             DestinoPendente = null;
@@ -559,7 +558,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             PersonagemAtual.Peso = $"{PesoKg.ToString("0.#", new CultureInfo("pt-BR"))} kg";
         }
 
-        // Upload de Imagem
+        // Upload de Imagem (via FilePicker nativo com trava contra múltiplos cliques)
         public async Task CarregarFotoAsync()
         {
             if (CarregandoFoto) return;

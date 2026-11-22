@@ -16,6 +16,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly CampanhaService _campanhaService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly AppCacheService _cache;
+        private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
         private readonly ImagemPickerService _imagemPicker;
 
@@ -25,21 +26,22 @@ namespace RPGdeMesa.Presentation.ViewModel
             CampanhaService campanhaService,
             SessaoUsuarioService sessaoUsuario,
             AppCacheService cache,
-            NavigationManager navigation,
-            ImagemPickerService imagemPicker)
+            ImagemPickerService imagemPicker,
+            NavigationManager navigation)
         {
             _usuarioService = usuarioService;
             _personagemService = personagemService;
             _campanhaService = campanhaService;
             _sessaoUsuario = sessaoUsuario;
             _cache = cache;
+            _imagemPicker = imagemPicker;
             _navigation = navigation;
             _imagemPicker = imagemPicker;
         }
 
         // Campos de dbo.Usuario e dbo.Perfil
-        public string UsernameLogin { get; private set; } = string.Empty; // Usuario.usar_name (somente leitura)
-        public string NomeExibicaoInput { get; set; } = string.Empty;     // Perfil.nome_exibicao (editável)
+        public string UsernameLogin { get; private set; } = string.Empty;
+        public string NomeExibicaoInput { get; set; } = string.Empty;
         public string Email { get; private set; } = string.Empty;
         public string StatusConta { get; private set; } = "ativo";
         public DateTime? DataCadastro { get; private set; }
@@ -55,7 +57,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public bool CarregandoAvatar { get; private set; }
         public bool Salvando { get; private set; }
         public bool ExibirAvisoSaida { get; private set; }
-        public int ChaveInputAvatar { get; private set; }
         public string StatusUpload { get; private set; } = string.Empty;
         public string MensagemStatus { get; private set; } = string.Empty;
         public bool TemErro { get; private set; }
@@ -184,7 +185,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             AvatarUrl = null;
             StatusUpload = "Foto removida. Clique em 'Salvar perfil' para confirmar.";
-            ChaveInputAvatar++;
             NotifyStateChanged();
         }
 

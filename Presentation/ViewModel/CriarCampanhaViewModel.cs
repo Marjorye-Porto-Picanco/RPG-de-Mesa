@@ -63,6 +63,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
+        public bool CarregandoImagem { get; private set; }
 
         public int TotalRecursosVinculados =>
             ListaMonstros.Count + ListaNPCs.Count + ListaItensCampanha.Count;

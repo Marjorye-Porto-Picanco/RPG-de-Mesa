@@ -40,7 +40,7 @@
                     <button type="button" class="btn-upload" disabled="@ViewModel.CarregandoFoto" @onclick="ViewModel.CarregarFotoAsync">
                         ↑ @(ViewModel.CarregandoFoto ? "Carregando..." : "Escolher foto do herói")
                     </button>
-                    <p class="upload-help">Imagem de até 2 MB.</p>
+                    <p class="upload-help">JPG ou PNG. A imagem é reduzida automaticamente.</p>
                     @if (!string.IsNullOrWhiteSpace(ViewModel.ErroImagem))
                     {
                         <p class="field-error" role="alert">@ViewModel.ErroImagem</p>

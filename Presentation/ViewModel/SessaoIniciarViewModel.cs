@@ -24,6 +24,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly NpcService _npcService;
         private readonly ItemService _itemService;
         private readonly SessaoService _sessaoService;
+        private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
         private readonly ImagemPickerService _imagemPicker;
 
@@ -33,14 +34,15 @@ namespace RPGdeMesa.Presentation.ViewModel
             NpcService npcService,
             ItemService itemService,
             SessaoService sessaoService,
-            NavigationManager navigation,
-            ImagemPickerService imagemPicker)
+            ImagemPickerService imagemPicker,
+            NavigationManager navigation)
         {
             _campanhaService = campanhaService;
             _personagemService = personagemService;
             _npcService = npcService;
             _itemService = itemService;
             _sessaoService = sessaoService;
+            _imagemPicker = imagemPicker;
             _navigation = navigation;
             _imagemPicker = imagemPicker;
         }
@@ -48,6 +50,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int IdCampanha { get; set; }
         public Campanha? CampanhaAtual { get; private set; }
         public bool SessaoEmAndamento => HistoricoSessoes.Any(s => s.Ativa);
+        public bool CarregandoImagem { get; private set; }
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
         public List<NPC> NpcsDisponiveis { get; private set; } = new();
         public List<Item> ItensDisponiveis { get; private set; } = new();
@@ -109,7 +112,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int NpcCarisma { get; set; } = 10;
         public string? NpcImagem { get; set; } = ImagemPadraoNpc;
         public string? ErroImagemNpc { get; private set; }
-        public int ChaveInputFotoNpc { get; private set; }
         public bool TemFotoNpc => NpcImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 
         // Form Fields - Monstro
@@ -127,7 +129,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int MonstroVida { get; set; } = 15;
         public string? MonstroImagem { get; set; } = ImagemPadraoMonstro;
         public string? ErroImagemMonstro { get; private set; }
-        public int ChaveInputFotoMonstro { get; private set; }
         public bool TemFotoMonstro => MonstroImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 
         // Form Fields - Item
@@ -381,8 +382,10 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
-                if (res.Erro is not null) ErroImagemNpc = res.Erro;
-                else if (res.Imagem is not null) NpcImagem = res.Imagem.DataUrl;
+                if (res.Erro is not null)
+                    ErroImagemNpc = res.Erro;
+                else if (res.Imagem is not null)
+                    NpcImagem = res.Imagem.DataUrl;
             }
             finally
             {
@@ -395,7 +398,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             NpcImagem = ImagemPadraoNpc;
             ErroImagemNpc = null;
-            ChaveInputFotoNpc++;
             NotifyStateChanged();
         }
 
@@ -416,7 +418,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             NpcHistoria = string.Empty;
             NpcImagem = ImagemPadraoNpc;
             ErroImagemNpc = null;
-            ChaveInputFotoNpc++;
         }
 
         // --- FOTO DO MONSTRO ---
@@ -430,8 +431,10 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
-                if (res.Erro is not null) ErroImagemMonstro = res.Erro;
-                else if (res.Imagem is not null) MonstroImagem = res.Imagem.DataUrl;
+                if (res.Erro is not null)
+                    ErroImagemMonstro = res.Erro;
+                else if (res.Imagem is not null)
+                    MonstroImagem = res.Imagem.DataUrl;
             }
             finally
             {
@@ -444,7 +447,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             MonstroImagem = ImagemPadraoMonstro;
             ErroImagemMonstro = null;
-            ChaveInputFotoMonstro++;
             NotifyStateChanged();
         }
 
@@ -464,7 +466,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             MonstroDescricao = string.Empty;
             MonstroImagem = ImagemPadraoMonstro;
             ErroImagemMonstro = null;
-            ChaveInputFotoMonstro++;
         }
 
         // --- MÉTODOS DE MAPAS ---
@@ -496,6 +497,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 {
                     NovoMapaImagemBase64 = res.Imagem.DataUrl;
                     NovoMapaNomeArquivo = res.Imagem.NomeArquivo;
+
                     if (string.IsNullOrWhiteSpace(NovoMapaNome))
                         NovoMapaNome = Path.GetFileNameWithoutExtension(res.Imagem.NomeArquivo);
                 }
