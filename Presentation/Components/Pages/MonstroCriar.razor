@@ -1,10 +1,11 @@
 ﻿@page "/monstro-criar"
 @using System.Globalization
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.Services
 @using RPGdeMesa.Presentation.ViewModel
 @inject MonstroCriarViewModel ViewModel
+@inject ImagemPickerService ImagemPicker
 @implements IDisposable
 
 <NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
@@ -39,10 +40,9 @@
                                 </div>
                                 <div class="foto-acoes">
                                     <div class="foto-botoes">
-                                        <label class="btn-foto">
-                                            ↑ @(TemFoto ? "Trocar imagem" : "Escolher imagem")
-                                            <InputFile @key="_chaveInputFoto" OnChange="CarregarFotoAsync" accept="image/*" aria-label="Escolher imagem da criatura" />
-                                        </label>
+                                        <button type="button" class="btn-foto" disabled="@_carregandoFoto" @onclick="CarregarFotoAsync">
+                                            ↑ @(_carregandoFoto ? "Carregando..." : (TemFoto ? "Trocar imagem" : "Escolher imagem"))
+                                        </button>
                                         @if (TemFoto)
                                         {
                                             <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
@@ -216,12 +216,8 @@
 }
 
 @code {
-    private const int LadoMaximoFoto = 512;
-    private const long LimiteOriginalBytes = 10 * 1024 * 1024;
-    private const long LimiteFinalBytes = 2 * 1024 * 1024;
-
     private string? _imagemPadrao;
-    private int _chaveInputFoto;
+    private bool _carregandoFoto;
     private string? ErroImagem { get; set; }
 
     private bool TemFoto =>
@@ -245,48 +241,25 @@
         ViewModel.OnChange += StateHasChanged;
     }
 
-    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+    private async Task CarregarFotoAsync()
     {
+        if (_carregandoFoto) return;
+        _carregandoFoto = true;
         ErroImagem = null;
-        var arquivo = evento.File;
-
-        if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
-            !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            ErroImagem = "Selecione um arquivo de imagem válido.";
-            return;
-        }
-
-        if (arquivo.Size > LimiteOriginalBytes)
-        {
-            ErroImagem = "A imagem deve ter no máximo 10 MB.";
-            return;
-        }
+        StateHasChanged();
 
         try
         {
-            IBrowserFile origem = arquivo;
-            try
-            {
-                var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
-                    ? "image/jpeg"
-                    : "image/png";
-                origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
-            }
-            catch (Exception) when (arquivo.Size <= LimiteFinalBytes)
-            {
-                origem = arquivo;
-            }
-
-            await using var leitura = origem.OpenReadStream(LimiteFinalBytes);
-            using var memoria = new MemoryStream();
-            await leitura.CopyToAsync(memoria);
-
-            ViewModel.MonstroAtual.Imagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            var res = await ImagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+            if (res.Erro is not null)
+                ErroImagem = res.Erro;
+            else if (res.Imagem is not null)
+                ViewModel.MonstroAtual.Imagem = res.Imagem.DataUrl;
         }
-        catch (Exception)
+        finally
         {
-            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+            _carregandoFoto = false;
+            StateHasChanged();
         }
     }
 
@@ -294,7 +267,6 @@
     {
         ViewModel.MonstroAtual.Imagem = _imagemPadrao;
         ErroImagem = null;
-        _chaveInputFoto++;
     }
 
     private static string Texto(string? valor, string padrao) =>

@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
-using System;
-using System.Threading.Tasks;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -12,12 +13,18 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly MonstroService _monstroService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
+        private readonly AppCacheService _appCache;
 
-        public MonstroCriarViewModel(MonstroService monstroService, SessaoUsuarioService sessaoUsuario, NavigationManager navigation)
+        public MonstroCriarViewModel(
+            MonstroService monstroService,
+            SessaoUsuarioService sessaoUsuario,
+            NavigationManager navigation,
+            AppCacheService appCache)
         {
             _monstroService = monstroService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
+            _appCache = appCache;
             LimparFormulario();
         }
 
@@ -88,12 +95,16 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 if (Sucesso)
                 {
-                    // Libera a navegação para que o NavigationLock não exiba o aviso de perda de dados
+                    // Write-through: grava na Biblioteca em memória antes de redirecionar
+                    if (MonstroAtual.IdMonstro > 0)
+                        _appCache.UpsertMonstro(idUsuario, MonstroAtual);
+                    else
+                        _appCache.InvalidarBiblioteca();
+
                     LiberarProximaNavegacao = true;
                     NotifyStateChanged();
 
-                    await Task.Delay(1000);
-                    // Redireciona para a biblioteca abrindo diretamente a aba de monstros
+                    await Task.Delay(500);
                     _navigation.NavigateTo("/BibliotecaGeral?categoria=monstros");
                 }
                 else

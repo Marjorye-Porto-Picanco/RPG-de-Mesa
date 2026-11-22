@@ -2,7 +2,6 @@
 @using System.Globalization
 @using RPGdeMesa.Domain.Npcs
 @using Microsoft.AspNetCore.Components
-@using Microsoft.AspNetCore.Components.Forms
 @using RPGdeMesa.Application.Services
 @using RPGdeMesa.Presentation.Services
 @inject NpcService NpcService
@@ -10,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject AppCacheService AppCache
 @inject HomeCacheService HomeCache
+@inject ImagemPickerService ImagemPicker
 
 <main class="npc-create-page">
     <div class="app-content">
@@ -40,10 +40,9 @@
                                 </div>
                                 <div class="foto-acoes">
                                     <div class="foto-botoes">
-                                        <label class="btn-foto">
-                                            ↑ @(TemFoto ? "Trocar foto" : "Escolher foto")
-                                            <InputFile @key="_chaveInputFoto" OnChange="CarregarFotoAsync" accept="image/*" aria-label="Escolher foto do NPC" />
-                                        </label>
+                                        <button type="button" class="btn-foto" disabled="@_carregandoFoto" @onclick="CarregarFotoAsync">
+                                            ↑ @(_carregandoFoto ? "Carregando..." : (TemFoto ? "Trocar foto" : "Escolher foto"))
+                                        </button>
                                         @if (TemFoto)
                                         {
                                             <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
@@ -172,11 +171,8 @@
     };
 
     private static readonly string? ImagemPadrao = new NPC().Imagem;
-    private const int LadoMaximoFoto = 512;
-    private const long LimiteOriginalBytes = 10 * 1024 * 1024;
-    private const long LimiteFinalBytes = 2 * 1024 * 1024;
 
-    private int _chaveInputFoto;
+    private bool _carregandoFoto;
     private string? ErroImagem { get; set; }
     private bool TemFoto => Npc.Imagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -212,53 +208,29 @@
         Npc = CriarNpcPadrao();
         _atributos = null;
         ErroImagem = null;
-        _chaveInputFoto++;
     }
 
     private void Voltar() => Navigation.NavigateTo(RotaBibliotecaNpcs);
 
-    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+    private async Task CarregarFotoAsync()
     {
+        if (_carregandoFoto) return;
+        _carregandoFoto = true;
         ErroImagem = null;
-        var arquivo = evento.File;
-
-        if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
-            !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            ErroImagem = "Selecione um arquivo de imagem válido.";
-            return;
-        }
-
-        if (arquivo.Size > LimiteOriginalBytes)
-        {
-            ErroImagem = "A imagem deve ter no máximo 10 MB.";
-            return;
-        }
+        StateHasChanged();
 
         try
         {
-            IBrowserFile origem = arquivo;
-            try
-            {
-                var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
-                    ? "image/jpeg"
-                    : "image/png";
-                origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
-            }
-            catch (Exception) when (arquivo.Size <= LimiteFinalBytes)
-            {
-                origem = arquivo;
-            }
-
-            await using var leitura = origem.OpenReadStream(LimiteFinalBytes);
-            using var memoria = new MemoryStream();
-            await leitura.CopyToAsync(memoria);
-
-            Npc.Imagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            var res = await ImagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+            if (res.Erro is not null)
+                ErroImagem = res.Erro;
+            else if (res.Imagem is not null)
+                Npc.Imagem = res.Imagem.DataUrl;
         }
-        catch (Exception)
+        finally
         {
-            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+            _carregandoFoto = false;
+            StateHasChanged();
         }
     }
 
@@ -266,7 +238,6 @@
     {
         Npc.Imagem = ImagemPadrao;
         ErroImagem = null;
-        _chaveInputFoto++;
     }
 
     private static string Texto(string? valor, string padrao) =>

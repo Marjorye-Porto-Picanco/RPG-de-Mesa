@@ -1,5 +1,4 @@
 ﻿@page "/sessao-iniciar/{idCampanha:int}"
-@using Microsoft.AspNetCore.Components.Forms
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
 @inject SessaoIniciarViewModel ViewModel
@@ -223,10 +222,9 @@
                                                 </div>
                                                 <div class="npc-foto-acoes">
                                                     <div class="npc-foto-botoes">
-                                                        <label class="btn-foto-npc">
-                                                            ↑ @(ViewModel.TemFotoNpc ? "Trocar foto" : "Escolher foto")
-                                                            <InputFile @key="ViewModel.ChaveInputFotoNpc" OnChange="ViewModel.SelecionarFotoNpcAsync" accept="image/*" aria-label="Escolher foto do NPC" />
-                                                        </label>
+                                                        <button type="button" class="btn-foto-npc" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.SelecionarFotoNpcAsync">
+                                                            ↑ @(ViewModel.CarregandoImagem ? "Carregando..." : (ViewModel.TemFotoNpc ? "Trocar foto" : "Escolher foto"))
+                                                        </button>
                                                         @if (ViewModel.TemFotoNpc)
                                                         {
                                                             <button type="button" class="btn-foto-npc-sec" @onclick="ViewModel.RemoverFotoNpc">Remover</button>
@@ -362,10 +360,9 @@
                                                 </div>
                                                 <div class="npc-foto-acoes">
                                                     <div class="npc-foto-botoes">
-                                                        <label class="btn-foto-npc">
-                                                            ↑ @(ViewModel.TemFotoMonstro ? "Trocar foto" : "Escolher foto")
-                                                            <InputFile @key="ViewModel.ChaveInputFotoMonstro" OnChange="ViewModel.SelecionarFotoMonstroAsync" accept="image/*" aria-label="Escolher foto do monstro" />
-                                                        </label>
+                                                        <button type="button" class="btn-foto-npc" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.SelecionarFotoMonstroAsync">
+                                                            ↑ @(ViewModel.CarregandoImagem ? "Carregando..." : (ViewModel.TemFotoMonstro ? "Trocar foto" : "Escolher foto"))
+                                                        </button>
                                                         @if (ViewModel.TemFotoMonstro)
                                                         {
                                                             <button type="button" class="btn-foto-npc-sec" @onclick="ViewModel.RemoverFotoMonstro">Remover</button>
@@ -621,7 +618,9 @@
 
                                     <div class="form-field">
                                         <label for="novo-mapa-arquivo">Imagem do mapa*</label>
-                                        <InputFile id="novo-mapa-arquivo" class="entrada-arquivo-mapa" OnChange="ViewModel.SelecionarImagemNovoMapaAsync" accept="image/*" />
+                                        <button type="button" id="novo-mapa-arquivo" class="entrada-arquivo-mapa" disabled="@ViewModel.CarregandoImagem" @onclick="ViewModel.SelecionarImagemNovoMapaAsync">
+                                            @(ViewModel.CarregandoImagem ? "Carregando..." : "↑ Escolher imagem do mapa")
+                                        </button>
                                     </div>
 
                                     @if (!string.IsNullOrWhiteSpace(ViewModel.NovoMapaImagemBase64))

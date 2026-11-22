@@ -1,5 +1,4 @@
 ﻿@page "/personagem-editar/{Id:int}"
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
@@ -20,10 +19,9 @@
                              src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)"
                              alt="Retrato do personagem" />
                     </div>
-                    <label class="upload-imagem-botao retrato-upload">
-                        <span aria-hidden="true">↑</span> Foto
-                        <InputFile OnChange="ViewModel.CarregarFotoAsync" accept="image/*" aria-label="Alterar foto do personagem" />
-                    </label>
+                    <button type="button" class="upload-imagem-botao retrato-upload" disabled="@ViewModel.CarregandoFoto" @onclick="ViewModel.CarregarFotoAsync">
+                        <span aria-hidden="true">↑</span> @(ViewModel.CarregandoFoto ? "..." : "Foto")
+                    </button>
                 </div>
 
                 <div class="identidade">

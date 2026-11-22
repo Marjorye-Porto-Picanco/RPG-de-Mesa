@@ -1,6 +1,5 @@
 ﻿@page "/personagem-criar"
 @using System.Globalization
-@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
@@ -38,10 +37,9 @@
             </div>
             <div class="aside-info">
                 <div class="preview-actions">
-                    <label class="btn-upload">
-                        ↑ Escolher foto do herói
-                        <InputFile OnChange="ViewModel.CarregarFotoAsync" accept="image/*" aria-label="Escolher foto do personagem" />
-                    </label>
+                    <button type="button" class="btn-upload" disabled="@ViewModel.CarregandoFoto" @onclick="ViewModel.CarregarFotoAsync">
+                        ↑ @(ViewModel.CarregandoFoto ? "Carregando..." : "Escolher foto do herói")
+                    </button>
                     <p class="upload-help">Imagem de até 2 MB.</p>
                     @if (!string.IsNullOrWhiteSpace(ViewModel.ErroImagem))
                     {

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Presentation.Services;
 
@@ -11,9 +9,6 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class PerfilViewModel
     {
-        private const int LadoMaximoAvatar = 512;
-        private const long LimiteOriginalAvatar = 10 * 1024 * 1024; // 10 MB
-        private const long LimiteFinalAvatar = 2 * 1024 * 1024; // 2 MB
         private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
 
         private readonly UsuarioService _usuarioService;
@@ -22,6 +17,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly AppCacheService _cache;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
 
         public PerfilViewModel(
             UsuarioService usuarioService,
@@ -29,7 +25,8 @@ namespace RPGdeMesa.Presentation.ViewModel
             CampanhaService campanhaService,
             SessaoUsuarioService sessaoUsuario,
             AppCacheService cache,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            ImagemPickerService imagemPicker)
         {
             _usuarioService = usuarioService;
             _personagemService = personagemService;
@@ -37,6 +34,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             _sessaoUsuario = sessaoUsuario;
             _cache = cache;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
         }
 
         // Campos de dbo.Usuario e dbo.Perfil
@@ -54,6 +52,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         // Estado da tela
         public bool Carregando { get; private set; }
+        public bool CarregandoAvatar { get; private set; }
         public bool Salvando { get; private set; }
         public bool ExibirAvisoSaida { get; private set; }
         public int ChaveInputAvatar { get; private set; }
@@ -149,54 +148,34 @@ namespace RPGdeMesa.Presentation.ViewModel
             }
         }
 
-        public async Task SelecionarAvatarAsync(InputFileChangeEventArgs evento)
+        public async Task SelecionarAvatarAsync()
         {
-            StatusUpload = string.Empty;
-            var arquivo = evento.File;
-
-            if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
-                !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                StatusUpload = "Selecione um arquivo de imagem válido.";
-                NotifyStateChanged();
-                return;
-            }
-
-            if (arquivo.Size > LimiteOriginalAvatar)
-            {
-                StatusUpload = "A imagem deve ter no máximo 10 MB.";
-                NotifyStateChanged();
-                return;
-            }
+            if (CarregandoAvatar) return;
+            CarregandoAvatar = true;
+            StatusUpload = "Carregando foto...";
+            NotifyStateChanged();
 
             try
             {
-                IBrowserFile origem = arquivo;
-                try
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Cancelado)
                 {
-                    var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
-                        ? "image/jpeg"
-                        : "image/png";
-                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoAvatar, LadoMaximoAvatar);
-                }
-                catch (Exception) when (arquivo.Size <= LimiteFinalAvatar)
-                {
-                    origem = arquivo;
+                    StatusUpload = string.Empty;
+                    return;
                 }
 
-                await using var leitura = origem.OpenReadStream(LimiteFinalAvatar);
-                using var memoria = new MemoryStream();
-                await leitura.CopyToAsync(memoria);
+                if (res.Erro is not null)
+                {
+                    StatusUpload = res.Erro;
+                    return;
+                }
 
-                AvatarUrl = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+                AvatarUrl = res.Imagem!.DataUrl;
                 StatusUpload = "Foto carregada. Clique em 'Salvar perfil' para confirmar.";
-            }
-            catch
-            {
-                StatusUpload = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
             }
             finally
             {
+                CarregandoAvatar = false;
                 NotifyStateChanged();
             }
         }

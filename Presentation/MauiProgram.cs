@@ -57,6 +57,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<ItemService>();
             builder.Services.AddScoped<MagiaService>();
             builder.Services.AddScoped<SessaoService>();
+            builder.Services.AddSingleton<ImagemPickerService>();
 
             // 3. CAMADA DE PRESENTATION / UI (Auth, Storage de Sessão e Cache)
             builder.Services.AddScoped<SessaoCampanhaStorageService>();
@@ -79,6 +80,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<HomeViewModel>();
             builder.Services.AddTransient<PerfilViewModel>();
             builder.Services.AddScoped<SessaoViewModel>();
+            builder.Services.AddTransient<SessaoEntrarCodeViewModel>();
 
             return builder.Build();
         }

@@ -4,22 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
     public class SessaoIniciarViewModel
     {
-        private const long TamanhoMaximoMapa = 5 * 1024 * 1024; // 5 MB
-        private const int LadoMaximoFoto = 512;
-        private const long LimiteOriginalFoto = 10 * 1024 * 1024; // 10 MB
-        private const long LimiteFinalFoto = 2 * 1024 * 1024; // 2 MB
         private static readonly string? ImagemPadraoNpc = new NPC().Imagem;
         private static readonly string? ImagemPadraoMonstro = new Monstro().Imagem;
 
@@ -29,6 +25,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly ItemService _itemService;
         private readonly SessaoService _sessaoService;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
 
         public SessaoIniciarViewModel(
             CampanhaService campanhaService,
@@ -36,7 +33,8 @@ namespace RPGdeMesa.Presentation.ViewModel
             NpcService npcService,
             ItemService itemService,
             SessaoService sessaoService,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            ImagemPickerService imagemPicker)
         {
             _campanhaService = campanhaService;
             _personagemService = personagemService;
@@ -44,6 +42,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             _itemService = itemService;
             _sessaoService = sessaoService;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
         }
 
         public int IdCampanha { get; set; }
@@ -144,6 +143,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string ItemRaridade { get; set; } = string.Empty;
         public string ItemSintonizacao { get; set; } = "Não";
 
+        public bool CarregandoImagem { get; private set; }
         public string MensagemFeedback { get; private set; } = string.Empty;
 
         public event Action? OnChange;
@@ -371,53 +371,22 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // --- FOTO DO NPC ---
-        public async Task SelecionarFotoNpcAsync(InputFileChangeEventArgs evento)
+        public async Task SelecionarFotoNpcAsync()
         {
+            if (CarregandoImagem) return;
+            CarregandoImagem = true;
             ErroImagemNpc = null;
-            var arquivo = evento.File;
-
-            if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
-                !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                ErroImagemNpc = "Selecione um arquivo de imagem válido.";
-                NotifyStateChanged();
-                return;
-            }
-
-            if (arquivo.Size > LimiteOriginalFoto)
-            {
-                ErroImagemNpc = "A imagem deve ter no máximo 10 MB.";
-                NotifyStateChanged();
-                return;
-            }
+            NotifyStateChanged();
 
             try
             {
-                IBrowserFile origem = arquivo;
-                try
-                {
-                    var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
-                        ? "image/jpeg"
-                        : "image/png";
-                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
-                }
-                catch (Exception) when (arquivo.Size <= LimiteFinalFoto)
-                {
-                    origem = arquivo;
-                }
-
-                await using var leitura = origem.OpenReadStream(LimiteFinalFoto);
-                using var memoria = new MemoryStream();
-                await leitura.CopyToAsync(memoria);
-
-                NpcImagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
-            }
-            catch (Exception)
-            {
-                ErroImagemNpc = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Erro is not null) ErroImagemNpc = res.Erro;
+                else if (res.Imagem is not null) NpcImagem = res.Imagem.DataUrl;
             }
             finally
             {
+                CarregandoImagem = false;
                 NotifyStateChanged();
             }
         }
@@ -451,53 +420,22 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // --- FOTO DO MONSTRO ---
-        public async Task SelecionarFotoMonstroAsync(InputFileChangeEventArgs evento)
+        public async Task SelecionarFotoMonstroAsync()
         {
+            if (CarregandoImagem) return;
+            CarregandoImagem = true;
             ErroImagemMonstro = null;
-            var arquivo = evento.File;
-
-            if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
-                !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                ErroImagemMonstro = "Selecione um arquivo de imagem válido.";
-                NotifyStateChanged();
-                return;
-            }
-
-            if (arquivo.Size > LimiteOriginalFoto)
-            {
-                ErroImagemMonstro = "A imagem deve ter no máximo 10 MB.";
-                NotifyStateChanged();
-                return;
-            }
+            NotifyStateChanged();
 
             try
             {
-                IBrowserFile origem = arquivo;
-                try
-                {
-                    var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
-                        ? "image/jpeg"
-                        : "image/png";
-                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
-                }
-                catch (Exception) when (arquivo.Size <= LimiteFinalFoto)
-                {
-                    origem = arquivo;
-                }
-
-                await using var leitura = origem.OpenReadStream(LimiteFinalFoto);
-                using var memoria = new MemoryStream();
-                await leitura.CopyToAsync(memoria);
-
-                MonstroImagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
-            }
-            catch (Exception)
-            {
-                ErroImagemMonstro = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Erro is not null) ErroImagemMonstro = res.Erro;
+                else if (res.Imagem is not null) MonstroImagem = res.Imagem.DataUrl;
             }
             finally
             {
+                CarregandoImagem = false;
                 NotifyStateChanged();
             }
         }
@@ -540,32 +478,31 @@ namespace RPGdeMesa.Presentation.ViewModel
             NotifyStateChanged();
         }
 
-        public async Task SelecionarImagemNovoMapaAsync(InputFileChangeEventArgs e)
+        public async Task SelecionarImagemNovoMapaAsync()
         {
-            var arquivo = e.File;
-            if (arquivo is null) return;
+            if (CarregandoImagem) return;
+            CarregandoImagem = true;
+            MensagemFeedbackMapas = string.Empty;
+            NotifyStateChanged();
 
             try
             {
-                using var stream = arquivo.OpenReadStream(TamanhoMaximoMapa);
-                using var ms = new MemoryStream();
-                await stream.CopyToAsync(ms);
-                var base64 = Convert.ToBase64String(ms.ToArray());
-
-                NovoMapaImagemBase64 = $"data:{arquivo.ContentType};base64,{base64}";
-                NovoMapaNomeArquivo = arquivo.Name;
-
-                if (string.IsNullOrWhiteSpace(NovoMapaNome))
-                    NovoMapaNome = Path.GetFileNameWithoutExtension(arquivo.Name);
-
-                MensagemFeedbackMapas = string.Empty;
-            }
-            catch (Exception ex)
-            {
-                MensagemFeedbackMapas = $"Erro ao carregar imagem (máx. 5MB): {ex.Message}";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 1600);
+                if (res.Erro is not null)
+                {
+                    MensagemFeedbackMapas = res.Erro;
+                }
+                else if (res.Imagem is not null)
+                {
+                    NovoMapaImagemBase64 = res.Imagem.DataUrl;
+                    NovoMapaNomeArquivo = res.Imagem.NomeArquivo;
+                    if (string.IsNullOrWhiteSpace(NovoMapaNome))
+                        NovoMapaNome = Path.GetFileNameWithoutExtension(res.Imagem.NomeArquivo);
+                }
             }
             finally
             {
+                CarregandoImagem = false;
                 NotifyStateChanged();
             }
         }

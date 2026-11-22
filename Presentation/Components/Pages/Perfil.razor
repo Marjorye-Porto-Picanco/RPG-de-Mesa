@@ -43,10 +43,9 @@
                 </div>
 
                 <div class="upload-imagem profile-image-upload">
-                    <label class="upload-imagem-botao">
-                        <span aria-hidden="true">↑</span> @(ViewModel.TemAvatar ? "Trocar foto de perfil" : "Escolher foto de perfil")
-                        <InputFile @key="ViewModel.ChaveInputAvatar" OnChange="ViewModel.SelecionarAvatarAsync" accept="image/*" aria-label="Escolher foto de perfil" />
-                    </label>
+                    <button type="button" class="upload-imagem-botao" disabled="@ViewModel.CarregandoAvatar" @onclick="ViewModel.SelecionarAvatarAsync">
+                        <span aria-hidden="true">↑</span> @(ViewModel.CarregandoAvatar ? "Carregando..." : (ViewModel.TemAvatar ? "Trocar foto de perfil" : "Escolher foto de perfil"))
+                    </button>
                     @if (ViewModel.TemAvatar)
                     {
                         <button type="button" class="action-quiet" @onclick="ViewModel.RemoverAvatar">Remover foto</button>

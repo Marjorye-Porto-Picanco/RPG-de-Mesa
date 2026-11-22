@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Campanhas;
@@ -11,7 +12,7 @@ public sealed record RemocaoCampanhaPendente(int IdCampanha, string Nome, bool C
 
 public class CampanhasViewModel
 {
-    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
     private readonly CampanhaService _campanhaService;
     private readonly SessaoUsuarioService _sessaoUsuario;
@@ -71,8 +72,12 @@ public class CampanhasViewModel
                 return;
         }
 
-        CampanhasMestre = await _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
-        CampanhasJogador = await _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+        var tarefaMestre = _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
+        var tarefaJogador = _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+        await Task.WhenAll(tarefaMestre, tarefaJogador);
+
+        CampanhasMestre = tarefaMestre.Result;
+        CampanhasJogador = tarefaJogador.Result;
 
         _cache.SalvarCampanhas(new CampanhasCacheSnapshot
         {
@@ -87,9 +92,12 @@ public class CampanhasViewModel
     {
         ExibirModalEntrar = false;
         AbaAtiva = "jogador";
-        _cache.InvalidarCampanhas();
-        _homeCache.Limpar();
+
+        int idUsuario = _sessaoUsuario.IdUsuarioLogado;
         await CarregarCampanhasAsync(forcarAtualizacao: true);
+
+        foreach (var campanha in CampanhasJogador)
+            _homeCache.UpsertCampanha(idUsuario, campanha, comoMestre: false);
     }
 
     public void PedirRemocaoCampanha(Campanha campanha, bool comoJogador)
@@ -127,9 +135,12 @@ public class CampanhasViewModel
             }
 
             CampanhaPendente = null;
-            _cache.InvalidarCampanhas();
-            _homeCache.Limpar();
-            await CarregarCampanhasAsync(forcarAtualizacao: true);
+            CampanhasMestre = CampanhasMestre.Where(c => c.IdCampanha != pendente.IdCampanha).ToList();
+            CampanhasJogador = CampanhasJogador.Where(c => c.IdCampanha != pendente.IdCampanha).ToList();
+
+            // Write-through: remove direto na RAM e no snapshot da Home (sem refazer query no banco)
+            _cache.RemoverCampanha(idUsuario, pendente.IdCampanha);
+            _homeCache.RemoverCampanha(idUsuario, pendente.IdCampanha);
         }
         catch (Exception ex)
         {

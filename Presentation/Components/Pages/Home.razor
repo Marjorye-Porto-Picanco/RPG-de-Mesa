@@ -18,10 +18,10 @@
                  aria-labelledby="campanha-atual">
             <div class="home-hero-content">
                 <p class="page-kicker">Sua próxima aventura começa aqui</p>
-                <h2 id="campanha-atual">@(ViewModel.CampanhaEmDestaque?.Nome ?? "Sua próxima aventura")</h2>
-                <p>@(ViewModel.CampanhaEmDestaque?.Descricao ?? "O grupo está reunido. As trilhas antigas aguardam a próxima sessão.")</p>
+                <h2 id="campanha-atual">@ViewModel.NomeCampanhaDestaque</h2>
+                <p>@ViewModel.DescricaoCampanhaDestaque</p>
                 <div class="home-hero-actions">
-                    <a class="action-primary" href="@ViewModel.ObterRotaCampanha(ViewModel.CampanhaEmDestaque)">
+                    <a class="action-primary" href="@ViewModel.RotaCampanhaDestaque">
                         @ViewModel.TextoBotaoPrincipalHero <span aria-hidden="true">→</span>
                     </a>
                     <a class="action-secondary" href="@ViewModel.RotaBotaoSecundarioHero">
@@ -109,7 +109,7 @@
                         <a class="text-link" href="/criar-campanha" aria-label="Criar campanha">+ Nova</a>
                     </div>
                     <div class="home-campaigns">
-                        @foreach (var campanha in ViewModel.Campanhas.Take(3))
+                        @foreach (var campanha in ViewModel.CampanhasResumo)
                         {
                             <a class="home-campaign-row" href="@ViewModel.ObterRotaCampanha(campanha)">
                                 <img src="@ViewModel.ObterCapaCampanha(campanha)" alt="Capa de @campanha.Nome" />
@@ -121,7 +121,7 @@
                             </a>
                         }
                     </div>
-                    @if (!ViewModel.Carregando && ViewModel.Campanhas.Count == 0)
+                    @if (!ViewModel.Carregando && ViewModel.CampanhasResumo.Count == 0)
                     {
                         <p class="home-campaign-empty">Nenhuma campanha nesta conta.</p>
                     }
@@ -131,7 +131,7 @@
                     <div class="section-heading">
                         <div>
                             <h2>Na sua mesa</h2>
-                            <p>@(ViewModel.CampanhaEmDestaque?.Nome ?? "Campanhas em andamento")</p>
+                            <p>@ViewModel.NomeCampanhaDestaque</p>
                         </div>
                     </div>
                     <div class="activity-list">
@@ -157,15 +157,22 @@
 </div>
 
 @code {
+    protected override void OnInitialized()
+    {
+        ViewModel.OnChange -= AtualizarTela;
+        ViewModel.OnChange += AtualizarTela;
+        ViewModel.HidratarDoCacheSincrono();
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        ViewModel.OnChange -= StateHasChanged;
-        ViewModel.OnChange += StateHasChanged;
         await ViewModel.CarregarDadosAsync();
     }
 
+    private void AtualizarTela() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
-        ViewModel.OnChange -= StateHasChanged;
+        ViewModel.OnChange -= AtualizarTela;
     }
 }

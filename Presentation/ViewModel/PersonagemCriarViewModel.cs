@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Routing;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Presentation.Services;
-using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -109,17 +107,26 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly CampanhaService _campanhaService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
 
         public PersonagemCriarViewModel(
             PersonagemService personagemService,
             CampanhaService campanhaService,
             SessaoUsuarioService sessaoUsuario,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            ImagemPickerService imagemPicker,
+            AppCacheService appCache,
+            HomeCacheService homeCache)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
+            _appCache = appCache;
+            _homeCache = homeCache;
             LimparFormulario();
         }
 
@@ -189,6 +196,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int EtapaAtual { get; private set; } = 1;
         public string? ErroEtapa { get; private set; }
         public string? ErroImagem { get; private set; }
+        public bool CarregandoFoto { get; private set; }
         public bool ExibirAvisoSaida { get; private set; }
         public bool LiberarProximaNavegacao { get; private set; }
         public string? DestinoPendente { get; private set; }
@@ -277,6 +285,15 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             try
             {
+                var idUsuario = _sessaoUsuario.IdUsuarioLogado;
+                var bibSnap = idUsuario > 0 ? _appCache.ObterBiblioteca(idUsuario) : null;
+                if (bibSnap is not null && bibSnap.Magias.Count > 0)
+                {
+                    MagiasCatalogo = bibSnap.Magias;
+                    NotifyStateChanged();
+                    return;
+                }
+
                 MagiasCatalogo = await _campanhaService.ObterTodasMagiasAsync();
                 NotifyStateChanged();
             }
@@ -543,34 +560,25 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // Upload de Imagem
-        public async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+        public async Task CarregarFotoAsync()
         {
+            if (CarregandoFoto) return;
+            CarregandoFoto = true;
             ErroImagem = null;
-            var arquivo = evento.File;
-
-            if (arquivo.Size > LimiteImagemBytes)
-            {
-                ErroImagem = "A imagem deve ter no máximo 2 MB.";
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                ErroImagem = "Selecione um arquivo de imagem válido.";
-                return;
-            }
+            NotifyStateChanged();
 
             try
             {
-                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-                using var memoria = new MemoryStream();
-                await origem.CopyToAsync(memoria);
-
-                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Erro is not null)
+                    ErroImagem = res.Erro;
+                else if (res.Imagem is not null)
+                    PersonagemAtual.Imagem = res.Imagem.DataUrl;
             }
-            catch (Exception)
+            finally
             {
-                ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo.";
+                CarregandoFoto = false;
+                NotifyStateChanged();
             }
         }
 
@@ -687,12 +695,24 @@ namespace RPGdeMesa.Presentation.ViewModel
                     await _campanhaService.AdicionarPersonagemNaCampanhaAsync(IdCampanhaOpcional.Value, PersonagemAtual.IdPersonagem);
                 }
 
+                // Write-through: grava na RAM e atualiza a Home instantaneamente
+                if (PersonagemAtual.IdPersonagem > 0)
+                {
+                    _appCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                    _homeCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                }
+                else
+                {
+                    _appCache.InvalidarPersonagensLib();
+                    _homeCache.Limpar();
+                }
+
                 Sucesso = true;
                 LiberarProximaNavegacao = true;
                 MensagemFeedback = "Personagem forjado com sucesso!";
                 NotifyStateChanged();
 
-                await Task.Delay(1000);
+                await Task.Delay(500);
                 _navigation.NavigateTo(DestinoPadrao);
             }
             catch (Exception ex)
