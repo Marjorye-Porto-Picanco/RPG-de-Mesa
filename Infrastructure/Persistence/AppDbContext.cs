@@ -620,21 +620,28 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<SessaoPino>(e =>
         {
             e.ToTable("Sessao_Pino");
-            e.HasKey(sp => sp.IdPino);
-            e.Property(sp => sp.IdPino).HasColumnName("id_pino");
-            e.Property(sp => sp.IdSessao).HasColumnName("id_sessao");
-            e.Property(sp => sp.TipoEntidade).HasColumnName("tipo_entidade").HasMaxLength(20).IsRequired();
-            e.Property(sp => sp.IdEntidade).HasColumnName("id_entidade");
-            e.Property(sp => sp.Coluna).HasColumnName("coluna");
-            e.Property(sp => sp.Linha).HasColumnName("linha");
-            e.Property(sp => sp.Visivel).HasColumnName("visivel");
+            e.HasKey(p => p.IdPino);
+            e.Property(p => p.IdPino).HasColumnName("id_pino");
+            e.Property(p => p.IdSessao).HasColumnName("id_sessao");
+            e.Property(p => p.IdMapa).HasColumnName("id_mapa");
+            e.Property(p => p.TipoEntidade).HasColumnName("tipo_entidade").HasMaxLength(20).IsRequired();
+            e.Property(p => p.IdEntidade).HasColumnName("id_entidade");
+            e.Property(p => p.Coluna).HasColumnName("coluna");
+            e.Property(p => p.Linha).HasColumnName("linha");
+            e.Property(p => p.Visivel).HasColumnName("visivel");
 
-            e.HasIndex(sp => new { sp.IdSessao, sp.TipoEntidade, sp.IdEntidade }).IsUnique();
+            e.HasIndex(p => new { p.IdSessao, p.IdMapa, p.TipoEntidade, p.IdEntidade })
+             .IsUnique();
 
-            e.HasOne(sp => sp.Sessao)
+            e.HasOne(p => p.Sessao)
              .WithMany()
-             .HasForeignKey(sp => sp.IdSessao)
+             .HasForeignKey(p => p.IdSessao)
              .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(p => p.Mapa)
+             .WithMany()
+             .HasForeignKey(p => p.IdMapa)
+             .IsRequired(false);
         });
     }
 }

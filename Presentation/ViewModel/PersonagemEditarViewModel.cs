@@ -1,33 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Routing;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
     public class PersonagemEditarViewModel
     {
-        private const long LimiteImagemBytes = 2 * 1024 * 1024;
         private readonly PersonagemService _personagemService;
         private readonly CampanhaService _campanhaService;
+        private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
 
         public PersonagemEditarViewModel(
             PersonagemService personagemService,
             CampanhaService campanhaService,
+            ImagemPickerService imagemPicker,
             NavigationManager navigation)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
+            _imagemPicker = imagemPicker;
             _navigation = navigation;
         }
 
@@ -105,6 +106,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
+        public bool CarregandoFoto { get; private set; }
 
         public event Action? OnChange;
         public void NotifyStateChanged() => OnChange?.Invoke();
@@ -182,22 +184,30 @@ namespace RPGdeMesa.Presentation.ViewModel
             return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
         }
 
-        public async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+        public async Task CarregarFotoAsync()
         {
-            var arquivo = evento.File;
-            if (arquivo.Size > LimiteImagemBytes) return;
-            if (string.IsNullOrWhiteSpace(arquivo.ContentType) || !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)) return;
+            if (CarregandoFoto) return;
+            CarregandoFoto = true;
+            NotifyStateChanged();
 
             try
             {
-                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-                using var memoria = new MemoryStream();
-                await origem.CopyToAsync(memoria);
-
-                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Imagem is not null)
+                {
+                    PersonagemAtual.Imagem = res.Imagem.DataUrl;
+                }
+                else if (res.Erro is not null)
+                {
+                    Sucesso = false;
+                    MensagemFeedback = res.Erro;
+                }
+            }
+            finally
+            {
+                CarregandoFoto = false;
                 NotifyStateChanged();
             }
-            catch { }
         }
 
         public async Task CarregarPersonagemAsync(int idPersonagem)
