@@ -25,8 +25,9 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly ItemService _itemService;
         private readonly SessaoService _sessaoService;
         private readonly ImagemPickerService _imagemPicker;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
         private readonly NavigationManager _navigation;
-        private readonly ImagemPickerService _imagemPicker;
 
         public SessaoIniciarViewModel(
             CampanhaService campanhaService,
@@ -35,6 +36,8 @@ namespace RPGdeMesa.Presentation.ViewModel
             ItemService itemService,
             SessaoService sessaoService,
             ImagemPickerService imagemPicker,
+            AppCacheService appCache,
+            HomeCacheService homeCache,
             NavigationManager navigation)
         {
             _campanhaService = campanhaService;
@@ -43,8 +46,9 @@ namespace RPGdeMesa.Presentation.ViewModel
             _itemService = itemService;
             _sessaoService = sessaoService;
             _imagemPicker = imagemPicker;
+            _appCache = appCache;
+            _homeCache = homeCache;
             _navigation = navigation;
-            _imagemPicker = imagemPicker;
         }
 
         public int IdCampanha { get; set; }
@@ -144,7 +148,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string ItemRaridade { get; set; } = string.Empty;
         public string ItemSintonizacao { get; set; } = "Não";
 
-        public bool CarregandoImagem { get; private set; }
         public string MensagemFeedback { get; private set; } = string.Empty;
 
         public event Action? OnChange;
@@ -631,10 +634,12 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             try
             {
+                int idUsuario = CampanhaAtual.IdAccount;
+
                 if (CategoriaSelecionada == "npc")
                 {
                     var novoNpc = new NPC(
-                        idAccount: CampanhaAtual.IdAccount,
+                        idAccount: idUsuario,
                         nome: NpcNome,
                         racaTexto: NpcRaca,
                         classeTexto: NpcClasse,
@@ -652,10 +657,22 @@ namespace RPGdeMesa.Presentation.ViewModel
                         idCampanha: IdCampanha
                     );
 
-                    var resultado = await _npcService.CriarNpcAsync(CampanhaAtual.IdAccount, novoNpc, IdCampanha);
+                    var resultado = await _npcService.CriarNpcAsync(idUsuario, novoNpc, IdCampanha);
                     MensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
                     if (resultado.Sucesso)
                     {
+                        if (novoNpc.IdNpc > 0)
+                        {
+                            _appCache.UpsertNpc(idUsuario, novoNpc);
+                            _homeCache.UpsertNpc(idUsuario, novoNpc);
+                        }
+                        else
+                        {
+                            _appCache.InvalidarBiblioteca();
+                            _appCache.InvalidarPersonagensLib();
+                            _homeCache.Limpar();
+                        }
+
                         LimparFormularioNpc();
                     }
                 }
@@ -682,13 +699,18 @@ namespace RPGdeMesa.Presentation.ViewModel
                     MensagemFeedback = resultado.Mensagem;
                     if (resultado.Sucesso)
                     {
+                        if (novoMonstro.IdMonstro > 0)
+                            _appCache.UpsertMonstro(idUsuario, novoMonstro);
+                        else
+                            _appCache.InvalidarBiblioteca();
+
                         LimparFormularioMonstro();
                     }
                 }
                 else if (CategoriaSelecionada == "item")
                 {
                     var novoItem = new Item(
-                        idAccount: CampanhaAtual.IdAccount,
+                        idAccount: idUsuario,
                         nome: ItemNome,
                         tipo: ItemTipo,
                         peso: ItemPeso,
@@ -702,13 +724,16 @@ namespace RPGdeMesa.Presentation.ViewModel
                         sintonizacao: ItemSintonizacao
                     );
 
-                    var resultadoCriacao = await _itemService.CriarItemAsync(CampanhaAtual.IdAccount, novoItem);
+                    var resultadoCriacao = await _itemService.CriarItemAsync(idUsuario, novoItem);
                     if (resultadoCriacao.Sucesso)
                     {
                         if (resultadoCriacao.IdItemCriado > 0)
                         {
                             await _campanhaService.AdicionarItemNaCampanhaAsync(IdCampanha, resultadoCriacao.IdItemCriado);
                         }
+
+                        _appCache.InvalidarBiblioteca();
+                        _homeCache.Limpar();
 
                         MensagemFeedback = "Item cadastrado e vinculado com sucesso!";
                         ItemNome = ItemTipo = ItemDescricao = string.Empty;

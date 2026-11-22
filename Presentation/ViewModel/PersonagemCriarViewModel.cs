@@ -106,7 +106,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
-        private readonly ImagemPickerService _imagemPicker;
         private readonly AppCacheService _appCache;
         private readonly HomeCacheService _homeCache;
 
@@ -115,14 +114,15 @@ namespace RPGdeMesa.Presentation.ViewModel
             CampanhaService campanhaService,
             SessaoUsuarioService sessaoUsuario,
             ImagemPickerService imagemPicker,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            AppCacheService appCache,
+            HomeCacheService homeCache)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
             _sessaoUsuario = sessaoUsuario;
             _imagemPicker = imagemPicker;
             _navigation = navigation;
-            _imagemPicker = imagemPicker;
             _appCache = appCache;
             _homeCache = homeCache;
             LimparFormulario();
