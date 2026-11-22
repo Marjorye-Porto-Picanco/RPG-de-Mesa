@@ -26,6 +26,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly SessaoService _sessaoService;
         private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
 
         public SessaoIniciarViewModel(
             CampanhaService campanhaService,
@@ -43,6 +44,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             _sessaoService = sessaoService;
             _imagemPicker = imagemPicker;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
         }
 
         public int IdCampanha { get; set; }
@@ -142,6 +144,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string ItemRaridade { get; set; } = string.Empty;
         public string ItemSintonizacao { get; set; } = "Não";
 
+        public bool CarregandoImagem { get; private set; }
         public string MensagemFeedback { get; private set; } = string.Empty;
 
         public event Action? OnChange;

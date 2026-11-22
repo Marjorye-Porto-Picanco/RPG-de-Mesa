@@ -80,6 +80,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<HomeViewModel>();
             builder.Services.AddTransient<PerfilViewModel>();
             builder.Services.AddScoped<SessaoViewModel>();
+            builder.Services.AddTransient<SessaoEntrarCodeViewModel>();
 
             return builder.Build();
         }

@@ -29,7 +29,7 @@ namespace RPGdeMesa.Presentation.ViewModel
     {
         private const string BannerPadrao = "img/maprpg.png";
         private const string CapaPadrao = "img/capacampanha1.png";
-        private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+        private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
         private readonly SemaphoreSlim _semaforoCarga = new(1, 1);
         private readonly CampanhaService _campanhaService;
@@ -40,6 +40,11 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly HomeCacheService _cache;
         private readonly AppCacheService _appCache;
         private readonly NavigationManager _navigation;
+
+        private int _totalMestrePreview;
+        private int _totalJogadorPreview;
+        private int _totalPersonagensDestaque;
+        private int _totalElementosMesaDestaque;
 
         public HomeViewModel(
             CampanhaService campanhaService,
@@ -69,6 +74,8 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<NPC> NpcsUsuario { get; private set; } = new();
         public List<Item> ItensUsuario { get; private set; } = new();
         public Campanha? CampanhaEmDestaque { get; private set; }
+        public HomeCampanhaResumo? DestaqueResumo { get; private set; }
+        public List<HomeCampanhaResumo> CampanhasResumo { get; private set; } = new();
         public List<AtividadeRecenteItem> AtividadesRecentes { get; private set; } = new();
 
         public event Action? OnChange;
@@ -90,29 +97,50 @@ namespace RPGdeMesa.Presentation.ViewModel
             DateTime.Now.ToString("D", new CultureInfo("pt-BR"));
 
         public bool EhApenasJogador =>
-            CampanhasComoJogador.Count > 0 && CampanhasComoMestre.Count == 0;
+            _totalJogadorPreview > 0 && _totalMestrePreview == 0;
 
-        public bool ExibirResumoMesa => CampanhaEmDestaque is not null;
+        public bool ExibirResumoMesa => DestaqueResumo is not null;
+
+        public string NomeCampanhaDestaque =>
+            DestaqueResumo?.Nome ?? "Sua próxima aventura";
+
+        public string DescricaoCampanhaDestaque =>
+            string.IsNullOrWhiteSpace(DestaqueResumo?.Descricao)
+                ? "O grupo está reunido. As trilhas antigas aguardam a próxima sessão."
+                : DestaqueResumo.Descricao;
 
         public string CapaCampanhaDestaque =>
-            ObterCapaCampanha(CampanhaEmDestaque, BannerPadrao);
+            string.IsNullOrWhiteSpace(DestaqueResumo?.Capa) ? BannerPadrao : DestaqueResumo.Capa;
 
-        public int TotalPersonagensDestaque =>
-            CampanhaEmDestaque?.Personagens.Count() ?? 0;
+        public string RotaCampanhaDestaque =>
+            ObterRotaCampanha(DestaqueResumo);
 
-        public int TotalElementosMesaDestaque =>
-            (CampanhaEmDestaque?.MonstroCampanhas.Count ?? 0) +
-            (CampanhaEmDestaque?.NpcCampanhas.Count ?? 0);
+        public int TotalPersonagensDestaque => _totalPersonagensDestaque;
+
+        public int TotalElementosMesaDestaque => _totalElementosMesaDestaque;
 
         public bool EhMestreDaCampanha(Campanha campanha) =>
             campanha.IdAccount == _sessaoUsuario.IdUsuarioLogado;
 
-        public string ObterCapaCampanha(Campanha? campanha, string fallback = CapaPadrao)
-        {
-            return string.IsNullOrWhiteSpace(campanha?.Capa) ? fallback : campanha.Capa;
-        }
+        public bool EhMestreDaCampanha(HomeCampanhaResumo campanha) =>
+            campanha.IdAccount == _sessaoUsuario.IdUsuarioLogado;
+
+        public string ObterCapaCampanha(Campanha? campanha, string fallback = CapaPadrao) =>
+            string.IsNullOrWhiteSpace(campanha?.Capa) ? fallback : campanha.Capa;
+
+        public string ObterCapaCampanha(HomeCampanhaResumo? campanha, string fallback = CapaPadrao) =>
+            string.IsNullOrWhiteSpace(campanha?.Capa) ? fallback : campanha.Capa;
 
         public string ObterRotaCampanha(Campanha? campanha)
+        {
+            if (campanha is null) return "/criar-campanha";
+
+            return EhMestreDaCampanha(campanha)
+                ? $"/sessao-iniciar/{campanha.IdCampanha}"
+                : $"/sessao-entrar/{campanha.IdCampanha}";
+        }
+
+        public string ObterRotaCampanha(HomeCampanhaResumo? campanha)
         {
             if (campanha is null) return "/criar-campanha";
 
@@ -125,8 +153,8 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             get
             {
-                if (CampanhaEmDestaque is null) return "Criar campanha";
-                return EhMestreDaCampanha(CampanhaEmDestaque) ? "Iniciar sessão" : "Entrar como jogador";
+                if (DestaqueResumo is null) return "Criar campanha";
+                return EhMestreDaCampanha(DestaqueResumo) ? "Iniciar sessão" : "Entrar como jogador";
             }
         }
 
@@ -135,6 +163,34 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public string TextoBotaoSecundarioHero =>
             EhApenasJogador ? "Ver campanhas" : "Entrar na sala";
+
+        /// <summary>
+        /// Hidrata a Home de forma síncrona (RAM primeiro, depois JSON em disco)
+        /// para renderizar imediatamente sem tela vazia.
+        /// </summary>
+        public bool HidratarDoCacheSincrono()
+        {
+            if (!_sessaoUsuario.EstaLogado)
+                return false;
+
+            int idUsuario = _sessaoUsuario.IdUsuarioLogado;
+
+            var snapshotRam = _cache.Obter(idUsuario);
+            if (snapshotRam is not null)
+            {
+                AplicarSnapshot(snapshotRam);
+                return true;
+            }
+
+            var snapshotDisco = _cache.ObterDoDisco(idUsuario);
+            if (snapshotDisco is not null)
+            {
+                AplicarDiscoSnapshot(snapshotDisco);
+                return true;
+            }
+
+            return false;
+        }
 
         public async Task CarregarDadosAsync(bool forcarAtualizacao = false)
         {
@@ -146,7 +202,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             int idUsuario = _sessaoUsuario.IdUsuarioLogado;
 
-            // 1. Hidrata imediatamente do cache da Home se existir para este usuário
+            // 1. Se o cache em RAM existe e não expirou, aplica em 0ms sem ir ao banco
             var snapshot = _cache.Obter(idUsuario);
             if (snapshot is not null)
             {
@@ -156,17 +212,27 @@ namespace RPGdeMesa.Presentation.ViewModel
                 if (!forcarAtualizacao && !_cache.EstaExpirado(idUsuario, ValidadeCache))
                     return;
             }
+            else if (DestaqueResumo is null && CampanhasResumo.Count == 0)
+            {
+                // Se ainda não hidratou do disco, hidrata agora antes de consultar o banco
+                var disco = _cache.ObterDoDisco(idUsuario);
+                if (disco is not null)
+                {
+                    AplicarDiscoSnapshot(disco);
+                    NotifyStateChanged();
+                }
+            }
 
             // 2. Atualiza em segundo plano (ou faz a primeira carga) com proteção de concorrência
             if (!await _semaforoCarga.WaitAsync(0))
                 return;
 
-            Carregando = snapshot is null;
+            bool jaTinhaPreview = snapshot is not null || DestaqueResumo is not null || CampanhasResumo.Count > 0;
+            Carregando = !jaTinhaPreview;
             if (Carregando) NotifyStateChanged();
 
             try
             {
-                // Reaproveita snapshots válidos do AppCacheService (evita ir ao banco pelo que já foi baixado)
                 var campanhasSnap = !forcarAtualizacao && !_appCache.CampanhasExpiradas(idUsuario, ValidadeCache)
                     ? _appCache.ObterCampanhas(idUsuario)
                     : null;
@@ -179,7 +245,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                     ? _appCache.ObterBiblioteca(idUsuario)
                     : null;
 
-                // Dispara em paralelo apenas o que não estava em cache
                 var tarefaMestre = campanhasSnap is not null
                     ? Task.FromResult(campanhasSnap.CampanhasMestre)
                     : _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
@@ -194,7 +259,9 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 var tarefaNpcs = personagensSnap is not null
                     ? Task.FromResult(personagensSnap.Npcs)
-                    : _npcService.ObterNpcsPorUsuarioAsync(idUsuario);
+                    : bibliotecaSnap is not null
+                        ? Task.FromResult(bibliotecaSnap.Npcs)
+                        : _npcService.ObterNpcsPorUsuarioAsync(idUsuario);
 
                 var tarefaItens = bibliotecaSnap is not null
                     ? Task.FromResult(bibliotecaSnap.Itens)
@@ -208,7 +275,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                 NpcsUsuario = tarefaNpcs.Result;
                 ItensUsuario = tarefaItens.Result;
 
-                // Alimenta o AppCacheService para que outras telas também abram rápido
                 if (campanhasSnap is null)
                 {
                     _appCache.SalvarCampanhas(new CampanhasCacheSnapshot
@@ -238,17 +304,23 @@ namespace RPGdeMesa.Presentation.ViewModel
                     .ThenByDescending(c => c.IdCampanha)
                     .ToList();
 
+                // Pinta a tela imediatamente antes de buscar os detalhes pesados da campanha em destaque
                 var primeira = Campanhas.FirstOrDefault();
+                CampanhaEmDestaque = primeira;
+                AtividadesRecentes = GerarAtividadesRecentes(idUsuario, Campanhas, PersonagensUsuario, NpcsUsuario, ItensUsuario);
+                SincronizarCamposResumo();
+                Carregando = false;
+                NotifyStateChanged();
+
                 if (primeira is not null)
                 {
-                    CampanhaEmDestaque = await _campanhaService.ObterDetalhesCampanhaAsync(primeira.IdCampanha) ?? primeira;
+                    var detalhada = await _campanhaService.ObterDetalhesCampanhaAsync(primeira.IdCampanha);
+                    if (detalhada is not null)
+                    {
+                        CampanhaEmDestaque = detalhada;
+                        SincronizarCamposResumo();
+                    }
                 }
-                else
-                {
-                    CampanhaEmDestaque = null;
-                }
-
-                MontarAtividadesRecentes();
 
                 _cache.Salvar(new HomeCacheSnapshot
                 {
@@ -288,27 +360,67 @@ namespace RPGdeMesa.Presentation.ViewModel
             ItensUsuario = s.ItensUsuario;
             CampanhaEmDestaque = s.CampanhaEmDestaque;
             AtividadesRecentes = s.AtividadesRecentes;
+            SincronizarCamposResumo();
         }
 
-        private void MontarAtividadesRecentes()
+        private void AplicarDiscoSnapshot(HomeDiscoSnapshot d)
+        {
+            _totalMestrePreview = d.TotalCampanhasMestre;
+            _totalJogadorPreview = d.TotalCampanhasJogador;
+            DestaqueResumo = d.CampanhaDestaque;
+            _totalPersonagensDestaque = d.TotalPersonagensDestaque;
+            _totalElementosMesaDestaque = d.TotalElementosMesaDestaque;
+            CampanhasResumo = d.CampanhasResumo;
+            AtividadesRecentes = d.AtividadesRecentes;
+        }
+
+        private void SincronizarCamposResumo()
+        {
+            _totalMestrePreview = CampanhasComoMestre.Count;
+            _totalJogadorPreview = CampanhasComoJogador.Count;
+            DestaqueResumo = CampanhaEmDestaque is null ? null : ParaResumo(CampanhaEmDestaque);
+            _totalPersonagensDestaque = CampanhaEmDestaque?.Personagens.Count() ?? 0;
+            _totalElementosMesaDestaque =
+                (CampanhaEmDestaque?.MonstroCampanhas.Count ?? 0) +
+                (CampanhaEmDestaque?.NpcCampanhas.Count ?? 0);
+            CampanhasResumo = Campanhas.Take(3).Select(ParaResumo).ToList();
+        }
+
+        private static HomeCampanhaResumo ParaResumo(Campanha c) => new()
+        {
+            IdCampanha = c.IdCampanha,
+            IdAccount = c.IdAccount,
+            Nome = c.Nome,
+            Descricao = c.Descricao,
+            DataCriacao = c.DataCriacao,
+            Capa = c.Capa
+        };
+
+        public static List<AtividadeRecenteItem> GerarAtividadesRecentes(
+            int idUsuario,
+            List<Campanha> campanhas,
+            List<Personagem> personagens,
+            List<NPC> npcs,
+            List<Item> itens)
         {
             var eventos = new List<AtividadeRecenteItem>();
 
-            foreach (var c in Campanhas)
+            foreach (var c in campanhas)
             {
+                bool ehMestre = c.IdAccount == idUsuario;
                 eventos.Add(new AtividadeRecenteItem
                 {
                     Iniciais = ObterIniciais(c.Nome),
                     Titulo = c.Nome,
-                    Descricao = EhMestreDaCampanha(c) ? "Campanha criada como Mestre" : "Campanha vinculada como Jogador",
+                    Descricao = ehMestre ? "Campanha criada como Mestre" : "Campanha vinculada como Jogador",
                     Meta = c.DataCriacao.ToString("dd/MM"),
-                    Rota = ObterRotaCampanha(c),
+                    Rota = ehMestre ? $"/sessao-iniciar/{c.IdCampanha}" : $"/sessao-entrar/{c.IdCampanha}",
                     DataReferencia = c.DataCriacao,
                     OrdemId = c.IdCampanha
                 });
             }
 
-            foreach (var p in PersonagensUsuario.OrderByDescending(x => x.IdPersonagem).Take(3))
+            foreach (var p in personagens.OrderByDescending(x => x.IdPersonagem).Take(3))
             {
                 eventos.Add(new AtividadeRecenteItem
                 {
@@ -322,7 +434,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 });
             }
 
-            foreach (var npc in NpcsUsuario.OrderByDescending(x => x.IdNpc).Take(3))
+            foreach (var npc in npcs.OrderByDescending(x => x.IdNpc).Take(3))
             {
                 eventos.Add(new AtividadeRecenteItem
                 {
@@ -330,13 +442,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                     Titulo = npc.Nome,
                     Descricao = $"NPC · {npc.ClasseTexto ?? npc.Ocupacao ?? "Personagem do Mestre"}",
                     Meta = "NPC",
-                    Rota = "/biblioteca",
+                    Rota = "/BibliotecaGeral?categoria=npcs",
                     DataReferencia = DateTime.MinValue,
                     OrdemId = npc.IdNpc
                 });
             }
 
-            foreach (var item in ItensUsuario.OrderByDescending(x => x.IdItem).Take(3))
+            foreach (var item in itens.OrderByDescending(x => x.IdItem).Take(3))
             {
                 eventos.Add(new AtividadeRecenteItem
                 {
@@ -344,13 +456,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                     Titulo = item.Nome,
                     Descricao = $"Item · {item.Tipo ?? "Equipamento"}",
                     Meta = "Item",
-                    Rota = "/biblioteca",
+                    Rota = "/BibliotecaGeral?categoria=itens",
                     DataReferencia = DateTime.MinValue,
                     OrdemId = item.IdItem
                 });
             }
 
-            AtividadesRecentes = eventos
+            return eventos
                 .OrderByDescending(e => e.DataReferencia)
                 .ThenByDescending(e => e.OrdemId)
                 .Take(3)

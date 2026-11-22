@@ -58,6 +58,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<Mapa> ListaMapas { get; set; } = new();
         public string? CapaBase64 { get; set; }
         public string? NomeArquivoCapa { get; set; }
+        public bool CarregandoImagem { get; private set; }
 
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;

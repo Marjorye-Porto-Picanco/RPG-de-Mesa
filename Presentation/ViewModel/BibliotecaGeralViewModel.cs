@@ -16,7 +16,7 @@ public sealed record ExclusaoPendente(string Tipo, int Id, string Nome);
 
 public class BibliotecaGeralViewModel
 {
-    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
     private readonly ItemService _itemService;
     private readonly MagiaService _magiaService;
@@ -205,7 +205,9 @@ public class BibliotecaGeralViewModel
         try
         {
             var tarefaItens = _itemService.ObterItensPorUsuarioAsync(IdUsuarioLogado);
-            var tarefaMagias = _magiaService.ObterTodasMagiasAsync();
+            var tarefaMagias = !forcarAtualizacao && EntradasMagias.Count > 0
+                ? Task.FromResult(EntradasMagias)
+                : _magiaService.ObterTodasMagiasAsync();
             var tarefaMonstros = _monstroService.ObterMonstrosPorUsuarioAsync(IdUsuarioLogado);
             var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(IdUsuarioLogado);
 
@@ -337,11 +339,12 @@ public class BibliotecaGeralViewModel
         try
         {
             var tipoExcluido = ExclusaoAtual.Tipo;
+            var idExcluido = ExclusaoAtual.Id;
             var resultado = tipoExcluido switch
             {
-                "monstro" => await _monstroService.RemoverMonstroAsync(IdUsuarioLogado, ExclusaoAtual.Id),
-                "npc" => await _npcService.RemoverNpcAsync(ExclusaoAtual.Id),
-                _ => await _itemService.RemoverItemAsync(IdUsuarioLogado, ExclusaoAtual.Id)
+                "monstro" => await _monstroService.RemoverMonstroAsync(IdUsuarioLogado, idExcluido),
+                "npc" => await _npcService.RemoverNpcAsync(idExcluido),
+                _ => await _itemService.RemoverItemAsync(IdUsuarioLogado, idExcluido)
             };
 
             if (!resultado.Sucesso)
@@ -352,12 +355,29 @@ public class BibliotecaGeralViewModel
 
             ExclusaoAtual = null;
             FecharTodosModaisDetalhes();
-            _cache.InvalidarBiblioteca();
-            if (tipoExcluido == "npc")
-                _cache.InvalidarPersonagensLib();
-            _homeCache.Limpar();
 
-            await CarregarDadosAsync(forcarAtualizacao: true);
+            // Write-through: remove direto na lista local, no AppCache e na Home (0ms, sem refetch)
+            switch (tipoExcluido)
+            {
+                case "monstro":
+                    EntradasMonstros = EntradasMonstros.Where(m => m.IdMonstro != idExcluido).ToList();
+                    _cache.RemoverMonstro(IdUsuarioLogado, idExcluido);
+                    break;
+
+                case "npc":
+                    EntradasNpcs = EntradasNpcs.Where(n => n.IdNpc != idExcluido).ToList();
+                    _cache.RemoverNpc(IdUsuarioLogado, idExcluido);
+                    _homeCache.RemoverNpc(IdUsuarioLogado, idExcluido);
+                    break;
+
+                default:
+                    EntradasItens = EntradasItens.Where(i => i.IdItem != idExcluido).ToList();
+                    _cache.RemoverItem(IdUsuarioLogado, idExcluido);
+                    _homeCache.RemoverItem(IdUsuarioLogado, idExcluido);
+                    break;
+            }
+
+            AtualizarMensagemStatus();
         }
         catch (Exception ex)
         {

@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
-using System;
-using System.Threading.Tasks;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.Presentation.ViewModel
 {
@@ -12,15 +13,21 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly ItemService _itemService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
 
         public ItemCriarViewModel(
             ItemService itemService,
             SessaoUsuarioService sessaoUsuario,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            AppCacheService appCache,
+            HomeCacheService homeCache)
         {
             _itemService = itemService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
+            _appCache = appCache;
+            _homeCache = homeCache;
             LimparFormulario();
         }
 
@@ -126,7 +133,6 @@ namespace RPGdeMesa.Presentation.ViewModel
                 MensagemFeedback = "Forjando item...";
                 NotifyStateChanged();
 
-                // Tratamento rigoroso para evitar nulos ou strings vazias no banco de dados
                 string? tipoFinal = string.IsNullOrWhiteSpace(ItemTipo) ? null : ItemTipo.Trim();
                 string? danoFinal = string.IsNullOrWhiteSpace(ItemDano) ? null : ItemDano.Trim();
                 string? tipoDanoFinal = string.IsNullOrWhiteSpace(ItemTipoDano) ? null : ItemTipoDano.Trim();
@@ -160,10 +166,22 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 if (Sucesso)
                 {
+                    // Write-through: grava na Biblioteca e na Home em memória antes de navegar
+                    if (novoItem.IdItem > 0)
+                    {
+                        _appCache.UpsertItem(idUsuario, novoItem);
+                        _homeCache.UpsertItem(idUsuario, novoItem);
+                    }
+                    else
+                    {
+                        _appCache.InvalidarBiblioteca();
+                        _homeCache.Limpar();
+                    }
+
                     LiberarProximaNavegacao = true;
                     NotifyStateChanged();
 
-                    await Task.Delay(1000);
+                    await Task.Delay(500);
                     _navigation.NavigateTo("/BibliotecaGeral?categoria=itens");
                 }
                 else

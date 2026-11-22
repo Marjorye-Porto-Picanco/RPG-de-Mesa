@@ -17,19 +17,22 @@ namespace RPGdeMesa.Presentation.ViewModel
     {
         private readonly PersonagemService _personagemService;
         private readonly CampanhaService _campanhaService;
-        private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
 
         public PersonagemEditarViewModel(
             PersonagemService personagemService,
             CampanhaService campanhaService,
-            ImagemPickerService imagemPicker,
             NavigationManager navigation)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
-            _imagemPicker = imagemPicker;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
+            _appCache = appCache;
+            _homeCache = homeCache;
         }
 
         // Listas Estáticas de Apoio
@@ -103,6 +106,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public bool LiberarProximaNavegacao { get; private set; }
         public string? DestinoPendente { get; private set; }
 
+        public bool CarregandoFoto { get; private set; }
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
@@ -192,20 +196,11 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             try
             {
-                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
-                if (res.Imagem is not null)
-                {
-                    PersonagemAtual.Imagem = res.Imagem.DataUrl;
-                }
-                else if (res.Erro is not null)
-                {
-                    Sucesso = false;
-                    MensagemFeedback = res.Erro;
-                }
-            }
-            finally
-            {
-                CarregandoFoto = false;
+                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
+                using var memoria = new MemoryStream();
+                await origem.CopyToAsync(memoria);
+
+                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
                 NotifyStateChanged();
             }
         }
@@ -228,16 +223,19 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 NotifyStateChanged();
 
-                try
-                {
-                    MagiasCatalogo = await _campanhaService.ObterTodasMagiasAsync();
-                }
-                catch
-                {
-                    MagiasCatalogo = new List<Magia>();
-                }
+                var idUsuario = _sessaoUsuario.IdUsuarioLogado;
+                var bibSnap = idUsuario > 0 ? _appCache.ObterBiblioteca(idUsuario) : null;
 
-                var encontrado = await _personagemService.ObterPorIdAsync(idPersonagem);
+                var tarefaMagias = bibSnap is not null && bibSnap.Magias.Count > 0
+                    ? Task.FromResult(bibSnap.Magias)
+                    : ObterMagiasSeguroAsync();
+
+                var tarefaPersonagem = _personagemService.ObterPorIdAsync(idPersonagem);
+                await Task.WhenAll(tarefaMagias, tarefaPersonagem);
+
+                MagiasCatalogo = tarefaMagias.Result;
+                var encontrado = tarefaPersonagem.Result;
+
                 if (encontrado != null)
                 {
                     PersonagemAtual = encontrado;
@@ -515,7 +513,23 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 Sucesso = resultado3FN.Sucesso;
                 MensagemFeedback = Sucesso ? "Ficha atualizada com sucesso!" : resultado3FN.Mensagem;
-                if (Sucesso) LiberarProximaNavegacao = true;
+
+                if (Sucesso)
+                {
+                    LiberarProximaNavegacao = true;
+
+                    // Write-through: atualiza a ficha editada direto na RAM e na Home
+                    var idUsuario = PersonagemAtual.IdAccount > 0
+                        ? PersonagemAtual.IdAccount
+                        : _sessaoUsuario.IdUsuarioLogado;
+
+                    if (idUsuario > 0 && PersonagemAtual.IdPersonagem > 0)
+                    {
+                        _appCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                        _homeCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                    }
+                }
+
                 NotifyStateChanged();
             }
             catch (Exception ex)

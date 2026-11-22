@@ -18,6 +18,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly AppCacheService _cache;
         private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
 
         public PerfilViewModel(
             UsuarioService usuarioService,
@@ -35,6 +36,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             _cache = cache;
             _imagemPicker = imagemPicker;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
         }
 
         // Campos de dbo.Usuario e dbo.Perfil

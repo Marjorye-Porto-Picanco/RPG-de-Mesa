@@ -122,7 +122,7 @@
                    OnCancelar="CancelarExclusao" />
 
 @code {
-    private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+    private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
     private List<Personagem>? personagens;
     private List<NPC>? npcs;
@@ -155,9 +155,12 @@
         try
         {
             var idUsuario = SessaoUsuario.IdUsuarioLogado;
-            var resultado = exclusaoPendente.Tipo == "npc"
-                ? await NpcService.RemoverNpcAsync(exclusaoPendente.Id)
-                : await PersonagemService.RemoverPersonagemAsync(idUsuario, exclusaoPendente.Id);
+            var idExcluido = exclusaoPendente.Id;
+            var tipoExcluido = exclusaoPendente.Tipo;
+
+            var resultado = tipoExcluido == "npc"
+                ? await NpcService.RemoverNpcAsync(idExcluido)
+                : await PersonagemService.RemoverPersonagemAsync(idUsuario, idExcluido);
 
             if (!resultado.Sucesso)
             {
@@ -165,24 +168,19 @@
                 return;
             }
 
-            if (exclusaoPendente.Tipo == "npc")
+            // Write-through: remove direto na lista local, no AppCache e na Home (sem refazer query)
+            if (tipoExcluido == "npc")
             {
-                npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
-                AppCache.InvalidarBiblioteca();
+                npcs = npcs?.Where(n => n.IdNpc != idExcluido).ToList() ?? new();
+                AppCache.RemoverNpc(idUsuario, idExcluido);
+                HomeCache.RemoverNpc(idUsuario, idExcluido);
             }
             else
             {
-                personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+                personagens = personagens?.Where(p => p.IdPersonagem != idExcluido).ToList() ?? new();
+                AppCache.RemoverPersonagem(idUsuario, idExcluido);
+                HomeCache.RemoverPersonagem(idUsuario, idExcluido);
             }
-
-            AppCache.SalvarPersonagensLib(new PersonagensLibCacheSnapshot
-            {
-                IdUsuario = idUsuario,
-                AtualizadoEmUtc = DateTime.UtcNow,
-                Personagens = personagens ?? new(),
-                Npcs = npcs ?? new()
-            });
-            HomeCache.Limpar();
 
             exclusaoPendente = null;
         }
@@ -216,8 +214,12 @@
                 return;
         }
 
-        personagens = await PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
-        npcs = await NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+        var tarefaPersonagens = PersonagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+        var tarefaNpcs = NpcService.ObterNpcsPorUsuarioAsync(idUsuario);
+        await Task.WhenAll(tarefaPersonagens, tarefaNpcs);
+
+        personagens = tarefaPersonagens.Result;
+        npcs = tarefaNpcs.Result;
 
         AppCache.SalvarPersonagensLib(new PersonagensLibCacheSnapshot
         {

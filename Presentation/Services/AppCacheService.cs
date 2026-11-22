@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
@@ -58,6 +59,9 @@ public class AppCacheService
     private BibliotecaCacheSnapshot? _biblioteca;
     private PerfilCacheSnapshot? _perfil;
 
+    public event Action? OnCacheAlterado;
+    private void NotificarAlteracao() => OnCacheAlterado?.Invoke();
+
     // --- CAMPANHAS ---
     public CampanhasCacheSnapshot? ObterCampanhas(int idUsuario)
     {
@@ -79,6 +83,80 @@ public class AppCacheService
     public void InvalidarCampanhas()
     {
         lock (_lock) _campanhas = null;
+    }
+
+    public void UpsertCampanhaMestre(int idUsuario, Campanha campanha)
+    {
+        if (campanha is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_campanhas is null || _campanhas.IdUsuario != idUsuario) return;
+
+            var mestre = _campanhas.CampanhasMestre
+                .Where(c => c.IdCampanha != campanha.IdCampanha)
+                .Append(campanha)
+                .OrderByDescending(c => c.DataCriacao)
+                .ThenByDescending(c => c.IdCampanha)
+                .ToList();
+
+            _campanhas = new CampanhasCacheSnapshot
+            {
+                IdUsuario = idUsuario,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                CampanhasMestre = mestre,
+                CampanhasJogador = _campanhas.CampanhasJogador
+            };
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void UpsertCampanhaJogador(int idUsuario, Campanha campanha)
+    {
+        if (campanha is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_campanhas is null || _campanhas.IdUsuario != idUsuario) return;
+
+            var jogador = _campanhas.CampanhasJogador
+                .Where(c => c.IdCampanha != campanha.IdCampanha)
+                .Append(campanha)
+                .OrderByDescending(c => c.DataCriacao)
+                .ThenByDescending(c => c.IdCampanha)
+                .ToList();
+
+            _campanhas = new CampanhasCacheSnapshot
+            {
+                IdUsuario = idUsuario,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                CampanhasMestre = _campanhas.CampanhasMestre,
+                CampanhasJogador = jogador
+            };
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void RemoverCampanha(int idUsuario, int idCampanha)
+    {
+        if (idUsuario <= 0 || idCampanha <= 0) return;
+
+        lock (_lock)
+        {
+            if (_campanhas is null || _campanhas.IdUsuario != idUsuario) return;
+
+            _campanhas = new CampanhasCacheSnapshot
+            {
+                IdUsuario = idUsuario,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                CampanhasMestre = _campanhas.CampanhasMestre.Where(c => c.IdCampanha != idCampanha).ToList(),
+                CampanhasJogador = _campanhas.CampanhasJogador.Where(c => c.IdCampanha != idCampanha).ToList()
+            };
+        }
+
+        NotificarAlteracao();
     }
 
     // --- PERSONAGENS / NPCS ---
@@ -104,6 +182,62 @@ public class AppCacheService
         lock (_lock) _personagensLib = null;
     }
 
+    public void UpsertPersonagem(int idUsuario, Personagem personagem)
+    {
+        if (personagem is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_personagensLib is not null && _personagensLib.IdUsuario == idUsuario)
+            {
+                var lista = _personagensLib.Personagens
+                    .Where(p => p.IdPersonagem != personagem.IdPersonagem)
+                    .Append(personagem)
+                    .OrderBy(p => p.Nome)
+                    .ToList();
+
+                _personagensLib = new PersonagensLibCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Personagens = lista,
+                    Npcs = _personagensLib.Npcs
+                };
+
+                AtualizarContadorPerfilLocked(idUsuario, totalPersonagens: lista.Count);
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void RemoverPersonagem(int idUsuario, int idPersonagem)
+    {
+        if (idUsuario <= 0 || idPersonagem <= 0) return;
+
+        lock (_lock)
+        {
+            if (_personagensLib is not null && _personagensLib.IdUsuario == idUsuario)
+            {
+                var lista = _personagensLib.Personagens
+                    .Where(p => p.IdPersonagem != idPersonagem)
+                    .ToList();
+
+                _personagensLib = new PersonagensLibCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Personagens = lista,
+                    Npcs = _personagensLib.Npcs
+                };
+
+                AtualizarContadorPerfilLocked(idUsuario, totalPersonagens: lista.Count);
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
     // --- BIBLIOTECA GERAL ---
     public BibliotecaCacheSnapshot? ObterBiblioteca(int idUsuario)
     {
@@ -125,6 +259,198 @@ public class AppCacheService
     public void InvalidarBiblioteca()
     {
         lock (_lock) _biblioteca = null;
+    }
+
+    public void UpsertNpc(int idUsuario, NPC npc)
+    {
+        if (npc is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                var npcs = _biblioteca.Npcs
+                    .Where(n => n.IdNpc != npc.IdNpc)
+                    .Append(npc)
+                    .OrderBy(n => n.Nome)
+                    .ToList();
+
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = _biblioteca.Itens,
+                    Magias = _biblioteca.Magias,
+                    Monstros = _biblioteca.Monstros,
+                    Npcs = npcs
+                };
+            }
+
+            if (_personagensLib is not null && _personagensLib.IdUsuario == idUsuario)
+            {
+                var npcs = _personagensLib.Npcs
+                    .Where(n => n.IdNpc != npc.IdNpc)
+                    .Append(npc)
+                    .OrderBy(n => n.Nome)
+                    .ToList();
+
+                _personagensLib = new PersonagensLibCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Personagens = _personagensLib.Personagens,
+                    Npcs = npcs
+                };
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void RemoverNpc(int idUsuario, int idNpc)
+    {
+        if (idUsuario <= 0 || idNpc <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = _biblioteca.Itens,
+                    Magias = _biblioteca.Magias,
+                    Monstros = _biblioteca.Monstros,
+                    Npcs = _biblioteca.Npcs.Where(n => n.IdNpc != idNpc).ToList()
+                };
+            }
+
+            if (_personagensLib is not null && _personagensLib.IdUsuario == idUsuario)
+            {
+                _personagensLib = new PersonagensLibCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Personagens = _personagensLib.Personagens,
+                    Npcs = _personagensLib.Npcs.Where(n => n.IdNpc != idNpc).ToList()
+                };
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void UpsertMonstro(int idUsuario, Monstro monstro)
+    {
+        if (monstro is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                var monstros = _biblioteca.Monstros
+                    .Where(m => m.IdMonstro != monstro.IdMonstro)
+                    .Append(monstro)
+                    .OrderBy(m => m.Nome)
+                    .ToList();
+
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = _biblioteca.Itens,
+                    Magias = _biblioteca.Magias,
+                    Monstros = monstros,
+                    Npcs = _biblioteca.Npcs
+                };
+
+                AtualizarContadorPerfilLocked(idUsuario, totalMonstros: monstros.Count(m => m.IdAccount == idUsuario));
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void RemoverMonstro(int idUsuario, int idMonstro)
+    {
+        if (idUsuario <= 0 || idMonstro <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                var monstros = _biblioteca.Monstros
+                    .Where(m => m.IdMonstro != idMonstro)
+                    .ToList();
+
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = _biblioteca.Itens,
+                    Magias = _biblioteca.Magias,
+                    Monstros = monstros,
+                    Npcs = _biblioteca.Npcs
+                };
+
+                AtualizarContadorPerfilLocked(idUsuario, totalMonstros: monstros.Count(m => m.IdAccount == idUsuario));
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void UpsertItem(int idUsuario, Item item)
+    {
+        if (item is null || idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                var itens = _biblioteca.Itens
+                    .Where(i => i.IdItem != item.IdItem)
+                    .Append(item)
+                    .OrderBy(i => i.Nome)
+                    .ToList();
+
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = itens,
+                    Magias = _biblioteca.Magias,
+                    Monstros = _biblioteca.Monstros,
+                    Npcs = _biblioteca.Npcs
+                };
+            }
+        }
+
+        NotificarAlteracao();
+    }
+
+    public void RemoverItem(int idUsuario, int idItem)
+    {
+        if (idUsuario <= 0 || idItem <= 0) return;
+
+        lock (_lock)
+        {
+            if (_biblioteca is not null && _biblioteca.IdUsuario == idUsuario)
+            {
+                _biblioteca = new BibliotecaCacheSnapshot
+                {
+                    IdUsuario = idUsuario,
+                    AtualizadoEmUtc = DateTime.UtcNow,
+                    Itens = _biblioteca.Itens.Where(i => i.IdItem != idItem).ToList(),
+                    Magias = _biblioteca.Magias,
+                    Monstros = _biblioteca.Monstros,
+                    Npcs = _biblioteca.Npcs
+                };
+            }
+        }
+
+        NotificarAlteracao();
     }
 
     // --- PERFIL ---
@@ -150,6 +476,53 @@ public class AppCacheService
         lock (_lock) _perfil = null;
     }
 
+    public void AtualizarPerfilBasico(int idUsuario, string nomeExibicao, string biografia, string? avatarUrl)
+    {
+        if (idUsuario <= 0) return;
+
+        lock (_lock)
+        {
+            if (_perfil is null || _perfil.IdUsuario != idUsuario) return;
+
+            _perfil = new PerfilCacheSnapshot
+            {
+                IdUsuario = idUsuario,
+                AtualizadoEmUtc = DateTime.UtcNow,
+                NomeUsuario = _perfil.NomeUsuario,
+                NomeExibicao = nomeExibicao,
+                Email = _perfil.Email,
+                StatusConta = _perfil.StatusConta,
+                DataCadastro = _perfil.DataCadastro,
+                Biografia = biografia,
+                AvatarUrl = avatarUrl,
+                TotalPersonagens = _perfil.TotalPersonagens,
+                TotalMonstros = _perfil.TotalMonstros
+            };
+        }
+
+        NotificarAlteracao();
+    }
+
+    private void AtualizarContadorPerfilLocked(int idUsuario, int? totalPersonagens = null, int? totalMonstros = null)
+    {
+        if (_perfil is null || _perfil.IdUsuario != idUsuario) return;
+
+        _perfil = new PerfilCacheSnapshot
+        {
+            IdUsuario = idUsuario,
+            AtualizadoEmUtc = DateTime.UtcNow,
+            NomeUsuario = _perfil.NomeUsuario,
+            NomeExibicao = _perfil.NomeExibicao,
+            Email = _perfil.Email,
+            StatusConta = _perfil.StatusConta,
+            DataCadastro = _perfil.DataCadastro,
+            Biografia = _perfil.Biografia,
+            AvatarUrl = _perfil.AvatarUrl,
+            TotalPersonagens = totalPersonagens ?? _perfil.TotalPersonagens,
+            TotalMonstros = totalMonstros ?? _perfil.TotalMonstros
+        };
+    }
+
     // --- LIMPEZA GERAL (LOGOUT / TROCA DE CONTA) ---
     public void LimparTudo()
     {
@@ -160,5 +533,7 @@ public class AppCacheService
             _biblioteca = null;
             _perfil = null;
         }
+
+        NotificarAlteracao();
     }
 }

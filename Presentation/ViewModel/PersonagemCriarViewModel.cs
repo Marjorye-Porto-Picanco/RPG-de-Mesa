@@ -106,6 +106,9 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
+        private readonly ImagemPickerService _imagemPicker;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
 
         public PersonagemCriarViewModel(
             PersonagemService personagemService,
@@ -119,6 +122,9 @@ namespace RPGdeMesa.Presentation.ViewModel
             _sessaoUsuario = sessaoUsuario;
             _imagemPicker = imagemPicker;
             _navigation = navigation;
+            _imagemPicker = imagemPicker;
+            _appCache = appCache;
+            _homeCache = homeCache;
             LimparFormulario();
         }
 
@@ -278,6 +284,15 @@ namespace RPGdeMesa.Presentation.ViewModel
         {
             try
             {
+                var idUsuario = _sessaoUsuario.IdUsuarioLogado;
+                var bibSnap = idUsuario > 0 ? _appCache.ObterBiblioteca(idUsuario) : null;
+                if (bibSnap is not null && bibSnap.Magias.Count > 0)
+                {
+                    MagiasCatalogo = bibSnap.Magias;
+                    NotifyStateChanged();
+                    return;
+                }
+
                 MagiasCatalogo = await _campanhaService.ObterTodasMagiasAsync();
                 NotifyStateChanged();
             }
@@ -679,12 +694,24 @@ namespace RPGdeMesa.Presentation.ViewModel
                     await _campanhaService.AdicionarPersonagemNaCampanhaAsync(IdCampanhaOpcional.Value, PersonagemAtual.IdPersonagem);
                 }
 
+                // Write-through: grava na RAM e atualiza a Home instantaneamente
+                if (PersonagemAtual.IdPersonagem > 0)
+                {
+                    _appCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                    _homeCache.UpsertPersonagem(idUsuario, PersonagemAtual);
+                }
+                else
+                {
+                    _appCache.InvalidarPersonagensLib();
+                    _homeCache.Limpar();
+                }
+
                 Sucesso = true;
                 LiberarProximaNavegacao = true;
                 MensagemFeedback = "Personagem forjado com sucesso!";
                 NotifyStateChanged();
 
-                await Task.Delay(1000);
+                await Task.Delay(500);
                 _navigation.NavigateTo(DestinoPadrao);
             }
             catch (Exception ex)
