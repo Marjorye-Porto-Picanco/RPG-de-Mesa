@@ -53,12 +53,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                 {
                     _sessaoUsuario.FazerLogin(
                         resultado.UsuarioLogado.IdAccount,
-                        resultado.UsuarioLogado.UsarName,
+                        resultado.UsuarioLogado.NomeParaExibicao,
                         resultado.UsuarioLogado.EMail
                     );
+                    _sessaoUsuario.AtualizarAvatar(resultado.UsuarioLogado.Perfil?.AvatarUrl);
 
                     await Task.Delay(800);
-                    _navigation.NavigateTo("/campanhas");
+                    _navigation.NavigateTo("/home");
                 }
             }
             finally
@@ -96,12 +97,13 @@ namespace RPGdeMesa.Presentation.ViewModel
                 {
                     _sessaoUsuario.FazerLogin(
                         resultado.UsuarioLogado.IdAccount,
-                        resultado.UsuarioLogado.UsarName,
+                        resultado.UsuarioLogado.NomeParaExibicao,
                         resultado.UsuarioLogado.EMail
                     );
+                    _sessaoUsuario.AtualizarAvatar(resultado.UsuarioLogado.Perfil?.AvatarUrl);
 
                     await Task.Delay(1000);
-                    _navigation.NavigateTo("/campanhas");
+                    _navigation.NavigateTo("/home");
                 }
             }
             catch (Exception ex)

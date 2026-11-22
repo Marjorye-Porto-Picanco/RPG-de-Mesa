@@ -6,84 +6,57 @@ namespace RPGdeMesa.Infrastructure.Repositories;
 
 public class NpcRepository : INpcRepository
 {
-    private readonly AppDbContext _contexto;
-    private readonly SemaphoreSlim _dbLock = new(1, 1);
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
-    public NpcRepository(AppDbContext contexto) => _contexto = contexto;
+    public NpcRepository(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
-    private async Task<T> ExecutarComLockAsync<T>(Func<Task<T>> operacao)
+    public async Task<NPC?> ObterPorIdAsync(int idNpc)
     {
-        await _dbLock.WaitAsync();
-        try
-        {
-            return await operacao();
-        }
-        finally
-        {
-            _dbLock.Release();
-        }
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Npcs
+            .AsNoTracking()
+            .Include(n => n.NpcCampanhas)
+            .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
     }
 
-    private async Task ExecutarComLockAsync(Func<Task> operacao)
+    public async Task<List<NPC>> ListarPorUsuarioAsync(int idAccount)
     {
-        await _dbLock.WaitAsync();
-        try
-        {
-            await operacao();
-        }
-        finally
-        {
-            _dbLock.Release();
-        }
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Npcs
+            .AsNoTracking()
+            .Include(n => n.NpcCampanhas)
+            .Where(n => n.IdAccount == idAccount)
+            .ToListAsync();
     }
 
-    public Task<NPC?> ObterPorIdAsync(int idNpc) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.ChangeTracker.Clear();
-            return await _contexto.Npcs
-                .Include(n => n.NpcCampanhas)
-                .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
-        });
+    public async Task<List<NPC>> ListarPorCampanhaAsync(int idCampanha)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Npcs
+            .AsNoTracking()
+            .Include(n => n.NpcCampanhas)
+            .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
+            .ToListAsync();
+    }
 
-    public Task<List<NPC>> ListarPorUsuarioAsync(int idAccount) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.ChangeTracker.Clear();
-            return await _contexto.Npcs
-                .Include(n => n.NpcCampanhas)
-                .Where(n => n.IdAccount == idAccount)
-                .ToListAsync();
-        });
+    public async Task AdicionarAsync(NPC npc)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Npcs.Add(npc);
+        await contexto.SaveChangesAsync();
+    }
 
-    public Task<List<NPC>> ListarPorCampanhaAsync(int idCampanha) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.ChangeTracker.Clear();
-            return await _contexto.Npcs
-                .Include(n => n.NpcCampanhas)
-                .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
-                .ToListAsync();
-        });
+    public async Task AtualizarAsync(NPC npc)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Npcs.Update(npc);
+        await contexto.SaveChangesAsync();
+    }
 
-    public Task AdicionarAsync(NPC npc) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.Npcs.Add(npc);
-            await _contexto.SaveChangesAsync();
-        });
-
-    public Task AtualizarAsync(NPC npc) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.Npcs.Update(npc);
-            await _contexto.SaveChangesAsync();
-        });
-
-    public Task RemoverAsync(NPC npc) =>
-        ExecutarComLockAsync(async () =>
-        {
-            _contexto.Npcs.Remove(npc);
-            await _contexto.SaveChangesAsync();
-        });
+    public async Task RemoverAsync(NPC npc)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Npcs.Remove(npc);
+        await contexto.SaveChangesAsync();
+    }
 }

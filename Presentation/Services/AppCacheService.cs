@@ -40,6 +40,7 @@ public sealed class PerfilCacheSnapshot
     public int IdUsuario { get; init; }
     public DateTime AtualizadoEmUtc { get; init; } = DateTime.UtcNow;
     public string NomeUsuario { get; init; } = string.Empty;
+    public string NomeExibicao { get; init; } = string.Empty;
     public string Email { get; init; } = string.Empty;
     public string StatusConta { get; init; } = "ativo";
     public DateTime? DataCadastro { get; init; }

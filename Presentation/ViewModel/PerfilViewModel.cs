@@ -40,7 +40,8 @@ namespace RPGdeMesa.Presentation.ViewModel
         }
 
         // Campos de dbo.Usuario e dbo.Perfil
-        public string NomeUsuario { get; set; } = string.Empty;
+        public string UsernameLogin { get; private set; } = string.Empty; // Usuario.usar_name (somente leitura)
+        public string NomeExibicaoInput { get; set; } = string.Empty;     // Perfil.nome_exibicao (editável)
         public string Email { get; private set; } = string.Empty;
         public string StatusConta { get; private set; } = "ativo";
         public DateTime? DataCadastro { get; private set; }
@@ -64,7 +65,9 @@ namespace RPGdeMesa.Presentation.ViewModel
         private void NotifyStateChanged() => OnChange?.Invoke();
 
         public string NomeExibicao =>
-            string.IsNullOrWhiteSpace(NomeUsuario) ? "Mestre da mesa" : NomeUsuario.Trim();
+            !string.IsNullOrWhiteSpace(NomeExibicaoInput)
+                ? NomeExibicaoInput.Trim()
+                : (!string.IsNullOrWhiteSpace(UsernameLogin) ? UsernameLogin : "Mestre da mesa");
 
         public bool TemAvatar =>
             !string.IsNullOrWhiteSpace(AvatarUrl);
@@ -92,7 +95,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             TemErro = false;
             MensagemStatus = string.Empty;
 
-            // 1. Hidrata imediatamente do cache se existir para este usuário
             var snapshot = _cache.ObterPerfil(idUsuario);
             if (snapshot is not null)
             {
@@ -111,19 +113,20 @@ namespace RPGdeMesa.Presentation.ViewModel
                 var usuario = await _usuarioService.ObterPorIdAsync(idUsuario);
                 if (usuario is not null)
                 {
-                    NomeUsuario = usuario.UsarName;
+                    UsernameLogin = usuario.UsarName;
+                    NomeExibicaoInput = usuario.NomeParaExibicao;
                     Email = usuario.EMail;
                     StatusConta = usuario.StatusConta;
                     DataCadastro = usuario.DataCadastro;
                     Biografia = usuario.Perfil?.Biografia ?? string.Empty;
                     AvatarUrl = usuario.Perfil?.AvatarUrl;
 
-                    _sessaoUsuario.AtualizarNomeUsuario(NomeUsuario);
+                    _sessaoUsuario.AtualizarNomeUsuario(NomeExibicao);
                     _sessaoUsuario.AtualizarAvatar(AvatarUrl);
                 }
                 else
                 {
-                    NomeUsuario = _sessaoUsuario.NomeUsuario ?? "Mestre da mesa";
+                    NomeExibicaoInput = _sessaoUsuario.NomeUsuario ?? "Mestre da mesa";
                 }
 
                 var personagens = await _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
@@ -218,11 +221,11 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 int idUsuario = _sessaoUsuario.IdUsuarioLogado;
-                string usernameLimpo = NomeUsuario.Trim();
+                string nomeLimpo = NomeExibicaoInput.Trim();
 
                 var resultado = await _usuarioService.AtualizarPerfilAsync(
                     idUsuario,
-                    usernameLimpo,
+                    nomeLimpo,
                     Biografia,
                     AvatarUrl);
 
@@ -231,11 +234,11 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 if (resultado.Sucesso)
                 {
-                    NomeUsuario = usernameLimpo;
+                    NomeExibicaoInput = nomeLimpo;
                     StatusUpload = string.Empty;
-                    _sessaoUsuario.AtualizarNomeUsuario(NomeUsuario); // Atualiza nome no NavMenu na hora
-                    _sessaoUsuario.AtualizarAvatar(AvatarUrl);        // Atualiza foto no NavMenu na hora
-                    SalvarSnapshotNoCache(idUsuario);                 // Mantém o cache sincronizado
+                    _sessaoUsuario.AtualizarNomeUsuario(NomeExibicao);
+                    _sessaoUsuario.AtualizarAvatar(AvatarUrl);
+                    SalvarSnapshotNoCache(idUsuario);
                 }
             }
             catch (Exception ex)
@@ -252,7 +255,8 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         private void AplicarSnapshot(PerfilCacheSnapshot s)
         {
-            NomeUsuario = s.NomeUsuario;
+            UsernameLogin = s.NomeUsuario;
+            NomeExibicaoInput = string.IsNullOrWhiteSpace(s.NomeExibicao) ? s.NomeUsuario : s.NomeExibicao;
             Email = s.Email;
             StatusConta = s.StatusConta;
             DataCadastro = s.DataCadastro;
@@ -268,7 +272,8 @@ namespace RPGdeMesa.Presentation.ViewModel
             {
                 IdUsuario = idUsuario,
                 AtualizadoEmUtc = DateTime.UtcNow,
-                NomeUsuario = NomeUsuario,
+                NomeUsuario = UsernameLogin,
+                NomeExibicao = NomeExibicaoInput,
                 Email = Email,
                 StatusConta = StatusConta,
                 DataCadastro = DataCadastro,

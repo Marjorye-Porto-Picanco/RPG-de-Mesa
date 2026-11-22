@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
@@ -33,8 +34,10 @@ namespace RPGdeMesa
             builder.Logging.AddDebug();
 #endif
 
-            // 1. CAMADA DE INFRASTRUCTURE (Banco de Dados e Repositórios como Transient)
-            builder.Services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
+            // 1. CAMADA DE INFRASTRUCTURE (DbContextFactory para paralelismo sem erro de concorrência)
+            builder.Services.AddDbContextFactory<AppDbContext>();
+            builder.Services.AddTransient(sp => sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
+
             builder.Services.AddTransient<IUsuarioRepository, UsuarioRepository>();
             builder.Services.AddTransient<ICampanhaRepository, CampanhaRepository>();
             builder.Services.AddTransient<IMonstroRepository, MonstroRepository>();
@@ -44,7 +47,7 @@ namespace RPGdeMesa
             builder.Services.AddScoped<IMagiaRepository, MagiaRepository>();
             builder.Services.AddScoped<ISessaoRepository, SessaoRepository>();
 
-            // 2. CAMADA DE APPLICATION (Casos de Uso / Services 100% Transient para evitar conflito no EF Core)
+            // 2. CAMADA DE APPLICATION (Casos de Uso / Services)
             builder.Services.AddTransient<UsuarioService>();
             builder.Services.AddTransient<CampanhaService>();
             builder.Services.AddSingleton<SessaoUsuarioService>(); // Singleton pois gerencia sessão ativa do usuário

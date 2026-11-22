@@ -7,13 +7,14 @@ namespace RPGdeMesa.Infrastructure.Repositories;
 
 public class PersonagemRepository : IPersonagemRepository
 {
-    private readonly AppDbContext _contexto;
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
-    public PersonagemRepository(AppDbContext contexto) => _contexto = contexto;
+    public PersonagemRepository(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
     public async Task<Personagem?> ObterPorIdAsync(int idPersonagem)
     {
-        var personagem = await _contexto.Personagens
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var personagem = await contexto.Personagens
             .AsNoTracking()
             .AsSplitQuery()
             .Include(p => p.Raca)
@@ -40,8 +41,8 @@ public class PersonagemRepository : IPersonagemRepository
     // Retorna APENAS as fichas base da biblioteca do usuário (IdPersonagemOrigem == null)
     public async Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount)
     {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Personagens
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Personagens
             .AsNoTracking()
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
@@ -51,15 +52,16 @@ public class PersonagemRepository : IPersonagemRepository
 
     public async Task AdicionarAsync(Personagem personagem)
     {
-        await VincularRacaEAntecedente3FNAsync(personagem);
-        _contexto.Personagens.Add(personagem);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        await VincularRacaEAntecedente3FNAsync(contexto, personagem);
+        contexto.Personagens.Add(personagem);
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AtualizarAsync(Personagem personagem)
     {
-        _contexto.ChangeTracker.Clear();
-        var existente = await _contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var existente = await contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
         if (existente != null)
         {
             string nomeOriginal = existente.Nome;
@@ -71,7 +73,7 @@ public class PersonagemRepository : IPersonagemRepository
             string? alturaOriginal = existente.Altura;
             string? generoOriginal = existente.Genero;
 
-            _contexto.Entry(existente).CurrentValues.SetValues(personagem);
+            contexto.Entry(existente).CurrentValues.SetValues(personagem);
 
             existente.Nome = nomeOriginal;
             existente.IdPersonagemOrigem = idOrigemOriginal;
@@ -82,7 +84,7 @@ public class PersonagemRepository : IPersonagemRepository
             existente.Altura = alturaOriginal;
             existente.Genero = generoOriginal;
 
-            await _contexto.SaveChangesAsync();
+            await contexto.SaveChangesAsync();
         }
     }
 
@@ -92,10 +94,10 @@ public class PersonagemRepository : IPersonagemRepository
         Inventario dadosInventario,
         IEnumerable<(int IdItem, int Quantidade)> itens)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
         // Verifica se já existe uma instância clonada deste personagem base nesta mesma campanha
-        var vinculoExistenteNaCampanha = await _contexto.PersonagensCampanha
+        var vinculoExistenteNaCampanha = await contexto.PersonagensCampanha
             .Include(pc => pc.Personagem)
             .FirstOrDefaultAsync(pc =>
                 pc.IdCampanha == idCampanha &&
@@ -106,8 +108,8 @@ public class PersonagemRepository : IPersonagemRepository
         {
             // Se já era uma instância exclusiva desta campanha (ex: foi recusada e está reenviando), apenas atualiza o inventário dela
             int idInstanciaExistente = vinculoExistenteNaCampanha.IdPersonagem;
-            await SalvarInventarioInternoAsync(idInstanciaExistente, dadosInventario, itens);
-            await _contexto.SaveChangesAsync();
+            await SalvarInventarioInternoAsync(contexto, idInstanciaExistente, dadosInventario, itens);
+            await contexto.SaveChangesAsync();
             return idInstanciaExistente;
         }
 
@@ -161,8 +163,8 @@ public class PersonagemRepository : IPersonagemRepository
             Idiomas = fichaBase.Idiomas
         };
 
-        await _contexto.Personagens.AddAsync(cloneCampanha);
-        await _contexto.SaveChangesAsync();
+        await contexto.Personagens.AddAsync(cloneCampanha);
+        await contexto.SaveChangesAsync();
 
         // Copia Classes (Multiclasse), Salvaguardas, Perícias e Magias da Ficha Base + Salva o Inventário da Campanha
         var classesBase = fichaBase.PersonagemClasses
@@ -191,12 +193,12 @@ public class PersonagemRepository : IPersonagemRepository
         return cloneCampanha.IdPersonagem;
     }
 
-    private async Task VincularRacaEAntecedente3FNAsync(Personagem personagem)
+    private static async Task VincularRacaEAntecedente3FNAsync(AppDbContext contexto, Personagem personagem)
     {
         if (!string.IsNullOrWhiteSpace(personagem.RacaTexto))
         {
             string nomeRaca = personagem.RacaTexto.Trim();
-            var racaBanco = await _contexto.Racas
+            var racaBanco = await contexto.Racas
                 .FirstOrDefaultAsync(r => r.Nome.ToLower() == nomeRaca.ToLower());
 
             if (racaBanco == null)
@@ -208,8 +210,8 @@ public class PersonagemRepository : IPersonagemRepository
                     DeslocamentoBase = 9,
                     VisaoNoEscuro = false
                 };
-                await _contexto.Racas.AddAsync(racaBanco);
-                await _contexto.SaveChangesAsync();
+                await contexto.Racas.AddAsync(racaBanco);
+                await contexto.SaveChangesAsync();
             }
 
             personagem.IdRaca = racaBanco.IdRaca;
@@ -220,7 +222,7 @@ public class PersonagemRepository : IPersonagemRepository
         if (!string.IsNullOrWhiteSpace(personagem.AntecedenteTexto))
         {
             string nomeAntecedente = personagem.AntecedenteTexto.Trim();
-            var antecedenteBanco = await _contexto.Antecedentes
+            var antecedenteBanco = await contexto.Antecedentes
                 .FirstOrDefaultAsync(a => a.Nome.ToLower() == nomeAntecedente.ToLower());
 
             if (antecedenteBanco == null)
@@ -229,8 +231,8 @@ public class PersonagemRepository : IPersonagemRepository
                 {
                     Nome = nomeAntecedente
                 };
-                await _contexto.Antecedentes.AddAsync(antecedenteBanco);
-                await _contexto.SaveChangesAsync();
+                await contexto.Antecedentes.AddAsync(antecedenteBanco);
+                await contexto.SaveChangesAsync();
             }
 
             personagem.IdAntecedente = antecedenteBanco.IdAntecedente;
@@ -247,11 +249,11 @@ public class PersonagemRepository : IPersonagemRepository
         IEnumerable<(int IdItem, int Quantidade)>? itens,
         IEnumerable<Magia> magias)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var classesAntigas = await _contexto.PersonagemClasses.Where(pc => pc.IdPersonagem == idPersonagem).ToListAsync();
-        _contexto.PersonagemClasses.RemoveRange(classesAntigas);
-        await _contexto.SaveChangesAsync();
+        var classesAntigas = await contexto.PersonagemClasses.Where(pc => pc.IdPersonagem == idPersonagem).ToListAsync();
+        contexto.PersonagemClasses.RemoveRange(classesAntigas);
+        await contexto.SaveChangesAsync();
 
         var classesAgrupadas = classes
             .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
@@ -261,7 +263,7 @@ public class PersonagemRepository : IPersonagemRepository
 
         foreach (var c in classesAgrupadas)
         {
-            var classeBanco = await _contexto.Classes
+            var classeBanco = await contexto.Classes
                 .FirstOrDefaultAsync(cl => cl.Nome.ToLower() == c.NomeClasse.ToLower());
 
             if (classeBanco == null)
@@ -272,11 +274,11 @@ public class PersonagemRepository : IPersonagemRepository
                     DadoVida = "d8",
                     AtributoPrimario = "Variável"
                 };
-                await _contexto.Classes.AddAsync(classeBanco);
-                await _contexto.SaveChangesAsync();
+                await contexto.Classes.AddAsync(classeBanco);
+                await contexto.SaveChangesAsync();
             }
 
-            await _contexto.PersonagemClasses.AddAsync(new PersonagemClasse
+            await contexto.PersonagemClasses.AddAsync(new PersonagemClasse
             {
                 IdPersonagem = idPersonagem,
                 IdClasse = classeBanco.IdClasse,
@@ -284,28 +286,28 @@ public class PersonagemRepository : IPersonagemRepository
             });
         }
 
-        var salvAntigas = await _contexto.PersonagemSalvaguardas.Where(s => s.IdPersonagem == idPersonagem).ToListAsync();
-        _contexto.PersonagemSalvaguardas.RemoveRange(salvAntigas);
+        var salvAntigas = await contexto.PersonagemSalvaguardas.Where(s => s.IdPersonagem == idPersonagem).ToListAsync();
+        contexto.PersonagemSalvaguardas.RemoveRange(salvAntigas);
         foreach (var s in salvaguardas.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
         {
-            await _contexto.PersonagemSalvaguardas.AddAsync(new PersonagemSalvaguarda(idPersonagem, s.Trim()));
+            await contexto.PersonagemSalvaguardas.AddAsync(new PersonagemSalvaguarda(idPersonagem, s.Trim()));
         }
 
-        var perAntigas = await _contexto.PersonagemPericias.Where(p => p.IdPersonagem == idPersonagem).ToListAsync();
-        _contexto.PersonagemPericias.RemoveRange(perAntigas);
+        var perAntigas = await contexto.PersonagemPericias.Where(p => p.IdPersonagem == idPersonagem).ToListAsync();
+        contexto.PersonagemPericias.RemoveRange(perAntigas);
         foreach (var p in pericias.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())
         {
-            await _contexto.PersonagemPericias.AddAsync(new PersonagemPericia(idPersonagem, p.Trim()));
+            await contexto.PersonagemPericias.AddAsync(new PersonagemPericia(idPersonagem, p.Trim()));
         }
 
         if (dadosInventario != null && itens != null)
         {
-            await SalvarInventarioInternoAsync(idPersonagem, dadosInventario, itens);
+            await SalvarInventarioInternoAsync(contexto, idPersonagem, dadosInventario, itens);
         }
 
-        var magiasAntigas = await _contexto.PersonagemMagias.Where(pm => pm.IdPersonagem == idPersonagem).ToListAsync();
-        _contexto.PersonagemMagias.RemoveRange(magiasAntigas);
-        await _contexto.SaveChangesAsync();
+        var magiasAntigas = await contexto.PersonagemMagias.Where(pm => pm.IdPersonagem == idPersonagem).ToListAsync();
+        contexto.PersonagemMagias.RemoveRange(magiasAntigas);
+        await contexto.SaveChangesAsync();
 
         foreach (var m in magias.Where(x => !string.IsNullOrWhiteSpace(x.Nome)))
         {
@@ -316,17 +318,17 @@ public class PersonagemRepository : IPersonagemRepository
                 DanoEfeito = m.DanoEfeito,
                 Alcance = m.Alcance
             };
-            await _contexto.Magias.AddAsync(novaMagia);
-            await _contexto.SaveChangesAsync();
+            await contexto.Magias.AddAsync(novaMagia);
+            await contexto.SaveChangesAsync();
 
-            await _contexto.PersonagemMagias.AddAsync(new PersonagemMagia
+            await contexto.PersonagemMagias.AddAsync(new PersonagemMagia
             {
                 IdPersonagem = idPersonagem,
                 IdMagia = novaMagia.IdMagia
             });
         }
 
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task SalvarInventarioPersonagem3FNAsync(
@@ -334,17 +336,18 @@ public class PersonagemRepository : IPersonagemRepository
         Inventario dadosInventario,
         IEnumerable<(int IdItem, int Quantidade)> itens)
     {
-        _contexto.ChangeTracker.Clear();
-        await SalvarInventarioInternoAsync(idPersonagem, dadosInventario, itens);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        await SalvarInventarioInternoAsync(contexto, idPersonagem, dadosInventario, itens);
+        await contexto.SaveChangesAsync();
     }
 
-    private async Task SalvarInventarioInternoAsync(
+    private static async Task SalvarInventarioInternoAsync(
+        AppDbContext contexto,
         int idPersonagem,
         Inventario dadosInventario,
         IEnumerable<(int IdItem, int Quantidade)> itens)
     {
-        var inv = await _contexto.Inventarios
+        var inv = await contexto.Inventarios
             .Include(i => i.Itens)
             .FirstOrDefaultAsync(i => i.IdPersonagem == idPersonagem);
 
@@ -363,8 +366,8 @@ public class PersonagemRepository : IPersonagemRepository
                 MoedasPL = dadosInventario.MoedasPL,
                 Notas = dadosInventario.Notas
             };
-            await _contexto.Inventarios.AddAsync(inv);
-            await _contexto.SaveChangesAsync();
+            await contexto.Inventarios.AddAsync(inv);
+            await contexto.SaveChangesAsync();
         }
         else
         {
@@ -378,8 +381,8 @@ public class PersonagemRepository : IPersonagemRepository
             inv.MoedasPL = dadosInventario.MoedasPL;
             inv.Notas = dadosInventario.Notas;
 
-            _contexto.InventarioItens.RemoveRange(inv.Itens);
-            await _contexto.SaveChangesAsync();
+            contexto.InventarioItens.RemoveRange(inv.Itens);
+            await contexto.SaveChangesAsync();
         }
 
         var itensAgrupados = itens
@@ -392,15 +395,15 @@ public class PersonagemRepository : IPersonagemRepository
                 Quantidade = g.Sum(x => Math.Max(1, x.Quantidade))
             });
 
-        await _contexto.InventarioItens.AddRangeAsync(itensAgrupados);
+        await contexto.InventarioItens.AddRangeAsync(itensAgrupados);
     }
 
     public async Task RemoverAsync(Personagem personagem)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
         // Se o usuário excluir a ficha base da biblioteca, desvincula o ponteiro das instâncias de campanhas para não dar erro de FK
-        var copiasEmCampanhas = await _contexto.Personagens
+        var copiasEmCampanhas = await contexto.Personagens
             .Where(p => p.IdPersonagemOrigem == personagem.IdPersonagem)
             .ToListAsync();
 
@@ -408,13 +411,13 @@ public class PersonagemRepository : IPersonagemRepository
         {
             copia.IdPersonagemOrigem = null;
         }
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
 
-        var alvo = await _contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
+        var alvo = await contexto.Personagens.FirstOrDefaultAsync(p => p.IdPersonagem == personagem.IdPersonagem);
         if (alvo != null)
         {
-            _contexto.Personagens.Remove(alvo);
-            await _contexto.SaveChangesAsync();
+            contexto.Personagens.Remove(alvo);
+            await contexto.SaveChangesAsync();
         }
     }
 }

@@ -180,24 +180,19 @@ public class UsuarioService
         return await _usuarioRepo.ObterPorIdAsync(idAccount);
     }
 
-    public async Task<(bool Sucesso, string Mensagem)> AtualizarPerfilAsync(int idAccount, string novoUsername, string? biografia, string? avatarUrl)
+    public async Task<(bool Sucesso, string Mensagem)> AtualizarPerfilAsync(int idAccount, string? nomeExibicao, string? biografia, string? avatarUrl)
     {
         var usuario = await _usuarioRepo.ObterPorIdAsync(idAccount);
         if (usuario is null)
             return (false, "Usuário não encontrado.");
 
-        string usernameLimpo = novoUsername?.Trim() ?? string.Empty;
-        if (!ValidarNomeUsuario(usernameLimpo))
-            return (false, "O nome de usuário deve ter entre 3 e 20 caracteres e conter apenas letras, números e sublinhado (_).");
-
-        bool alterouUsername = !string.Equals(usuario.UsarName, usernameLimpo, StringComparison.OrdinalIgnoreCase);
-        if (alterouUsername && await _usuarioRepo.ExisteUsernameAsync(usernameLimpo))
-            return (false, "Este nome de usuário já está em uso.");
+        string? nomeLimpo = string.IsNullOrWhiteSpace(nomeExibicao) ? null : nomeExibicao.Trim();
+        if (nomeLimpo is not null && nomeLimpo.Length > 100)
+            return (false, "O nome de exibição deve ter no máximo 100 caracteres.");
 
         try
         {
-            usuario.AlterarUsername(usernameLimpo);
-            usuario.AtualizarPerfil(biografia?.Trim(), avatarUrl);
+            usuario.AtualizarPerfil(nomeLimpo, biografia?.Trim(), avatarUrl);
             await _usuarioRepo.AtualizarAsync(usuario);
 
             return (true, "Perfil atualizado com sucesso!");

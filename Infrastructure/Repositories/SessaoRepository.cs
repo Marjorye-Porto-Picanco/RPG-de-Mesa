@@ -9,13 +9,14 @@ namespace RPGdeMesa.Infrastructure.Repositories;
 
 public class SessaoRepository : ISessaoRepository
 {
-    private readonly AppDbContext _contexto;
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
-    public SessaoRepository(AppDbContext contexto) => _contexto = contexto;
+    public SessaoRepository(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
     public async Task<Campanha?> ObterCampanhaParaSessaoAsync(int idCampanha)
     {
-        return await _contexto.Campanhas
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Campanhas
             .AsNoTracking()
             .AsSplitQuery()
             .Include(c => c.UsuarioMestre).ThenInclude(u => u.Perfil)
@@ -31,14 +32,16 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<bool> SessaoEstaAtivaAsync(int idCampanha)
     {
-        return await _contexto.SessoesMesa
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessoesMesa
             .AsNoTracking()
             .AnyAsync(s => s.IdCampanha == idCampanha && s.Ativa);
     }
 
     public async Task<SessaoMesa?> ObterSessaoPorCampanhaAsync(int idCampanha)
     {
-        return await _contexto.SessoesMesa
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessoesMesa
             .AsNoTracking()
             .Where(s => s.IdCampanha == idCampanha)
             .OrderByDescending(s => s.Ativa)
@@ -48,16 +51,17 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<SessaoMesa?> ObterSessaoPorIdAsync(int idSessao)
     {
-        return await _contexto.SessoesMesa
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessoesMesa
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
     }
 
     public async Task<SessaoMesa> AbrirOuReabrirSessaoAsync(int idCampanha, int? idMapaInicial = null)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessaoAtiva = await _contexto.SessoesMesa
+        var sessaoAtiva = await contexto.SessoesMesa
             .Where(s => s.IdCampanha == idCampanha && s.Ativa)
             .OrderByDescending(s => s.IdSessao)
             .FirstOrDefaultAsync();
@@ -65,24 +69,25 @@ public class SessaoRepository : ISessaoRepository
         if (sessaoAtiva != null)
         {
             sessaoAtiva.AbrirSessao(idMapaInicial);
-            await _contexto.SaveChangesAsync();
+            await contexto.SaveChangesAsync();
             return sessaoAtiva;
         }
 
-        int ultimoNumero = await _contexto.SessoesMesa
+        int ultimoNumero = await contexto.SessoesMesa
             .AsNoTracking()
             .Where(s => s.IdCampanha == idCampanha)
             .MaxAsync(s => (int?)s.NumeroSessao) ?? 0;
 
         var novaSessao = new SessaoMesa(idCampanha, ultimoNumero + 1, idMapaInicial);
-        await _contexto.SessoesMesa.AddAsync(novaSessao);
-        await _contexto.SaveChangesAsync();
+        await contexto.SessoesMesa.AddAsync(novaSessao);
+        await contexto.SaveChangesAsync();
         return novaSessao;
     }
 
     public async Task<SessaoMesa?> ObterSessaoCompletaAsync(int idSessao)
     {
-        return await _contexto.SessoesMesa
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessoesMesa
             .AsNoTracking()
             .AsSplitQuery()
             .Include(s => s.MapaAtivo)
@@ -93,9 +98,9 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<bool> ConectarParticipanteAsync(int idSessao, int idAccount, int? idPersonagem)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var participante = await _contexto.SessaoParticipantes
+        var participante = await contexto.SessaoParticipantes
             .FirstOrDefaultAsync(sp => sp.IdSessao == idSessao && sp.IdAccount == idAccount);
 
         bool estavaOffline;
@@ -103,7 +108,7 @@ public class SessaoRepository : ISessaoRepository
         if (participante == null)
         {
             participante = new SessaoParticipante(idSessao, idAccount, idPersonagem);
-            await _contexto.SessaoParticipantes.AddAsync(participante);
+            await contexto.SessaoParticipantes.AddAsync(participante);
             estavaOffline = true;
         }
         else
@@ -112,44 +117,44 @@ public class SessaoRepository : ISessaoRepository
             participante.Conectar(idPersonagem);
         }
 
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
         return estavaOffline;
     }
 
     public async Task AtualizarHeartbeatAsync(int idSessao, int idAccount)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var participante = await _contexto.SessaoParticipantes
+        var participante = await contexto.SessaoParticipantes
             .FirstOrDefaultAsync(sp => sp.IdSessao == idSessao && sp.IdAccount == idAccount);
 
         if (participante != null)
         {
             participante.AtualizarHeartbeat();
-            await _contexto.SaveChangesAsync();
+            await contexto.SaveChangesAsync();
         }
     }
 
     public async Task<bool> DesconectarParticipanteAsync(int idSessao, int idAccount)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var participante = await _contexto.SessaoParticipantes
+        var participante = await contexto.SessaoParticipantes
             .FirstOrDefaultAsync(sp => sp.IdSessao == idSessao && sp.IdAccount == idAccount);
 
         if (participante == null || !participante.Online)
             return false;
 
         participante.Desconectar();
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
         return true;
     }
 
     public async Task FinalizarSessaoAsync(int idSessao)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessao = await _contexto.SessoesMesa
+        var sessao = await contexto.SessoesMesa
             .Include(s => s.Participantes)
             .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
 
@@ -161,47 +166,48 @@ public class SessaoRepository : ISessaoRepository
             participante.Desconectar();
         }
 
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AtualizarResumoSessaoAsync(int idSessao, string? titulo, string? resumo, int? xpTotalDistribuido = null)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessao = await _contexto.SessoesMesa
+        var sessao = await contexto.SessoesMesa
             .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
 
         if (sessao == null) return;
 
         sessao.AtualizarResumo(titulo, resumo, xpTotalDistribuido);
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AtualizarMapaAtivoAsync(int idSessao, int? idMapa)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessao = await _contexto.SessoesMesa
+        var sessao = await contexto.SessoesMesa
             .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
 
         if (sessao == null) return;
 
         sessao.AlterarMapaAtivo(idMapa);
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AdicionarMensagemAsync(SessaoMensagem mensagem)
     {
-        _contexto.ChangeTracker.Clear();
-        await _contexto.SessaoMensagens.AddAsync(mensagem);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        await contexto.SessaoMensagens.AddAsync(mensagem);
+        await contexto.SaveChangesAsync();
     }
 
     public async Task<List<SessaoMensagem>> ListarMensagensAsync(int idSessao, int limitePorCanal = 80)
     {
-        var recentes = await _contexto.SessaoMensagens
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var recentes = await contexto.SessaoMensagens
             .AsNoTracking()
-            .Include(m => m.Usuario)
+            .Include(m => m.Usuario).ThenInclude(u => u!.Perfil)
             .Where(m => m.IdSessao == idSessao)
             .OrderByDescending(m => m.DataEnvio)
             .Take(limitePorCanal * 4)
@@ -213,11 +219,12 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<List<SessaoMesa>> ListarHistoricoSessoesAsync(int idCampanha)
     {
-        return await _contexto.SessoesMesa
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessoesMesa
             .AsNoTracking()
             .AsSplitQuery()
             .Include(s => s.MapaAtivo)
-            .Include(s => s.Participantes).ThenInclude(p => p.Usuario)
+            .Include(s => s.Participantes).ThenInclude(p => p.Usuario).ThenInclude(u => u.Perfil)
             .Include(s => s.Participantes).ThenInclude(p => p.Personagem)
             .Where(s => s.IdCampanha == idCampanha)
             .OrderByDescending(s => s.NumeroSessao)
@@ -232,7 +239,8 @@ public class SessaoRepository : ISessaoRepository
         if (!ids.Any())
             return new Dictionary<int, (int, int)>();
 
-        var agrupado = await _contexto.SessaoMensagens
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var agrupado = await contexto.SessaoMensagens
             .AsNoTracking()
             .Where(m => ids.Contains(m.IdSessao))
             .GroupBy(m => m.IdSessao)
@@ -251,10 +259,11 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem)
     {
-        var personagem = await _contexto.Personagens
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var personagem = await contexto.Personagens
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(p => p.Usuario)
+            .Include(p => p.Usuario).ThenInclude(u => u.Perfil)
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
             .Include(p => p.PersonagemClasses).ThenInclude(pc => pc.Classe)
@@ -277,7 +286,8 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<List<Personagem>> ListarFichasAceitasCompletasAsync(int idCampanha)
     {
-        var idsAceitos = await _contexto.PersonagensCampanha
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var idsAceitos = await contexto.PersonagensCampanha
             .AsNoTracking()
             .Where(pc => pc.IdCampanha == idCampanha &&
                         (string.IsNullOrEmpty(pc.StatusAprovacao) || pc.StatusAprovacao == "Aceita"))
@@ -287,10 +297,10 @@ public class SessaoRepository : ISessaoRepository
         if (!idsAceitos.Any())
             return new List<Personagem>();
 
-        var personagens = await _contexto.Personagens
+        var personagens = await contexto.Personagens
             .AsNoTracking()
             .AsSplitQuery()
-            .Include(p => p.Usuario)
+            .Include(p => p.Usuario).ThenInclude(u => u.Perfil)
             .Include(p => p.Raca)
             .Include(p => p.Antecedente)
             .Include(p => p.PersonagemClasses).ThenInclude(pc => pc.Classe)
@@ -313,7 +323,8 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task<List<Item>> ListarItensCampanhaAsync(int idCampanha)
     {
-        return await _contexto.ItemCampanhas
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.ItemCampanhas
             .AsNoTracking()
             .Where(ic => ic.IdCampanha == idCampanha && ic.Item != null)
             .Select(ic => ic.Item!)
@@ -326,7 +337,8 @@ public class SessaoRepository : ISessaoRepository
     // =========================================================================
     public async Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao)
     {
-        return await _contexto.SessaoPinos
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.SessaoPinos
             .AsNoTracking()
             .Where(p => p.IdSessao == idSessao)
             .OrderBy(p => p.IdPino)
@@ -335,9 +347,9 @@ public class SessaoRepository : ISessaoRepository
 
     public async Task SalvarOuMoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var existente = await _contexto.SessaoPinos
+        var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
@@ -345,7 +357,7 @@ public class SessaoRepository : ISessaoRepository
         if (existente == null)
         {
             var novo = new SessaoPino(idSessao, tipoEntidade, idEntidade, coluna, linha, visivel);
-            await _contexto.SessaoPinos.AddAsync(novo);
+            await contexto.SessaoPinos.AddAsync(novo);
         }
         else
         {
@@ -353,14 +365,14 @@ public class SessaoRepository : ISessaoRepository
             existente.DefinirVisibilidade(visivel);
         }
 
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AlterarVisibilidadePinoAsync(int idSessao, string tipoEntidade, int idEntidade, bool visivel)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var existente = await _contexto.SessaoPinos
+        var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
@@ -368,21 +380,21 @@ public class SessaoRepository : ISessaoRepository
         if (existente == null) return;
 
         existente.DefinirVisibilidade(visivel);
-        await _contexto.SaveChangesAsync();
+        await contexto.SaveChangesAsync();
     }
 
     public async Task RemoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade)
     {
-        _contexto.ChangeTracker.Clear();
+        await using var contexto = await _factory.CreateDbContextAsync();
 
-        var existente = await _contexto.SessaoPinos
+        var existente = await contexto.SessaoPinos
             .FirstOrDefaultAsync(p => p.IdSessao == idSessao
                                    && p.TipoEntidade == tipoEntidade
                                    && p.IdEntidade == idEntidade);
 
         if (existente == null) return;
 
-        _contexto.SessaoPinos.Remove(existente);
-        await _contexto.SaveChangesAsync();
+        contexto.SessaoPinos.Remove(existente);
+        await contexto.SaveChangesAsync();
     }
 }

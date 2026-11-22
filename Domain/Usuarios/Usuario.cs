@@ -17,6 +17,11 @@ public class Usuario : IAggregateRoot
     private readonly List<Personagem> _personagens = new();
     public virtual IReadOnlyCollection<Personagem> Personagens => _personagens.AsReadOnly();
 
+    public string NomeParaExibicao =>
+        !string.IsNullOrWhiteSpace(Perfil?.NomeExibicao)
+            ? Perfil!.NomeExibicao!
+            : UsarName;
+
     protected Usuario() { }
 
     public Usuario(string usarName, string email, string passwordHash)
@@ -33,23 +38,15 @@ public class Usuario : IAggregateRoot
         Password = passwordHash;
         DataCadastro = DateTime.Now;
         StatusConta = "ativo";
-        Perfil = new Perfil(this);
+        Perfil = new Perfil(this, nomeExibicao: UsarName);
     }
 
-    public void AlterarUsername(string novoUsername)
-    {
-        if (string.IsNullOrWhiteSpace(novoUsername))
-            throw new DomainException("O nome de usuário é obrigatório.");
-
-        UsarName = novoUsername.Trim();
-    }
-
-    public void AtualizarPerfil(string? biografia, string? avatarUrl)
+    public void AtualizarPerfil(string? nomeExibicao, string? biografia, string? avatarUrl)
     {
         if (Perfil is null)
-            Perfil = new Perfil(this, biografia, avatarUrl);
+            Perfil = new Perfil(this, biografia, avatarUrl, nomeExibicao);
         else
-            Perfil.Atualizar(biografia, avatarUrl);
+            Perfil.Atualizar(nomeExibicao, biografia, avatarUrl);
     }
 
     public void AlterarStatusConta(string novoStatus)

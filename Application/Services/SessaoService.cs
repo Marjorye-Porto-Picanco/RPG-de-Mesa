@@ -1,4 +1,5 @@
-﻿using RPGdeMesa.Domain.Bestiario;
+﻿using System.Collections.Concurrent;
+using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
@@ -10,8 +11,11 @@ namespace RPGdeMesa.Application.Services;
 
 public class SessaoService
 {
+    private static readonly TimeSpan ValidadeCacheCampanha = TimeSpan.FromSeconds(60);
+
     private readonly ISessaoRepository _sessaoRepo;
     private readonly IPersonagemRepository _personagemRepo;
+    private readonly ConcurrentDictionary<int, (Campanha Campanha, DateTime AtualizadoEmUtc)> _cacheCampanhas = new();
 
     public SessaoService(
         ISessaoRepository sessaoRepo,
@@ -19,6 +23,27 @@ public class SessaoService
     {
         _sessaoRepo = sessaoRepo;
         _personagemRepo = personagemRepo;
+    }
+
+    public void InvalidarCacheCampanha(int idCampanha) =>
+        _cacheCampanhas.TryRemove(idCampanha, out _);
+
+    private async Task<Campanha?> ObterCampanhaComCacheAsync(int idCampanha, bool forcarAtualizacao = false)
+    {
+        if (!forcarAtualizacao &&
+            _cacheCampanhas.TryGetValue(idCampanha, out var entrada) &&
+            (DateTime.UtcNow - entrada.AtualizadoEmUtc) < ValidadeCacheCampanha)
+        {
+            return entrada.Campanha;
+        }
+
+        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+        if (campanha != null)
+        {
+            _cacheCampanhas[idCampanha] = (campanha, DateTime.UtcNow);
+        }
+
+        return campanha;
     }
 
     public Task<bool> VerificarSessaoAtivaAsync(int idCampanha) =>
@@ -32,7 +57,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha, forcarAtualizacao: true);
             if (campanha == null)
                 return (false, "Campanha não encontrada.", null);
 
@@ -118,13 +143,19 @@ public class SessaoService
 
     public async Task<SessaoEstadoDto?> SincronizarSessaoAsync(int idCampanha, int idSessao, int idAccount)
     {
-        var sessaoAtual = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+        var tarefaSessao = _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+        var tarefaCampanha = ObterCampanhaComCacheAsync(idCampanha);
+
+        await Task.WhenAll(tarefaSessao, tarefaCampanha);
+
+        var sessaoAtual = tarefaSessao.Result;
+        var campanha = tarefaCampanha.Result;
+
         if (sessaoAtual != null && sessaoAtual.Ativa)
         {
             await _sessaoRepo.AtualizarHeartbeatAsync(idSessao, idAccount);
         }
 
-        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
         if (campanha == null) return null;
 
         return await MontarEstadoSessaoAsync(campanha, idSessao, idAccount);
@@ -158,7 +189,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -166,6 +197,7 @@ public class SessaoService
                 return (false, "Apenas o Mestre pode finalizar a sessão.");
 
             await _sessaoRepo.FinalizarSessaoAsync(idSessao);
+            InvalidarCacheCampanha(idCampanha);
 
             string apelido = string.IsNullOrWhiteSpace(nomeMestre) ? "O Mestre" : nomeMestre;
             await _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(
@@ -190,7 +222,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -224,7 +256,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -250,7 +282,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -275,7 +307,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -334,10 +366,11 @@ public class SessaoService
                 $"🎲 {nomeExibicao} rolou {rolagem.Expressao}{contextoTexto}: Total {rolagem.Total} [{dadosIndividuais}]{modTexto}";
 
             var msgChat = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Chat, textoSistema);
-            await _sessaoRepo.AdicionarMensagemAsync(msgChat);
-
             var msgRegistro = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Registro, textoSistema);
-            await _sessaoRepo.AdicionarMensagemAsync(msgRegistro);
+
+            await Task.WhenAll(
+                _sessaoRepo.AdicionarMensagemAsync(msgChat),
+                _sessaoRepo.AdicionarMensagemAsync(msgRegistro));
 
             return (true, string.Empty);
         }
@@ -359,7 +392,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -384,22 +417,24 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.", null);
 
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode realizar a revisão pós-sessão.", null);
 
-            var fichas = await _sessaoRepo.ListarFichasAceitasCompletasAsync(idCampanha);
-            var itens = await _sessaoRepo.ListarItensCampanhaAsync(idCampanha);
+            var tarefaFichas = _sessaoRepo.ListarFichasAceitasCompletasAsync(idCampanha);
+            var tarefaItens = _sessaoRepo.ListarItensCampanhaAsync(idCampanha);
+
+            await Task.WhenAll(tarefaFichas, tarefaItens);
 
             return (true, string.Empty, new RevisaoPosSessaoDto
             {
                 IdCampanha = campanha.IdCampanha,
                 NomeCampanha = campanha.Nome,
-                Fichas = fichas,
-                ItensCampanha = itens
+                Fichas = tarefaFichas.Result,
+                ItensCampanha = tarefaItens.Result
             });
         }
         catch (Exception ex)
@@ -418,7 +453,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -453,6 +488,7 @@ public class SessaoService
                     xpTotalDistribuido);
             }
 
+            InvalidarCacheCampanha(idCampanha);
             return (true, "Revisão concluída! Fichas, XPs e resumo da sessão foram salvos.");
         }
         catch (Exception ex)
@@ -463,12 +499,15 @@ public class SessaoService
 
     public async Task<List<HistoricoSessaoDto>> ObterHistoricoSessoesAsync(int idCampanha)
     {
-        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
-        if (campanha == null)
-            return new List<HistoricoSessaoDto>();
+        var tarefaCampanha = ObterCampanhaComCacheAsync(idCampanha);
+        var tarefaSessoes = _sessaoRepo.ListarHistoricoSessoesAsync(idCampanha);
 
-        var sessoes = await _sessaoRepo.ListarHistoricoSessoesAsync(idCampanha);
-        if (!sessoes.Any())
+        await Task.WhenAll(tarefaCampanha, tarefaSessoes);
+
+        var campanha = tarefaCampanha.Result;
+        var sessoes = tarefaSessoes.Result;
+
+        if (campanha == null || !sessoes.Any())
             return new List<HistoricoSessaoDto>();
 
         var contagens = await _sessaoRepo.ContarAtividadePorSessoesAsync(sessoes.Select(s => s.IdSessao));
@@ -489,11 +528,11 @@ public class SessaoService
 
             var participantes = s.Participantes
                 .OrderByDescending(p => p.IdAccount == campanha.IdAccount)
-                .ThenBy(p => p.Usuario?.UsarName)
+                .ThenBy(p => p.Usuario?.NomeParaExibicao)
                 .Select(p => new ParticipanteHistoricoDto
                 {
                     IdAccount = p.IdAccount,
-                    NomeUsuario = p.Usuario?.UsarName ?? $"Usuário #{p.IdAccount}",
+                    NomeUsuario = p.Usuario?.NomeParaExibicao ?? $"Usuário #{p.IdAccount}",
                     EhMestre = p.IdAccount == campanha.IdAccount,
                     NomePersonagem = p.Personagem?.Nome,
                     ClasseNivel = p.Personagem != null
@@ -539,7 +578,7 @@ public class SessaoService
                 EhSistema = m.IdAccount == null,
                 Autor = m.IdAccount == null
                     ? "Sistema"
-                    : (m.Usuario?.UsarName ?? $"Usuário #{m.IdAccount}"),
+                    : (m.Usuario?.NomeParaExibicao ?? $"Usuário #{m.IdAccount}"),
                 Conteudo = m.Conteudo,
                 DataEnvioLocal = DateTime.SpecifyKind(m.DataEnvio, DateTimeKind.Utc).ToLocalTime()
             })
@@ -555,7 +594,7 @@ public class SessaoService
     {
         try
         {
-            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
@@ -588,9 +627,15 @@ public class SessaoService
 
     private async Task<SessaoEstadoDto> MontarEstadoSessaoAsync(Campanha campanha, int idSessao, int idAccountLogado)
     {
-        var sessaoCompleta = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
-        var mensagens = await _sessaoRepo.ListarMensagensAsync(idSessao);
-        var pinosDb = await _sessaoRepo.ListarPinosSessaoAsync(idSessao);
+        var tarefaSessao = _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
+        var tarefaMensagens = _sessaoRepo.ListarMensagensAsync(idSessao);
+        var tarefaPinos = _sessaoRepo.ListarPinosSessaoAsync(idSessao);
+
+        await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos);
+
+        var sessaoCompleta = tarefaSessao.Result;
+        var mensagens = tarefaMensagens.Result;
+        var pinosDb = tarefaPinos.Result;
 
         var mapasDisponiveis = campanha.MapaCampanhas
             .Where(mc => mc.Mapa != null)
@@ -632,7 +677,7 @@ public class SessaoService
         var mestreDto = new ParticipanteSessaoDto
         {
             IdAccount = campanha.IdAccount,
-            Username = campanha.UsuarioMestre?.UsarName ?? "Mestre",
+            Username = campanha.UsuarioMestre?.NomeParaExibicao ?? "Mestre",
             EhMestre = true,
             SubtituloLinha1 = "Mestre",
             SubtituloLinha2 = string.Empty,
@@ -650,7 +695,7 @@ public class SessaoService
         foreach (var uc in campanha.UsuarioCampanhas.Where(uc => uc.IdAccount != campanha.IdAccount))
         {
             contasJogadores[uc.IdAccount] = (
-                uc.Usuario?.UsarName ?? $"Jogador #{uc.IdAccount}",
+                uc.Usuario?.NomeParaExibicao ?? $"Jogador #{uc.IdAccount}",
                 uc.Usuario?.Perfil?.AvatarUrl);
         }
 
@@ -659,7 +704,7 @@ public class SessaoService
             if (!contasJogadores.ContainsKey(kv.Key))
             {
                 contasJogadores[kv.Key] = (
-                    kv.Value.Usuario?.UsarName ?? $"Jogador #{kv.Key}",
+                    kv.Value.Usuario?.NomeParaExibicao ?? $"Jogador #{kv.Key}",
                     kv.Value.Usuario?.Perfil?.AvatarUrl);
             }
         }
@@ -738,7 +783,7 @@ public class SessaoService
             EhSistema = m.IdAccount == null,
             Autor = m.IdAccount == null
                 ? "Sistema"
-                : (m.Usuario?.UsarName ?? $"Usuário #{m.IdAccount}"),
+                : (m.Usuario?.NomeParaExibicao ?? $"Usuário #{m.IdAccount}"),
             Conteudo = m.Conteudo,
             DataEnvioLocal = DateTime.SpecifyKind(m.DataEnvio, DateTimeKind.Utc).ToLocalTime()
         }).ToList();

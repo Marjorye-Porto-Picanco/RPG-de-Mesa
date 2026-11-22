@@ -6,20 +6,23 @@ namespace RPGdeMesa.Infrastructure.Repositories;
 
 public class MonstroRepository : IMonstroRepository
 {
-    private readonly AppDbContext _contexto;
+    private readonly IDbContextFactory<AppDbContext> _factory;
 
-    public MonstroRepository(AppDbContext contexto) => _contexto = contexto;
+    public MonstroRepository(IDbContextFactory<AppDbContext> factory) => _factory = factory;
 
     public async Task<Monstro?> ObterPorIdAsync(int idMonstro)
     {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Monstros.FirstOrDefaultAsync(m => m.IdMonstro == idMonstro);
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Monstros
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.IdMonstro == idMonstro);
     }
 
     public async Task<List<Monstro>> ListarPorUsuarioAsync(int idAccount)
     {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Monstros
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Monstros
+            .AsNoTracking()
             // Lista monstros públicos e monstros pertencentes à conta logada.
             .Where(m => m.IdAccount == null || m.IdAccount == idAccount)
             .OrderByDescending(m => m.IdMonstro)
@@ -28,19 +31,22 @@ public class MonstroRepository : IMonstroRepository
 
     public async Task AdicionarAsync(Monstro monstro)
     {
-        _contexto.Monstros.Add(monstro);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Monstros.Add(monstro);
+        await contexto.SaveChangesAsync();
     }
 
     public async Task AtualizarAsync(Monstro monstro)
     {
-        _contexto.Monstros.Update(monstro);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Monstros.Update(monstro);
+        await contexto.SaveChangesAsync();
     }
 
     public async Task RemoverAsync(Monstro monstro)
     {
-        _contexto.Monstros.Remove(monstro);
-        await _contexto.SaveChangesAsync();
+        await using var contexto = await _factory.CreateDbContextAsync();
+        contexto.Monstros.Remove(monstro);
+        await contexto.SaveChangesAsync();
     }
 }

@@ -38,6 +38,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly ItemService _itemService;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly HomeCacheService _cache;
+        private readonly AppCacheService _appCache;
         private readonly NavigationManager _navigation;
 
         public HomeViewModel(
@@ -47,6 +48,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             ItemService itemService,
             SessaoUsuarioService sessaoUsuario,
             HomeCacheService cache,
+            AppCacheService appCache,
             NavigationManager navigation)
         {
             _campanhaService = campanhaService;
@@ -55,6 +57,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             _itemService = itemService;
             _sessaoUsuario = sessaoUsuario;
             _cache = cache;
+            _appCache = appCache;
             _navigation = navigation;
         }
 
@@ -143,14 +146,13 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             int idUsuario = _sessaoUsuario.IdUsuarioLogado;
 
-            // 1. Hidrata imediatamente do cache se existir para este usuário
+            // 1. Hidrata imediatamente do cache da Home se existir para este usuário
             var snapshot = _cache.Obter(idUsuario);
             if (snapshot is not null)
             {
                 AplicarSnapshot(snapshot);
                 NotifyStateChanged();
 
-                // Se o cache ainda está dentro da validade e não foi forçado, evita ir ao banco
                 if (!forcarAtualizacao && !_cache.EstaExpirado(idUsuario, ValidadeCache))
                     return;
             }
@@ -164,11 +166,70 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             try
             {
-                CampanhasComoMestre = await _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
-                CampanhasComoJogador = await _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
-                PersonagensUsuario = await _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
-                NpcsUsuario = await _npcService.ObterNpcsPorUsuarioAsync(idUsuario);
-                ItensUsuario = (await _itemService.ObterItensPorUsuarioAsync(idUsuario)).ToList();
+                // Reaproveita snapshots válidos do AppCacheService (evita ir ao banco pelo que já foi baixado)
+                var campanhasSnap = !forcarAtualizacao && !_appCache.CampanhasExpiradas(idUsuario, ValidadeCache)
+                    ? _appCache.ObterCampanhas(idUsuario)
+                    : null;
+
+                var personagensSnap = !forcarAtualizacao && !_appCache.PersonagensLibExpirados(idUsuario, ValidadeCache)
+                    ? _appCache.ObterPersonagensLib(idUsuario)
+                    : null;
+
+                var bibliotecaSnap = !forcarAtualizacao && !_appCache.BibliotecaExpirada(idUsuario, ValidadeCache)
+                    ? _appCache.ObterBiblioteca(idUsuario)
+                    : null;
+
+                // Dispara em paralelo apenas o que não estava em cache
+                var tarefaMestre = campanhasSnap is not null
+                    ? Task.FromResult(campanhasSnap.CampanhasMestre)
+                    : _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuario);
+
+                var tarefaJogador = campanhasSnap is not null
+                    ? Task.FromResult(campanhasSnap.CampanhasJogador)
+                    : _campanhaService.ObterCampanhasComoJogadorAsync(idUsuario);
+
+                var tarefaPersonagens = personagensSnap is not null
+                    ? Task.FromResult(personagensSnap.Personagens)
+                    : _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+
+                var tarefaNpcs = personagensSnap is not null
+                    ? Task.FromResult(personagensSnap.Npcs)
+                    : _npcService.ObterNpcsPorUsuarioAsync(idUsuario);
+
+                var tarefaItens = bibliotecaSnap is not null
+                    ? Task.FromResult(bibliotecaSnap.Itens)
+                    : ObterItensListaAsync(idUsuario);
+
+                await Task.WhenAll(tarefaMestre, tarefaJogador, tarefaPersonagens, tarefaNpcs, tarefaItens);
+
+                CampanhasComoMestre = tarefaMestre.Result;
+                CampanhasComoJogador = tarefaJogador.Result;
+                PersonagensUsuario = tarefaPersonagens.Result;
+                NpcsUsuario = tarefaNpcs.Result;
+                ItensUsuario = tarefaItens.Result;
+
+                // Alimenta o AppCacheService para que outras telas também abram rápido
+                if (campanhasSnap is null)
+                {
+                    _appCache.SalvarCampanhas(new CampanhasCacheSnapshot
+                    {
+                        IdUsuario = idUsuario,
+                        AtualizadoEmUtc = DateTime.UtcNow,
+                        CampanhasMestre = CampanhasComoMestre,
+                        CampanhasJogador = CampanhasComoJogador
+                    });
+                }
+
+                if (personagensSnap is null)
+                {
+                    _appCache.SalvarPersonagensLib(new PersonagensLibCacheSnapshot
+                    {
+                        IdUsuario = idUsuario,
+                        AtualizadoEmUtc = DateTime.UtcNow,
+                        Personagens = PersonagensUsuario,
+                        Npcs = NpcsUsuario
+                    });
+                }
 
                 Campanhas = CampanhasComoMestre
                     .Concat(CampanhasComoJogador)
@@ -209,6 +270,12 @@ namespace RPGdeMesa.Presentation.ViewModel
                 _semaforoCarga.Release();
                 NotifyStateChanged();
             }
+        }
+
+        private async Task<List<Item>> ObterItensListaAsync(int idUsuario)
+        {
+            var itens = await _itemService.ObterItensPorUsuarioAsync(idUsuario);
+            return itens.ToList();
         }
 
         private void AplicarSnapshot(HomeCacheSnapshot s)
