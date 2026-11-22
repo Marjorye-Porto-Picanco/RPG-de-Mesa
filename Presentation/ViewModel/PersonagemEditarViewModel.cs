@@ -17,6 +17,7 @@ namespace RPGdeMesa.Presentation.ViewModel
     {
         private readonly PersonagemService _personagemService;
         private readonly CampanhaService _campanhaService;
+        private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly NavigationManager _navigation;
         private readonly ImagemPickerService _imagemPicker;
         private readonly AppCacheService _appCache;
@@ -25,10 +26,15 @@ namespace RPGdeMesa.Presentation.ViewModel
         public PersonagemEditarViewModel(
             PersonagemService personagemService,
             CampanhaService campanhaService,
-            NavigationManager navigation)
+            SessaoUsuarioService sessaoUsuario,
+            NavigationManager navigation,
+            ImagemPickerService imagemPicker,
+            AppCacheService appCache,
+            HomeCacheService homeCache)
         {
             _personagemService = personagemService;
             _campanhaService = campanhaService;
+            _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
             _imagemPicker = imagemPicker;
             _appCache = appCache;
@@ -110,7 +116,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
-        public bool CarregandoFoto { get; private set; }
 
         public event Action? OnChange;
         public void NotifyStateChanged() => OnChange?.Invoke();
@@ -196,12 +201,31 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             try
             {
-                await using var origem = arquivo.OpenReadStream(LimiteImagemBytes);
-                using var memoria = new MemoryStream();
-                await origem.CopyToAsync(memoria);
-
-                PersonagemAtual.Imagem = $"data:{arquivo.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+                var res = await _imagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
+                if (res.Imagem is not null)
+                    PersonagemAtual.Imagem = res.Imagem.DataUrl;
+                else if (res.Erro is not null)
+                {
+                    Sucesso = false;
+                    MensagemFeedback = res.Erro;
+                }
+            }
+            finally
+            {
+                CarregandoFoto = false;
                 NotifyStateChanged();
+            }
+        }
+
+        private async Task<List<Magia>> ObterMagiasSeguroAsync()
+        {
+            try
+            {
+                return await _campanhaService.ObterTodasMagiasAsync();
+            }
+            catch
+            {
+                return new List<Magia>();
             }
         }
 

@@ -16,24 +16,32 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class CriarCampanhaViewModel
     {
+        private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
+
         private readonly CampanhaService _campanhaService;
         private readonly NavigationManager _navigation;
         private readonly IJSRuntime _jsRuntime;
         private readonly SessaoUsuarioService _sessaoUsuario;
         private readonly ImagemPickerService _imagemPicker;
+        private readonly AppCacheService _appCache;
+        private readonly HomeCacheService _homeCache;
 
         public CriarCampanhaViewModel(
             CampanhaService campanhaService,
             NavigationManager navigation,
             IJSRuntime jsRuntime,
             SessaoUsuarioService sessaoUsuario,
-            ImagemPickerService imagemPicker)
+            ImagemPickerService imagemPicker,
+            AppCacheService appCache,
+            HomeCacheService homeCache)
         {
             _campanhaService = campanhaService;
             _navigation = navigation;
             _jsRuntime = jsRuntime;
             _sessaoUsuario = sessaoUsuario;
             _imagemPicker = imagemPicker;
+            _appCache = appCache;
+            _homeCache = homeCache;
 
             CodigoConvite = GerarCodigoConvite();
         }
@@ -63,7 +71,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
-        public bool CarregandoImagem { get; private set; }
 
         public int TotalRecursosVinculados =>
             ListaMonstros.Count + ListaNPCs.Count + ListaItensCampanha.Count;
@@ -104,9 +111,26 @@ namespace RPGdeMesa.Presentation.ViewModel
             int idUsuario = _sessaoUsuario.IdUsuarioLogado;
             if (idUsuario <= 0) return;
 
-            var tarefaMonstros = _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
-            var tarefaNpcs = _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
-            var tarefaItens = _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
+            var bibSnap = !_appCache.BibliotecaExpirada(idUsuario, ValidadeCache)
+                ? _appCache.ObterBiblioteca(idUsuario)
+                : null;
+            var persSnap = !_appCache.PersonagensLibExpirados(idUsuario, ValidadeCache)
+                ? _appCache.ObterPersonagensLib(idUsuario)
+                : null;
+
+            var tarefaMonstros = bibSnap is not null
+                ? Task.FromResult(bibSnap.Monstros)
+                : _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
+
+            var tarefaNpcs = persSnap is not null
+                ? Task.FromResult(persSnap.Npcs)
+                : bibSnap is not null
+                    ? Task.FromResult(bibSnap.Npcs)
+                    : _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
+
+            var tarefaItens = bibSnap is not null
+                ? Task.FromResult(bibSnap.Itens)
+                : _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
 
             await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens);
 
@@ -312,7 +336,24 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 if (Sucesso)
                 {
-                    await Task.Delay(1000);
+                    // Write-through: busca a campanha recém-criada para já entrar na RAM e na Home
+                    var campanhasAtualizadas = await _campanhaService.ObterCampanhasPorUsuarioAsync(idUsuarioLogado);
+                    var campanhaCriada = campanhasAtualizadas
+                        .FirstOrDefault(c => string.Equals(c.CodigoConvite, CodigoConvite, StringComparison.OrdinalIgnoreCase))
+                        ?? campanhasAtualizadas.OrderByDescending(c => c.IdCampanha).FirstOrDefault();
+
+                    if (campanhaCriada is not null)
+                    {
+                        _appCache.UpsertCampanhaMestre(idUsuarioLogado, campanhaCriada);
+                        _homeCache.UpsertCampanha(idUsuarioLogado, campanhaCriada, comoMestre: true);
+                    }
+                    else
+                    {
+                        _appCache.InvalidarCampanhas();
+                        _homeCache.Limpar();
+                    }
+
+                    await Task.Delay(500);
                     _navigation.NavigateTo("/campanhas");
                 }
             }

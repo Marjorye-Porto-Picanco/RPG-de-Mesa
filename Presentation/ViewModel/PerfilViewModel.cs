@@ -9,7 +9,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 {
     public class PerfilViewModel
     {
-        private static readonly TimeSpan ValidadeCache = TimeSpan.FromSeconds(45);
+        private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
         private readonly UsuarioService _usuarioService;
         private readonly PersonagemService _personagemService;
@@ -18,7 +18,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly AppCacheService _cache;
         private readonly ImagemPickerService _imagemPicker;
         private readonly NavigationManager _navigation;
-        private readonly ImagemPickerService _imagemPicker;
 
         public PerfilViewModel(
             UsuarioService usuarioService,
@@ -36,7 +35,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             _cache = cache;
             _imagemPicker = imagemPicker;
             _navigation = navigation;
-            _imagemPicker = imagemPicker;
         }
 
         // Campos de dbo.Usuario e dbo.Perfil
@@ -110,7 +108,20 @@ namespace RPGdeMesa.Presentation.ViewModel
 
             try
             {
-                var usuario = await _usuarioService.ObterPorIdAsync(idUsuario);
+                var persSnap = !_appCachePersonagensDisponivel(idUsuario, forcarAtualizacao, out var persCache);
+                var bibSnap = !_appCacheBibliotecaDisponivel(idUsuario, forcarAtualizacao, out var bibCache);
+
+                var tarefaUsuario = _usuarioService.ObterPorIdAsync(idUsuario);
+                var tarefaPersonagens = persCache is not null
+                    ? Task.FromResult(persCache.Personagens.Count)
+                    : ObterTotalPersonagensAsync(idUsuario);
+                var tarefaMonstros = bibCache is not null
+                    ? Task.FromResult(bibCache.Monstros.Count(m => m.IdAccount == idUsuario))
+                    : ObterTotalMonstrosAsync(idUsuario);
+
+                await Task.WhenAll(tarefaUsuario, tarefaPersonagens, tarefaMonstros);
+
+                var usuario = tarefaUsuario.Result;
                 if (usuario is not null)
                 {
                     UsernameLogin = usuario.UsarName;
@@ -129,11 +140,8 @@ namespace RPGdeMesa.Presentation.ViewModel
                     NomeExibicaoInput = _sessaoUsuario.NomeUsuario ?? "Mestre da mesa";
                 }
 
-                var personagens = await _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
-                TotalPersonagens = personagens.Count;
-
-                var monstros = await _campanhaService.ObterMonstrosParaSessaoAsync(idUsuario);
-                TotalMonstros = monstros.Count(m => m.IdAccount == idUsuario);
+                TotalPersonagens = tarefaPersonagens.Result;
+                TotalMonstros = tarefaMonstros.Result;
 
                 SalvarSnapshotNoCache(idUsuario);
             }
@@ -147,6 +155,34 @@ namespace RPGdeMesa.Presentation.ViewModel
                 Carregando = false;
                 NotifyStateChanged();
             }
+        }
+
+        private bool _appCachePersonagensDisponivel(int idUsuario, bool forcarAtualizacao, out PersonagensLibCacheSnapshot? snap)
+        {
+            snap = !forcarAtualizacao && !_cache.PersonagensLibExpirados(idUsuario, ValidadeCache)
+                ? _cache.ObterPersonagensLib(idUsuario)
+                : null;
+            return snap is not null;
+        }
+
+        private bool _appCacheBibliotecaDisponivel(int idUsuario, bool forcarAtualizacao, out BibliotecaCacheSnapshot? snap)
+        {
+            snap = !forcarAtualizacao && !_cache.BibliotecaExpirada(idUsuario, ValidadeCache)
+                ? _cache.ObterBiblioteca(idUsuario)
+                : null;
+            return snap is not null;
+        }
+
+        private async Task<int> ObterTotalPersonagensAsync(int idUsuario)
+        {
+            var personagens = await _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
+            return personagens.Count;
+        }
+
+        private async Task<int> ObterTotalMonstrosAsync(int idUsuario)
+        {
+            var monstros = await _campanhaService.ObterMonstrosParaSessaoAsync(idUsuario);
+            return monstros.Count(m => m.IdAccount == idUsuario);
         }
 
         public async Task SelecionarAvatarAsync()
@@ -218,6 +254,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                     _sessaoUsuario.AtualizarNomeUsuario(NomeExibicao);
                     _sessaoUsuario.AtualizarAvatar(AvatarUrl);
                     SalvarSnapshotNoCache(idUsuario);
+                    _cache.AtualizarPerfilBasico(idUsuario, nomeLimpo, Biografia, AvatarUrl);
                 }
             }
             catch (Exception ex)
