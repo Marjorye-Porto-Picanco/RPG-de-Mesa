@@ -169,10 +169,23 @@
     [SupplyParameterFromQuery(Name = "categoria")]
     public string? CategoriaQuery { get; set; }
 
+    private string? _ultimaCategoriaQuery;
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(CategoriaQuery) &&
+            !string.Equals(CategoriaQuery, _ultimaCategoriaQuery, StringComparison.OrdinalIgnoreCase))
+        {
+            _ultimaCategoriaQuery = CategoriaQuery;
+            VM.TrocarCategoria(CategoriaQuery);
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         if (!string.IsNullOrWhiteSpace(CategoriaQuery))
         {
+            _ultimaCategoriaQuery = CategoriaQuery;
             VM.TrocarCategoria(CategoriaQuery);
         }
         await VM.CarregarDadosAsync();

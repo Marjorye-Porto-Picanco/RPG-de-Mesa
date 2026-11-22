@@ -8,22 +8,19 @@
 
 <NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
 
-<div class="app-shell criacao-personagem">
-    <main class="app-content">
-        <button class="exit-prompt-link" type="button" @onclick="ViewModel.AbrirAvisoSaida">
-            <span aria-hidden="true">←</span> Voltar à Biblioteca de Itens
-        </button>
-
+<main class="item-create-page">
+    <div class="app-content">
         <header class="top-bar">
-            <div class="top-bar-copy">
-                <p class="page-kicker">Compêndio de Equipamentos</p>
-                <h1 class="page-title">Criar Item / Equipamento</h1>
-                <p class="page-description">Preencha os atributos e propriedades para registrar um novo item ou arma na sua conta.</p>
-            </div>
+            <button type="button" class="voltar-link" @onclick="ViewModel.AbrirAvisoSaida">
+                <span aria-hidden="true">←</span> Voltar à Biblioteca de Itens
+            </button>
+            <p class="page-kicker">Compêndio de Equipamentos</p>
+            <h1 class="page-title">Criar Item / Equipamento</h1>
+            <p class="page-description">Preencha os atributos e propriedades para registrar um novo item ou arma na sua conta.</p>
         </header>
 
         <form id="form-item" class="form-layout" @onsubmit="ViewModel.SalvarItemAsync" @onsubmit:preventDefault="true">
-            <section class="ficha-pergaminho">
+            <section class="ficha-pergaminho" aria-label="Ficha do Item">
                 <div class="ficha-conteudo">
                     <div class="form-grid-2">
                         <label class="campo-ficha full-width">
@@ -162,6 +159,13 @@
                         </div>
                     </div>
 
+                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
+                    {
+                        <p class="feedback @(ViewModel.Sucesso ? "ok" : "erro")" role="status" aria-live="polite">
+                            @ViewModel.MensagemFeedback
+                        </p>
+                    }
+
                     <footer class="form-footer">
                         <button class="action-secondary" type="button" @onclick="ViewModel.CancelarCriacao" disabled="@ViewModel.IsProcessing">
                             Cancelar
@@ -170,13 +174,6 @@
                             @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Item")
                         </button>
                     </footer>
-
-                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
-                    {
-                        <p class="form-status @(ViewModel.Sucesso ? "success" : "error")" role="status" aria-live="polite">
-                            @ViewModel.MensagemFeedback
-                        </p>
-                    }
                 </div>
             </section>
 
@@ -203,8 +200,8 @@
                 </div>
             </aside>
         </form>
-    </main>
-</div>
+    </div>
+</main>
 
 @if (ViewModel.ExibirAvisoSaida)
 {

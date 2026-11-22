@@ -2,22 +2,28 @@
     box-sizing: border-box;
 }
 
-:root {
+.item-create-page {
     color-scheme: dark;
-    --wood: #1b130f;
-    --paper: #dfc38d;
-    --gold: #d1a951;
-    --ink: #392819;
-    --line: rgba(126, 87, 31, 0.38);
-}
-
-.app-shell {
+    /* Paleta */
+    --bg-deep: #120c09;
+    --bg-wood: #1d140f;
+    --parchment-1: #f5e8c4;
+    --parchment-2: #e5cd99;
+    --gold: #d9b25f;
+    --gold-bright: #efcd7e;
+    --gold-deep: #a87a1f;
+    --ink: #3a2815;
+    --ink-soft: #7a5420;
+    --line: rgba(122, 84, 32, 0.35);
+    --leather-1: #4d3421;
+    --leather-2: #382415;
+    --ok: #1f5e34;
+    --erro: #8c2a1c;
+    --focus-ring: 0 0 0 3px rgba(217, 178, 95, 0.3);
+    margin: 0;
     min-height: 100vh;
-    background: var(--wood);
-    background-image: linear-gradient(rgba(25, 17, 13, 0.9), rgba(25, 17, 13, 0.95)), url("img/fundodemadeira.png.jpg");
-    background-position: center;
-    background-size: cover;
-    background-attachment: fixed;
+    background-color: var(--bg-deep);
+    background-image: radial-gradient(ellipse 80% 45% at 50% 0%, rgba(168, 122, 31, 0.18), transparent 70%), linear-gradient(180deg, var(--bg-wood) 0%, var(--bg-deep) 100%);
     color: #f2e6cf;
     font-family: Cambria, Georgia, "Times New Roman", serif;
 }
@@ -29,34 +35,43 @@ button, input, select, textarea {
 .app-content {
     width: min(1140px, 100%);
     margin: 0 auto;
-    padding: 28px clamp(16px, 4vw, 48px) 56px;
+    padding: 16px clamp(16px, 4vw, 48px) 56px;
 }
-
-/* Botão Voltar igual ao MonstroCriar */
-.exit-prompt-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 14px;
-    padding: 8px 14px;
-    border: 1px solid rgba(211, 172, 96, 0.55);
-    border-radius: 4px;
-    background: rgba(24, 16, 12, 0.72);
-    color: #dfc995;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 160ms ease, color 160ms ease;
-}
-
-    .exit-prompt-link:hover {
-        background: rgba(112, 82, 38, 0.45);
-        color: #f3e7ce;
-    }
 
 /* Cabeçalho */
 .top-bar {
     margin-bottom: 22px;
 }
+
+.voltar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 14px;
+    padding: 6px 14px 6px 10px;
+    border: 1px solid rgba(217, 178, 95, 0.35);
+    border-radius: 999px;
+    background: rgba(217, 178, 95, 0.08);
+    color: var(--gold);
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+    .voltar-link:hover {
+        background: rgba(217, 178, 95, 0.17);
+        border-color: rgba(217, 178, 95, 0.65);
+        color: var(--gold-bright);
+        transform: translateX(-2px);
+    }
+
+    .voltar-link:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+    }
 
 .page-kicker {
     margin: 0 0 5px;
@@ -70,21 +85,23 @@ button, input, select, textarea {
 
 .page-title {
     margin: 0;
-    color: #f3e7ce;
+    color: #f7ecd3;
     font-size: clamp(24px, 3vw, 34px);
     font-weight: 500;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 
 .page-description {
     margin: 6px 0 0;
     color: #c5b79d;
     font-size: 13px;
+    line-height: 1.5;
 }
 
-/* Layout Principal: Pergaminho + Card Lateral */
+/* Layout principal: pergaminho + prévia lateral */
 .form-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 290px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 22px;
     align-items: start;
 }
@@ -93,11 +110,11 @@ button, input, select, textarea {
     position: relative;
     padding: 32px clamp(20px, 3vw, 40px);
     border-radius: 6px;
-    background-color: var(--paper);
-    background-image: linear-gradient(rgba(248, 229, 188, 0.88), rgba(226, 198, 143, 0.94));
+    background-color: var(--parchment-2);
+    background-image: radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255, 250, 232, 0.55), transparent 70%), linear-gradient(180deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
     color: var(--ink);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45);
-    border: 1px solid #9c783d;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    border: 1px solid #a47f3f;
 }
 
     .ficha-pergaminho::after {
@@ -115,7 +132,7 @@ button, input, select, textarea {
     z-index: 1;
 }
 
-/* Grids e Campos */
+/* Grids e campos */
 .form-grid-2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -131,18 +148,18 @@ button, input, select, textarea {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 8px 0 2px;
-    color: #805f30;
+    margin: 10px 0 4px;
+    color: var(--ink-soft);
     font-size: 11px;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
 }
 
     .form-divider::after {
         height: 1px;
         flex: 1;
-        background: rgba(128, 95, 48, 0.35);
+        background: linear-gradient(90deg, rgba(122, 84, 32, 0.45), rgba(122, 84, 32, 0.08));
         content: "";
     }
 
@@ -151,17 +168,23 @@ button, input, select, textarea {
     flex-direction: column;
     gap: 5px;
     padding: 9px 12px;
-    border: 1px solid rgba(146, 102, 39, 0.45);
+    border: 1px solid rgba(139, 98, 37, 0.38);
     border-radius: 8px;
-    background: rgba(241, 205, 104, 0.55);
-    color: #493519;
+    background: linear-gradient(180deg, rgba(255, 248, 224, 0.66), rgba(243, 224, 172, 0.58));
+    color: var(--ink);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+    .campo-ficha:focus-within {
+        border-color: rgba(168, 122, 31, 0.85);
+        box-shadow: var(--focus-ring);
+    }
+
     .campo-ficha span {
-        color: #805b22;
+        color: var(--ink-soft);
         font-size: 10px;
         font-weight: bold;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
     }
 
@@ -169,64 +192,88 @@ button, input, select, textarea {
     .campo-ficha select {
         width: 100%;
         padding: 7px 8px;
-        border: 1px solid rgba(156, 120, 61, 0.45);
-        border-radius: 4px;
-        background: rgba(255, 255, 255, 0.82);
-        color: #392819;
+        border: 1px solid rgba(139, 98, 37, 0.4);
+        border-radius: 5px;
+        background-color: #fffaf0;
+        color: var(--ink);
+        color-scheme: light;
         font-size: 13px;
         font-weight: 600;
         outline: none;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
     }
+
+        .campo-ficha input::placeholder {
+            color: rgba(122, 84, 32, 0.55);
+        }
 
         .campo-ficha input:focus,
         .campo-ficha select:focus {
-            background: #ffffff;
-            border-color: #704916;
+            background-color: #ffffff;
+            border-color: var(--gold-deep);
         }
 
-/* Painel de Descrição */
+    .campo-ficha select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding-right: 30px;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%237a5420' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 12px 8px;
+    }
+
+/* Painel de descrição (couro escuro para contrastar com o pergaminho) */
 .painel-descricao {
     grid-column: 1 / -1;
     display: flex;
     flex-direction: column;
     padding: 14px 16px;
-    border: 1px solid rgba(126, 87, 31, 0.58);
+    border: 1px solid rgba(40, 26, 14, 0.55);
     border-radius: 10px;
-    background: rgba(146, 102, 33, 0.88);
-    color: #fff1d1;
+    background: linear-gradient(180deg, var(--leather-1) 0%, var(--leather-2) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 226, 160, 0.12), 0 2px 6px rgba(60, 38, 14, 0.25);
+    color: #f6e8c9;
 }
 
     .painel-descricao label {
         margin: 0 0 8px;
-        color: #ffe8af;
+        color: var(--gold-bright);
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
     }
 
     .painel-descricao textarea {
         width: 100%;
         min-height: 120px;
         padding: 10px 12px;
-        border: 1px solid rgba(255, 235, 180, 0.35);
+        border: 1px solid rgba(239, 205, 126, 0.28);
         border-radius: 6px;
-        background: rgba(0, 0, 0, 0.16);
-        color: #fff2d4;
+        background: rgba(0, 0, 0, 0.28);
+        color: #f8ecd0;
         font-size: 13px;
         line-height: 1.5;
         resize: vertical;
         outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-        .painel-descricao textarea::placeholder {
-            color: rgba(255, 240, 200, 0.6);
+        .painel-descricao textarea:focus {
+            border-color: rgba(239, 205, 126, 0.7);
+            box-shadow: var(--focus-ring);
         }
 
-/* Rodapé do Formulário */
+        .painel-descricao textarea::placeholder {
+            color: rgba(246, 232, 201, 0.5);
+        }
+
+/* Rodapé do formulário */
 .form-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: 12px;
     margin-top: 22px;
@@ -234,57 +281,96 @@ button, input, select, textarea {
     border-top: 1px solid rgba(126, 87, 31, 0.35);
 }
 
-.action-primary,
-.action-secondary {
+.action-primary {
     min-height: 42px;
     padding: 0 22px;
     border-radius: 4px;
+    border: 1px solid #8a6218;
+    background: linear-gradient(180deg, #ecc977 0%, #cba23f 52%, #a87a1f 100%);
+    color: #2a1808;
     font-size: 12px;
     font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     cursor: pointer;
-    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 244, 210, 0.55);
+    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.action-primary {
-    border: 1px solid #9c7333;
-    background: linear-gradient(180deg, #c59f5b 0%, #a47a2d 100%);
-    color: #2c1a0b;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
-
-    .action-primary:hover {
-        filter: brightness(1.08);
+    .action-primary:hover:not(:disabled) {
+        filter: brightness(1.07);
         transform: translateY(-1px);
+        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 244, 210, 0.55);
+    }
+
+    .action-primary:active {
+        transform: translateY(0);
+        filter: brightness(0.97);
+    }
+
+    .action-primary:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring), 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .action-primary:disabled {
+        opacity: 0.65;
+        cursor: wait;
+        transform: none;
     }
 
 .action-secondary {
-    border: 1px solid rgba(126, 87, 31, 0.55);
-    background: rgba(100, 70, 31, 0.14);
-    color: #65481f;
+    min-height: 42px;
+    padding: 0 18px;
+    border: 1px solid rgba(122, 84, 32, 0.55);
+    border-radius: 4px;
+    background: transparent;
+    color: #5e3d12;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
 }
 
-    .action-secondary:hover {
-        background: rgba(100, 70, 31, 0.24);
+    .action-secondary:hover:not(:disabled) {
+        background: rgba(122, 84, 32, 0.12);
     }
 
-.form-status {
-    margin: 14px 0 0;
+    .action-secondary:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+    }
+
+    .action-secondary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+/* Mensagem de retorno */
+.feedback {
+    margin: 16px 0 0;
+    padding: 9px 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 700;
-    text-align: right;
 }
 
-    .form-status.success {
-        color: #236b35;
+    .feedback.ok {
+        color: var(--ok);
+        background: rgba(46, 125, 70, 0.12);
+        border-color: rgba(46, 125, 70, 0.35);
     }
 
-    .form-status.error {
-        color: #a12720;
+    .feedback.erro {
+        color: var(--erro);
+        background: rgba(154, 42, 29, 0.1);
+        border-color: rgba(154, 42, 29, 0.32);
     }
 
-/* Card Lateral: Prévia do Item */
+/* Card lateral: prévia do item */
 .form-aside {
     display: flex;
     flex-direction: column;
@@ -294,31 +380,34 @@ button, input, select, textarea {
 }
 
 .item-preview-card {
-    padding: 20px;
-    border: 2px solid #946c2d;
+    padding: 18px;
+    border: 2px solid #9a7430;
     border-radius: 6px;
-    background: #211811;
+    background: linear-gradient(180deg, #30241a 0%, #1f1610 100%);
     color: #eee0c5;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(239, 205, 126, 0.12);
 }
 
 .item-preview-kicker {
     display: inline-block;
     padding: 3px 8px;
     border-radius: 4px;
-    background: rgba(209, 169, 81, 0.16);
-    border: 1px solid rgba(209, 169, 81, 0.4);
+    background: rgba(217, 178, 95, 0.14);
+    border: 1px solid rgba(217, 178, 95, 0.38);
     color: var(--gold);
+    font-family: "Trebuchet MS", sans-serif;
     font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     margin-bottom: 8px;
 }
 
 .item-preview-card h3 {
     margin: 0 0 12px;
-    color: #f3e7ce;
-    font-size: 20px;
-    border-bottom: 1px solid rgba(216, 181, 112, 0.25);
+    color: var(--gold-bright);
+    font-size: 19px;
+    border-bottom: 1px solid rgba(217, 178, 95, 0.28);
     padding-bottom: 8px;
     overflow-wrap: anywhere;
 }
@@ -326,14 +415,14 @@ button, input, select, textarea {
 .item-detail-row {
     margin: 0 0 7px;
     font-size: 12px;
-    color: #d5c6a9;
+    color: #cdbfa3;
     display: flex;
     justify-content: space-between;
     gap: 10px;
 }
 
     .item-detail-row strong {
-        color: #d7b968;
+        color: var(--gold);
     }
 
     .item-detail-row span {
@@ -344,14 +433,14 @@ button, input, select, textarea {
 .item-preview-desc {
     margin-top: 12px;
     padding-top: 10px;
-    border-top: 1px solid rgba(216, 181, 112, 0.2);
+    border-top: 1px solid rgba(217, 178, 95, 0.24);
     font-size: 12px;
-    color: #d5c6a9;
+    color: #cdbfa3;
 }
 
     .item-preview-desc strong {
         display: block;
-        color: #d7b968;
+        color: var(--gold);
         margin-bottom: 4px;
     }
 
@@ -362,60 +451,85 @@ button, input, select, textarea {
         overflow-wrap: anywhere;
     }
 
-/* Modal de Confirmação de Saída */
+/* Modal de confirmação de saída */
 .confirm-overlay {
     position: fixed;
-    z-index: 1000;
     inset: 0;
-    display: grid;
-    place-items: center;
+    background: rgba(10, 7, 5, 0.82);
+    backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 20px;
-    background: rgba(0, 0, 0, 0.74);
 }
 
 .confirm-dialog {
-    width: min(440px, 100%);
-    padding: 28px clamp(20px, 6vw, 36px);
-    border: 1px solid #9c783d;
+    width: min(420px, 100%);
+    background: linear-gradient(180deg, #30241a 0%, #1f1610 100%);
+    border: 2px solid #9a7430;
     border-radius: 6px;
-    background: #ead8b3;
-    color: #493519;
+    padding: 24px;
+    color: #eee0c5;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7);
     text-align: center;
 }
+
+    .confirm-dialog h2 {
+        margin: 0 0 10px;
+        color: #efcd7e;
+        font-size: 20px;
+    }
+
+    .confirm-dialog p {
+        margin: 0 0 20px;
+        color: #cdbfa3;
+        font-size: 13px;
+        line-height: 1.5;
+    }
 
 .confirm-actions {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin-top: 16px;
 }
 
-    .confirm-actions button {
-        min-width: 92px;
-        min-height: 40px;
-        border-radius: 3px;
-        font-size: 13px;
-        cursor: pointer;
-    }
-
 .confirm-exit {
-    border: 1px solid #8c2f22;
-    background: #9b3526;
-    color: #fff1ec;
+    min-width: 96px;
+    min-height: 38px;
+    padding: 8px 18px;
+    background: #8c2a1c;
+    border: 1px solid #b54534;
+    color: #fff4ec;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
     .confirm-exit:hover {
-        background: #b0422f;
+        background: #a53424;
     }
 
 .confirm-cancel {
-    border: 1px solid #9c783d;
-    background: transparent;
-    color: #493519;
+    min-width: 96px;
+    min-height: 38px;
+    padding: 8px 18px;
+    background: rgba(217, 178, 95, 0.1);
+    border: 1px solid rgba(217, 178, 95, 0.45);
+    color: #efcd7e;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
     .confirm-cancel:hover {
-        background: rgba(156, 120, 61, 0.18);
+        background: rgba(217, 178, 95, 0.2);
     }
 
 @media (max-width: 860px) {
@@ -425,5 +539,16 @@ button, input, select, textarea {
 
     .form-aside {
         position: static;
+    }
+
+    .form-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .campo-ficha, .action-primary, .action-secondary, .voltar-link, .painel-descricao textarea {
+        transition: none;
     }
 }

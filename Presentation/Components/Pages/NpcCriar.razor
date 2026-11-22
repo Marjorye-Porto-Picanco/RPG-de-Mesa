@@ -7,13 +7,15 @@
 @using RPGdeMesa.Presentation.Services
 @inject NpcService NpcService
 @inject SessaoUsuarioService SessaoUsuario
-@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject AppCacheService AppCache
+@inject HomeCacheService HomeCache
 
 <main class="npc-create-page">
     <div class="app-content">
         <header class="top-bar">
-            <button type="button" class="voltar-link" @onclick="VoltarAsync">
-                <span aria-hidden="true">←</span> Voltar
+            <button type="button" class="voltar-link" @onclick="Voltar">
+                <span aria-hidden="true">←</span> Voltar para NPCs
             </button>
             <p class="page-kicker">FICHA DO ELEMENTO</p>
             <h1 class="page-title">Cadastrar NPC</h1>
@@ -153,24 +155,10 @@
 </main>
 
 @code {
+    private const string RotaBibliotecaNpcs = "/BibliotecaGeral?categoria=npcs";
     private sealed record AtributoCampo(string Sigla, Func<int> Obter, Action<int> Definir);
 
-    private NPC Npc { get; set; } = new()
-    {
-        Nome = "",
-        RacaTexto = "Humano",
-        ClasseTexto = "Guerreiro",
-        Nivel = 1,
-        AntecedenteTexto = "",
-        Tendencia = "Neutra",
-        Forca = 10,
-        Destreza = 10,
-        Constituicao = 10,
-        Inteligencia = 10,
-        Sabedoria = 10,
-        Carisma = 10,
-        Historia = ""
-    };
+    private NPC Npc { get; set; } = CriarNpcPadrao();
 
     private AtributoCampo[]? _atributos;
     private AtributoCampo[] Atributos => _atributos ??= new[]
@@ -202,7 +190,32 @@
     private string NomePreview => string.IsNullOrWhiteSpace(Npc.Nome) ? "Aldeão" : Npc.Nome.Trim();
     private string Inicial => StringInfo.GetNextTextElement(NomePreview).ToUpperInvariant();
 
-    private async Task VoltarAsync() => await JS.InvokeVoidAsync("history.back");
+    private static NPC CriarNpcPadrao() => new()
+    {
+        Nome = "",
+        RacaTexto = "Humano",
+        ClasseTexto = "Guerreiro",
+        Nivel = 1,
+        AntecedenteTexto = "",
+        Tendencia = "Neutra",
+        Forca = 10,
+        Destreza = 10,
+        Constituicao = 10,
+        Inteligencia = 10,
+        Sabedoria = 10,
+        Carisma = 10,
+        Historia = ""
+    };
+
+    private void LimparFormulario()
+    {
+        Npc = CriarNpcPadrao();
+        _atributos = null;
+        ErroImagem = null;
+        _chaveInputFoto++;
+    }
+
+    private void Voltar() => Navigation.NavigateTo(RotaBibliotecaNpcs);
 
     private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
     {
@@ -224,8 +237,6 @@
 
         try
         {
-            // Reduz a foto no próprio aparelho para não guardar imagens enormes no banco.
-            // Se o redimensionamento não estiver disponível, só aceita a original se for pequena.
             IBrowserFile origem = arquivo;
             try
             {
@@ -255,14 +266,12 @@
     {
         Npc.Imagem = ImagemPadrao;
         ErroImagem = null;
-        _chaveInputFoto++; // recria o seletor para permitir escolher o mesmo arquivo de novo
+        _chaveInputFoto++;
     }
 
     private static string Texto(string? valor, string padrao) =>
         string.IsNullOrWhiteSpace(valor) ? padrao : valor.Trim();
 
-    // Atualiza o valor enquanto digita; valores inválidos (campo vazio, "-") são ignorados
-    // para não apagar o que a pessoa está digitando.
     private static void AoDigitarNumero(ChangeEventArgs e, int min, int max, Action<int> definir)
     {
         if (int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor))
@@ -302,6 +311,14 @@
             var resultado = await NpcService.CriarNpcAsync(idUsuario, Npc);
             Sucesso = resultado.Sucesso;
             Mensagem = resultado.Mensagem;
+
+            if (resultado.Sucesso)
+            {
+                AppCache.InvalidarBiblioteca();
+                AppCache.InvalidarPersonagensLib();
+                HomeCache.Limpar();
+            }
+
             if (Sucesso && IdCampanha is > 0)
             {
                 var vinculo = await NpcService.VincularNpcACampanhaAsync(Npc.IdNpc, IdCampanha.Value);
@@ -310,8 +327,14 @@
                     ? "NPC cadastrado e vinculado à campanha com sucesso!"
                     : $"NPC salvo, mas não foi possível vincular à campanha: {vinculo.Mensagem}";
             }
+
             if (Sucesso)
-                await Task.Delay(700);
+            {
+                LimparFormulario();
+                StateHasChanged();
+                await Task.Delay(500);
+                Navigation.NavigateTo(RotaBibliotecaNpcs);
+            }
         }
         finally
         {

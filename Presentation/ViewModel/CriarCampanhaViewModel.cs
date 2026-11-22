@@ -6,7 +6,6 @@ using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
-using RPGdeMesa.Domain.Personagens;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -50,25 +49,49 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<NPC> NPCsDisponiveisBiblioteca { get; set; } = new();
         public List<Item> ItensDisponiveisBiblioteca { get; set; } = new();
 
-        public int IdMonstroSelecionadoNaLista { get; set; }
-        public int IdNPCSelecionadoNaLista { get; set; }
-        public int IdItemSelecionadoNaLista { get; set; }
+        // Termos de pesquisa por digitação
+        public string BuscaMonstro { get; set; } = "";
+        public string BuscaNPC { get; set; } = "";
+        public string BuscaItem { get; set; } = "";
 
         public List<Mapa> ListaMapas { get; set; } = new();
         public string? CapaBase64 { get; set; }
         public string? NomeArquivoCapa { get; set; }
 
-        public bool ExibirModalSelecionarMonstro { get; set; } = false;
-        public bool ExibirModalSelecionarNPC { get; set; } = false;
-        public bool ExibirModalSelecionarItem { get; set; } = false;
-
-        public Monstro? MonstroSelecionadoParaVer { get; set; }
-        public NPC? NPCSelecionadoParaVer { get; set; }
-        public Item? ItemSelecionadoParaVer { get; set; }
-
         public string MensagemFeedback { get; set; } = "";
         public bool Sucesso { get; set; } = false;
         public bool IsProcessing { get; set; } = false;
+
+        public int TotalRecursosVinculados =>
+            ListaMonstros.Count + ListaNPCs.Count + ListaItensCampanha.Count;
+
+        public IEnumerable<Monstro> MonstrosFiltrados =>
+            MonstrosDisponiblesBiblioteca
+                .Where(m => !ListaMonstros.Any(v => v.IdMonstro == m.IdMonstro))
+                .Where(m => string.IsNullOrWhiteSpace(BuscaMonstro) ||
+                            m.Nome.Contains(BuscaMonstro.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                            (m.Tipo?.Contains(BuscaMonstro.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderBy(m => m.Nome)
+                .Take(8);
+
+        public IEnumerable<NPC> NPCsFiltrados =>
+            NPCsDisponiveisBiblioteca
+                .Where(n => !ListaNPCs.Any(v => v.IdNpc == n.IdNpc))
+                .Where(n => string.IsNullOrWhiteSpace(BuscaNPC) ||
+                            n.Nome.Contains(BuscaNPC.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                            (n.ClasseTexto?.Contains(BuscaNPC.Trim(), StringComparison.OrdinalIgnoreCase) ?? false) ||
+                            (n.RacaTexto?.Contains(BuscaNPC.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderBy(n => n.Nome)
+                .Take(8);
+
+        public IEnumerable<Item> ItensFiltrados =>
+            ItensDisponiveisBiblioteca
+                .Where(i => !ListaItensCampanha.Any(v => v.IdItem == i.IdItem))
+                .Where(i => string.IsNullOrWhiteSpace(BuscaItem) ||
+                            i.Nome.Contains(BuscaItem.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                            (i.Tipo?.Contains(BuscaItem.Trim(), StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderBy(i => i.Nome)
+                .Take(8);
 
         public event Action? OnChange;
         private void NotifyStateChanged() => OnChange?.Invoke();
@@ -76,42 +99,29 @@ namespace RPGdeMesa.Presentation.ViewModel
         public async Task CarregarBibliotecasAsync()
         {
             int idUsuario = _sessaoUsuario.IdUsuarioLogado;
-            if (idUsuario > 0)
-            {
-                // Filtra estritamente pelos criados pelo próprio usuário (não exibe os públicos id_account == null no modal)
-                var monstros = await _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
-                MonstrosDisponiblesBiblioteca = monstros.Where(m => m.IdAccount == idUsuario).ToList();
+            if (idUsuario <= 0) return;
 
-                var npcs = await _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
-                NPCsDisponiveisBiblioteca = npcs.Where(n => n.IdAccount == idUsuario).ToList();
+            var tarefaMonstros = _campanhaService.ObterMonstrosDoUsuarioAsync(idUsuario);
+            var tarefaNpcs = _campanhaService.ObterNPCsDoUsuarioAsync(idUsuario);
+            var tarefaItens = _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
 
-                var itens = await _campanhaService.ObterItensDoUsuarioAsync(idUsuario);
-                ItensDisponiveisBiblioteca = itens.Where(i => i.IdAccount == idUsuario).ToList();
+            await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens);
 
-                NotifyStateChanged();
-            }
-        }
+            MonstrosDisponiblesBiblioteca = tarefaMonstros.Result.Where(m => m.IdAccount == idUsuario).ToList();
+            NPCsDisponiveisBiblioteca = tarefaNpcs.Result.Where(n => n.IdAccount == idUsuario).ToList();
+            ItensDisponiveisBiblioteca = tarefaItens.Result.Where(i => i.IdAccount == idUsuario).ToList();
 
-        // --- MÉTODOS DE MONSTROS ---
-        public void AbrirModalSelecionarMonstro()
-        {
-            ExibirModalSelecionarMonstro = true;
             NotifyStateChanged();
         }
 
-        public void FecharModalSelecionarMonstro()
-        {
-            ExibirModalSelecionarMonstro = false;
-            IdMonstroSelecionadoNaLista = 0;
-            NotifyStateChanged();
-        }
-
+        // --- MONSTROS ---
         public void AdicionarMonstroDaBiblioteca(Monstro monstro)
         {
             if (monstro != null && !ListaMonstros.Any(m => m.IdMonstro == monstro.IdMonstro))
             {
                 ListaMonstros.Add(monstro);
-                FecharModalSelecionarMonstro();
+                BuscaMonstro = "";
+                NotifyStateChanged();
             }
         }
 
@@ -121,38 +131,14 @@ namespace RPGdeMesa.Presentation.ViewModel
             NotifyStateChanged();
         }
 
-        public void AbrirDetalhesMonstro(Monstro monstro)
-        {
-            MonstroSelecionadoParaVer = monstro;
-            NotifyStateChanged();
-        }
-
-        public void FecharDetalhesMonstro()
-        {
-            MonstroSelecionadoParaVer = null;
-            NotifyStateChanged();
-        }
-
-        // --- MÉTODOS DE NPCs ---
-        public void AbrirModalSelecionarNPC()
-        {
-            ExibirModalSelecionarNPC = true;
-            NotifyStateChanged();
-        }
-
-        public void FecharModalSelecionarNPC()
-        {
-            ExibirModalSelecionarNPC = false;
-            IdNPCSelecionadoNaLista = 0;
-            NotifyStateChanged();
-        }
-
+        // --- NPCs ---
         public void AdicionarNPCDaBiblioteca(NPC npc)
         {
             if (npc != null && !ListaNPCs.Any(n => n.IdNpc == npc.IdNpc))
             {
                 ListaNPCs.Add(npc);
-                FecharModalSelecionarNPC();
+                BuscaNPC = "";
+                NotifyStateChanged();
             }
         }
 
@@ -162,56 +148,20 @@ namespace RPGdeMesa.Presentation.ViewModel
             NotifyStateChanged();
         }
 
-        public void AbrirDetalhesNPC(NPC npc)
-        {
-            NPCSelecionadoParaVer = npc;
-            NotifyStateChanged();
-        }
-
-        public void FecharDetalhesNPC()
-        {
-            NPCSelecionadoParaVer = null;
-            NotifyStateChanged();
-        }
-
-        // --- MÉTODOS DE ITENS ---
-        public void AbrirModalSelecionarItem()
-        {
-            ExibirModalSelecionarItem = true;
-            NotifyStateChanged();
-        }
-
-        public void FecharModalSelecionarItem()
-        {
-            ExibirModalSelecionarItem = false;
-            IdItemSelecionadoNaLista = 0;
-            NotifyStateChanged();
-        }
-
+        // --- ITENS ---
         public void AdicionarItemDaBiblioteca(Item item)
         {
             if (item != null && !ListaItensCampanha.Any(i => i.IdItem == item.IdItem))
             {
                 ListaItensCampanha.Add(item);
-                FecharModalSelecionarItem();
+                BuscaItem = "";
+                NotifyStateChanged();
             }
         }
 
         public void RemoverItem(Item item)
         {
             ListaItensCampanha.Remove(item);
-            NotifyStateChanged();
-        }
-
-        public void AbrirDetalhesItem(Item item)
-        {
-            ItemSelecionadoParaVer = item;
-            NotifyStateChanged();
-        }
-
-        public void FecharDetalhesItem()
-        {
-            ItemSelecionadoParaVer = null;
             NotifyStateChanged();
         }
 

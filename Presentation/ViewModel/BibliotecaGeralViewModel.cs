@@ -204,15 +204,17 @@ public class BibliotecaGeralViewModel
 
         try
         {
-            var itens = await _itemService.ObterItensPorUsuarioAsync(IdUsuarioLogado);
-            var magias = await _magiaService.ObterTodasMagiasAsync();
-            var monstros = await _monstroService.ObterMonstrosPorUsuarioAsync(IdUsuarioLogado);
-            var npcs = await _npcService.ObterNpcsPorUsuarioAsync(IdUsuarioLogado);
+            var tarefaItens = _itemService.ObterItensPorUsuarioAsync(IdUsuarioLogado);
+            var tarefaMagias = _magiaService.ObterTodasMagiasAsync();
+            var tarefaMonstros = _monstroService.ObterMonstrosPorUsuarioAsync(IdUsuarioLogado);
+            var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(IdUsuarioLogado);
 
-            EntradasItens = itens.OrderBy(i => i.Nome).ToList();
-            EntradasMagias = magias;
-            EntradasMonstros = monstros.OrderBy(m => m.Nome).ToList();
-            EntradasNpcs = npcs.OrderBy(n => n.Nome).ToList();
+            await Task.WhenAll(tarefaItens, tarefaMagias, tarefaMonstros, tarefaNpcs);
+
+            EntradasItens = tarefaItens.Result.OrderBy(i => i.Nome).ToList();
+            EntradasMagias = tarefaMagias.Result;
+            EntradasMonstros = tarefaMonstros.Result.OrderBy(m => m.Nome).ToList();
+            EntradasNpcs = tarefaNpcs.Result.OrderBy(n => n.Nome).ToList();
 
             _cache.SalvarBiblioteca(new BibliotecaCacheSnapshot
             {
@@ -240,7 +242,11 @@ public class BibliotecaGeralViewModel
 
     public void TrocarCategoria(string categoria)
     {
-        if (string.Equals(categoria, "armas", StringComparison.OrdinalIgnoreCase))
+        var chave = string.IsNullOrWhiteSpace(categoria)
+            ? "itens"
+            : categoria.Trim().ToLowerInvariant();
+
+        if (chave == "armas")
         {
             CategoriaAtual = "itens";
             FiltroTipoItem = "armas";
@@ -249,11 +255,11 @@ public class BibliotecaGeralViewModel
         }
         else
         {
-            CategoriaAtual = categoria;
-            if (categoria != "itens")
+            CategoriaAtual = Categorias.Any(c => c.Chave == chave) ? chave : "itens";
+            if (CategoriaAtual != "itens")
                 FiltroTipoItem = string.Empty;
 
-            if (categoria != "magias")
+            if (CategoriaAtual != "magias")
             {
                 FiltroCirculoMagia = string.Empty;
                 FiltroEscolaMagia = string.Empty;

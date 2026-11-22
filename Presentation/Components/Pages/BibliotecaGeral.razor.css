@@ -138,12 +138,21 @@
 }
 
 .app-shell ::deep .action-primary {
-    background: #94702f;
+    border: 1px solid #8a6218;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #ecc977 0%, #cba23f 52%, #a87a1f 100%);
+    color: #2a1808;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 244, 210, 0.55);
+    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
     .app-shell ::deep .action-primary:hover {
-        border-color: var(--gold-light);
-        background: #a98239;
+        filter: brightness(1.07);
+        transform: translateY(-1px);
     }
 
 .app-shell ::deep .action-secondary {

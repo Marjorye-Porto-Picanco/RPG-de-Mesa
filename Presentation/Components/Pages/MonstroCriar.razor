@@ -1,4 +1,5 @@
 ﻿@page "/monstro-criar"
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
@@ -8,26 +9,54 @@
 
 <NavigationLock OnBeforeInternalNavigation="ViewModel.ConfirmarNavegacao" />
 
-<div class="app-shell criacao-personagem">
-    <main class="app-content">
-        <button class="exit-prompt-link" type="button" @onclick="ViewModel.AbrirAvisoSaida">
-            <span aria-hidden="true">←</span> Voltar ao Bestiário
-        </button>
-
+<main class="monstro-create-page">
+    <div class="app-content">
         <header class="top-bar">
-            <div class="top-bar-copy">
-                <p class="page-kicker">Bestiário e Criaturas</p>
-                <h1 class="page-title">Criar Monstro / Criatura</h1>
-                <p class="page-description">Preencha os atributos e características para registrar uma nova ameaça para suas campanhas.</p>
-            </div>
+            <button type="button" class="voltar-link" @onclick="ViewModel.AbrirAvisoSaida">
+                <span aria-hidden="true">←</span> Voltar ao Bestiário
+            </button>
+            <p class="page-kicker">Bestiário e Criaturas</p>
+            <h1 class="page-title">Criar Monstro / Criatura</h1>
+            <p class="page-description">Preencha os atributos e características para registrar uma nova ameaça para suas campanhas.</p>
         </header>
 
-        <form class="wizard-layout" @onsubmit="ViewModel.SalvarMonstroAsync" @onsubmit:preventDefault="true">
-            <section class="ficha-pergaminho">
-                <div class="step-panel active">
-                    <h2 class="section-title">Detalhes da Criatura</h2>
-
+        <form class="form-layout" @onsubmit="ViewModel.SalvarMonstroAsync" @onsubmit:preventDefault="true">
+            <section class="ficha-pergaminho" aria-label="Ficha do Monstro">
+                <div class="ficha-conteudo">
                     <div class="form-grid-2">
+                        <div class="campo-foto full-width">
+                            <span class="campo-rotulo">Imagem da Criatura</span>
+                            <div class="foto-linha">
+                                <div class="foto-preview" aria-hidden="true">
+                                    @if (TemFoto)
+                                    {
+                                        <img src="@ViewModel.MonstroAtual.Imagem" alt="" />
+                                    }
+                                    else
+                                    {
+                                        <text>@Inicial</text>
+                                    }
+                                </div>
+                                <div class="foto-acoes">
+                                    <div class="foto-botoes">
+                                        <label class="btn-foto">
+                                            ↑ @(TemFoto ? "Trocar imagem" : "Escolher imagem")
+                                            <InputFile @key="_chaveInputFoto" OnChange="CarregarFotoAsync" accept="image/*" aria-label="Escolher imagem da criatura" />
+                                        </label>
+                                        @if (TemFoto)
+                                        {
+                                            <button type="button" class="btn-foto-sec" @onclick="RemoverFoto">Remover</button>
+                                        }
+                                    </div>
+                                    <p class="foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
+                                    @if (!string.IsNullOrWhiteSpace(ErroImagem))
+                                    {
+                                        <p class="foto-erro" role="alert">@ErroImagem</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
                         <label class="campo-ficha full-width">
                             <span>Nome da Criatura</span>
                             <input type="text"
@@ -62,6 +91,8 @@
                             </select>
                         </label>
 
+                        <div class="form-divider">Combate e Estatísticas</div>
+
                         <label class="campo-ficha">
                             <span>Nível de Desafio (ND)</span>
                             <input type="number" @bind="ViewModel.MonstroAtual.Nd" min="0" max="30" step="0.125" required />
@@ -79,55 +110,96 @@
 
                         <label class="campo-ficha">
                             <span>Deslocamento</span>
-                            <input type="text" @bind="ViewModel.MonstroAtual.Deslocamento" placeholder="Ex.: 9 m, voo 18 m" />
-                        </label>
-
-                        <label class="campo-ficha">
-                            <span>Tendência</span>
-                            <input type="text" @bind="ViewModel.MonstroAtual.Tendencia" placeholder="Ex.: Neutro e mau" />
+                            <input type="text"
+                                   @bind="ViewModel.MonstroAtual.Deslocamento"
+                                   @bind:event="oninput"
+                                   placeholder="Ex.: 9 m, voo 18 m" />
                         </label>
 
                         <label class="campo-ficha full-width">
+                            <span>Tendência</span>
+                            <input type="text"
+                                   @bind="ViewModel.MonstroAtual.Tendencia"
+                                   @bind:event="oninput"
+                                   placeholder="Ex.: Neutro e mau" />
+                        </label>
+
+                        <div class="form-divider">Traços e Detalhes</div>
+
+                        <label class="campo-ficha full-width">
                             <span>Sentidos</span>
-                            <input type="text" @bind="ViewModel.MonstroAtual.Sentidos" placeholder="Ex.: Visão no escuro 18 m, Percepção passiva 13" />
+                            <input type="text"
+                                   @bind="ViewModel.MonstroAtual.Sentidos"
+                                   placeholder="Ex.: Visão no escuro 18 m, Percepção passiva 13" />
                         </label>
 
                         <label class="campo-ficha full-width">
                             <span>Resistências / Imunidades</span>
-                            <input type="text" @bind="ViewModel.MonstroAtual.Resistencias" placeholder="Ex.: Resistência a dano necrótico, imunidade a veneno" />
+                            <input type="text"
+                                   @bind="ViewModel.MonstroAtual.Resistencias"
+                                   placeholder="Ex.: Resistência a dano necrótico, imunidade a veneno" />
                         </label>
 
-                        <label class="campo-ficha full-width">
-                            <span>Habilidades Especiais</span>
-                            <textarea @bind="ViewModel.MonstroAtual.Habilidades" rows="3" placeholder="Ataques múltiplos, magias inatas, traços especiais..."></textarea>
-                        </label>
+                        <div class="painel-historia">
+                            <label for="monstro-habilidades">Habilidades Especiais</label>
+                            <textarea id="monstro-habilidades"
+                                      @bind="ViewModel.MonstroAtual.Habilidades"
+                                      rows="4"
+                                      placeholder="Ataques múltiplos, magias inatas, traços especiais..."></textarea>
+                        </div>
 
-                        <label class="campo-ficha full-width">
-                            <span>Descrição da Criatura</span>
-                            <textarea @bind="ViewModel.MonstroAtual.Descricao" rows="3" placeholder="Lore, comportamento ou anotações do Mestre..."></textarea>
-                        </label>
+                        <div class="painel-historia">
+                            <label for="monstro-descricao">Descrição da Criatura</label>
+                            <textarea id="monstro-descricao"
+                                      @bind="ViewModel.MonstroAtual.Descricao"
+                                      rows="4"
+                                      placeholder="Lore, comportamento ou anotações do Mestre..."></textarea>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
+                    {
+                        <p class="feedback @(ViewModel.Sucesso ? "ok" : "erro")" role="status" aria-live="polite">
+                            @ViewModel.MensagemFeedback
+                        </p>
+                    }
+
+                    <footer class="form-footer">
+                        <button class="action-secondary" type="button" @onclick="ViewModel.CancelarCriacao" disabled="@ViewModel.IsProcessing">
+                            Cancelar
+                        </button>
+                        <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
+                            @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Monstro")
+                        </button>
+                    </footer>
+                </div>
+            </section>
+
+            <aside class="form-aside" aria-label="Resumo do Monstro">
+                <div class="monstro-preview-card">
+                    <div class="monstro-avatar-circle">
+                        @if (TemFoto)
+                        {
+                            <img src="@ViewModel.MonstroAtual.Imagem" alt="Imagem de @NomePreview" />
+                        }
+                        else
+                        {
+                            <text>@Inicial</text>
+                        }
+                    </div>
+                    <h3>@NomePreview</h3>
+                    <p>@TipoPreview • @Texto(ViewModel.MonstroAtual.Tamanho, "Médio")</p>
+                    <p class="preview-extra">@Texto(ViewModel.MonstroAtual.Tendencia, "Sem tendência") • @Texto(ViewModel.MonstroAtual.Deslocamento, "9 m")</p>
+                    <div class="preview-stats-mini">
+                        <div><b>ND</b><span>@ViewModel.MonstroAtual.Nd</span></div>
+                        <div><b>CA</b><span>@ViewModel.MonstroAtual.ClasseArmadura</span></div>
+                        <div><b>PV</b><span>@ViewModel.MonstroAtual.PvMaximo</span></div>
                     </div>
                 </div>
-
-                <footer class="wizard-footer">
-                    <button class="action-secondary" type="button" @onclick="ViewModel.CancelarCriacao" disabled="@ViewModel.IsProcessing">
-                        Cancelar
-                    </button>
-                    <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
-                        @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Monstro")
-                    </button>
-                </footer>
-
-                @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
-                {
-                    <p class="form-status @(ViewModel.Sucesso ? "success" : "error")" role="status" aria-live="polite">
-                        @ViewModel.MensagemFeedback
-                    </p>
-                }
-            </section>
+            </aside>
         </form>
-    </main>
-</div>
+    </div>
+</main>
 
 @if (ViewModel.ExibirAvisoSaida)
 {
@@ -144,11 +216,89 @@
 }
 
 @code {
+    private const int LadoMaximoFoto = 512;
+    private const long LimiteOriginalBytes = 10 * 1024 * 1024;
+    private const long LimiteFinalBytes = 2 * 1024 * 1024;
+
+    private string? _imagemPadrao;
+    private int _chaveInputFoto;
+    private string? ErroImagem { get; set; }
+
+    private bool TemFoto =>
+        ViewModel.MonstroAtual.Imagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
+
+    private string NomePreview =>
+        string.IsNullOrWhiteSpace(ViewModel.MonstroAtual.Nome) ? "Guardião das Sombras" : ViewModel.MonstroAtual.Nome.Trim();
+
+    private string Inicial =>
+        StringInfo.GetNextTextElement(NomePreview).ToUpperInvariant();
+
+    private string TipoPreview =>
+        ViewModel.MonstroAtual.TipoMonstro == "Dragao"
+            ? "Dragão"
+            : Texto(ViewModel.MonstroAtual.TipoMonstro, "Outro");
+
     protected override void OnInitialized()
     {
         ViewModel.LimparFormulario();
+        _imagemPadrao = ViewModel.MonstroAtual.Imagem;
         ViewModel.OnChange += StateHasChanged;
     }
+
+    private async Task CarregarFotoAsync(InputFileChangeEventArgs evento)
+    {
+        ErroImagem = null;
+        var arquivo = evento.File;
+
+        if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
+            !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            ErroImagem = "Selecione um arquivo de imagem válido.";
+            return;
+        }
+
+        if (arquivo.Size > LimiteOriginalBytes)
+        {
+            ErroImagem = "A imagem deve ter no máximo 10 MB.";
+            return;
+        }
+
+        try
+        {
+            IBrowserFile origem = arquivo;
+            try
+            {
+                var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
+                    ? "image/jpeg"
+                    : "image/png";
+                origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
+            }
+            catch (Exception) when (arquivo.Size <= LimiteFinalBytes)
+            {
+                origem = arquivo;
+            }
+
+            await using var leitura = origem.OpenReadStream(LimiteFinalBytes);
+            using var memoria = new MemoryStream();
+            await leitura.CopyToAsync(memoria);
+
+            ViewModel.MonstroAtual.Imagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+        }
+        catch (Exception)
+        {
+            ErroImagem = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+        }
+    }
+
+    private void RemoverFoto()
+    {
+        ViewModel.MonstroAtual.Imagem = _imagemPadrao;
+        ErroImagem = null;
+        _chaveInputFoto++;
+    }
+
+    private static string Texto(string? valor, string padrao) =>
+        string.IsNullOrWhiteSpace(valor) ? padrao : valor.Trim();
 
     public void Dispose()
     {
