@@ -242,11 +242,12 @@ public class SessaoService
     }
 
     // =========================================================================
-    // GERENCIAMENTO DE PINOS NO MAPA (EXCLUSIVO DO MESTRE)
+    // GERENCIAMENTO DE PINOS POR MAPA (EXCLUSIVO DO MESTRE)
     // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> PosicionarPinoAsync(
         int idCampanha,
         int idSessao,
+        int? idMapa,
         int idAccountMestre,
         string tipoEntidade,
         int idEntidade,
@@ -263,7 +264,10 @@ public class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode posicionar pinos no mapa.");
 
-            await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, tipoEntidade, idEntidade, coluna, linha, visivel);
+            if (!idMapa.HasValue)
+                return (false, "Selecione um mapa antes de posicionar pinos.");
+
+            await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -275,6 +279,7 @@ public class SessaoService
     public async Task<(bool Sucesso, string Mensagem)> AlterarVisibilidadePinoAsync(
         int idCampanha,
         int idSessao,
+        int? idMapa,
         int idAccountMestre,
         string tipoEntidade,
         int idEntidade,
@@ -289,7 +294,7 @@ public class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode alterar a visibilidade dos pinos.");
 
-            await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, tipoEntidade, idEntidade, visivel);
+            await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, visivel);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -301,6 +306,7 @@ public class SessaoService
     public async Task<(bool Sucesso, string Mensagem)> RemoverPinoAsync(
         int idCampanha,
         int idSessao,
+        int? idMapa,
         int idAccountMestre,
         string tipoEntidade,
         int idEntidade)
@@ -314,7 +320,7 @@ public class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode remover pinos do mapa.");
 
-            await _sessaoRepo.RemoverPinoAsync(idSessao, tipoEntidade, idEntidade);
+            await _sessaoRepo.RemoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -766,6 +772,7 @@ public class SessaoService
             pinosDto.Add(new PinoMapaDto
             {
                 IdPino = pino.IdPino,
+                IdMapa = pino.IdMapa,
                 TipoEntidade = pino.TipoEntidade,
                 IdEntidade = pino.IdEntidade,
                 Nome = nome,
@@ -853,6 +860,7 @@ public class SessaoEstadoDto
 public class PinoMapaDto
 {
     public int IdPino { get; set; }
+    public int? IdMapa { get; set; }
     public string TipoEntidade { get; set; } = string.Empty;
     public int IdEntidade { get; set; }
     public string Nome { get; set; } = string.Empty;
