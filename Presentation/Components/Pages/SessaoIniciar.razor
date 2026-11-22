@@ -1,4 +1,5 @@
 ﻿@page "/sessao-iniciar/{idCampanha:int}"
+@using Microsoft.AspNetCore.Components.Forms
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
 @inject SessaoIniciarViewModel ViewModel
@@ -52,12 +53,12 @@
                     <header class="page-heading">
                         <div>
                             <p class="page-kicker">Prepare a mesa</p>
-                            <h1>Iniciar sessão</h1>
+                            <h1>@(ViewModel.SessaoEmAndamento ? "Sessão em andamento" : "Iniciar sessão")</h1>
                             <p class="page-description">Reúna o grupo, gerencie o plano e acompanhe a aventura.</p>
                         </div>
                     </header>
                     <section class="session-summary" aria-label="Resumo da sessão">
-                        <p class="summary-kicker">Campanha Ativa</p>
+                        <p class="summary-kicker">@(ViewModel.SessaoEmAndamento ? "Sessão em Andamento" : "Campanha Ativa")</p>
                         <h2>@(ViewModel.CampanhaAtual?.Nome ?? "Carregando...")</h2>
                         <p class="summary-description">@(ViewModel.CampanhaAtual?.Descricao ?? "Sem descrição informada.")</p>
                         <dl class="summary-details">
@@ -66,15 +67,17 @@
                             <div><dt>Aventureiros Aceitos</dt><dd>@(ViewModel.CampanhaAtual?.Personagens.Count() ?? 0) presentes</dd></div>
                             <div><dt>Fichas Pendentes</dt><dd>@ViewModel.FichasPendentes.Count() aguardando avaliação</dd></div>
                         </dl>
-                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                            <a class="action-primary" href="@($"/sessao/{IdCampanha}")">Abrir Sala de Jogo <span aria-hidden="true">→</span></a>
+                        <div class="summary-actions">
+                            <a class="action-primary" href="@($"/sessao/{IdCampanha}")">
+                                @(ViewModel.SessaoEmAndamento ? "Retomar sessão" : "Abrir Sala de Jogo") <span aria-hidden="true">→</span>
+                            </a>
                             @if (ViewModel.FichasPendentes.Any())
                             {
-                                <button type="button" class="action-primary" style="background:#6f5296; border-color:#a28acb;" @onclick="ViewModel.AbrirFichas">
+                                <button type="button" class="action-secondary" @onclick="ViewModel.AbrirFichas">
                                     Avaliar @ViewModel.FichasPendentes.Count() Ficha(s) Pendente(s)
                                 </button>
                             }
-                            <a class="action-primary" style="background:transparent; border-color:rgba(217,184,120,0.4);" href="/campanhas">Voltar para campanhas</a>
+                            @* <a class="action-secondary" href="/campanhas">Voltar para campanhas</a> *@
                         </div>
                     </section>
                 }
@@ -106,15 +109,15 @@
                                         </div>
 
                                         <div class="resource-tabs" role="tablist">
-                                            <button class="resource-tab @(ViewModel.CategoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "todos"'>Todos</button>
-                                            <button class="resource-tab @(ViewModel.CategoriaAtiva == "npcs" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "npcs"'>NPCs</button>
-                                            <button class="resource-tab @(ViewModel.CategoriaAtiva == "monstros" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "monstros"'>Monstros</button>
-                                            <button class="resource-tab @(ViewModel.CategoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "itens"'>Itens</button>
+                                            <button type="button" class="resource-tab @(ViewModel.CategoriaAtiva == "todos" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "todos"'>Todos</button>
+                                            <button type="button" class="resource-tab @(ViewModel.CategoriaAtiva == "npcs" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "npcs"'>NPCs</button>
+                                            <button type="button" class="resource-tab @(ViewModel.CategoriaAtiva == "monstros" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "monstros"'>Monstros</button>
+                                            <button type="button" class="resource-tab @(ViewModel.CategoriaAtiva == "itens" ? "ativa" : "")" @onclick='() => ViewModel.CategoriaAtiva = "itens"'>Itens</button>
                                         </div>
 
                                         <div class="link-tabs" role="tablist">
-                                            <button class="link-tab @(ViewModel.ModoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "vinculados"'>Vinculados</button>
-                                            <button class="link-tab @(ViewModel.ModoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
+                                            <button type="button" class="link-tab @(ViewModel.ModoVisualizacao == "vinculados" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "vinculados"'>Vinculados</button>
+                                            <button type="button" class="link-tab @(ViewModel.ModoVisualizacao == "disponiveis" ? "ativa" : "")" @onclick='() => ViewModel.ModoVisualizacao = "disponiveis"'>Disponíveis (Biblioteca)</button>
                                         </div>
 
                                         <div class="resource-list">
@@ -344,40 +347,83 @@
                                     }
                                     else if (ViewModel.CategoriaSelecionada == "monstro")
                                     {
-                                        <label class="form-field">Nome da criatura<input @bind="ViewModel.MonstroNome" required maxlength="60" placeholder="Ex.: Guardião" /></label>
-                                        <label class="form-field">
-                                            Tipo
-                                            <select @bind="ViewModel.MonstroTipo" style="color: white;">
-                                                <option value="Outro">Outro</option>
-                                                <option value="Dragao">Dragão</option>
-                                                <option value="Fera">Fera</option>
-                                                <option value="Morto-vivo">Morto-vivo</option>
-                                            </select>
-                                        </label>
-                                        <label class="form-field">
-                                            Tamanho
-                                            <select @bind="ViewModel.MonstroTamanho" style="color: white;">
-                                                <option value="Médio">Médio</option>
-                                                <option value="Grande">Grande</option>
-                                                <option value="Pequeno">Pequeno</option>
-                                            </select>
-                                        </label>
-                                        <label class="form-field">Alinhamento<input @bind="ViewModel.MonstroAlinhamento" maxlength="40" placeholder="Ex.: Caótico e mau" /></label>
-                                        <label class="form-field">Nível de desafio<input @bind="ViewModel.MonstroNd" type="number" min="0" max="30" step="0.125" /></label>
-                                        <label class="form-field">Classe de armadura<input @bind="ViewModel.MonstroDefesa" type="number" min="0" max="40" /></label>
-                                        <label class="form-field">Pontos de vida<input @bind="ViewModel.MonstroVida" type="number" min="1" max="9999" /></label>
-                                        <label class="form-field">Deslocamento<input @bind="ViewModel.MonstroDeslocamento" maxlength="50" placeholder="9 m" /></label>
+                                        <div class="form-field">
+                                            <span>Foto do Monstro</span>
+                                            <div class="npc-foto-linha">
+                                                <div class="npc-foto-preview" aria-hidden="true">
+                                                    @if (ViewModel.TemFotoMonstro)
+                                                    {
+                                                        <img src="@ViewModel.MonstroImagem" alt="" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <text>@(string.IsNullOrWhiteSpace(ViewModel.MonstroNome) ? "M" : ViewModel.MonstroNome.Trim().Substring(0, 1).ToUpperInvariant())</text>
+                                                    }
+                                                </div>
+                                                <div class="npc-foto-acoes">
+                                                    <div class="npc-foto-botoes">
+                                                        <label class="btn-foto-npc">
+                                                            ↑ @(ViewModel.TemFotoMonstro ? "Trocar foto" : "Escolher foto")
+                                                            <InputFile @key="ViewModel.ChaveInputFotoMonstro" OnChange="ViewModel.SelecionarFotoMonstroAsync" accept="image/*" aria-label="Escolher foto do monstro" />
+                                                        </label>
+                                                        @if (ViewModel.TemFotoMonstro)
+                                                        {
+                                                            <button type="button" class="btn-foto-npc-sec" @onclick="ViewModel.RemoverFotoMonstro">Remover</button>
+                                                        }
+                                                    </div>
+                                                    <p class="npc-foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
+                                                    @if (!string.IsNullOrWhiteSpace(ViewModel.ErroImagemMonstro))
+                                                    {
+                                                        <p class="npc-foto-erro" role="alert">@ViewModel.ErroImagemMonstro</p>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <label class="form-field">Nome da criatura<input @bind="ViewModel.MonstroNome" @bind:event="oninput" required maxlength="60" autocomplete="off" placeholder="Ex.: Guardião" /></label>
+
+                                        <div class="history-fields-row">
+                                            <label class="form-field">
+                                                Tipo
+                                                <select @bind="ViewModel.MonstroTipo">
+                                                    <option value="Outro">Outro</option>
+                                                    <option value="Dragao">Dragão</option>
+                                                    <option value="Fera">Fera</option>
+                                                    <option value="Morto-vivo">Morto-vivo</option>
+                                                </select>
+                                            </label>
+                                            <label class="form-field">
+                                                Tamanho
+                                                <select @bind="ViewModel.MonstroTamanho">
+                                                    <option value="Médio">Médio</option>
+                                                    <option value="Grande">Grande</option>
+                                                    <option value="Pequeno">Pequeno</option>
+                                                </select>
+                                            </label>
+                                        </div>
+
+                                        <div class="history-fields-row">
+                                            <label class="form-field">Nível de desafio<input @bind="ViewModel.MonstroNd" type="number" min="0" max="30" step="0.125" /></label>
+                                            <label class="form-field">Classe de armadura<input @bind="ViewModel.MonstroDefesa" type="number" min="0" max="40" /></label>
+                                        </div>
+
+                                        <div class="history-fields-row">
+                                            <label class="form-field">Pontos de vida<input @bind="ViewModel.MonstroVida" type="number" min="1" max="9999" /></label>
+                                            <label class="form-field">Deslocamento<input @bind="ViewModel.MonstroDeslocamento" maxlength="50" placeholder="9 m" /></label>
+                                        </div>
+
+                                        <label class="form-field">Tendência / Alinhamento<input @bind="ViewModel.MonstroAlinhamento" maxlength="40" placeholder="Ex.: Caótico e mau" /></label>
                                         <label class="form-field">Sentidos<input @bind="ViewModel.MonstroSentidos" maxlength="80" placeholder="Visão no escuro 18 m" /></label>
                                         <label class="form-field full-width">Resistências e imunidades<input @bind="ViewModel.MonstroResistencias" maxlength="120" placeholder="Ex.: frio, veneno" /></label>
                                         <label class="form-field full-width">Habilidades especiais<input @bind="ViewModel.MonstroHabilidades" maxlength="160" placeholder="Ex.: Ataque múltiplo" /></label>
-                                        <label class="form-field full-width">Descrição<textarea @bind="ViewModel.MonstroDescricao" rows="2" placeholder="Táticas e anotações..."></textarea></label>
+                                        <label class="form-field full-width">Descrição<textarea @bind="ViewModel.MonstroDescricao" rows="3" placeholder="Táticas e anotações..."></textarea></label>
                                     }
                                     else
                                     {
                                         <label class="form-field">Nome do Item<input @bind="ViewModel.ItemNome" required maxlength="100" placeholder="Ex.: Espada Longa" /></label>
                                         <label class="form-field">
                                             Tipo
-                                            <select @bind="ViewModel.ItemTipo" style="color: white;">
+                                            <select @bind="ViewModel.ItemTipo">
                                                 <option value="">Selecionar...</option>
                                                 <option value="Anéis">Anéis</option>
                                                 <option value="Armadura">Armadura</option>
@@ -395,7 +441,7 @@
                                         <label class="form-field">Dano<input @bind="ViewModel.ItemDano" maxlength="20" placeholder="Ex.: 1d8" /></label>
                                         <label class="form-field">
                                             Tipo de Dano
-                                            <select @bind="ViewModel.ItemTipoDano" style="color: white;">
+                                            <select @bind="ViewModel.ItemTipoDano">
                                                 <option value="">Nenhum / N/A</option>
                                                 <option value="Cortante">Cortante</option>
                                                 <option value="Perfurante">Perfurante</option>
@@ -444,7 +490,7 @@
 
                                     @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedback))
                                     {
-                                        <p class="save-status" role="status" style="margin-top: 10px; color: #d4af37;">@ViewModel.MensagemFeedback</p>
+                                        <p class="save-status" role="status">@ViewModel.MensagemFeedback</p>
                                     }
                                 </form>
                             </div>
@@ -481,7 +527,7 @@
 
                             @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedbackMapas))
                             {
-                                <p class="save-status" role="status" style="margin: 0 0 12px; font-size: 12px; color: #d4af37;">@ViewModel.MensagemFeedbackMapas</p>
+                                <p class="save-status" role="status">@ViewModel.MensagemFeedbackMapas</p>
                             }
 
                             @if (ViewModel.AbaMapas != "novo")
@@ -639,17 +685,17 @@
 
                     <div class="session-page-content">
                         <div class="link-tabs" role="tablist" style="max-width: 480px; margin-bottom: 16px;">
-                            <button class="link-tab @(ViewModel.FiltroFichasMestre == "pendentes" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "pendentes"'>
+                            <button type="button" class="link-tab @(ViewModel.FiltroFichasMestre == "pendentes" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "pendentes"'>
                                 Fichas para Validar <span>@ViewModel.FichasPendentes.Count()</span>
                             </button>
-                            <button class="link-tab @(ViewModel.FiltroFichasMestre == "aceitas" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "aceitas"'>
+                            <button type="button" class="link-tab @(ViewModel.FiltroFichasMestre == "aceitas" ? "ativa" : "")" @onclick='() => ViewModel.FiltroFichasMestre = "aceitas"'>
                                 Fichas Aceitas <span>@ViewModel.FichasAceitas.Count()</span>
                             </button>
                         </div>
 
                         @if (!string.IsNullOrEmpty(ViewModel.MensagemFeedbackFichas))
                         {
-                            <p class="save-status" style="margin-bottom: 14px; font-size: 12px; color: #d4af37; font-weight: bold;">@ViewModel.MensagemFeedbackFichas</p>
+                            <p class="save-status">@ViewModel.MensagemFeedbackFichas</p>
                         }
 
                         <div class="fichas-mestre-lista">
@@ -719,7 +765,7 @@
                                 <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
                                     <h2>Motivo da Recusa</h2>
                                     <p>Escreva o motivo pelo qual esta ficha/inventário está sendo recusada. O jogador visualizará essa mensagem na tela dele.</p>
-                                    <textarea @bind="ViewModel.TextoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..." style="width:100%; padding:8px; margin:10px 0; background:#18110c; color:#fff; border:1px solid #9c783d; border-radius:4px;"></textarea>
+                                    <textarea @bind="ViewModel.TextoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..."></textarea>
                                     <div class="confirm-actions">
                                         <button class="confirm-exit" type="button" @onclick="ViewModel.ConfirmarRecusaComMotivoAsync">Confirmar Recusa</button>
                                         <button class="confirm-cancel" type="button" @onclick="() => ViewModel.IdPersonagemParaRecusar = 0">Cancelar</button>
@@ -735,7 +781,7 @@
                             <section class="ficha-pergaminho-inspecao" aria-label="Inspeção completa da ficha">
                                 <div class="inspecao-top-bar">
                                     <span>Inspecionando ficha e equipamentos de <strong>@fichaInspecionada.Nome</strong></span>
-                                    <div style="display:flex; gap:8px;">
+                                    <div class="inspecao-acoes-barra">
                                         @if (ViewModel.StatusDaFichaInspecionada == "Pendente")
                                         {
                                             <button type="button" class="btn-aprovar-ficha" @onclick="() => ViewModel.AprovarFichaJogadorAsync(fichaInspecionada.IdPersonagem)">✓ Aceitar Ficha e Itens</button>
@@ -868,7 +914,7 @@
                                             <h4>Magias Conhecidas / Preparadas</h4>
                                             @if (fichaInspecionada.PersonagemMagias != null && fichaInspecionada.PersonagemMagias.Any())
                                             {
-                                                <ul style="margin: 0; padding-left: 18px;">
+                                                <ul class="inspecao-lista">
                                                     @foreach (var pm in fichaInspecionada.PersonagemMagias)
                                                     {
                                                         if (pm.Magia != null)
@@ -887,14 +933,12 @@
                                 }
 
                                 <!-- SEÇÃO FIXA ABAIXO DA FICHA: ITENS DA CAMPANHA ENVIADOS PELO JOGADOR -->
-                                <div style="margin-top: 22px; padding-top: 18px; border-top: 2px dashed rgba(126, 87, 31, 0.45);">
-                                    <h3 style="margin: 0 0 12px; color: #392819; font-size: 18px;">
-                                        🎒 Itens da Campanha e Moedas Selecionados pelo Jogador
-                                    </h3>
+                                <div class="inspecao-inventario-bloco">
+                                    <h3>🎒 Itens da Campanha e Moedas Selecionados pelo Jogador</h3>
 
                                     @if (fichaInspecionada.Inventario != null)
                                     {
-                                        <div class="grid-4-inspecao" style="grid-template-columns: repeat(5, 1fr); margin-bottom: 12px;">
+                                        <div class="grid-4-inspecao moedas-inspecao-grid">
                                             <div class="campo-leitura-inspecao"><span>PC</span><strong>@fichaInspecionada.Inventario.MoedasPC</strong></div>
                                             <div class="campo-leitura-inspecao"><span>PP</span><strong>@fichaInspecionada.Inventario.MoedasPP</strong></div>
                                             <div class="campo-leitura-inspecao"><span>PE</span><strong>@fichaInspecionada.Inventario.MoedasPE</strong></div>
@@ -906,7 +950,7 @@
                                             <h4>Equipamentos Vinculados (Carga Total: @(fichaInspecionada.Inventario.PesoAtual ?? 0) kg / @(fichaInspecionada.Inventario.CapacidadeCarga ?? 0) kg)</h4>
                                             @if (fichaInspecionada.Inventario.Itens != null && fichaInspecionada.Inventario.Itens.Any())
                                             {
-                                                <ul style="margin: 0; padding-left: 18px;">
+                                                <ul class="inspecao-lista">
                                                     @foreach (var ii in fichaInspecionada.Inventario.Itens)
                                                     {
                                                         <li>
@@ -925,7 +969,7 @@
 
                                         @if (!string.IsNullOrWhiteSpace(fichaInspecionada.Inventario.Notas))
                                         {
-                                            <div class="painel-marrom-inspecao" style="margin-top: 10px;">
+                                            <div class="painel-marrom-inspecao notas-inspecao-espaco">
                                                 <h4>Notas do Inventário do Jogador</h4>
                                                 <p>@fichaInspecionada.Inventario.Notas</p>
                                             </div>
@@ -1148,7 +1192,7 @@
 
                                             @if (!string.IsNullOrWhiteSpace(ViewModel.MensagemFeedbackHistorico))
                                             {
-                                                <p class="save-status" role="status" style="color: #d4af37;">@ViewModel.MensagemFeedbackHistorico</p>
+                                                <p class="save-status" role="status">@ViewModel.MensagemFeedbackHistorico</p>
                                             }
                                         </form>
                                     </section>

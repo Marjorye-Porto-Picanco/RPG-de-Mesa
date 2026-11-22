@@ -1,4 +1,5 @@
 ﻿@page "/personagem-criar"
+@using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
@@ -24,9 +25,16 @@
 
         <aside class="form-aside" aria-label="Prévia do personagem">
             <div class="aside-portrait">
-                <img id="preview-img"
-                     src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)"
-                     alt="Prévia do retrato do personagem" />
+                @if (TemFotoPersonagem)
+                {
+                    <img id="preview-img"
+                         src="@ViewModel.PersonagemAtual.Imagem"
+                         alt="Prévia do retrato do personagem" />
+                }
+                else
+                {
+                    <span class="aside-initials" aria-hidden="true">@IniciaisPersonagem</span>
+                }
             </div>
             <div class="aside-info">
                 <div class="preview-actions">
@@ -675,6 +683,31 @@
 @code {
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaId { get; set; }
+
+    private bool TemFotoPersonagem =>
+        !string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Imagem) &&
+        !string.Equals(ViewModel.PersonagemAtual.Imagem.Trim(), "img/armaduraprata.png", StringComparison.OrdinalIgnoreCase);
+
+    private string IniciaisPersonagem
+    {
+        get
+        {
+            var nome = ViewModel.PersonagemAtual.Nome?.Trim();
+            if (string.IsNullOrWhiteSpace(nome))
+                return "NP";
+
+            var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (partes.Length >= 2)
+            {
+                var primeira = StringInfo.GetNextTextElement(partes[0]).ToUpperInvariant();
+                var segunda = StringInfo.GetNextTextElement(partes[1]).ToUpperInvariant();
+                return $"{primeira}{segunda}";
+            }
+
+            var letra = StringInfo.GetNextTextElement(partes[0]).ToUpperInvariant();
+            return letra;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -17,10 +17,11 @@ namespace RPGdeMesa.Presentation.ViewModel
     public class SessaoIniciarViewModel
     {
         private const long TamanhoMaximoMapa = 5 * 1024 * 1024; // 5 MB
-        private const int LadoMaximoFotoNpc = 512;
-        private const long LimiteOriginalFotoNpc = 10 * 1024 * 1024; // 10 MB
-        private const long LimiteFinalFotoNpc = 2 * 1024 * 1024; // 2 MB
+        private const int LadoMaximoFoto = 512;
+        private const long LimiteOriginalFoto = 10 * 1024 * 1024; // 10 MB
+        private const long LimiteFinalFoto = 2 * 1024 * 1024; // 2 MB
         private static readonly string? ImagemPadraoNpc = new NPC().Imagem;
+        private static readonly string? ImagemPadraoMonstro = new Monstro().Imagem;
 
         private readonly CampanhaService _campanhaService;
         private readonly PersonagemService _personagemService;
@@ -47,6 +48,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public int IdCampanha { get; set; }
         public Campanha? CampanhaAtual { get; private set; }
+        public bool SessaoEmAndamento => HistoricoSessoes.Any(s => s.Ativa);
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
         public List<NPC> NpcsDisponiveis { get; private set; } = new();
         public List<Item> ItensDisponiveis { get; private set; } = new();
@@ -124,6 +126,10 @@ namespace RPGdeMesa.Presentation.ViewModel
         public decimal MonstroNd { get; set; } = 1;
         public int MonstroDefesa { get; set; } = 12;
         public int MonstroVida { get; set; } = 15;
+        public string? MonstroImagem { get; set; } = ImagemPadraoMonstro;
+        public string? ErroImagemMonstro { get; private set; }
+        public int ChaveInputFotoMonstro { get; private set; }
+        public bool TemFotoMonstro => MonstroImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
 
         // Form Fields - Item
         public string ItemNome { get; set; } = string.Empty;
@@ -218,31 +224,37 @@ namespace RPGdeMesa.Presentation.ViewModel
             IdCampanha = idCampanha;
             if (IdCampanha > 0)
             {
-                CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+                var tarefaCampanha = _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+                var tarefaHistorico = CarregarHistoricoInternoAsync();
+                await Task.WhenAll(tarefaCampanha, tarefaHistorico);
+
+                CampanhaAtual = tarefaCampanha.Result;
+
                 if (CampanhaAtual != null)
                 {
-                    var todosMonstros = await _campanhaService.ObterMonstrosParaSessaoAsync(CampanhaAtual.IdAccount);
+                    var tarefaMonstros = _campanhaService.ObterMonstrosParaSessaoAsync(CampanhaAtual.IdAccount);
+                    var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(CampanhaAtual.IdAccount);
+                    var tarefaItens = _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
+                    var tarefaMapas = _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
+
+                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas);
+
                     var idsMonstrosVinculados = CampanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
-                    MonstrosDisponiveis = todosMonstros.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
+                    MonstrosDisponiveis = tarefaMonstros.Result.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
 
-                    var todosNpcsUsuario = await _npcService.ObterNpcsPorUsuarioAsync(CampanhaAtual.IdAccount);
                     var idsNpcsVinculados = CampanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
-                    NpcsDisponiveis = todosNpcsUsuario.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
+                    NpcsDisponiveis = tarefaNpcs.Result.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
 
-                    var todosItens = await _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
                     var idsItensVinculados = CampanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
-                    ItensDisponiveis = todosItens.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
+                    ItensDisponiveis = tarefaItens.Result.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
 
-                    var todosMapasUsuario = await _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
                     var idsMapasVinculados = CampanhaAtual.MapaCampanhas.Select(mc => mc.IdMapa).ToList();
-                    MapasDisponiveis = todosMapasUsuario.Where(m => !idsMapasVinculados.Contains(m.IdMapa)).ToList();
+                    MapasDisponiveis = tarefaMapas.Result.Where(m => !idsMapasVinculados.Contains(m.IdMapa)).ToList();
 
                     if (MapaSelecionadoParaVer != null && !idsMapasVinculados.Contains(MapaSelecionadoParaVer.IdMapa))
                     {
                         MapaSelecionadoParaVer = null;
                     }
-
-                    await CarregarHistoricoInternoAsync();
                 }
             }
             NotifyStateChanged();
@@ -372,7 +384,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 return;
             }
 
-            if (arquivo.Size > LimiteOriginalFotoNpc)
+            if (arquivo.Size > LimiteOriginalFoto)
             {
                 ErroImagemNpc = "A imagem deve ter no máximo 10 MB.";
                 NotifyStateChanged();
@@ -387,14 +399,14 @@ namespace RPGdeMesa.Presentation.ViewModel
                     var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
                         ? "image/jpeg"
                         : "image/png";
-                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFotoNpc, LadoMaximoFotoNpc);
+                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
                 }
-                catch (Exception) when (arquivo.Size <= LimiteFinalFotoNpc)
+                catch (Exception) when (arquivo.Size <= LimiteFinalFoto)
                 {
                     origem = arquivo;
                 }
 
-                await using var leitura = origem.OpenReadStream(LimiteFinalFotoNpc);
+                await using var leitura = origem.OpenReadStream(LimiteFinalFoto);
                 using var memoria = new MemoryStream();
                 await leitura.CopyToAsync(memoria);
 
@@ -436,6 +448,85 @@ namespace RPGdeMesa.Presentation.ViewModel
             NpcImagem = ImagemPadraoNpc;
             ErroImagemNpc = null;
             ChaveInputFotoNpc++;
+        }
+
+        // --- FOTO DO MONSTRO ---
+        public async Task SelecionarFotoMonstroAsync(InputFileChangeEventArgs evento)
+        {
+            ErroImagemMonstro = null;
+            var arquivo = evento.File;
+
+            if (string.IsNullOrWhiteSpace(arquivo.ContentType) ||
+                !arquivo.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                ErroImagemMonstro = "Selecione um arquivo de imagem válido.";
+                NotifyStateChanged();
+                return;
+            }
+
+            if (arquivo.Size > LimiteOriginalFoto)
+            {
+                ErroImagemMonstro = "A imagem deve ter no máximo 10 MB.";
+                NotifyStateChanged();
+                return;
+            }
+
+            try
+            {
+                IBrowserFile origem = arquivo;
+                try
+                {
+                    var formato = arquivo.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase)
+                        ? "image/jpeg"
+                        : "image/png";
+                    origem = await arquivo.RequestImageFileAsync(formato, LadoMaximoFoto, LadoMaximoFoto);
+                }
+                catch (Exception) when (arquivo.Size <= LimiteFinalFoto)
+                {
+                    origem = arquivo;
+                }
+
+                await using var leitura = origem.OpenReadStream(LimiteFinalFoto);
+                using var memoria = new MemoryStream();
+                await leitura.CopyToAsync(memoria);
+
+                MonstroImagem = $"data:{origem.ContentType};base64,{Convert.ToBase64String(memoria.ToArray())}";
+            }
+            catch (Exception)
+            {
+                ErroImagemMonstro = "Não foi possível carregar essa imagem. Tente outro arquivo (até 2 MB).";
+            }
+            finally
+            {
+                NotifyStateChanged();
+            }
+        }
+
+        public void RemoverFotoMonstro()
+        {
+            MonstroImagem = ImagemPadraoMonstro;
+            ErroImagemMonstro = null;
+            ChaveInputFotoMonstro++;
+            NotifyStateChanged();
+        }
+
+        private void LimparFormularioMonstro()
+        {
+            MonstroNome = string.Empty;
+            MonstroTipo = "Outro";
+            MonstroTamanho = "Médio";
+            MonstroAlinhamento = string.Empty;
+            MonstroNd = 1;
+            MonstroDefesa = 12;
+            MonstroVida = 15;
+            MonstroDeslocamento = "9 m";
+            MonstroSentidos = string.Empty;
+            MonstroResistencias = string.Empty;
+            MonstroHabilidades = string.Empty;
+            MonstroDescricao = string.Empty;
+            MonstroImagem = ImagemPadraoMonstro;
+            ErroImagemMonstro = null;
+            ChaveInputFotoMonstro++;
         }
 
         // --- MÉTODOS DE MAPAS ---
@@ -644,12 +735,16 @@ namespace RPGdeMesa.Presentation.ViewModel
                         Sentidos = MonstroSentidos,
                         Resistencias = MonstroResistencias,
                         Habilidades = MonstroHabilidades,
-                        Descricao = MonstroDescricao
+                        Descricao = MonstroDescricao,
+                        Imagem = MonstroImagem
                     };
 
                     var resultado = await _campanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);
                     MensagemFeedback = resultado.Mensagem;
-                    if (resultado.Sucesso) { MonstroNome = MonstroDescricao = string.Empty; }
+                    if (resultado.Sucesso)
+                    {
+                        LimparFormularioMonstro();
+                    }
                 }
                 else if (CategoriaSelecionada == "item")
                 {

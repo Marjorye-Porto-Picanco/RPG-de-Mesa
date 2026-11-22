@@ -122,11 +122,11 @@
                     </div>
 
                     <div class="form-footer rodape-modal">
-                        @if (NpcSelecionado.IdAccount == IdUsuarioLogado)
+                        <!--@if (NpcSelecionado.IdAccount == IdUsuarioLogado)
                         {
                             <BotaoExcluir Inline="true" Texto="Excluir NPC" Titulo="Excluir NPC"
                                           OnClick="() => OnPedirExclusao.InvokeAsync((NpcSelecionado.IdNpc, NpcSelecionado.Nome))" />
-                        }
+                        }-->
                         <button type="button" class="action-secondary" @onclick="OnFecharModal">Fechar</button>
                     </div>
                 </section>
