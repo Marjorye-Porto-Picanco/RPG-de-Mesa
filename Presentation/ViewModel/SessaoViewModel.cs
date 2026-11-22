@@ -1,10 +1,14 @@
 ﻿using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa.Presentation.ViewModel;
+
+public sealed record PinoSelecionadoParaColocar(string TipoEntidade, int IdEntidade, string Nome);
 
 public class ItemSlotSessaoDto
 {
@@ -80,6 +84,16 @@ public class SessaoViewModel : IAsyncDisposable
     public const int GradeLinhas = 20;
     public const int TamanhoBaseMapaPx = 720;
 
+    // Painel de Pinos (Exclusivo do Mestre)
+    public bool ExibirPainelPinos { get; private set; }
+    public string AbaPinosAtiva { get; private set; } = "jogadores";
+    public PinoSelecionadoParaColocar? PinoParaPosicionar { get; private set; }
+    public bool NovoPinoVisivel { get; set; } = true;
+
+    // Modais de Ficha de Monstro / NPC (ao clicar no pino)
+    public Monstro? MonstroEmVisualizacao { get; private set; }
+    public NPC? NpcEmVisualizacao { get; private set; }
+
     // Modais (Mini janelas)
     public bool ExibirModalDados { get; private set; }
     public bool ExibirModalFicha { get; private set; }
@@ -103,6 +117,11 @@ public class SessaoViewModel : IAsyncDisposable
 
     public IEnumerable<MensagemSessaoDto> MensagensAbaAtiva =>
         Estado.Mensagens.Where(m => string.Equals(m.Canal, AbaChatAtiva, StringComparison.OrdinalIgnoreCase));
+
+    public IEnumerable<PinoMapaDto> PinosVisiveisNoMapa =>
+        Estado.EhMestre
+            ? Estado.Pinos
+            : Estado.Pinos.Where(p => p.Visivel);
 
     public SessaoViewModel(
         SessaoService sessaoService,
@@ -131,6 +150,10 @@ public class SessaoViewModel : IAsyncDisposable
         ModoRevisaoPosSessao = false;
         ExibirModalDados = false;
         ExibirModalFicha = false;
+        ExibirPainelPinos = false;
+        PinoParaPosicionar = null;
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
         FichaEmVisualizacao = null;
         FichasRevisao.Clear();
         FichaRevisaoSelecionada = null;
@@ -247,6 +270,8 @@ public class SessaoViewModel : IAsyncDisposable
                     SessaoEncerradaPeloMestre = true;
                     ExibirModalDados = false;
                     ExibirModalFicha = false;
+                    MonstroEmVisualizacao = null;
+                    NpcEmVisualizacao = null;
                     _desconectado = true;
                     _syncCts?.Cancel();
                 }
@@ -261,6 +286,210 @@ public class SessaoViewModel : IAsyncDisposable
         {
             _dbLock.Release();
         }
+    }
+
+    // =========================================================================
+    // PAINEL DE PINOS (MESTRE) E FICHAS DE MONSTRO / NPC
+    // =========================================================================
+    public void AlternarPainelPinos()
+    {
+        if (!Estado.EhMestre) return;
+        ExibirPainelPinos = !ExibirPainelPinos;
+        if (!ExibirPainelPinos)
+            PinoParaPosicionar = null;
+        Notificar();
+    }
+
+    public void MudarAbaPinos(string aba)
+    {
+        AbaPinosAtiva = aba;
+        Notificar();
+    }
+
+    public PinoMapaDto? ObterPinoNoMapa(string tipoEntidade, int idEntidade) =>
+        Estado.Pinos.FirstOrDefault(p => p.TipoEntidade == tipoEntidade && p.IdEntidade == idEntidade);
+
+    public void SelecionarPinoParaPosicionar(string tipoEntidade, int idEntidade, string nome)
+    {
+        if (!Estado.EhMestre) return;
+
+        if (PinoParaPosicionar is not null &&
+            PinoParaPosicionar.TipoEntidade == tipoEntidade &&
+            PinoParaPosicionar.IdEntidade == idEntidade)
+        {
+            PinoParaPosicionar = null;
+            FeedbackAcao = null;
+        }
+        else
+        {
+            PinoParaPosicionar = new PinoSelecionadoParaColocar(tipoEntidade, idEntidade, nome);
+            FeedbackAcao = $"Clique em uma casa do mapa 20×20 para posicionar \"{nome}\".";
+        }
+        Notificar();
+    }
+
+    public void CancelarSelecaoPino()
+    {
+        PinoParaPosicionar = null;
+        FeedbackAcao = null;
+        Notificar();
+    }
+
+    public async Task AoClicarCelulaMapaAsync(int coluna, int linha)
+    {
+        if (!Estado.EhMestre || PinoParaPosicionar is null || Estado.IdSessao <= 0)
+            return;
+
+        var alvo = PinoParaPosicionar;
+        var existente = ObterPinoNoMapa(alvo.TipoEntidade, alvo.IdEntidade);
+        bool visivel = existente?.Visivel ?? NovoPinoVisivel;
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (sucesso, erro) = await _sessaoService.PosicionarPinoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                alvo.TipoEntidade,
+                alvo.IdEntidade,
+                coluna,
+                linha,
+                visivel);
+
+            if (!sucesso)
+            {
+                FeedbackAcao = erro;
+            }
+            else
+            {
+                PinoParaPosicionar = null;
+                FeedbackAcao = null;
+            }
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            Notificar();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
+    public async Task AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade)
+    {
+        if (!Estado.EhMestre || Estado.IdSessao <= 0) return;
+
+        var pino = ObterPinoNoMapa(tipoEntidade, idEntidade);
+        if (pino == null) return;
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (sucesso, erro) = await _sessaoService.AlterarVisibilidadePinoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                tipoEntidade,
+                idEntidade,
+                !pino.Visivel);
+
+            if (!sucesso)
+                FeedbackAcao = erro;
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            Notificar();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
+    public async Task RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade)
+    {
+        if (!Estado.EhMestre || Estado.IdSessao <= 0) return;
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (sucesso, erro) = await _sessaoService.RemoverPinoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                tipoEntidade,
+                idEntidade);
+
+            if (!sucesso)
+                FeedbackAcao = erro;
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            Notificar();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+    }
+
+    public async Task AoClicarPinoMapaAsync(PinoMapaDto pino)
+    {
+        if (pino.TipoEntidade == TiposPinoSessao.Monstro)
+        {
+            MonstroEmVisualizacao = Estado.MonstrosCampanha.FirstOrDefault(m => m.IdMonstro == pino.IdEntidade);
+            NpcEmVisualizacao = null;
+            ExibirModalDados = false;
+            ExibirModalFicha = false;
+            Notificar();
+            return;
+        }
+
+        if (pino.TipoEntidade == TiposPinoSessao.Npc)
+        {
+            NpcEmVisualizacao = Estado.NpcsCampanha.FirstOrDefault(n => n.IdNpc == pino.IdEntidade);
+            MonstroEmVisualizacao = null;
+            ExibirModalDados = false;
+            ExibirModalFicha = false;
+            Notificar();
+            return;
+        }
+
+        if (pino.TipoEntidade == TiposPinoSessao.Personagem)
+        {
+            var jogador = Estado.Jogadores.FirstOrDefault(j => j.IdPersonagem == pino.IdEntidade);
+            if (jogador != null)
+            {
+                await AbrirFichaParticipanteAsync(jogador);
+            }
+        }
+    }
+
+    public void FecharModalEntidade()
+    {
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
+        Notificar();
     }
 
     public async Task SelecionarMapaAsync(ChangeEventArgs e)
@@ -389,6 +618,8 @@ public class SessaoViewModel : IAsyncDisposable
     public void AbrirModalDados()
     {
         ExibirModalFicha = false;
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
         ExibirModalDados = true;
         Notificar();
     }
@@ -454,6 +685,8 @@ public class SessaoViewModel : IAsyncDisposable
         FeedbackAcao = null;
         FeedbackFichaModal = null;
         ExibirModalDados = false;
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
         AbaFichaModalAtiva = abaInicial;
         CarregandoFichaModal = true;
         Notificar();
@@ -602,6 +835,8 @@ public class SessaoViewModel : IAsyncDisposable
     {
         ExibirModalDados = false;
         ExibirModalFicha = false;
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
         FeedbackAcao = null;
         Notificar();
     }
@@ -627,6 +862,7 @@ public class SessaoViewModel : IAsyncDisposable
     public void LimparFeedback()
     {
         FeedbackAcao = null;
+        PinoParaPosicionar = null;
         Notificar();
     }
 
@@ -641,6 +877,9 @@ public class SessaoViewModel : IAsyncDisposable
         FeedbackAcao = null;
         ExibirModalDados = false;
         ExibirModalFicha = false;
+        ExibirPainelPinos = false;
+        MonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
         Notificar();
 
         _desconectado = true;

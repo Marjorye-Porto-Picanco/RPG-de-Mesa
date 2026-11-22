@@ -7,50 +7,83 @@ namespace RPGdeMesa.Infrastructure.Repositories;
 public class NpcRepository : INpcRepository
 {
     private readonly AppDbContext _contexto;
+    private readonly SemaphoreSlim _dbLock = new(1, 1);
 
     public NpcRepository(AppDbContext contexto) => _contexto = contexto;
 
-    public async Task<NPC?> ObterPorIdAsync(int idNpc)
+    private async Task<T> ExecutarComLockAsync<T>(Func<Task<T>> operacao)
     {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Npcs
-            .Include(n => n.NpcCampanhas)
-            .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
+        await _dbLock.WaitAsync();
+        try
+        {
+            return await operacao();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
     }
 
-    public async Task<List<NPC>> ListarPorUsuarioAsync(int idAccount)
+    private async Task ExecutarComLockAsync(Func<Task> operacao)
     {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Npcs
-            .Include(n => n.NpcCampanhas)
-            .Where(n => n.IdAccount == idAccount)
-            .ToListAsync();
+        await _dbLock.WaitAsync();
+        try
+        {
+            await operacao();
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
     }
 
-    public async Task<List<NPC>> ListarPorCampanhaAsync(int idCampanha)
-    {
-        _contexto.ChangeTracker.Clear();
-        return await _contexto.Npcs
-            .Include(n => n.NpcCampanhas)
-            .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
-            .ToListAsync();
-    }
+    public Task<NPC?> ObterPorIdAsync(int idNpc) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.ChangeTracker.Clear();
+            return await _contexto.Npcs
+                .Include(n => n.NpcCampanhas)
+                .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
+        });
 
-    public async Task AdicionarAsync(NPC npc)
-    {
-        _contexto.Npcs.Add(npc);
-        await _contexto.SaveChangesAsync();
-    }
+    public Task<List<NPC>> ListarPorUsuarioAsync(int idAccount) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.ChangeTracker.Clear();
+            return await _contexto.Npcs
+                .Include(n => n.NpcCampanhas)
+                .Where(n => n.IdAccount == idAccount)
+                .ToListAsync();
+        });
 
-    public async Task AtualizarAsync(NPC npc)
-    {
-        _contexto.Npcs.Update(npc);
-        await _contexto.SaveChangesAsync();
-    }
+    public Task<List<NPC>> ListarPorCampanhaAsync(int idCampanha) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.ChangeTracker.Clear();
+            return await _contexto.Npcs
+                .Include(n => n.NpcCampanhas)
+                .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
+                .ToListAsync();
+        });
 
-    public async Task RemoverAsync(NPC npc)
-    {
-        _contexto.Npcs.Remove(npc);
-        await _contexto.SaveChangesAsync();
-    }
+    public Task AdicionarAsync(NPC npc) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.Npcs.Add(npc);
+            await _contexto.SaveChangesAsync();
+        });
+
+    public Task AtualizarAsync(NPC npc) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.Npcs.Update(npc);
+            await _contexto.SaveChangesAsync();
+        });
+
+    public Task RemoverAsync(NPC npc) =>
+        ExecutarComLockAsync(async () =>
+        {
+            _contexto.Npcs.Remove(npc);
+            await _contexto.SaveChangesAsync();
+        });
 }

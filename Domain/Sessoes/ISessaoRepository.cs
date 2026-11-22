@@ -25,4 +25,10 @@ public interface ISessaoRepository
     Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem);
     Task<List<Personagem>> ListarFichasAceitasCompletasAsync(int idCampanha);
     Task<List<Item>> ListarItensCampanhaAsync(int idCampanha);
+
+    // Pinos (Tokens) no mapa
+    Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao);
+    Task SalvarOuMoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel);
+    Task AlterarVisibilidadePinoAsync(int idSessao, string tipoEntidade, int idEntidade, bool visivel);
+    Task RemoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade);
 }

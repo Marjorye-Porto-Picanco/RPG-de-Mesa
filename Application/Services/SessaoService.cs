@@ -1,6 +1,8 @@
-﻿using RPGdeMesa.Domain.Campanhas;
+﻿using RPGdeMesa.Domain.Bestiario;
+using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 
@@ -204,6 +206,88 @@ public class SessaoService
         catch (Exception ex)
         {
             return (false, $"Erro ao alterar mapa: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    // =========================================================================
+    // GERENCIAMENTO DE PINOS NO MAPA (EXCLUSIVO DO MESTRE)
+    // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> PosicionarPinoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        string tipoEntidade,
+        int idEntidade,
+        int coluna,
+        int linha,
+        bool visivel)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode posicionar pinos no mapa.");
+
+            await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, tipoEntidade, idEntidade, coluna, linha, visivel);
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao posicionar pino: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> AlterarVisibilidadePinoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        string tipoEntidade,
+        int idEntidade,
+        bool visivel)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode alterar a visibilidade dos pinos.");
+
+            await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, tipoEntidade, idEntidade, visivel);
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao alterar visibilidade: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> RemoverPinoAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        string tipoEntidade,
+        int idEntidade)
+    {
+        try
+        {
+            var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode remover pinos do mapa.");
+
+            await _sessaoRepo.RemoverPinoAsync(idSessao, tipoEntidade, idEntidade);
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao remover pino: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
@@ -506,6 +590,7 @@ public class SessaoService
     {
         var sessaoCompleta = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
         var mensagens = await _sessaoRepo.ListarMensagensAsync(idSessao);
+        var pinosDb = await _sessaoRepo.ListarPinosSessaoAsync(idSessao);
 
         var mapasDisponiveis = campanha.MapaCampanhas
             .Where(mc => mc.Mapa != null)
@@ -523,6 +608,18 @@ public class SessaoService
             .Where(ic => ic.Item != null)
             .Select(ic => ic.Item!)
             .OrderBy(i => i.Nome)
+            .ToList();
+
+        var npcsCampanha = campanha.NpcCampanhas
+            .Where(nc => nc.Npc != null)
+            .Select(nc => nc.Npc!)
+            .OrderBy(n => n.Nome)
+            .ToList();
+
+        var monstrosCampanha = campanha.MonstroCampanhas
+            .Where(mc => mc.Monstro != null)
+            .Select(mc => mc.Monstro!)
+            .OrderBy(m => m.Nome)
             .ToList();
 
         int? idMapaAtivo = sessaoCompleta?.IdMapaAtivo;
@@ -596,6 +693,44 @@ public class SessaoService
         int? idPersonagemAtual = jogadoresDto
             .FirstOrDefault(j => j.IdAccount == idAccountLogado)?.IdPersonagem;
 
+        var pinosDto = new List<PinoMapaDto>();
+        foreach (var pino in pinosDb)
+        {
+            string nome = string.Empty;
+            string? imagem = null;
+
+            if (pino.TipoEntidade == TiposPinoSessao.Personagem)
+            {
+                var jog = jogadoresDto.FirstOrDefault(j => j.IdPersonagem == pino.IdEntidade);
+                nome = jog?.NomePersonagem ?? jog?.Username ?? $"Herói #{pino.IdEntidade}";
+                imagem = jog?.AvatarUrl;
+            }
+            else if (pino.TipoEntidade == TiposPinoSessao.Npc)
+            {
+                var npc = npcsCampanha.FirstOrDefault(n => n.IdNpc == pino.IdEntidade);
+                nome = npc?.Nome ?? $"NPC #{pino.IdEntidade}";
+                imagem = npc?.Imagem;
+            }
+            else if (pino.TipoEntidade == TiposPinoSessao.Monstro)
+            {
+                var monstro = monstrosCampanha.FirstOrDefault(m => m.IdMonstro == pino.IdEntidade);
+                nome = monstro?.Nome ?? $"Monstro #{pino.IdEntidade}";
+                imagem = monstro?.Imagem;
+            }
+
+            pinosDto.Add(new PinoMapaDto
+            {
+                IdPino = pino.IdPino,
+                TipoEntidade = pino.TipoEntidade,
+                IdEntidade = pino.IdEntidade,
+                Nome = nome,
+                ImagemUrl = imagem,
+                Coluna = pino.Coluna,
+                Linha = pino.Linha,
+                Visivel = pino.Visivel
+            });
+        }
+
         var mensagensDto = mensagens.Select(m => new MensagemSessaoDto
         {
             IdMensagem = m.IdMensagem,
@@ -622,6 +757,9 @@ public class SessaoService
             MapaAtivo = mapaAtivo,
             MapasDisponiveis = mapasDisponiveis,
             ItensCampanha = itensCampanha,
+            NpcsCampanha = npcsCampanha,
+            MonstrosCampanha = monstrosCampanha,
+            Pinos = pinosDto,
             Mestre = mestreDto,
             Jogadores = jogadoresDto,
             Mensagens = mensagensDto
@@ -659,9 +797,25 @@ public class SessaoEstadoDto
     public MapaSessaoDto? MapaAtivo { get; set; }
     public List<MapaSessaoDto> MapasDisponiveis { get; set; } = new();
     public List<Item> ItensCampanha { get; set; } = new();
+    public List<NPC> NpcsCampanha { get; set; } = new();
+    public List<Monstro> MonstrosCampanha { get; set; } = new();
+    public List<PinoMapaDto> Pinos { get; set; } = new();
     public ParticipanteSessaoDto Mestre { get; set; } = new();
     public List<ParticipanteSessaoDto> Jogadores { get; set; } = new();
     public List<MensagemSessaoDto> Mensagens { get; set; } = new();
+}
+
+public class PinoMapaDto
+{
+    public int IdPino { get; set; }
+    public string TipoEntidade { get; set; } = string.Empty;
+    public int IdEntidade { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public string? ImagemUrl { get; set; }
+    public int Coluna { get; set; }
+    public int Linha { get; set; }
+    public bool Visivel { get; set; } = true;
+    public string CoordenadaTexto => $"{(char)('A' + Coluna)}{Linha + 1}";
 }
 
 public class HistoricoSessaoDto

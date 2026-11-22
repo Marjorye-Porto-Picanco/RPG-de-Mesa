@@ -39,6 +39,8 @@ public class AppDbContext : DbContext
     public DbSet<ItemCampanha> ItemCampanhas { get; set; }
     public DbSet<MapaCampanha> MapaCampanhas { get; set; }
 
+    public DbSet<SessaoPino> SessaoPinos { get; set; }
+
     public DbSet<SessaoMesa> SessoesMesa { get; set; }
     public DbSet<SessaoParticipante> SessaoParticipantes { get; set; }
     public DbSet<SessaoMensagem> SessaoMensagens { get; set; }
@@ -612,6 +614,26 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(sm => sm.IdAccount)
              .IsRequired(false);
+        });
+
+        modelBuilder.Entity<SessaoPino>(e =>
+        {
+            e.ToTable("Sessao_Pino");
+            e.HasKey(sp => sp.IdPino);
+            e.Property(sp => sp.IdPino).HasColumnName("id_pino");
+            e.Property(sp => sp.IdSessao).HasColumnName("id_sessao");
+            e.Property(sp => sp.TipoEntidade).HasColumnName("tipo_entidade").HasMaxLength(20).IsRequired();
+            e.Property(sp => sp.IdEntidade).HasColumnName("id_entidade");
+            e.Property(sp => sp.Coluna).HasColumnName("coluna");
+            e.Property(sp => sp.Linha).HasColumnName("linha");
+            e.Property(sp => sp.Visivel).HasColumnName("visivel");
+
+            e.HasIndex(sp => new { sp.IdSessao, sp.TipoEntidade, sp.IdEntidade }).IsUnique();
+
+            e.HasOne(sp => sp.Sessao)
+             .WithMany()
+             .HasForeignKey(sp => sp.IdSessao)
+             .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

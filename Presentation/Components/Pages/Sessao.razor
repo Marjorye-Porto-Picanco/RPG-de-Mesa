@@ -100,7 +100,6 @@ else if (ViewModel.ModoRevisaoPosSessao)
                     <div class="revisao-aviso">@ViewModel.FeedbackRevisao</div>
                 }
 
-                <!-- RESUMO DA SESSÃO PARA O HISTÓRICO -->
                 <section class="revisao-painel revisao-resumo-box">
                     <div class="revisao-ficha-topo">
                         <div>
@@ -313,13 +312,17 @@ else
 
                 <span class="toolbar-separator" aria-hidden="true"></span>
 
-                <button class="toolbar-tool @(!ViewModel.ExibirModalDados && !ViewModel.ExibirModalFicha ? "selecionada" : "")"
-                        type="button"
-                        title="Mapa"
-                        aria-label="Exibir mapa"
-                        @onclick="ViewModel.FocarMapa">
-                    <span aria-hidden="true">▦</span>
-                </button>
+                @* Somente o Mestre possui controle de mapa e administração de pinos na barra lateral *@
+                @if (ViewModel.Estado.EhMestre)
+                {
+                    <button class="toolbar-tool @(ViewModel.ExibirPainelPinos ? "selecionada" : "")"
+                            type="button"
+                            title="Administrar Pinos no Mapa (Jogadores, NPCs e Monstros)"
+                            aria-label="Administrar pinos no mapa"
+                            @onclick="ViewModel.AlternarPainelPinos">
+                        <span aria-hidden="true">▦</span>
+                    </button>
+                }
 
                 <button class="toolbar-tool desabilitada"
                         type="button"
@@ -396,8 +399,206 @@ else
                     </div>
                 </div>
 
-                <!-- PALCO DO MAPA COM MALHA 20x20 E ZOOM -->
+                <!-- PALCO DO MAPA COM MALHA 20x20, CABEÇALHO EXTERNO E PINOS -->
                 <section class="map-stage" aria-label="Mapa da sessão">
+                    @if (ViewModel.Estado.EhMestre && ViewModel.ExibirPainelPinos)
+                    {
+                        <aside class="pinos-drawer" aria-label="Administração de pinos no mapa">
+                            <header class="pinos-drawer-header">
+                                <div>
+                                    <p class="panel-kicker">Controle do Mestre</p>
+                                    <h3>Pinos no Mapa</h3>
+                                </div>
+                                <button type="button" class="pinos-drawer-close" aria-label="Fechar painel de pinos" @onclick="ViewModel.AlternarPainelPinos">×</button>
+                            </header>
+
+                            <label class="pinos-visibilidade-padrao">
+                                <input type="checkbox" @bind="ViewModel.NovoPinoVisivel" />
+                                <span>Colocar novos pinos visíveis</span>
+                            </label>
+
+                            <div class="pinos-tabs" role="tablist">
+                                <button type="button" class="pinos-tab @(ViewModel.AbaPinosAtiva == "jogadores" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaPinos("jogadores")'>Jogadores</button>
+                                <button type="button" class="pinos-tab @(ViewModel.AbaPinosAtiva == "npcs" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaPinos("npcs")'>NPCs</button>
+                                <button type="button" class="pinos-tab @(ViewModel.AbaPinosAtiva == "monstros" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaPinos("monstros")'>Monstros</button>
+                            </div>
+
+                            <div class="pinos-lista">
+                                @if (ViewModel.AbaPinosAtiva == "jogadores")
+                                {
+                                    var jogadoresAtivos = ViewModel.Estado.Jogadores.Where(j => j.Online && j.IdPersonagem.HasValue).ToList();
+                                    if (!jogadoresAtivos.Any())
+                                    {
+                                        <p class="pinos-vazio">Nenhum jogador ativo com ficha conectada no momento.</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var jog in jogadoresAtivos)
+                                        {
+                                            int idEntidade = jog.IdPersonagem!.Value;
+                                            string nome = jog.NomePersonagem ?? jog.Username;
+                                            var pinoAtual = ViewModel.ObterPinoNoMapa(TiposPinoSessao.Personagem, idEntidade);
+                                            bool selecionado = ViewModel.PinoParaPosicionar?.TipoEntidade == TiposPinoSessao.Personagem
+                                                && ViewModel.PinoParaPosicionar.IdEntidade == idEntidade;
+
+                                            <div class="pino-item-card @(selecionado ? "selecionado" : "")">
+                                                <button type="button"
+                                                        class="pino-item-main"
+                                                        title="Clique e depois escolha uma casa no mapa"
+                                                        @onclick="() => ViewModel.SelecionarPinoParaPosicionar(TiposPinoSessao.Personagem, idEntidade, nome)">
+                                                    <span class="pino-mini-avatar tipo-personagem">
+                                                        @if (!string.IsNullOrWhiteSpace(jog.AvatarUrl))
+                                                        {
+                                                            <img src="@jog.AvatarUrl" alt="@nome" />
+                                                        }
+                                                        else
+                                                        {
+                                                            @ObterIniciais(nome)
+                                                        }
+                                                    </span>
+                                                    <span class="pino-item-info">
+                                                        <strong>@nome</strong>
+                                                        <small>@(pinoAtual != null ? $"No mapa: {pinoAtual.CoordenadaTexto}" : "Clique para posicionar")</small>
+                                                    </span>
+                                                </button>
+
+                                                @if (pinoAtual != null)
+                                                {
+                                                    <div class="pino-item-acoes">
+                                                        <button type="button"
+                                                                class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
+                                                                title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
+                                                                @onclick="() => ViewModel.AlternarVisibilidadePinoAsync(TiposPinoSessao.Personagem, idEntidade)">
+                                                            @(pinoAtual.Visivel ? "👁" : "⊘")
+                                                        </button>
+                                                        <button type="button"
+                                                                class="pino-btn-acao remover"
+                                                                title="Remover do mapa"
+                                                                @onclick="() => ViewModel.RemoverPinoDoMapaAsync(TiposPinoSessao.Personagem, idEntidade)">
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                }
+                                else if (ViewModel.AbaPinosAtiva == "npcs")
+                                {
+                                    if (!ViewModel.Estado.NpcsCampanha.Any())
+                                    {
+                                        <p class="pinos-vazio">Nenhum NPC vinculado a esta campanha.</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var npc in ViewModel.Estado.NpcsCampanha)
+                                        {
+                                            var pinoAtual = ViewModel.ObterPinoNoMapa(TiposPinoSessao.Npc, npc.IdNpc);
+                                            bool selecionado = ViewModel.PinoParaPosicionar?.TipoEntidade == TiposPinoSessao.Npc
+                                                && ViewModel.PinoParaPosicionar.IdEntidade == npc.IdNpc;
+
+                                            <div class="pino-item-card @(selecionado ? "selecionado" : "")">
+                                                <button type="button"
+                                                        class="pino-item-main"
+                                                        title="Clique e depois escolha uma casa no mapa"
+                                                        @onclick="() => ViewModel.SelecionarPinoParaPosicionar(TiposPinoSessao.Npc, npc.IdNpc, npc.Nome)">
+                                                    <span class="pino-mini-avatar tipo-npc">
+                                                        @if (!string.IsNullOrWhiteSpace(npc.Imagem))
+                                                        {
+                                                            <img src="@npc.Imagem" alt="@npc.Nome" />
+                                                        }
+                                                        else
+                                                        {
+                                                            @ObterIniciais(npc.Nome)
+                                                        }
+                                                    </span>
+                                                    <span class="pino-item-info">
+                                                        <strong>@npc.Nome</strong>
+                                                        <small>@(pinoAtual != null ? $"No mapa: {pinoAtual.CoordenadaTexto}" : "Clique para posicionar")</small>
+                                                    </span>
+                                                </button>
+
+                                                @if (pinoAtual != null)
+                                                {
+                                                    <div class="pino-item-acoes">
+                                                        <button type="button"
+                                                                class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
+                                                                title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
+                                                                @onclick="() => ViewModel.AlternarVisibilidadePinoAsync(TiposPinoSessao.Npc, npc.IdNpc)">
+                                                            @(pinoAtual.Visivel ? "👁" : "⊘")
+                                                        </button>
+                                                        <button type="button"
+                                                                class="pino-btn-acao remover"
+                                                                title="Remover do mapa"
+                                                                @onclick="() => ViewModel.RemoverPinoDoMapaAsync(TiposPinoSessao.Npc, npc.IdNpc)">
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (!ViewModel.Estado.MonstrosCampanha.Any())
+                                    {
+                                        <p class="pinos-vazio">Nenhum monstro vinculado a esta campanha.</p>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var monstro in ViewModel.Estado.MonstrosCampanha)
+                                        {
+                                            var pinoAtual = ViewModel.ObterPinoNoMapa(TiposPinoSessao.Monstro, monstro.IdMonstro);
+                                            bool selecionado = ViewModel.PinoParaPosicionar?.TipoEntidade == TiposPinoSessao.Monstro
+                                                && ViewModel.PinoParaPosicionar.IdEntidade == monstro.IdMonstro;
+
+                                            <div class="pino-item-card @(selecionado ? "selecionado" : "")">
+                                                <button type="button"
+                                                        class="pino-item-main"
+                                                        title="Clique e depois escolha uma casa no mapa"
+                                                        @onclick="() => ViewModel.SelecionarPinoParaPosicionar(TiposPinoSessao.Monstro, monstro.IdMonstro, monstro.Nome)">
+                                                    <span class="pino-mini-avatar tipo-monstro">
+                                                        @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
+                                                        {
+                                                            <img src="@monstro.Imagem" alt="@monstro.Nome" />
+                                                        }
+                                                        else
+                                                        {
+                                                            @ObterIniciais(monstro.Nome)
+                                                        }
+                                                    </span>
+                                                    <span class="pino-item-info">
+                                                        <strong>@monstro.Nome</strong>
+                                                        <small>@(pinoAtual != null ? $"No mapa: {pinoAtual.CoordenadaTexto}" : "Clique para posicionar")</small>
+                                                    </span>
+                                                </button>
+
+                                                @if (pinoAtual != null)
+                                                {
+                                                    <div class="pino-item-acoes">
+                                                        <button type="button"
+                                                                class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
+                                                                title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
+                                                                @onclick="() => ViewModel.AlternarVisibilidadePinoAsync(TiposPinoSessao.Monstro, monstro.IdMonstro)">
+                                                            @(pinoAtual.Visivel ? "👁" : "⊘")
+                                                        </button>
+                                                        <button type="button"
+                                                                class="pino-btn-acao remover"
+                                                                title="Remover do mapa"
+                                                                @onclick="() => ViewModel.RemoverPinoDoMapaAsync(TiposPinoSessao.Monstro, monstro.IdMonstro)">
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </aside>
+                    }
+
                     @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAcao))
                     {
                         <div class="map-alert" role="status">
@@ -416,47 +617,105 @@ else
                     <div class="map-viewport" @onwheel="AoRolarMouseMapa">
                         @{
                             int tamanhoPx = (int)Math.Round(SessaoViewModel.TamanhoBaseMapaPx * ViewModel.NivelZoom);
+                            int cabecalhoPx = _mostrarCoordenadas ? Math.Max(22, (int)Math.Round(26 * ViewModel.NivelZoom)) : 0;
                         }
-                        <div class="map-art" style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
-                            @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
+                        <div class="map-board-wrapper @(_mostrarCoordenadas ? "com-coordenadas" : "")"
+                             style="--board-size: @(tamanhoPx)px; --header-size: @(cabecalhoPx)px;">
+
+                            @if (_mostrarCoordenadas)
                             {
-                                <img src="@ViewModel.Estado.MapaAtivo.ImagemUrl"
-                                     alt="@ViewModel.Estado.MapaAtivo.NomeRegiao" />
-                            }
-                            else
-                            {
-                                <div class="map-empty">
-                                    <p>
-                                        @(ViewModel.Estado.EhMestre
-                                            ? "Selecione um mapa vinculado à campanha na barra superior."
-                                            : "Aguardando o Mestre selecionar o mapa da sessão.")
-                                    </p>
+                                <!-- CANTO SUPERIOR ESQUERDO (NÃO JOGÁVEL) -->
+                                <div class="grade-canto" aria-hidden="true"></div>
+
+                                <!-- LINHA EXTRA SUPERIOR: COLUNAS A-T (APENAS IDENTIFICAÇÃO) -->
+                                <div class="grade-eixo-colunas" aria-hidden="true">
+                                    @for (int col = 0; col < SessaoViewModel.GradeColunas; col++)
+                                    {
+                                        <span class="eixo-label">@((char)('A' + col))</span>
+                                    }
+                                </div>
+
+                                <!-- COLUNA EXTRA ESQUERDA: LINHAS 1-20 (APENAS IDENTIFICAÇÃO) -->
+                                <div class="grade-eixo-linhas" aria-hidden="true">
+                                    @for (int linha = 0; linha < SessaoViewModel.GradeLinhas; linha++)
+                                    {
+                                        <span class="eixo-label">@(linha + 1)</span>
+                                    }
                                 </div>
                             }
 
-                            <!-- GRADE TÁTICA D&D 20x20 (1,5m cada quadrado) -->
-                            <div class="mapa-grade-20x20" aria-label="Grade tática 20 por 20">
-                                @for (int linha = 0; linha < SessaoViewModel.GradeLinhas; linha++)
+                            <!-- ÁREA JOGÁVEL 20x20 COM IMAGEM AJUSTADA SEM CORTES E SEM BORDAS VAZIAS -->
+                            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "")"
+                                 style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
+                                @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
                                 {
-                                    @for (int col = 0; col < SessaoViewModel.GradeColunas; col++)
-                                    {
-                                        char letraCol = (char)('A' + col);
-                                        int numLinha = linha + 1;
-                                        <div class="celula-grade"
-                                             data-col="@col"
-                                             data-row="@linha"
-                                             title="@($"{letraCol}{numLinha} (1,5m)")">
-                                            @if (_mostrarCoordenadas && linha == 0)
-                                            {
-                                                <span class="coord-topo">@letraCol</span>
-                                            }
-                                            @if (_mostrarCoordenadas && col == 0)
-                                            {
-                                                <span class="coord-esq">@numLinha</span>
-                                            }
-                                        </div>
-                                    }
+                                    <img class="map-bg-img"
+                                         src="@ViewModel.Estado.MapaAtivo.ImagemUrl"
+                                         alt="@ViewModel.Estado.MapaAtivo.NomeRegiao" />
                                 }
+                                else
+                                {
+                                    <div class="map-empty">
+                                        <p>
+                                            @(ViewModel.Estado.EhMestre
+                                                ? "Selecione um mapa vinculado à campanha na barra superior."
+                                                : "Aguardando o Mestre selecionar o mapa da sessão.")
+                                        </p>
+                                    </div>
+                                }
+
+                                <!-- GRADE TÁTICA D&D 20x20 (1,5m cada quadrado) -->
+                                <div class="mapa-grade-20x20" aria-label="Grade tática 20 por 20">
+                                    @for (int linha = 0; linha < SessaoViewModel.GradeLinhas; linha++)
+                                    {
+                                        int linhaAtual = linha;
+                                        @for (int col = 0; col < SessaoViewModel.GradeColunas; col++)
+                                        {
+                                            int colAtual = col;
+                                            char letraCol = (char)('A' + colAtual);
+                                            int numLinha = linhaAtual + 1;
+                                            var pinosCelula = ViewModel.PinosVisiveisNoMapa
+                                                .Where(p => p.Coluna == colAtual && p.Linha == linhaAtual)
+                                                .ToList();
+
+                                            <div class="celula-grade"
+                                                 data-col="@colAtual"
+                                                 data-row="@linhaAtual"
+                                                 title="@($"{letraCol}{numLinha} (1,5m)")"
+                                                 @onclick="() => ViewModel.AoClicarCelulaMapaAsync(colAtual, linhaAtual)">
+                                                @foreach (var pino in pinosCelula)
+                                                {
+                                                    string classeTipo = pino.TipoEntidade switch
+                                                    {
+                                                        TiposPinoSessao.Monstro => "tipo-monstro",
+                                                        TiposPinoSessao.Npc => "tipo-npc",
+                                                        _ => "tipo-personagem"
+                                                    };
+
+                                                    <button type="button"
+                                                            @key="@($"{pino.TipoEntidade}-{pino.IdEntidade}")"
+                                                            class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel")"
+                                                            title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{(pino.Visivel ? "" : " · Oculto")}")"
+                                                            @onclick:stopPropagation="true"
+                                                            @onclick="() => ViewModel.AoClicarPinoMapaAsync(pino)">
+                                                        @if (!string.IsNullOrWhiteSpace(pino.ImagemUrl))
+                                                        {
+                                                            <img src="@pino.ImagemUrl" alt="@pino.Nome" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>@ObterIniciais(pino.Nome)</span>
+                                                        }
+                                                        @if (!pino.Visivel)
+                                                        {
+                                                            <em class="pino-badge-oculto" aria-label="Oculto dos jogadores">⊘</em>
+                                                        }
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -648,6 +907,107 @@ else
             </aside>
         </div>
     </div>
+
+    <!-- =========================================================================
+         MODAL DE FICHA: MONSTRO (AO CLICAR NO PINO DO MONSTRO)
+         ========================================================================= -->
+    @if (ViewModel.MonstroEmVisualizacao != null)
+    {
+        var m = ViewModel.MonstroEmVisualizacao;
+        <div class="sessao-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+
+        <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-modal" @onclick:stopPropagation="true">
+            <header class="ficha-modal-header">
+                <div class="ficha-modal-identidade">
+                    <img class="ficha-modal-retrato"
+                         src="@(string.IsNullOrWhiteSpace(m.Imagem) ? "img/capacampanha2.png" : m.Imagem)"
+                         alt="@m.Nome" />
+                    <div>
+                        <p class="ficha-modal-sub">Bestiário da Campanha</p>
+                        <h2 id="titulo-monstro-modal">@m.Nome</h2>
+                        <small>@(m.TipoMonstro ?? "Criatura") • @(m.Tamanho ?? "Médio") • @(m.Tendencia ?? "Neutra")</small>
+                    </div>
+                </div>
+                <button class="ficha-modal-close" type="button" aria-label="Fechar ficha do monstro" @onclick="ViewModel.FecharModalEntidade">×</button>
+            </header>
+
+            <div class="ficha-modal-corpo">
+                <div class="fm-dados-pessoais">
+                    <div><span>PV Máximo</span><strong>@m.PvMaximo</strong></div>
+                    <div><span>CA</span><strong>@m.ClasseArmadura</strong></div>
+                    <div><span>ND</span><strong>@(m.NivelDesafio?.ToString("0.##") ?? "—")</strong></div>
+                    <div><span>Deslocamento</span><strong>@(string.IsNullOrWhiteSpace(m.Deslocamento) ? "—" : m.Deslocamento)</strong></div>
+                </div>
+
+                <div class="fm-grid-2">
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Sentidos</h3>
+                        <p>@(string.IsNullOrWhiteSpace(m.Sentidos) ? "—" : m.Sentidos)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Resistências</h3>
+                        <p>@(string.IsNullOrWhiteSpace(m.Resistencias) ? "—" : m.Resistencias)</p>
+                    </div>
+                    <div class="fm-box-escuro fm-span-2">
+                        <h3>Habilidades</h3>
+                        <p>@(string.IsNullOrWhiteSpace(m.Habilidades) ? "—" : m.Habilidades)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho fm-span-2">
+                        <h3>Descrição</h3>
+                        <p>@(string.IsNullOrWhiteSpace(m.Descricao) ? "Sem descrição registrada." : m.Descricao)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <!-- =========================================================================
+         MODAL DE FICHA: NPC (AO CLICAR NO PINO DO NPC)
+         ========================================================================= -->
+    @if (ViewModel.NpcEmVisualizacao != null)
+    {
+        var n = ViewModel.NpcEmVisualizacao;
+        <div class="sessao-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+
+        <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
+            <header class="ficha-modal-header">
+                <div class="ficha-modal-identidade">
+                    <img class="ficha-modal-retrato"
+                         src="@(string.IsNullOrWhiteSpace(n.Imagem) ? "img/capacampanha3.png" : n.Imagem)"
+                         alt="@n.Nome" />
+                    <div>
+                        <p class="ficha-modal-sub">NPC da Campanha</p>
+                        <h2 id="titulo-npc-modal">@n.Nome</h2>
+                        <small>@(n.RacaTexto ?? "Raça") • @(n.ClasseTexto ?? "NPC") • Nível @n.Nivel</small>
+                    </div>
+                </div>
+                <button class="ficha-modal-close" type="button" aria-label="Fechar ficha do NPC" @onclick="ViewModel.FecharModalEntidade">×</button>
+            </header>
+
+            <div class="ficha-modal-corpo">
+                <div class="fm-grid-atributos">
+                    <div class="fm-attr-card"><span>FOR</span><strong>@n.Forca</strong><small>@FormatarMod(n.Forca)</small></div>
+                    <div class="fm-attr-card"><span>DES</span><strong>@n.Destreza</strong><small>@FormatarMod(n.Destreza)</small></div>
+                    <div class="fm-attr-card"><span>CON</span><strong>@n.Constituicao</strong><small>@FormatarMod(n.Constituicao)</small></div>
+                    <div class="fm-attr-card"><span>INT</span><strong>@n.Inteligencia</strong><small>@FormatarMod(n.Inteligencia)</small></div>
+                    <div class="fm-attr-card"><span>SAB</span><strong>@n.Sabedoria</strong><small>@FormatarMod(n.Sabedoria)</small></div>
+                    <div class="fm-attr-card"><span>CAR</span><strong>@n.Carisma</strong><small>@FormatarMod(n.Carisma)</small></div>
+                </div>
+
+                <div class="fm-dados-pessoais">
+                    <div><span>Antecedente</span><strong>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</strong></div>
+                    <div><span>Tendência</span><strong>@(string.IsNullOrWhiteSpace(n.Tendencia) ? "Neutra" : n.Tendencia)</strong></div>
+                    <div><span>Nível</span><strong>@n.Nivel</strong></div>
+                    <div><span>Classe</span><strong>@(string.IsNullOrWhiteSpace(n.ClasseTexto) ? "—" : n.ClasseTexto)</strong></div>
+                </div>
+
+                <div class="fm-bloco-pergaminho">
+                    <h3>História & Notas</h3>
+                    <p>@(string.IsNullOrWhiteSpace(n.Historia) ? "Sem história registrada." : n.Historia)</p>
+                </div>
+            </div>
+        </section>
+    }
 
     <!-- =========================================================================
          MINI JANELA INDIVIDUAL: ROLAR DADOS (RESULTADO SAI NO CHAT)

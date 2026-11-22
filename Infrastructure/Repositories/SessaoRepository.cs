@@ -24,6 +24,8 @@ public class SessaoRepository : ISessaoRepository
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.PersonagemClasses).ThenInclude(pcl => pcl.Classe)
             .Include(c => c.MapaCampanhas).ThenInclude(mc => mc.Mapa)
             .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
+            .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
+            .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
     }
 
@@ -55,7 +57,6 @@ public class SessaoRepository : ISessaoRepository
     {
         _contexto.ChangeTracker.Clear();
 
-        // Se já existe uma sessão ativa, reutiliza ela (evita duplicar ao recarregar a página)
         var sessaoAtiva = await _contexto.SessoesMesa
             .Where(s => s.IdCampanha == idCampanha && s.Ativa)
             .OrderByDescending(s => s.IdSessao)
@@ -68,7 +69,6 @@ public class SessaoRepository : ISessaoRepository
             return sessaoAtiva;
         }
 
-        // Caso contrário, cria uma NOVA sessão com chat limpo e histórico próprio
         int ultimoNumero = await _contexto.SessoesMesa
             .AsNoTracking()
             .Where(s => s.IdCampanha == idCampanha)
@@ -319,5 +319,70 @@ public class SessaoRepository : ISessaoRepository
             .Select(ic => ic.Item!)
             .OrderBy(i => i.Nome)
             .ToListAsync();
+    }
+
+    // =========================================================================
+    // PINOS (TOKENS) NO MAPA
+    // =========================================================================
+    public async Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao)
+    {
+        return await _contexto.SessaoPinos
+            .AsNoTracking()
+            .Where(p => p.IdSessao == idSessao)
+            .OrderBy(p => p.IdPino)
+            .ToListAsync();
+    }
+
+    public async Task SalvarOuMoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var existente = await _contexto.SessaoPinos
+            .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.TipoEntidade == tipoEntidade
+                                   && p.IdEntidade == idEntidade);
+
+        if (existente == null)
+        {
+            var novo = new SessaoPino(idSessao, tipoEntidade, idEntidade, coluna, linha, visivel);
+            await _contexto.SessaoPinos.AddAsync(novo);
+        }
+        else
+        {
+            existente.MoverPara(coluna, linha);
+            existente.DefinirVisibilidade(visivel);
+        }
+
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task AlterarVisibilidadePinoAsync(int idSessao, string tipoEntidade, int idEntidade, bool visivel)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var existente = await _contexto.SessaoPinos
+            .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.TipoEntidade == tipoEntidade
+                                   && p.IdEntidade == idEntidade);
+
+        if (existente == null) return;
+
+        existente.DefinirVisibilidade(visivel);
+        await _contexto.SaveChangesAsync();
+    }
+
+    public async Task RemoverPinoAsync(int idSessao, string tipoEntidade, int idEntidade)
+    {
+        _contexto.ChangeTracker.Clear();
+
+        var existente = await _contexto.SessaoPinos
+            .FirstOrDefaultAsync(p => p.IdSessao == idSessao
+                                   && p.TipoEntidade == tipoEntidade
+                                   && p.IdEntidade == idEntidade);
+
+        if (existente == null) return;
+
+        _contexto.SessaoPinos.Remove(existente);
+        await _contexto.SaveChangesAsync();
     }
 }
