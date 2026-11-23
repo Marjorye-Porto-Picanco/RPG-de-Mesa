@@ -2566,44 +2566,67 @@ textarea {
 /* ==========================================================================
    PINOS (TOKENS) NO MAPA
    ========================================================================== */
+.mapa-grade-20x20 {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    grid-template-rows: repeat(20, minmax(0, 1fr));
+}
+
 .celula-grade {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border-right: 1px solid rgba(236, 218, 171, 0.24);
+    border-bottom: 1px solid rgba(236, 218, 171, 0.24);
+    transition: background-color 110ms ease;
 }
 
 .mapa-pino {
+    grid-area: 1 / 1;
     position: relative;
     z-index: 6;
     display: grid;
     place-items: center;
-    width: 88%;
-    height: 88%;
+    width: 84%;
+    height: 84%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
     padding: 0;
+    box-sizing: border-box;
     border: 2px solid #d4b460;
     border-radius: 50%;
     background: #2b241c;
     color: #fff3d6;
     font-size: 9px;
     font-weight: 700;
+    line-height: 1;
     overflow: hidden;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
     transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-    .mapa-pino:hover {
-        transform: scale(1.14);
-        z-index: 9;
-        box-shadow: 0 0 0 2px rgba(240, 209, 127, 0.65), 0 4px 10px rgba(0, 0, 0, 0.85);
-    }
-
     .mapa-pino img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center;
         display: block;
+    }
+
+    .mapa-pino span {
+        position: relative;
+        z-index: 1;
+        line-height: 1;
     }
 
     .mapa-pino.tipo-personagem {
@@ -2915,4 +2938,391 @@ textarea {
 .celula-grade.celula-drop-alvo {
     background-color: rgba(212, 180, 96, 0.38) !important;
     box-shadow: inset 0 0 0 2px #f0d17f;
+}
+/* ==========================================================================
+   MODAL DE ATAQUE & PV ATUAL DE MONSTRO
+   ========================================================================== */
+.action-slot.ativa {
+    border-color: #d4b460;
+    background: rgba(164, 122, 45, 0.25);
+    color: #fff1d1;
+}
+
+.attack-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2001;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(480px, calc(100vw - 32px));
+    max-height: min(680px, calc(100vh - 40px));
+    overflow-y: auto;
+    padding: 19px;
+    border: 1px solid #987b43;
+    border-radius: 8px;
+    background: radial-gradient(ellipse at top, rgba(138, 66, 44, 0.25), transparent 57%), #211d17;
+    color: #f3e7d0;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.85);
+}
+
+.attack-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attack-choice-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    gap: 7px;
+    max-height: 155px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.attack-choice-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 10px;
+    border: 1px solid rgba(205, 174, 101, 0.26);
+    border-radius: 5px;
+    background: #2e2921;
+    color: #efe4ca;
+    text-align: left;
+    cursor: pointer;
+}
+
+    .attack-choice-card:hover {
+        border-color: #c9a653;
+    }
+
+    .attack-choice-card.selecionado {
+        border-color: #e6c366;
+        background: rgba(179, 141, 57, 0.26);
+        box-shadow: inset 0 0 0 1px rgba(230, 195, 102, 0.45);
+    }
+
+    .attack-choice-card.derrotado {
+        opacity: 0.55;
+    }
+
+    .attack-choice-card strong {
+        font-size: 12px;
+        color: #f6ead1;
+    }
+
+    .attack-choice-card small {
+        font-size: 10px;
+        color: #cbbba0;
+    }
+
+.attack-empty {
+    margin: 6px 0;
+    color: #a69a80;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.attack-error {
+    padding: 8px 10px;
+    border-left: 3px solid #d96b5c;
+    border-radius: 4px;
+    background: rgba(173, 72, 58, 0.22);
+    color: #f7c5be;
+    font-size: 11px;
+}
+
+.attack-result-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px 14px;
+    border: 1px solid rgba(207, 178, 113, 0.3);
+    border-radius: 6px;
+    background: rgba(14, 13, 11, 0.55);
+    text-align: center;
+}
+
+    .attack-result-box.acertou {
+        border-color: rgba(135, 196, 122, 0.55);
+    }
+
+    .attack-result-box.falhou {
+        border-color: rgba(224, 108, 91, 0.55);
+    }
+
+    .attack-result-box strong {
+        font-family: "Trebuchet MS", sans-serif;
+        font-size: 42px;
+        line-height: 1;
+        color: #f3d379;
+    }
+
+    .attack-result-box p {
+        margin: 0;
+        color: #d8c9a9;
+        font-size: 12px;
+    }
+
+.attack-badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+}
+
+    .attack-badge.acertou {
+        background: rgba(135, 196, 122, 0.22);
+        color: #a8e39d;
+    }
+
+    .attack-badge.falhou {
+        background: rgba(224, 108, 91, 0.22);
+        color: #f2a498;
+    }
+
+.attack-damage-btn {
+    border-color: #d97a54;
+    background: #8f3d26;
+}
+
+    .attack-damage-btn:hover:not(:disabled) {
+        background: #a8482d;
+    }
+
+.attack-hp-summary {
+    padding-top: 6px;
+    border-top: 1px solid rgba(207, 178, 113, 0.18);
+    width: 100%;
+}
+
+.attack-footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.mapa-pino.pino-derrotado {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+.pino-badge-derrotado {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(110, 20, 15, 0.62);
+    color: #ffd5cf;
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.fm-pv-monstro-edit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+    .fm-pv-monstro-edit input {
+        width: 54px;
+        padding: 2px 5px;
+        border: 1px solid #946c2d;
+        border-radius: 4px;
+        background: #fffdf8;
+        color: #392819;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+    }
+
+.fm-btn-pv-ok {
+    padding: 2px 7px;
+    border: 1px solid #805b22;
+    border-radius: 4px;
+    background: #a47a2d;
+    color: #fff6e0;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.attack-choice-card:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(85%);
+}
+
+    .attack-choice-card:disabled:hover {
+        border-color: rgba(205, 174, 101, 0.26);
+    }
+
+.attack-result-box.critico {
+    border-color: #f3c654;
+    background: radial-gradient(ellipse at top, rgba(243, 198, 84, 0.22), rgba(14, 13, 11, 0.72));
+    box-shadow: 0 0 22px rgba(243, 198, 84, 0.18);
+}
+
+.attack-badge.critico {
+    background: rgba(243, 198, 84, 0.25);
+    color: #ffe28a;
+    border: 1px solid rgba(243, 198, 84, 0.55);
+}
+
+.attack-crit-btn {
+    border-color: #f3c654;
+    background: linear-gradient(180deg, #b87e1e, #8a5314);
+    color: #fff6dc;
+}
+
+    .attack-crit-btn:hover:not(:disabled) {
+        filter: brightness(1.12);
+    }
+/* ==========================================================================
+   CONTROLE DE TURNO & RESTAURAÇÃO DE PV DO MONSTRO
+   ========================================================================== */
+.action-slot:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+    .action-slot:disabled:hover {
+        border-color: rgba(203, 174, 113, 0.2);
+        background: #322e26;
+    }
+
+.turno-liberado-txt {
+    color: #9ed98f !important;
+    font-weight: 700;
+}
+
+.turno-bloqueado-txt {
+    color: #b59a7a !important;
+}
+
+.player-card.em-turno {
+    border-color: #d4b460;
+    background: rgba(212, 180, 96, 0.14);
+    box-shadow: inset 3px 0 0 #e6c366;
+}
+
+.turno-badge {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(158, 217, 143, 0.18);
+    border: 1px solid rgba(158, 217, 143, 0.45);
+    color: #b4ebb0;
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.btn-turno-mestre {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 7px;
+    border: 1px solid rgba(212, 180, 96, 0.45);
+    border-radius: 3px;
+    background: rgba(140, 99, 39, 0.28);
+    color: #f3dfad;
+    font-size: 8.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .btn-turno-mestre:hover:not(:disabled) {
+        background: rgba(168, 121, 51, 0.5);
+    }
+
+    .btn-turno-mestre.encerrar {
+        border-color: rgba(224, 108, 91, 0.55);
+        background: rgba(173, 72, 58, 0.28);
+        color: #f7c5be;
+    }
+
+        .btn-turno-mestre.encerrar:hover:not(:disabled) {
+            background: rgba(173, 72, 58, 0.5);
+        }
+
+    .btn-turno-mestre:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.btn-bloquear-turno-footer {
+    margin-left: auto;
+    padding: 2px 6px;
+    border: 1px solid rgba(224, 108, 91, 0.45);
+    border-radius: 3px;
+    background: rgba(173, 72, 58, 0.22);
+    color: #f5b9b0;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.pino-btn-acao.curar {
+    color: #9ed98f;
+    border-color: rgba(135, 196, 122, 0.45);
+}
+
+    .pino-btn-acao.curar:hover:not(:disabled) {
+        background: rgba(135, 196, 122, 0.24);
+    }
+
+.fm-btn-pv-max {
+    padding: 2px 7px;
+    border: 1px solid #4e7a44;
+    border-radius: 4px;
+    background: #3d6335;
+    color: #eefbe9;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+    .fm-btn-pv-max:hover:not(:disabled) {
+        filter: brightness(1.12);
+    }
+.attack-choice-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.alvo-tag {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.alvo-tag-monstro {
+    background: rgba(224, 108, 91, 0.22);
+    color: #f4a498;
+    border: 1px solid rgba(224, 108, 91, 0.45);
+}
+
+.alvo-tag-npc {
+    background: rgba(135, 196, 122, 0.2);
+    color: #a9e09d;
+    border: 1px solid rgba(135, 196, 122, 0.45);
+}
+
+.alvo-tag-jogador {
+    background: rgba(102, 179, 255, 0.2);
+    color: #9ecfff;
+    border: 1px solid rgba(102, 179, 255, 0.45);
 }

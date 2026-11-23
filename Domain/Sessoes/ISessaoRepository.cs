@@ -31,5 +31,6 @@ public interface ISessaoRepository
     Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel);
     Task AlterarVisibilidadePinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, bool visivel);
     Task AtualizarPvPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int pvAtual);
+    Task AtualizarPvPersonagemAsync(int idPersonagem, int pvAtual);
     Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade);
 }
