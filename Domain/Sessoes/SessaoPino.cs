@@ -20,13 +20,22 @@ public class SessaoPino
     public int Coluna { get; private set; }
     public int Linha { get; private set; }
     public bool Visivel { get; private set; } = true;
+    public int? PvAtual { get; private set; }
 
     public virtual SessaoMesa Sessao { get; private set; } = null!;
     public virtual Mapa? Mapa { get; private set; }
 
     protected SessaoPino() { }
 
-    public SessaoPino(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel = true)
+    public SessaoPino(
+        int idSessao,
+        int? idMapa,
+        string tipoEntidade,
+        int idEntidade,
+        int coluna,
+        int linha,
+        bool visivel = true,
+        int? pvAtual = null)
     {
         if (idSessao <= 0)
             throw new DomainException("Sessão inválida.");
@@ -42,6 +51,7 @@ public class SessaoPino
         Coluna = Math.Clamp(coluna, 0, 19);
         Linha = Math.Clamp(linha, 0, 19);
         Visivel = visivel;
+        PvAtual = pvAtual.HasValue ? Math.Max(0, pvAtual.Value) : null;
     }
 
     public void MoverPara(int coluna, int linha)
@@ -53,5 +63,17 @@ public class SessaoPino
     public void DefinirVisibilidade(bool visivel)
     {
         Visivel = visivel;
+    }
+
+    public void DefinirPvAtual(int pvAtual)
+    {
+        PvAtual = Math.Max(0, pvAtual);
+    }
+
+    public int AplicarDano(int dano, int pvMaximo)
+    {
+        int atual = PvAtual ?? Math.Max(0, pvMaximo);
+        PvAtual = Math.Max(0, atual - Math.Max(0, dano));
+        return PvAtual.Value;
     }
 }
