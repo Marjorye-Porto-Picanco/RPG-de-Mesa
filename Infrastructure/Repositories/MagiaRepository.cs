@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Infrastructure.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,10 +19,18 @@ public class MagiaRepository : IMagiaRepository
 
     public async Task<List<Magia>> ListarTodasAsync()
     {
-        return await _contexto.Magias
+        var todas = await _contexto.Magias
             .AsNoTracking()
             .OrderBy(m => m.CirculoNivel)
             .ThenBy(m => m.Nome)
+            .ThenBy(m => m.IdMagia)
             .ToListAsync();
+
+        return todas
+            .GroupBy(m => m.Nome.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(m => m.CirculoNivel)
+            .ThenBy(m => m.Nome)
+            .ToList();
     }
 }

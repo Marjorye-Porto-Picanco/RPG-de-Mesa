@@ -51,12 +51,19 @@
     display: flex;
     min-height: 0;
     flex: 1;
-    flex-direction: column;
-    gap: 8px;
+    flex-direction: column-reverse;
     overflow-y: auto;
-    padding: 9px 10px;
     scrollbar-color: #675a41 transparent;
     scrollbar-width: thin;
+}
+
+.chat-feed-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 10px;
+    margin-bottom: auto;
 }
 
 .chat-placeholder {
@@ -162,7 +169,7 @@
         font-size: 8px;
     }
 
-    .chat-feed {
+    .chat-feed-content {
         gap: 5px;
         padding: 6px 7px;
     }

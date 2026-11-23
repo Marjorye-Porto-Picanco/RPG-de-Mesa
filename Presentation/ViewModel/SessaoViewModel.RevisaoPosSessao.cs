@@ -1,5 +1,6 @@
 ﻿using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 
 namespace RPGdeMesa.Presentation.ViewModel;
@@ -13,6 +14,8 @@ public partial class SessaoViewModel
     public List<FichaRevisaoItemVm> FichasRevisao { get; private set; } = new();
     public FichaRevisaoItemVm? FichaRevisaoSelecionada { get; private set; }
     public List<Item> ItensCampanhaRevisao { get; private set; } = new();
+    public List<Magia> MagiasCatalogoRevisao { get; private set; } = new();
+    public string TermoBuscaMagiaRevisao { get; set; } = string.Empty;
     public int XpEmLote { get; set; } = 0;
     public string TituloSessaoRevisao { get; set; } = string.Empty;
     public string ResumoSessaoRevisao { get; set; } = string.Empty;
@@ -75,6 +78,8 @@ public partial class SessaoViewModel
             }
 
             ItensCampanhaRevisao = revisao.Dados.ItensCampanha;
+            MagiasCatalogoRevisao = revisao.Dados.MagiasCatalogo;
+            TermoBuscaMagiaRevisao = string.Empty;
             FichasRevisao = revisao.Dados.Fichas.Select(CriarVmRevisao).ToList();
             FichaRevisaoSelecionada = FichasRevisao.FirstOrDefault();
             XpEmLote = 0;
@@ -82,7 +87,7 @@ public partial class SessaoViewModel
                 ? $"Sessão #{Estado.NumeroSessao}"
                 : Estado.TituloSessao;
             ResumoSessaoRevisao = string.Empty;
-            FeedbackRevisao = "Sessão encerrada e todos os jogadores desconectados. Revise as fichas, distribua o XP, registre o resumo da sessão e conclua.";
+            FeedbackRevisao = "Sessão encerrada e todos os jogadores desconectados. Revise as fichas, distribua o XP, ajuste itens/magias, registre o resumo da sessão e conclua.";
             ModoRevisaoPosSessao = true;
         }
         finally
@@ -104,6 +109,13 @@ public partial class SessaoViewModel
             })
             .ToList() ?? new List<ItemSlotSessaoDto>();
 
+        var magias = p.PersonagemMagias?
+            .Where(pm => pm.IdMagia > 0)
+            .Select(pm => pm.IdMagia)
+            .Distinct()
+            .Select(id => new MagiaSlotSessaoDto { IdMagia = id })
+            .ToList() ?? new List<MagiaSlotSessaoDto>();
+
         return new FichaRevisaoItemVm
         {
             Personagem = p,
@@ -114,7 +126,8 @@ public partial class SessaoViewModel
             MoedasPO = inv?.MoedasPO ?? 0,
             MoedasPL = inv?.MoedasPL ?? 0,
             NotasInventario = inv?.Notas ?? string.Empty,
-            Itens = itens
+            Itens = itens,
+            Magias = magias
         };
     }
 
@@ -148,6 +161,33 @@ public partial class SessaoViewModel
         Notificar();
     }
 
+    public IEnumerable<Magia> ObterMagiasDisponiveisParaSlotRevisao(int idMagiaAtual)
+    {
+        return MagiasCatalogoRevisao.Where(m =>
+            m.IdMagia == idMagiaAtual ||
+            string.IsNullOrWhiteSpace(TermoBuscaMagiaRevisao) ||
+            m.Nome.Contains(TermoBuscaMagiaRevisao, StringComparison.OrdinalIgnoreCase) ||
+            (m.Escola != null && m.Escola.Contains(TermoBuscaMagiaRevisao, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    public void AdicionarMagiaRevisao(FichaRevisaoItemVm ficha)
+    {
+        var jaEquipadas = ficha.Magias.Select(m => m.IdMagia).ToHashSet();
+        var proxima = ObterMagiasDisponiveisParaSlotRevisao(0)
+            .FirstOrDefault(m => !jaEquipadas.Contains(m.IdMagia))
+            ?? MagiasCatalogoRevisao.FirstOrDefault(m => !jaEquipadas.Contains(m.IdMagia));
+
+        int idPadrao = proxima?.IdMagia ?? 0;
+        ficha.Magias.Add(new MagiaSlotSessaoDto { IdMagia = idPadrao });
+        Notificar();
+    }
+
+    public void RemoverMagiaRevisao(FichaRevisaoItemVm ficha, MagiaSlotSessaoDto slot)
+    {
+        ficha.Magias.Remove(slot);
+        Notificar();
+    }
+
     public async Task ConcluirRevisaoPosSessaoAsync()
     {
         if (SalvandoRevisao || Estado.IdCampanha <= 0) return;
@@ -165,6 +205,12 @@ public partial class SessaoViewModel
                     .Where(i => i.IdItem > 0 && i.Quantidade > 0)
                     .GroupBy(i => i.IdItem)
                     .Select(g => (IdItem: g.Key, Quantidade: g.Sum(x => x.Quantidade)))
+                    .ToList();
+
+                var idsMagias = f.Magias
+                    .Where(m => m.IdMagia > 0)
+                    .Select(m => m.IdMagia)
+                    .Distinct()
                     .ToList();
 
                 decimal pesoTotal = itensAgrupados.Sum(x =>
@@ -194,7 +240,8 @@ public partial class SessaoViewModel
                     Personagem = f.Personagem,
                     XpGanhoSessao = Math.Max(0, f.XpGanhoSessao),
                     DadosInventario = dadosInv,
-                    Itens = itensAgrupados
+                    Itens = itensAgrupados,
+                    IdsMagias = idsMagias
                 };
             }).ToList();
 

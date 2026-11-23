@@ -1,5 +1,7 @@
-﻿using RPGdeMesa.Application.Services;
+﻿using System.Globalization;
+using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 
 namespace RPGdeMesa.Presentation.ViewModel;
@@ -13,6 +15,7 @@ public partial class SessaoViewModel
     public bool SalvandoFichaModal { get; private set; }
     public string? FeedbackFichaModal { get; private set; }
 
+    // Edição de inventário dentro do modal da ficha
     public List<ItemSlotSessaoDto> ItensModalEdicao { get; private set; } = new();
     public int ModalMoedasPC { get; set; }
     public int ModalMoedasPP { get; set; }
@@ -21,10 +24,41 @@ public partial class SessaoViewModel
     public int ModalMoedasPL { get; set; }
     public string ModalNotasInventario { get; set; } = string.Empty;
 
+    // Edição de grimório (magias) dentro do modal da ficha
+    public List<MagiaSlotSessaoDto> MagiasModalEdicao { get; private set; } = new();
+    public string TermoBuscaMagiaModal { get; set; } = string.Empty;
+    public string FiltroCirculoMagiaModal { get; set; } = "todos";
+    public int IdMagiaSelecionadaModal { get; set; }
+
     public bool PodeEditarFichaModal =>
         FichaEmVisualizacao != null &&
         (Estado.EhMestre || FichaEmVisualizacao.IdAccount == _sessaoUsuario.IdUsuarioLogado);
 
+    public IEnumerable<Magia> MagiasCatalogoDisponiveisModal
+    {
+        get
+        {
+            var idsEquipados = MagiasModalEdicao
+                .Select(m => m.IdMagia)
+                .ToHashSet();
+
+            var nomesEquipados = MagiasModalEdicao
+                .Select(m => ObterDetalhesMagia(m.IdMagia)?.Nome?.Trim())
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return Estado.MagiasCatalogo
+                .Where(m => !idsEquipados.Contains(m.IdMagia) && !nomesEquipados.Contains(m.Nome.Trim()))
+                .Where(m =>
+                    FiltroCirculoMagiaModal == "todos" ||
+                    m.CirculoNivel.ToString(CultureInfo.InvariantCulture) == FiltroCirculoMagiaModal)
+                .Where(m =>
+                    string.IsNullOrWhiteSpace(TermoBuscaMagiaModal) ||
+                    m.Nome.Contains(TermoBuscaMagiaModal, StringComparison.OrdinalIgnoreCase) ||
+                    (m.Escola != null && m.Escola.Contains(TermoBuscaMagiaModal, StringComparison.OrdinalIgnoreCase)) ||
+                    (m.DanoEfeito != null && m.DanoEfeito.Contains(TermoBuscaMagiaModal, StringComparison.OrdinalIgnoreCase)));
+        }
+    }
     public void MudarAbaFichaModal(string aba)
     {
         AbaFichaModalAtiva = aba;
@@ -105,6 +139,7 @@ public partial class SessaoViewModel
             }
 
             CarregarInventarioModal(FichaEmVisualizacao);
+            CarregarMagiasModal(FichaEmVisualizacao);
             ExibirModalFicha = true;
         }
         catch (Exception ex)
@@ -139,6 +174,20 @@ public partial class SessaoViewModel
             .ToList() ?? new List<ItemSlotSessaoDto>();
     }
 
+    private void CarregarMagiasModal(Personagem p)
+    {
+        MagiasModalEdicao = p.PersonagemMagias?
+            .Where(pm => pm.IdMagia > 0)
+            .Select(pm => pm.IdMagia)
+            .Distinct()
+            .Select(id => new MagiaSlotSessaoDto { IdMagia = id })
+            .ToList() ?? new List<MagiaSlotSessaoDto>();
+
+        TermoBuscaMagiaModal = string.Empty;
+        FiltroCirculoMagiaModal = "todos";
+        IdMagiaSelecionadaModal = MagiasCatalogoDisponiveisModal.FirstOrDefault()?.IdMagia ?? 0;
+    }
+
     public void AdicionarItemModal()
     {
         int idPadrao = Estado.ItensCampanha.FirstOrDefault()?.IdItem ?? 0;
@@ -152,10 +201,43 @@ public partial class SessaoViewModel
         Notificar();
     }
 
+    public void AdicionarMagiaModal()
+    {
+        var disponiveis = MagiasCatalogoDisponiveisModal.ToList();
+        if (!disponiveis.Any())
+            return;
+
+        int idParaAdicionar = disponiveis.Any(m => m.IdMagia == IdMagiaSelecionadaModal)
+            ? IdMagiaSelecionadaModal
+            : disponiveis[0].IdMagia;
+
+        if (MagiasModalEdicao.All(m => m.IdMagia != idParaAdicionar))
+        {
+            MagiasModalEdicao.Add(new MagiaSlotSessaoDto { IdMagia = idParaAdicionar });
+        }
+
+        IdMagiaSelecionadaModal = MagiasCatalogoDisponiveisModal.FirstOrDefault()?.IdMagia ?? 0;
+        Notificar();
+    }
+
+    public void RemoverMagiaModal(MagiaSlotSessaoDto slot)
+    {
+        MagiasModalEdicao.Remove(slot);
+        if (IdMagiaSelecionadaModal == 0)
+            IdMagiaSelecionadaModal = MagiasCatalogoDisponiveisModal.FirstOrDefault()?.IdMagia ?? 0;
+        Notificar();
+    }
+
     public Item? ObterDetalhesItem(int idItem)
     {
         return Estado.ItensCampanha.FirstOrDefault(i => i.IdItem == idItem)
                ?? FichaEmVisualizacao?.Inventario?.Itens?.FirstOrDefault(ii => ii.IdItem == idItem)?.Item;
+    }
+
+    public Magia? ObterDetalhesMagia(int idMagia)
+    {
+        return Estado.MagiasCatalogo.FirstOrDefault(m => m.IdMagia == idMagia)
+               ?? FichaEmVisualizacao?.PersonagemMagias?.FirstOrDefault(pm => pm.IdMagia == idMagia)?.Magia;
     }
 
     public decimal CalcularPesoModal()
@@ -177,6 +259,12 @@ public partial class SessaoViewModel
             .Where(s => s.IdItem > 0 && s.Quantidade > 0)
             .GroupBy(s => s.IdItem)
             .Select(g => (IdItem: g.Key, Quantidade: g.Sum(x => x.Quantidade)))
+            .ToList();
+
+        var idsMagias = MagiasModalEdicao
+            .Where(m => m.IdMagia > 0)
+            .Select(m => m.IdMagia)
+            .Distinct()
             .ToList();
 
         decimal capacidade = Math.Round(Math.Max(1, FichaEmVisualizacao.Forca) * 7.5m, 1);
@@ -203,7 +291,8 @@ public partial class SessaoViewModel
                 _sessaoUsuario.IdUsuarioLogado,
                 FichaEmVisualizacao,
                 dadosInv,
-                itensAgrupados);
+                itensAgrupados,
+                idsMagias);
 
             FeedbackFichaModal = mensagem;
 
@@ -212,6 +301,7 @@ public partial class SessaoViewModel
                 FichaEmVisualizacao = await _sessaoService.ObterFichaCompletaAsync(FichaEmVisualizacao.IdPersonagem)
                                       ?? FichaEmVisualizacao;
                 CarregarInventarioModal(FichaEmVisualizacao);
+                CarregarMagiasModal(FichaEmVisualizacao);
             }
         }
         catch (Exception ex)

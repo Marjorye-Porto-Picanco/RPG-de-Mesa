@@ -166,6 +166,46 @@
                         }
                     </div>
 
+                    <h3 class="revisao-subtitulo">Grimório e Magias</h3>
+                    <div class="revisao-itens-box">
+                        <div class="revisao-itens-topo">
+                            <span>Magias no Grimório (@f.Magias.Count)</span>
+                            <div class="revisao-magia-controles">
+                                <input type="search"
+                                       class="revisao-magia-busca"
+                                       placeholder="Filtrar magia..."
+                                       @bind="ViewModel.TermoBuscaMagiaRevisao"
+                                       @bind:event="oninput" />
+                                <button type="button" class="revisao-btn-sec" @onclick="() => ViewModel.AdicionarMagiaRevisao(f)">
+                                    + Adicionar magia
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (f.Magias.Any())
+                        {
+                            @foreach (var slot in f.Magias)
+                            {
+                                <div class="revisao-magia-linha">
+                                    <select @bind="slot.IdMagia">
+                                        <option value="0">Selecione uma magia...</option>
+                                        @foreach (var magiaOpcao in ViewModel.ObterMagiasDisponiveisParaSlotRevisao(slot.IdMagia))
+                                        {
+                                            <option value="@magiaOpcao.IdMagia">
+                                                @magiaOpcao.Nome (@FormatarCirculo(magiaOpcao.CirculoNivel)@(!string.IsNullOrWhiteSpace(magiaOpcao.Escola) ? $" · {magiaOpcao.Escola}" : ""))
+                                            </option>
+                                        }
+                                    </select>
+                                    <button type="button" class="revisao-remover-btn" title="Remover magia" @onclick="() => ViewModel.RemoverMagiaRevisao(f, slot)">×</button>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="revisao-vazio">Nenhuma magia equipada no grimório.</p>
+                        }
+                    </div>
+
                     <div class="revisao-grid-notas">
                         <label><span>Notas do Inventário</span><textarea rows="3" @bind="f.NotasInventario"></textarea></label>
                         <label><span>Tesouro Pessoal</span><textarea rows="3" @bind="p.Tesouro"></textarea></label>
@@ -187,4 +227,7 @@
 @code {
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
+
+    private static string FormatarCirculo(int circuloNivel) =>
+        circuloNivel == 0 ? "Truque" : $"{circuloNivel}º Círculo";
 }

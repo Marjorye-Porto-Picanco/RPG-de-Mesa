@@ -33,35 +33,37 @@
         </button>
     </div>
 
-    <div class="chat-feed" aria-live="polite">
-        @if (ViewModel.AbaChatAtiva == CanaisSessao.Npc)
-        {
-            <p class="chat-placeholder">Canal de NPCs reservado para próximas atualizações.</p>
-        }
-        else if (!ViewModel.MensagensAbaAtiva.Any())
-        {
-            <p class="chat-placeholder">
-                @(ViewModel.AbaChatAtiva switch
-                {
-                    CanaisSessao.Registro => "Nenhuma rolagem registrada ainda.",
-                    CanaisSessao.Combate => "Nenhum ataque ou dano registrado ainda.",
-                    _ => "Nenhuma mensagem enviada ainda."
-                })
-            </p>
-        }
-        else
-        {
-            @foreach (var msg in ViewModel.MensagensAbaAtiva)
+    <div class="chat-feed" aria-live="polite" @key="ViewModel.AbaChatAtiva">
+        <div class="chat-feed-content">
+            @if (ViewModel.AbaChatAtiva == CanaisSessao.Npc)
             {
-                <p @key="msg.IdMensagem" class="chat-line @(msg.EhSistema ? "dice-line" : "")">
-                    <strong class="chat-name @(msg.EhSistema ? "sistema" : (msg.Autor == ViewModel.Estado.Mestre.Username ? "mestre" : ""))">
-                        @(msg.EhSistema ? "Sistema" : msg.Autor)
-                    </strong>
-                    <span>@msg.Conteudo</span>
-                    <time>@msg.DataEnvioLocal.ToString("HH:mm")</time>
+                <p class="chat-placeholder">Canal de NPCs reservado para próximas atualizações.</p>
+            }
+            else if (!ViewModel.MensagensAbaAtiva.Any())
+            {
+                <p class="chat-placeholder">
+                    @(ViewModel.AbaChatAtiva switch
+                    {
+                        CanaisSessao.Registro => "Nenhuma rolagem registrada ainda.",
+                        CanaisSessao.Combate => "Nenhum ataque ou dano registrado ainda.",
+                        _ => "Nenhuma mensagem enviada ainda."
+                    })
                 </p>
             }
-        }
+            else
+            {
+                @foreach (var msg in ViewModel.MensagensAbaAtiva)
+                {
+                    <p @key="msg.IdMensagem" class="chat-line @(msg.EhSistema ? "dice-line" : "")">
+                        <strong class="chat-name @(msg.EhSistema ? "sistema" : (msg.Autor == ViewModel.Estado.Mestre.Username ? "mestre" : ""))">
+                            @(msg.EhSistema ? "Sistema" : msg.Autor)
+                        </strong>
+                        <span>@msg.Conteudo</span>
+                        <time>@msg.DataEnvioLocal.ToString("HH:mm")</time>
+                    </p>
+                }
+            }
+        </div>
     </div>
 
     @if (ViewModel.AbaChatAtiva == CanaisSessao.Chat)

@@ -1,5 +1,6 @@
 ﻿using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 
 namespace RPGdeMesa.Domain.Sessoes;
@@ -26,6 +27,8 @@ public interface ISessaoRepository
     Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem);
     Task<List<Personagem>> ListarFichasAceitasCompletasAsync(int idCampanha);
     Task<List<Item>> ListarItensCampanhaAsync(int idCampanha);
+    Task<List<Magia>> ListarMagiasCatalogoAsync();
+    Task SalvarMagiasPersonagemAsync(int idPersonagem, IEnumerable<int> idsMagia);
 
     Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao);
     Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel);
@@ -33,5 +36,5 @@ public interface ISessaoRepository
     Task AtualizarPvPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int pvAtual);
     Task AtualizarPvPersonagemAsync(int idPersonagem, int pvAtual);
     Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade);
-    Task AtualizarEstadoCombateParticipanteAsync( int idSessao, int idAccount, bool? esquivando = null, bool? escondido = null);
+    Task AtualizarEstadoCombateParticipanteAsync(int idSessao, int idAccount, bool? esquivando = null, bool? escondido = null);
 }

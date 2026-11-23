@@ -67,7 +67,7 @@
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("atributos")'>Atributos & Perícias</button>
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem</button>
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("inventario")'>Inventário (@ViewModel.ItensModalEdicao.Count)</button>
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@p.PersonagemMagias.Count)</button>
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@ViewModel.MagiasModalEdicao.Count)</button>
         </nav>
 
         <div class="ficha-modal-corpo">
@@ -342,22 +342,97 @@
             }
             else if (ViewModel.AbaFichaModalAtiva == "grimorio")
             {
-                var magias = p.PersonagemMagias
-                    .Where(pm => pm.Magia != null)
-                    .Select(pm => pm.Magia!)
-                    .OrderBy(m => m.CirculoNivel)
-                    .ThenBy(m => m.Nome)
+                <div class="fm-inv-topo">
+                    <h3>Magias no Grimório (@ViewModel.MagiasModalEdicao.Count)</h3>
+                </div>
+
+                @if (ViewModel.PodeEditarFichaModal)
+                {
+                    var magiasDisponiveis = ViewModel.MagiasCatalogoDisponiveisModal.ToList();
+
+                    <div class="fm-item-card" style="margin-bottom: 12px;">
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 8px; margin-bottom: 8px;">
+                            <input type="search"
+                                   style="width: 100%; padding: 6px 8px; border: 1px solid rgba(139, 98, 37, 0.45); border-radius: 5px; background: #fffaf0; color: #392819; font-size: 12px;"
+                                   placeholder="Buscar magia por nome, escola ou efeito..."
+                                   @bind="ViewModel.TermoBuscaMagiaModal"
+                                   @bind:event="oninput" />
+
+                            <select style="width: 100%; padding: 6px 8px; border: 1px solid rgba(139, 98, 37, 0.45); border-radius: 5px; background: #fffaf0; color: #392819; font-size: 12px;"
+                                    aria-label="Filtrar magias por círculo"
+                                    @bind="ViewModel.FiltroCirculoMagiaModal">
+                                <option value="todos">Todos os círculos</option>
+                                <option value="0">Truque (0)</option>
+                                <option value="1">1º Círculo</option>
+                                <option value="2">2º Círculo</option>
+                                <option value="3">3º Círculo</option>
+                                <option value="4">4º Círculo</option>
+                                <option value="5">5º Círculo</option>
+                                <option value="6">6º Círculo</option>
+                                <option value="7">7º Círculo</option>
+                                <option value="8">8º Círculo</option>
+                                <option value="9">9º Círculo</option>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 36px; gap: 8px; align-items: center;">
+                            <select style="width: 100%; padding: 6px 8px; border: 1px solid rgba(139, 98, 37, 0.45); border-radius: 5px; background: #fffaf0; color: #392819; font-size: 12px;"
+                                    @bind="ViewModel.IdMagiaSelecionadaModal"
+                                    disabled="@(!magiasDisponiveis.Any())">
+                                @if (!magiasDisponiveis.Any())
+                                {
+                                    <option value="0">Nenhuma magia disponível com esse filtro</option>
+                                }
+                                else
+                                {
+                                    @foreach (var magiaOpcao in magiasDisponiveis)
+                                    {
+                                        <option value="@magiaOpcao.IdMagia">
+                                            @magiaOpcao.Nome (@FormatarCirculo(magiaOpcao.CirculoNivel)@(!string.IsNullOrWhiteSpace(magiaOpcao.Escola) ? $" · {magiaOpcao.Escola}" : ""))
+                                        </option>
+                                    }
+                                }
+                            </select>
+
+                            <button type="button"
+                                    class="fm-btn-add"
+                                    title="Adicionar magia selecionada ao grimório"
+                                    disabled="@(!magiasDisponiveis.Any())"
+                                    @onclick="ViewModel.AdicionarMagiaModal">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                var slotsOrdenados = ViewModel.MagiasModalEdicao
+                    .Select(slot => (Slot: slot, Info: ViewModel.ObterDetalhesMagia(slot.IdMagia)))
+                    .Where(x => x.Info != null)
+                    .OrderBy(x => x.Info!.CirculoNivel)
+                    .ThenBy(x => x.Info!.Nome)
                     .ToList();
 
-                if (magias.Any())
+                if (slotsOrdenados.Any())
                 {
                     <div class="fm-magias-grid">
-                        @foreach (var m in magias)
+                        @foreach (var item in slotsOrdenados)
                         {
+                            var m = item.Info!;
                             <article class="fm-magia-card">
                                 <header>
                                     <strong>@m.Nome</strong>
-                                    <span>@(m.CirculoNivel == 0 ? "Truque" : $"{m.CirculoNivel}º Círculo")</span>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span>@FormatarCirculo(m.CirculoNivel)</span>
+                                        @if (ViewModel.PodeEditarFichaModal)
+                                        {
+                                            <button type="button"
+                                                    class="fm-btn-rem"
+                                                    title="Remover @m.Nome do grimório"
+                                                    @onclick="() => ViewModel.RemoverMagiaModal(item.Slot)">
+                                                ×
+                                            </button>
+                                        }
+                                    </div>
                                 </header>
                                 <small>
                                     @(m.Escola ?? "Escola não informada")
@@ -416,6 +491,9 @@
         int mod = AtributosBase.CalcularModificador(valor);
         return mod >= 0 ? $"+{mod}" : mod.ToString();
     }
+
+    private static string FormatarCirculo(int circuloNivel) =>
+        circuloNivel == 0 ? "Truque" : $"{circuloNivel}º Círculo";
 
     private static string ObterResumoClasses(Personagem personagem)
     {

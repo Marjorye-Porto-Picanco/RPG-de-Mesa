@@ -3,6 +3,7 @@ using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
@@ -17,6 +18,8 @@ public class SessaoService
     private readonly ISessaoRepository _sessaoRepo;
     private readonly IPersonagemRepository _personagemRepo;
     private readonly ConcurrentDictionary<int, (Campanha Campanha, DateTime AtualizadoEmUtc)> _cacheCampanhas = new();
+    private List<Magia>? _cacheMagiasCatalogo;
+    private DateTime _cacheMagiasAtualizadoEmUtc = DateTime.MinValue;
 
     public SessaoService(
         ISessaoRepository sessaoRepo,
@@ -45,6 +48,21 @@ public class SessaoService
         }
 
         return campanha;
+    }
+
+    private async Task<List<Magia>> ObterMagiasCatalogoComCacheAsync(bool forcarAtualizacao = false)
+    {
+        if (!forcarAtualizacao &&
+            _cacheMagiasCatalogo != null &&
+            (DateTime.UtcNow - _cacheMagiasAtualizadoEmUtc) < ValidadeCacheCampanha)
+        {
+            return _cacheMagiasCatalogo;
+        }
+
+        var magias = await _sessaoRepo.ListarMagiasCatalogoAsync();
+        _cacheMagiasCatalogo = magias;
+        _cacheMagiasAtualizadoEmUtc = DateTime.UtcNow;
+        return magias;
     }
 
     public Task<bool> VerificarSessaoAtivaAsync(int idCampanha) =>
@@ -835,7 +853,8 @@ public class SessaoService
         int idAccount,
         Personagem ficha,
         Inventario dadosInventario,
-        IEnumerable<(int IdItem, int Quantidade)> itens)
+        IEnumerable<(int IdItem, int Quantidade)> itens,
+        IEnumerable<int>? idsMagia = null)
     {
         try
         {
@@ -849,6 +868,12 @@ public class SessaoService
 
             await _personagemRepo.AtualizarAsync(ficha);
             await _personagemRepo.SalvarInventarioPersonagem3FNAsync(ficha.IdPersonagem, dadosInventario, itens);
+
+            if (idsMagia != null)
+            {
+                await _sessaoRepo.SalvarMagiasPersonagemAsync(ficha.IdPersonagem, idsMagia);
+            }
+
             InvalidarCacheCampanha(idCampanha);
 
             return (true, "Alterações salvas na ficha da sessão!");
@@ -874,15 +899,17 @@ public class SessaoService
 
             var tarefaFichas = _sessaoRepo.ListarFichasAceitasCompletasAsync(idCampanha);
             var tarefaItens = _sessaoRepo.ListarItensCampanhaAsync(idCampanha);
+            var tarefaMagias = ObterMagiasCatalogoComCacheAsync(forcarAtualizacao: true);
 
-            await Task.WhenAll(tarefaFichas, tarefaItens);
+            await Task.WhenAll(tarefaFichas, tarefaItens, tarefaMagias);
 
             return (true, string.Empty, new RevisaoPosSessaoDto
             {
                 IdCampanha = campanha.IdCampanha,
                 NomeCampanha = campanha.Nome,
                 Fichas = tarefaFichas.Result,
-                ItensCampanha = tarefaItens.Result
+                ItensCampanha = tarefaItens.Result,
+                MagiasCatalogo = tarefaMagias.Result
             });
         }
         catch (Exception ex)
@@ -925,6 +952,9 @@ public class SessaoService
                     item.Personagem.IdPersonagem,
                     item.DadosInventario,
                     item.Itens);
+                await _sessaoRepo.SalvarMagiasPersonagemAsync(
+                    item.Personagem.IdPersonagem,
+                    item.IdsMagias);
             }
 
             if (idSessao > 0)
@@ -937,7 +967,7 @@ public class SessaoService
             }
 
             InvalidarCacheCampanha(idCampanha);
-            return (true, "Revisão concluída! Fichas, XPs e resumo da sessão foram salvos.");
+            return (true, "Revisão concluída! Fichas, XPs, magias e resumo da sessão foram salvos.");
         }
         catch (Exception ex)
         {
@@ -1090,12 +1120,14 @@ public class SessaoService
         var tarefaSessao = _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
         var tarefaMensagens = _sessaoRepo.ListarMensagensAsync(idSessao);
         var tarefaPinos = _sessaoRepo.ListarPinosSessaoAsync(idSessao);
+        var tarefaMagias = ObterMagiasCatalogoComCacheAsync();
 
-        await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos);
+        await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos, tarefaMagias);
 
         var sessaoCompleta = tarefaSessao.Result;
         var mensagens = tarefaMensagens.Result;
         var pinosDb = tarefaPinos.Result;
+        var magiasCatalogo = tarefaMagias.Result;
 
         var mapasDisponiveis = campanha.MapaCampanhas
             .Where(mc => mc.Mapa != null)
@@ -1308,6 +1340,7 @@ public class SessaoService
             MapaAtivo = mapaAtivo,
             MapasDisponiveis = mapasDisponiveis,
             ItensCampanha = itensCampanha,
+            MagiasCatalogo = magiasCatalogo,
             NpcsCampanha = npcsCampanha,
             MonstrosCampanha = monstrosCampanha,
             Pinos = pinosDto,
@@ -1350,6 +1383,7 @@ public class SessaoEstadoDto
     public MapaSessaoDto? MapaAtivo { get; set; }
     public List<MapaSessaoDto> MapasDisponiveis { get; set; } = new();
     public List<Item> ItensCampanha { get; set; } = new();
+    public List<Magia> MagiasCatalogo { get; set; } = new();
     public List<NPC> NpcsCampanha { get; set; } = new();
     public List<Monstro> MonstrosCampanha { get; set; } = new();
     public List<PinoMapaDto> Pinos { get; set; } = new();
@@ -1503,6 +1537,7 @@ public class RevisaoPosSessaoDto
     public string NomeCampanha { get; set; } = string.Empty;
     public List<Personagem> Fichas { get; set; } = new();
     public List<Item> ItensCampanha { get; set; } = new();
+    public List<Magia> MagiasCatalogo { get; set; } = new();
 }
 
 public class RevisaoFichaSalvarDto
@@ -1511,4 +1546,5 @@ public class RevisaoFichaSalvarDto
     public int XpGanhoSessao { get; set; }
     public Inventario DadosInventario { get; set; } = new();
     public List<(int IdItem, int Quantidade)> Itens { get; set; } = new();
+    public List<int> IdsMagias { get; set; } = new();
 }
