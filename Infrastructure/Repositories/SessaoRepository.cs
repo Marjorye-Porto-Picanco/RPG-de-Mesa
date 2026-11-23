@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Infrastructure.Persistence;
@@ -204,7 +205,6 @@ public class SessaoRepository : ISessaoRepository
 
         sessao.DefinirTurnoJogador(idAccountJogador);
 
-        // Quando o turno volta para o jogador, o bônus de Esquiva desaparece automaticamente
         if (idAccountJogador.HasValue)
         {
             var participante = await contexto.SessaoParticipantes
@@ -240,6 +240,7 @@ public class SessaoRepository : ISessaoRepository
 
         await contexto.SaveChangesAsync();
     }
+
     public async Task AdicionarMensagemAsync(SessaoMensagem mensagem)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
@@ -375,6 +376,60 @@ public class SessaoRepository : ISessaoRepository
             .Select(ic => ic.Item!)
             .OrderBy(i => i.Nome)
             .ToListAsync();
+    }
+
+    public async Task<List<Magia>> ListarMagiasCatalogoAsync()
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        var todas = await contexto.Magias
+            .AsNoTracking()
+            .OrderBy(m => m.CirculoNivel)
+            .ThenBy(m => m.Nome)
+            .ThenBy(m => m.IdMagia)
+            .ToListAsync();
+
+        return todas
+            .GroupBy(m => m.Nome.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(m => m.CirculoNivel)
+            .ThenBy(m => m.Nome)
+            .ToList();
+    }
+
+    public async Task SalvarMagiasPersonagemAsync(int idPersonagem, IEnumerable<int> idsMagia)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+
+        var idsDesejados = idsMagia
+            .Where(id => id > 0)
+            .Distinct()
+            .ToHashSet();
+
+        var existentes = await contexto.PersonagemMagias
+            .Where(pm => pm.IdPersonagem == idPersonagem)
+            .ToListAsync();
+
+        var paraRemover = existentes
+            .Where(pm => !idsDesejados.Contains(pm.IdMagia))
+            .ToList();
+
+        if (paraRemover.Any())
+            contexto.PersonagemMagias.RemoveRange(paraRemover);
+
+        var idsExistentes = existentes.Select(pm => pm.IdMagia).ToHashSet();
+        var paraAdicionar = idsDesejados
+            .Where(id => !idsExistentes.Contains(id))
+            .Select(id => new PersonagemMagia
+            {
+                IdPersonagem = idPersonagem,
+                IdMagia = id
+            })
+            .ToList();
+
+        if (paraAdicionar.Any())
+            await contexto.PersonagemMagias.AddRangeAsync(paraAdicionar);
+
+        await contexto.SaveChangesAsync();
     }
 
     // =========================================================================

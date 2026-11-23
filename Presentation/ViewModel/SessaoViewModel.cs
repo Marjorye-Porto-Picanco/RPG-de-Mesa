@@ -13,11 +13,17 @@ public class ItemSlotSessaoDto
     public int Quantidade { get; set; } = 1;
 }
 
+public class MagiaSlotSessaoDto
+{
+    public int IdMagia { get; set; }
+}
+
 public class SalvarFichaSessaoArgs
 {
     public Personagem Personagem { get; set; } = new();
     public Inventario DadosInventario { get; set; } = new();
     public List<(int IdItem, int Quantidade)> Itens { get; set; } = new();
+    public List<int> IdsMagias { get; set; } = new();
 }
 
 public class FichaRevisaoItemVm
@@ -31,6 +37,7 @@ public class FichaRevisaoItemVm
     public int MoedasPL { get; set; }
     public string NotasInventario { get; set; } = string.Empty;
     public List<ItemSlotSessaoDto> Itens { get; set; } = new();
+    public List<MagiaSlotSessaoDto> Magias { get; set; } = new();
 }
 
 public partial class SessaoViewModel : IAsyncDisposable
