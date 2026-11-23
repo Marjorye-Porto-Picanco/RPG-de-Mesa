@@ -18,6 +18,7 @@ public interface ISessaoRepository
     Task FinalizarSessaoAsync(int idSessao);
     Task AtualizarResumoSessaoAsync(int idSessao, string? titulo, string? resumo, int? xpTotalDistribuido = null);
     Task AtualizarMapaAtivoAsync(int idSessao, int? idMapa);
+    Task AtualizarTurnoJogadorAsync(int idSessao, int? idAccountTurno);
     Task AdicionarMensagemAsync(SessaoMensagem mensagem);
     Task<List<SessaoMensagem>> ListarMensagensAsync(int idSessao, int limitePorCanal = 80);
     Task<List<SessaoMesa>> ListarHistoricoSessoesAsync(int idCampanha);
@@ -29,5 +30,6 @@ public interface ISessaoRepository
     Task<List<SessaoPino>> ListarPinosSessaoAsync(int idSessao);
     Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel);
     Task AlterarVisibilidadePinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, bool visivel);
+    Task AtualizarPvPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int pvAtual);
     Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade);
 }

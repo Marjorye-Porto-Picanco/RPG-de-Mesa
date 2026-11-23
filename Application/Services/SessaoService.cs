@@ -242,6 +242,43 @@ public class SessaoService
     }
 
     // =========================================================================
+    // CONTROLE DE TURNO (EXCLUSIVO DO MESTRE)
+    // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> DefinirTurnoJogadorAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountMestre,
+        int? idAccountJogador,
+        string? nomeJogador = null)
+    {
+        try
+        {
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode liberar ou encerrar turnos.");
+
+            await _sessaoRepo.AtualizarTurnoJogadorAsync(idSessao, idAccountJogador);
+
+            string textoSistema = idAccountJogador.HasValue
+                ? $"⏳ O Mestre liberou o turno para {(string.IsNullOrWhiteSpace(nomeJogador) ? $"Jogador #{idAccountJogador}" : nomeJogador)}."
+                : "🔒 O Mestre encerrou o turno atual. Ações dos jogadores bloqueadas.";
+
+            await Task.WhenAll(
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao atualizar turno: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    // =========================================================================
     // GERENCIAMENTO DE PINOS POR MAPA (EXCLUSIVO DO MESTRE)
     // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> PosicionarPinoAsync(
@@ -326,6 +363,125 @@ public class SessaoService
         catch (Exception ex)
         {
             return (false, $"Erro ao remover pino: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    // =========================================================================
+    // COMBATE: ATAQUE E CONTROLE DE PV ATUAL DO MONSTRO
+    // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> RegistrarAtaqueAsync(
+        int idSessao,
+        int? idMapa,
+        int idAccountJogador,
+        RegistroAtaqueDto ataque)
+    {
+        try
+        {
+            var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+            if (sessao == null || !sessao.Ativa)
+                return (false, "A sessão não está ativa.");
+
+            if (sessao.IdAccountTurno != idAccountJogador)
+                return (false, "Aguarde o Mestre liberar o seu turno para atacar.");
+
+            string modAtk = ataque.ModificadorAtaque > 0
+                ? $" + {ataque.ModificadorAtaque}"
+                : ataque.ModificadorAtaque < 0
+                    ? $" - {Math.Abs(ataque.ModificadorAtaque)}"
+                    : string.Empty;
+
+            string textoSistema;
+
+            if (ataque.Acertou)
+            {
+                await _sessaoRepo.AtualizarPvPinoAsync(
+                    idSessao,
+                    idMapa,
+                    TiposPinoSessao.Monstro,
+                    ataque.IdMonstroAlvo,
+                    ataque.PvNovo);
+
+                string dadosDano = string.Join(" + ", ataque.ResultadosDano);
+                string modDano = ataque.ModificadorDano > 0
+                    ? $" + {ataque.ModificadorDano}"
+                    : ataque.ModificadorDano < 0
+                        ? $" - {Math.Abs(ataque.ModificadorDano)}"
+                        : string.Empty;
+
+                string tipoDanoTxt = string.IsNullOrWhiteSpace(ataque.TipoDano)
+                    ? string.Empty
+                    : $" ({ataque.TipoDano})";
+
+                string statusAlvo = ataque.PvNovo <= 0
+                    ? $"☠️ {ataque.NomeAlvo} foi derrotado! (PV: 0/{ataque.PvMaximo})"
+                    : $"PV de {ataque.NomeAlvo}: {ataque.PvNovo}/{ataque.PvMaximo}";
+
+                if (ataque.EhCritico)
+                {
+                    textoSistema =
+                        $"💥 CRÍTICO! {ataque.NomeAtacante} acertou um golpe crítico em {ataque.NomeAlvo} com {ataque.NomeArma}! " +
+                        $"Ataque: 20 natural (Total {ataque.TotalAtaque}) vs CA {ataque.CaAlvo} → ACERTO CRÍTICO! " +
+                        $"Dano dobrado (2× {ataque.ExpressaoDano}): {ataque.DanoTotal}{tipoDanoTxt} [{dadosDano}]{modDano}. {statusAlvo}";
+                }
+                else
+                {
+                    textoSistema =
+                        $"⚔️ {ataque.NomeAtacante} atacou {ataque.NomeAlvo} com {ataque.NomeArma}! " +
+                        $"Ataque: {ataque.TotalAtaque} [d20: {ataque.DadoAtaque}{modAtk}] vs CA {ataque.CaAlvo} → ACERTOU! " +
+                        $"Dano ({ataque.ExpressaoDano}): {ataque.DanoTotal}{tipoDanoTxt} [{dadosDano}]{modDano}. {statusAlvo}";
+                }
+            }
+            else
+            {
+                textoSistema =
+                    $"⚔️ {ataque.NomeAtacante} atacou {ataque.NomeAlvo} com {ataque.NomeArma}. " +
+                    $"Ataque: {ataque.TotalAtaque} [d20: {ataque.DadoAtaque}{modAtk}] vs CA {ataque.CaAlvo} → FALHOU!";
+            }
+
+            var msgChat = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Chat, textoSistema);
+            var msgCombate = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Combate, textoSistema);
+
+            await Task.WhenAll(
+                _sessaoRepo.AdicionarMensagemAsync(msgChat),
+                _sessaoRepo.AdicionarMensagemAsync(msgCombate));
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao registrar ataque: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    public async Task<(bool Sucesso, string Mensagem)> AtualizarPvMonstroNoMapaAsync(
+        int idCampanha,
+        int idSessao,
+        int? idMapa,
+        int idAccountMestre,
+        int idMonstro,
+        int pvAtual)
+    {
+        try
+        {
+            var campanha = await ObterCampanhaComCacheAsync(idCampanha);
+            if (campanha == null)
+                return (false, "Campanha não encontrada.");
+
+            if (campanha.IdAccount != idAccountMestre)
+                return (false, "Apenas o Mestre pode alterar o PV do monstro manualmente.");
+
+            await _sessaoRepo.AtualizarPvPinoAsync(
+                idSessao,
+                idMapa,
+                TiposPinoSessao.Monstro,
+                idMonstro,
+                Math.Max(0, pvAtual));
+
+            return (true, "PV do monstro atualizado.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao atualizar PV do monstro: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
@@ -744,11 +900,20 @@ public class SessaoService
         int? idPersonagemAtual = jogadoresDto
             .FirstOrDefault(j => j.IdAccount == idAccountLogado)?.IdPersonagem;
 
+        int? idAccountTurno = sessaoCompleta?.IdAccountTurno;
+        string? nomeJogadorTurno = idAccountTurno.HasValue
+            ? jogadoresDto.FirstOrDefault(j => j.IdAccount == idAccountTurno.Value)?.NomePersonagem
+              ?? jogadoresDto.FirstOrDefault(j => j.IdAccount == idAccountTurno.Value)?.Username
+            : null;
+
         var pinosDto = new List<PinoMapaDto>();
         foreach (var pino in pinosDb)
         {
             string nome = string.Empty;
             string? imagem = null;
+            int? pvAtual = pino.PvAtual;
+            int? pvMaximo = null;
+            int? classeArmadura = null;
 
             if (pino.TipoEntidade == TiposPinoSessao.Personagem)
             {
@@ -767,6 +932,9 @@ public class SessaoService
                 var monstro = monstrosCampanha.FirstOrDefault(m => m.IdMonstro == pino.IdEntidade);
                 nome = monstro?.Nome ?? $"Monstro #{pino.IdEntidade}";
                 imagem = monstro?.Imagem;
+                pvMaximo = monstro?.PvMaximo;
+                pvAtual = pino.PvAtual ?? monstro?.PvMaximo;
+                classeArmadura = monstro?.ClasseArmadura;
             }
 
             pinosDto.Add(new PinoMapaDto
@@ -779,7 +947,10 @@ public class SessaoService
                 ImagemUrl = imagem,
                 Coluna = pino.Coluna,
                 Linha = pino.Linha,
-                Visivel = pino.Visivel
+                Visivel = pino.Visivel,
+                PvAtual = pvAtual,
+                PvMaximo = pvMaximo,
+                ClasseArmadura = classeArmadura
             });
         }
 
@@ -805,6 +976,8 @@ public class SessaoService
             SessaoAtiva = sessaoCompleta?.Ativa ?? false,
             EhMestre = campanha.IdAccount == idAccountLogado,
             IdPersonagemLogado = idPersonagemAtual,
+            IdAccountTurno = idAccountTurno,
+            NomeJogadorTurno = nomeJogadorTurno,
             IdMapaAtivo = idMapaAtivo,
             MapaAtivo = mapaAtivo,
             MapasDisponiveis = mapasDisponiveis,
@@ -845,6 +1018,8 @@ public class SessaoEstadoDto
     public bool SessaoAtiva { get; set; }
     public bool EhMestre { get; set; }
     public int? IdPersonagemLogado { get; set; }
+    public int? IdAccountTurno { get; set; }
+    public string? NomeJogadorTurno { get; set; }
     public int? IdMapaAtivo { get; set; }
     public MapaSessaoDto? MapaAtivo { get; set; }
     public List<MapaSessaoDto> MapasDisponiveis { get; set; } = new();
@@ -868,7 +1043,32 @@ public class PinoMapaDto
     public int Coluna { get; set; }
     public int Linha { get; set; }
     public bool Visivel { get; set; } = true;
+    public int? PvAtual { get; set; }
+    public int? PvMaximo { get; set; }
+    public int? ClasseArmadura { get; set; }
     public string CoordenadaTexto => $"{(char)('A' + Coluna)}{Linha + 1}";
+}
+
+public class RegistroAtaqueDto
+{
+    public string NomeAtacante { get; set; } = string.Empty;
+    public string NomeArma { get; set; } = string.Empty;
+    public string ExpressaoDano { get; set; } = string.Empty;
+    public string? TipoDano { get; set; }
+    public int IdMonstroAlvo { get; set; }
+    public string NomeAlvo { get; set; } = string.Empty;
+    public int CaAlvo { get; set; }
+    public int DadoAtaque { get; set; }
+    public int ModificadorAtaque { get; set; }
+    public int TotalAtaque { get; set; }
+    public bool EhCritico { get; set; }
+    public bool Acertou { get; set; }
+    public List<int> ResultadosDano { get; set; } = new();
+    public int ModificadorDano { get; set; }
+    public int DanoTotal { get; set; }
+    public int PvAnterior { get; set; }
+    public int PvNovo { get; set; }
+    public int PvMaximo { get; set; }
 }
 
 public class HistoricoSessaoDto

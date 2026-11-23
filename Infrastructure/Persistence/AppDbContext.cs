@@ -556,6 +556,7 @@ public class AppDbContext : DbContext
             e.Property(s => s.DataAtualizacao).HasColumnName("data_atualizacao");
             e.Property(s => s.Resumo).HasColumnName("resumo");
             e.Property(s => s.XpTotalDistribuido).HasColumnName("xp_total_distribuido");
+            e.Property(s => s.IdAccountTurno).HasColumnName("id_account_turno");
 
             e.HasIndex(s => new { s.IdCampanha, s.Ativa });
 
@@ -629,6 +630,7 @@ public class AppDbContext : DbContext
             e.Property(p => p.Coluna).HasColumnName("coluna");
             e.Property(p => p.Linha).HasColumnName("linha");
             e.Property(p => p.Visivel).HasColumnName("visivel");
+            e.Property(p => p.PvAtual).HasColumnName("pv_atual");        
 
             e.HasIndex(p => new { p.IdSessao, p.IdMapa, p.TipoEntidade, p.IdEntidade })
              .IsUnique();
