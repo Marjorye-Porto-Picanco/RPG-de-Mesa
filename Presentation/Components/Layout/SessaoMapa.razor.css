@@ -248,6 +248,35 @@
     }
 
 /* ==========================================================================
+   MODO DISPARADA (DESTAQUE VISUAL DE ALCANCE PARA O JOGADOR)
+   ========================================================================== */
+.map-art.modo-disparada .celula-grade {
+    cursor: not-allowed;
+}
+
+    .map-art.modo-disparada .celula-grade.celula-disparada-alcance {
+        cursor: pointer;
+        background-color: rgba(102, 179, 255, 0.22);
+        box-shadow: inset 0 0 0 1px rgba(126, 198, 255, 0.55);
+    }
+
+        .map-art.modo-disparada .celula-grade.celula-disparada-alcance:hover {
+            background-color: rgba(135, 196, 122, 0.4);
+            box-shadow: inset 0 0 0 2px #a8e39d;
+        }
+
+    .map-art.modo-disparada .celula-grade.celula-disparada-origem {
+        cursor: default;
+        background-color: rgba(240, 209, 127, 0.28);
+        box-shadow: inset 0 0 0 2px #f0d17f;
+    }
+
+    .map-art.modo-disparada .celula-grade.celula-disparada-destino {
+        background-color: rgba(135, 196, 122, 0.5) !important;
+        box-shadow: inset 0 0 0 2px #c8f7be !important;
+    }
+
+/* ==========================================================================
    GRADE E PINOS PADRONIZADOS
    ========================================================================== */
 .mapa-grade-20x20 {

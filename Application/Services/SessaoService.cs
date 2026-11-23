@@ -243,12 +243,12 @@ public class SessaoService
     }
 
     // =========================================================================
-    // CONTROLE DE TURNO (EXCLUSIVO DO MESTRE)
+    // CONTROLE DE TURNO (MESTRE OU JOGADOR DONO DO TURNO ATUAL)
     // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> DefinirTurnoJogadorAsync(
         int idCampanha,
         int idSessao,
-        int idAccountMestre,
+        int idAccountSolicitante,
         int? idAccountJogador,
         string? nomeJogador = null)
     {
@@ -258,14 +258,39 @@ public class SessaoService
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
-            if (campanha.IdAccount != idAccountMestre)
-                return (false, "Apenas o Mestre pode liberar ou encerrar turnos.");
+            bool ehMestre = campanha.IdAccount == idAccountSolicitante;
+            if (!ehMestre)
+            {
+                var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+                if (sessao == null || !sessao.Ativa)
+                    return (false, "A sessão não está ativa.");
+
+                if (sessao.IdAccountTurno != idAccountSolicitante)
+                    return (false, "Apenas o Mestre ou o jogador no turno atual pode passar ou encerrar o turno.");
+
+                if (idAccountJogador.HasValue)
+                {
+                    bool destinoValido = campanha.UsuarioCampanhas.Any(uc => uc.IdAccount == idAccountJogador.Value)
+                        || campanha.FichasAceitas.Any(pc => pc.Personagem != null && pc.Personagem.IdAccount == idAccountJogador.Value);
+
+                    if (!destinoValido)
+                        return (false, "O próximo jogador informado não participa desta campanha.");
+                }
+            }
 
             await _sessaoRepo.AtualizarTurnoJogadorAsync(idSessao, idAccountJogador);
 
-            string textoSistema = idAccountJogador.HasValue
-                ? $"⏳ O Mestre liberou o turno para {(string.IsNullOrWhiteSpace(nomeJogador) ? $"Jogador #{idAccountJogador}" : nomeJogador)}."
-                : "🔒 O Mestre encerrou o turno atual. Ações dos jogadores bloqueadas.";
+            string nomeExibicao = string.IsNullOrWhiteSpace(nomeJogador)
+                ? $"Jogador #{idAccountJogador}"
+                : nomeJogador;
+
+            string textoSistema = ehMestre
+                ? (idAccountJogador.HasValue
+                    ? $"⏳ O Mestre liberou o turno para {nomeExibicao}."
+                    : "🔒 O Mestre encerrou o turno atual. Ações dos jogadores bloqueadas.")
+                : (idAccountJogador.HasValue
+                    ? $"⏳ Turno passado automaticamente para {nomeExibicao}."
+                    : "🔒 Turno encerrado.");
 
             await Task.WhenAll(
                 _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
@@ -280,13 +305,13 @@ public class SessaoService
     }
 
     // =========================================================================
-    // GERENCIAMENTO DE PINOS POR MAPA (EXCLUSIVO DO MESTRE)
+    // GERENCIAMENTO DE PINOS POR MAPA (MESTRE OU JOGADOR MOVENDO SEU PINO NO TURNO)
     // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> PosicionarPinoAsync(
         int idCampanha,
         int idSessao,
         int? idMapa,
-        int idAccountMestre,
+        int idAccountSolicitante,
         string tipoEntidade,
         int idEntidade,
         int coluna,
@@ -299,11 +324,39 @@ public class SessaoService
             if (campanha == null)
                 return (false, "Campanha não encontrada.");
 
-            if (campanha.IdAccount != idAccountMestre)
-                return (false, "Apenas o Mestre pode posicionar pinos no mapa.");
-
             if (!idMapa.HasValue)
                 return (false, "Selecione um mapa antes de posicionar pinos.");
+
+            bool ehMestre = campanha.IdAccount == idAccountSolicitante;
+            if (!ehMestre)
+            {
+                if (!string.Equals(tipoEntidade, TiposPinoSessao.Personagem, StringComparison.OrdinalIgnoreCase))
+                    return (false, "Apenas o Mestre pode posicionar ou mover NPCs e monstros no mapa.");
+
+                var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+                if (sessao == null || !sessao.Ativa)
+                    return (false, "A sessão não está ativa.");
+
+                if (sessao.IdAccountTurno != idAccountSolicitante)
+                    return (false, "Aguarde o seu turno para mover seu personagem no mapa.");
+
+                if (sessao.IdMapaAtivo != idMapa)
+                    return (false, "Você só pode mover seu personagem no mapa ativo da sessão.");
+
+                bool fichaDoJogador = campanha.FichasAceitas.Any(pc =>
+                    pc.IdPersonagem == idEntidade &&
+                    pc.Personagem != null &&
+                    pc.Personagem.IdAccount == idAccountSolicitante);
+
+                if (!fichaDoJogador)
+                {
+                    var fichaDb = await _sessaoRepo.ObterFichaCompletaAsync(idEntidade);
+                    fichaDoJogador = fichaDb != null && fichaDb.IdAccount == idAccountSolicitante;
+                }
+
+                if (!fichaDoJogador)
+                    return (false, "Você só pode mover o pino do seu próprio personagem.");
+            }
 
             await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
             return (true, string.Empty);

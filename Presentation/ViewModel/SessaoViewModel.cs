@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
@@ -126,6 +127,36 @@ public class SessaoViewModel : IAsyncDisposable
     public int EtapaAtaque { get; private set; } = 1; // 1=Escolher arma/alvo, 2=Acertou (rolar dano), 3=Finalizado
     public RegistroAtaqueDto? ResultadoAtaqueAtual { get; private set; }
 
+    // Modo Disparada (Movimento: Botão -> Clique na casa <= 2x deslocamento -> Confirmação -> Próximo turno)
+    public bool ModoDisparadaAtivo { get; private set; }
+    public bool ExibirModalConfirmarDisparada { get; private set; }
+    public bool ExecutandoDisparada { get; private set; }
+    public string? ErroDisparada { get; private set; }
+    public PinoMapaDto? PinoJogadorDisparada { get; private set; }
+    public string NomePersonagemDisparada { get; private set; } = string.Empty;
+    public decimal DeslocamentoNormalMetros { get; private set; } = 9m;
+    public decimal DeslocamentoDisparadaMetros => DeslocamentoNormalMetros * 2m;
+    public (int Coluna, int Linha)? DestinoDisparada { get; private set; }
+    public decimal DistanciaDestinoMetros { get; private set; }
+
+    public string DeslocamentoNormalTexto => FormatarMetros(DeslocamentoNormalMetros);
+    public string DeslocamentoDisparadaTexto => FormatarMetros(DeslocamentoDisparadaMetros);
+    public string DistanciaDestinoTexto => FormatarMetros(DistanciaDestinoMetros);
+
+    public string DestinoDisparadaTexto =>
+        DestinoDisparada is { } d
+            ? $"{(char)('A' + Math.Clamp(d.Coluna, 0, GradeColunas - 1))}{d.Linha + 1}"
+            : string.Empty;
+
+    public string? NomeProximoJogadorTurno
+    {
+        get
+        {
+            var proximo = ObterProximoJogadorTurno();
+            return proximo is null ? null : (proximo.NomePersonagem ?? proximo.Username);
+        }
+    }
+
     public Item? ArmaSelecionada =>
         ArmasDisponiveisAtaque.FirstOrDefault(a => a.IdItem == IdArmaSelecionada);
 
@@ -215,6 +246,7 @@ public class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        LimparEstadoDisparadaInterno();
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;
         PinoArrastando = null;
@@ -371,12 +403,34 @@ public class SessaoViewModel : IAsyncDisposable
                     }
                 }
 
+                if (ModoDisparadaAtivo)
+                {
+                    if (!Estado.EhMestre && !EhMeuTurno)
+                    {
+                        LimparEstadoDisparadaInterno();
+                        FeedbackAcao = "O Mestre encerrou o seu turno.";
+                    }
+                    else if (Estado.IdPersonagemLogado.HasValue && Estado.IdMapaAtivo.HasValue)
+                    {
+                        var pinoAtual = Estado.Pinos.FirstOrDefault(p =>
+                            p.IdMapa == Estado.IdMapaAtivo &&
+                            p.TipoEntidade == TiposPinoSessao.Personagem &&
+                            p.IdEntidade == Estado.IdPersonagemLogado.Value);
+
+                        if (pinoAtual is null)
+                            LimparEstadoDisparadaInterno();
+                        else
+                            PinoJogadorDisparada = pinoAtual;
+                    }
+                }
+
                 if (!Estado.SessaoAtiva && !Estado.EhMestre)
                 {
                     SessaoEncerradaPeloMestre = true;
                     ExibirModalDados = false;
                     ExibirModalFicha = false;
                     ExibirModalAtaque = false;
+                    LimparEstadoDisparadaInterno();
                     MonstroEmVisualizacao = null;
                     PinoMonstroEmVisualizacao = null;
                     NpcEmVisualizacao = null;
@@ -452,6 +506,320 @@ public class SessaoViewModel : IAsyncDisposable
     }
 
     // =========================================================================
+    // SISTEMA DE DISPARADA (DOBRA DESLOCAMENTO -> CLIQUE NA CASA -> PRÓXIMO TURNO)
+    // =========================================================================
+    public async Task AlternarModoDisparadaAsync()
+    {
+        if (ModoDisparadaAtivo)
+        {
+            CancelarDisparada();
+            return;
+        }
+
+        if (Estado.EhMestre)
+        {
+            FeedbackAcao = "A ação de Disparada é usada pelo jogador no turno dele.";
+            Notificar();
+            return;
+        }
+
+        if (!EhMeuTurno)
+        {
+            FeedbackAcao = "Aguarde o Mestre liberar o seu turno para usar Disparada.";
+            Notificar();
+            return;
+        }
+
+        if (!Estado.IdPersonagemLogado.HasValue || !Estado.IdMapaAtivo.HasValue)
+        {
+            FeedbackAcao = "É preciso ter uma ficha aprovada e um mapa ativo para usar Disparada.";
+            Notificar();
+            return;
+        }
+
+        var meuPino = Estado.Pinos.FirstOrDefault(p =>
+            p.IdMapa == Estado.IdMapaAtivo &&
+            p.TipoEntidade == TiposPinoSessao.Personagem &&
+            p.IdEntidade == Estado.IdPersonagemLogado.Value);
+
+        if (meuPino is null)
+        {
+            FeedbackAcao = "Seu pino ainda não está posicionado no mapa atual.";
+            Notificar();
+            return;
+        }
+
+        ExibirModalDados = false;
+        ExibirModalFicha = false;
+        ExibirModalAtaque = false;
+        MonstroEmVisualizacao = null;
+        PinoMonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var personagem = await _sessaoService.ObterFichaCompletaAsync(Estado.IdPersonagemLogado.Value);
+            NomePersonagemDisparada = personagem?.Nome ?? meuPino.Nome;
+            DeslocamentoNormalMetros = ExtrairDeslocamentoEmMetros(personagem?.Deslocamento);
+        }
+        finally
+        {
+            _dbLock.Release();
+        }
+
+        PinoJogadorDisparada = meuPino;
+        DestinoDisparada = null;
+        DistanciaDestinoMetros = 0m;
+        ErroDisparada = null;
+        ExibirModalConfirmarDisparada = false;
+        ModoDisparadaAtivo = true;
+        FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}): clique em uma casa destacada no mapa para se mover.";
+        Notificar();
+    }
+
+    public void CancelarDisparada()
+    {
+        if (ExecutandoDisparada) return;
+        LimparEstadoDisparadaInterno();
+        FeedbackAcao = null;
+        Notificar();
+    }
+
+    private void LimparEstadoDisparadaInterno()
+    {
+        ModoDisparadaAtivo = false;
+        ExibirModalConfirmarDisparada = false;
+        PinoJogadorDisparada = null;
+        DestinoDisparada = null;
+        DistanciaDestinoMetros = 0m;
+        ErroDisparada = null;
+    }
+
+    public bool EhCasaOrigemDisparada(int coluna, int linha) =>
+        ModoDisparadaAtivo &&
+        PinoJogadorDisparada is not null &&
+        PinoJogadorDisparada.Coluna == coluna &&
+        PinoJogadorDisparada.Linha == linha;
+
+    public bool CasaDentroDoAlcanceDisparada(int coluna, int linha)
+    {
+        if (!ModoDisparadaAtivo || PinoJogadorDisparada is null)
+            return false;
+
+        decimal dist = CalcularDistanciaMetros(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, coluna, linha);
+        return dist > 0m && dist <= DeslocamentoDisparadaMetros;
+    }
+
+    public string ObterTooltipCelulaDisparada(int coluna, int linha, string coordTexto)
+    {
+        if (!ModoDisparadaAtivo || PinoJogadorDisparada is null)
+            return $"{coordTexto} (1,5m)";
+
+        if (PinoJogadorDisparada.Coluna == coluna && PinoJogadorDisparada.Linha == linha)
+            return $"{coordTexto} · Sua posição atual";
+
+        decimal dist = CalcularDistanciaMetros(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, coluna, linha);
+        return dist <= DeslocamentoDisparadaMetros
+            ? $"{coordTexto} · {FormatarMetros(dist)} (clique para Disparada)"
+            : $"{coordTexto} · {FormatarMetros(dist)} (fora do alcance de {DeslocamentoDisparadaTexto})";
+    }
+
+    private void ProcessarCliqueCelulaDisparada(int coluna, int linha)
+    {
+        if (PinoJogadorDisparada is null)
+        {
+            CancelarDisparada();
+            return;
+        }
+
+        int colClamped = Math.Clamp(coluna, 0, GradeColunas - 1);
+        int linClamped = Math.Clamp(linha, 0, GradeLinhas - 1);
+
+        decimal distancia = CalcularDistanciaMetros(
+            PinoJogadorDisparada.Coluna,
+            PinoJogadorDisparada.Linha,
+            colClamped,
+            linClamped);
+
+        if (distancia <= 0m)
+        {
+            FeedbackAcao = "Escolha uma casa diferente da sua posição atual.";
+            Notificar();
+            return;
+        }
+
+        if (distancia > DeslocamentoDisparadaMetros)
+        {
+            FeedbackAcao = $"Casa fora do alcance da Disparada! Distância: {FormatarMetros(distancia)} (máximo: {DeslocamentoDisparadaTexto}).";
+            Notificar();
+            return;
+        }
+
+        DestinoDisparada = (colClamped, linClamped);
+        DistanciaDestinoMetros = distancia;
+        ErroDisparada = null;
+        ExibirModalConfirmarDisparada = true;
+        Notificar();
+    }
+
+    public void VoltarEscolhaCasaDisparada()
+    {
+        if (ExecutandoDisparada) return;
+        ExibirModalConfirmarDisparada = false;
+        DestinoDisparada = null;
+        DistanciaDestinoMetros = 0m;
+        ErroDisparada = null;
+        Notificar();
+    }
+
+    public async Task ConfirmarDisparadaAsync()
+    {
+        if (ExecutandoDisparada || !EhMeuTurno || PinoJogadorDisparada is null || DestinoDisparada is null || !Estado.IdMapaAtivo.HasValue)
+            return;
+
+        ExecutandoDisparada = true;
+        ErroDisparada = null;
+        Notificar();
+
+        var destino = DestinoDisparada.Value;
+        string origemTexto = PinoJogadorDisparada.CoordenadaTexto;
+        string destinoTexto = DestinoDisparadaTexto;
+        var proximoJogador = ObterProximoJogadorTurno();
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            // 1. Move o pino do jogador no mapa ativo
+            var (okMove, erroMove) = await _sessaoService.PosicionarPinoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                Estado.IdMapaAtivo,
+                _sessaoUsuario.IdUsuarioLogado,
+                TiposPinoSessao.Personagem,
+                PinoJogadorDisparada.IdEntidade,
+                destino.Coluna,
+                destino.Linha,
+                PinoJogadorDisparada.Visivel);
+
+            if (!okMove)
+            {
+                ErroDisparada = erroMove ?? "Não foi possível mover seu pino.";
+                return;
+            }
+
+            // 2. Registra a Disparada no chat
+            string nomeProximo = proximoJogador is not null
+                ? (proximoJogador.NomePersonagem ?? proximoJogador.Username)
+                : string.Empty;
+
+            string textoTurno = proximoJogador is not null
+                ? $" Turno passado para {nomeProximo}."
+                : " Turno encerrado.";
+
+            string mensagem = $"◷ {NomePersonagemDisparada} usou Disparada ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}) e moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}).{textoTurno}";
+
+            await _sessaoService.EnviarMensagemChatAsync(
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                mensagem);
+
+            // 3. Passa o turno automaticamente para o próximo jogador (Mestre continua podendo intervir)
+            var (okTurno, erroTurno) = await _sessaoService.DefinirTurnoJogadorAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                proximoJogador?.IdAccount,
+                proximoJogador is not null ? nomeProximo : null);
+
+            if (!okTurno)
+            {
+                ErroDisparada = erroTurno ?? "Pino movido, mas não foi possível passar o turno.";
+                return;
+            }
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            LimparEstadoDisparadaInterno();
+            FeedbackAcao = null;
+            AbaChatAtiva = CanaisSessao.Chat;
+        }
+        catch (Exception ex)
+        {
+            ErroDisparada = $"Erro ao concluir Disparada: {ex.Message}";
+        }
+        finally
+        {
+            ExecutandoDisparada = false;
+            _dbLock.Release();
+            Notificar();
+        }
+    }
+
+    private ParticipanteSessaoDto? ObterProximoJogadorTurno()
+    {
+        var jogadores = Estado.Jogadores
+            .Where(j => j.Online && j.IdPersonagem.HasValue)
+            .ToList();
+
+        if (jogadores.Count == 0)
+        {
+            jogadores = Estado.Jogadores
+                .Where(j => j.IdPersonagem.HasValue)
+                .ToList();
+        }
+
+        if (jogadores.Count <= 1)
+            return null;
+
+        int indiceAtual = jogadores.FindIndex(j => j.IdAccount == _sessaoUsuario.IdUsuarioLogado);
+        if (indiceAtual < 0)
+            return jogadores.FirstOrDefault();
+
+        int proximoIndice = (indiceAtual + 1) % jogadores.Count;
+        var proximo = jogadores[proximoIndice];
+        return proximo.IdAccount == _sessaoUsuario.IdUsuarioLogado ? null : proximo;
+    }
+
+    private static decimal CalcularDistanciaMetros(int colOrigem, int linOrigem, int colDestino, int linDestino)
+    {
+        // Grade D&D 5e: 1 quadrado = 1,5 m (inclusive na diagonal)
+        int quadrados = Math.Max(Math.Abs(colDestino - colOrigem), Math.Abs(linDestino - linOrigem));
+        return quadrados * 1.5m;
+    }
+
+    private static decimal ExtrairDeslocamentoEmMetros(object? valorDeslocamento)
+    {
+        if (valorDeslocamento is null) return 9m;
+        if (valorDeslocamento is decimal d && d > 0) return d;
+        if (valorDeslocamento is int i && i > 0) return i;
+        if (valorDeslocamento is double db && db > 0) return (decimal)db;
+
+        var texto = valorDeslocamento.ToString()?.Replace(',', '.');
+        if (string.IsNullOrWhiteSpace(texto)) return 9m;
+
+        var match = Regex.Match(texto, @"\d+(\.\d+)?");
+        if (match.Success &&
+            decimal.TryParse(match.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var metros) &&
+            metros > 0)
+        {
+            return metros;
+        }
+
+        return 9m;
+    }
+
+    private static string FormatarMetros(decimal metros) =>
+        $"{metros.ToString("0.#", new CultureInfo("pt-BR"))} m";
+
+    // =========================================================================
     // SISTEMA DE ATAQUE (ARMA DO INVENTÁRIO -> ALVO -> D20 VS CA -> DANO)
     // =========================================================================
     public async Task AbrirModalAtaqueAsync()
@@ -479,6 +847,7 @@ public class SessaoViewModel : IAsyncDisposable
 
         ExibirModalDados = false;
         ExibirModalFicha = false;
+        LimparEstadoDisparadaInterno();
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
@@ -1076,6 +1445,12 @@ public class SessaoViewModel : IAsyncDisposable
 
     public async Task AoClicarCelulaMapaAsync(int coluna, int linha)
     {
+        if (ModoDisparadaAtivo && EhMeuTurno)
+        {
+            ProcessarCliqueCelulaDisparada(coluna, linha);
+            return;
+        }
+
         if (!Estado.EhMestre || PinoParaPosicionar is null || Estado.IdSessao <= 0)
             return;
 
@@ -1204,6 +1579,12 @@ public class SessaoViewModel : IAsyncDisposable
 
     public async Task AoClicarPinoMapaAsync(PinoMapaDto pino)
     {
+        if (ModoDisparadaAtivo && EhMeuTurno)
+        {
+            ProcessarCliqueCelulaDisparada(pino.Coluna, pino.Linha);
+            return;
+        }
+
         if (pino.TipoEntidade == TiposPinoSessao.Monstro)
         {
             MonstroEmVisualizacao = Estado.MonstrosCampanha.FirstOrDefault(m => m.IdMonstro == pino.IdEntidade);
@@ -1387,6 +1768,7 @@ public class SessaoViewModel : IAsyncDisposable
     {
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        LimparEstadoDisparadaInterno();
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
@@ -1457,6 +1839,7 @@ public class SessaoViewModel : IAsyncDisposable
         FeedbackFichaModal = null;
         ExibirModalDados = false;
         ExibirModalAtaque = false;
+        LimparEstadoDisparadaInterno();
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
@@ -1614,7 +1997,8 @@ public class SessaoViewModel : IAsyncDisposable
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
         PinoNpcEmVisualizacao = null;
-        FeedbackAcao = null;
+        if (!ModoDisparadaAtivo)
+            FeedbackAcao = null;
         Notificar();
     }
 
@@ -1640,6 +2024,8 @@ public class SessaoViewModel : IAsyncDisposable
     {
         FeedbackAcao = null;
         PinoParaPosicionar = null;
+        if (ModoDisparadaAtivo)
+            LimparEstadoDisparadaInterno();
         Notificar();
     }
 
@@ -1655,6 +2041,7 @@ public class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        LimparEstadoDisparadaInterno();
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;
         PinoArrastando = null;

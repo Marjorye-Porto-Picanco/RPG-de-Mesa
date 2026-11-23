@@ -334,7 +334,7 @@
                 </div>
             }
 
-            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "")"
+            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "") @(ViewModel.ModoDisparadaAtivo ? "modo-disparada" : "")"
                  style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
                 @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
                 {
@@ -363,17 +363,24 @@
                             int colAtual = col;
                             char letraCol = (char)('A' + colAtual);
                             int numLinha = linhaAtual + 1;
+                            string coordTexto = $"{letraCol}{numLinha}";
+
                             bool ehAlvoDrop = ViewModel.PinoArrastando != null
                                 && ViewModel.CelulaDestinoArraste == (colAtual, linhaAtual);
+
+                            bool ehOrigemDisparada = ViewModel.EhCasaOrigemDisparada(colAtual, linhaAtual);
+                            bool ehAlcanceDisparada = ViewModel.CasaDentroDoAlcanceDisparada(colAtual, linhaAtual);
+                            bool ehDestinoDisparada = ViewModel.ModoDisparadaAtivo
+                                && ViewModel.DestinoDisparada == (colAtual, linhaAtual);
 
                             var pinosCelula = ViewModel.PinosVisiveisNoMapa
                                 .Where(p => p.Coluna == colAtual && p.Linha == linhaAtual)
                                 .ToList();
 
-                            <div class="celula-grade @(ehAlvoDrop ? "celula-drop-alvo" : "")"
+                            <div class="celula-grade @(ehAlvoDrop ? "celula-drop-alvo" : "") @(ehOrigemDisparada ? "celula-disparada-origem" : "") @(ehAlcanceDisparada ? "celula-disparada-alcance" : "") @(ehDestinoDisparada ? "celula-disparada-destino" : "")"
                                  data-col="@colAtual"
                                  data-row="@linhaAtual"
-                                 title="@($"{letraCol}{numLinha} (1,5m)")"
+                                 title="@ViewModel.ObterTooltipCelulaDisparada(colAtual, linhaAtual, coordTexto)"
                                  @onpointerenter="() => ViewModel.AtualizarCelulaDestinoArraste(colAtual, linhaAtual)"
                                  @onpointerup="() => ViewModel.SoltarPinoNaCelulaAsync(colAtual, linhaAtual)"
                                  @onpointerup:stopPropagation="true"

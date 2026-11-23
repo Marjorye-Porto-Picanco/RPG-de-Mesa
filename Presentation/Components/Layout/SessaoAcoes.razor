@@ -35,8 +35,14 @@
         <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
             <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
         </button>
-        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
-            <span class="slot-icon">◷</span><span>Disparada</span><small>Movimento</small>
+        <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Dobra seu deslocamento neste turno — clique e escolha a casa no mapa" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AlternarModoDisparadaAsync">
+            <span class="slot-icon">◷</span>
+            <span>@(ViewModel.ModoDisparadaAtivo ? "Cancelar" : "Disparada")</span>
+            <small>Movimento</small>
         </button>
         <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
             <span class="slot-icon">↺</span><span>Desengajar</span><small>Ação</small>
@@ -49,6 +55,60 @@
         </button>
     </div>
 </div>
+
+@if (ViewModel.ExibirModalConfirmarDisparada && ViewModel.PinoJogadorDisparada != null && ViewModel.DestinoDisparada != null)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.VoltarEscolhaCasaDisparada"></div>
+
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-disparada" @onclick:stopPropagation="true">
+        <header class="attack-header">
+            <div>
+                <p>Confirmar Disparada</p>
+                <h2 id="titulo-disparada">◷ Mover e Encerrar Turno</h2>
+            </div>
+            <button class="attack-close" type="button" aria-label="Fechar disparada" @onclick="ViewModel.VoltarEscolhaCasaDisparada">×</button>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(ViewModel.ErroDisparada))
+        {
+            <div class="attack-error">@ViewModel.ErroDisparada</div>
+        }
+
+        <div class="attack-result-box acertou">
+            <span class="attack-badge acertou">ALCANCE VÁLIDO (MÁX. @ViewModel.DeslocamentoDisparadaTexto)</span>
+            <strong>@ViewModel.PinoJogadorDisparada.CoordenadaTexto → @ViewModel.DestinoDisparadaTexto</strong>
+            <p>
+                Distância percorrida: <b>@ViewModel.DistanciaDestinoTexto</b>
+                (Deslocamento dobrado de @ViewModel.DeslocamentoNormalTexto para @ViewModel.DeslocamentoDisparadaTexto).
+            </p>
+            <p class="attack-hp-summary">
+                @if (!string.IsNullOrWhiteSpace(ViewModel.NomeProximoJogadorTurno))
+                {
+                    <text>Ao confirmar, seu pino será movido e o turno passará para <b>@ViewModel.NomeProximoJogadorTurno</b>.</text>
+                }
+                else
+                {
+                    <text>Ao confirmar, seu pino será movido e seu turno será encerrado.</text>
+                }
+            </p>
+        </div>
+
+        <div class="attack-footer-actions">
+            <button type="button"
+                    class="attack-btn-sec"
+                    disabled="@ViewModel.ExecutandoDisparada"
+                    @onclick="ViewModel.VoltarEscolhaCasaDisparada">
+                Escolher outra casa
+            </button>
+            <button type="button"
+                    class="attack-btn-prim"
+                    disabled="@ViewModel.ExecutandoDisparada"
+                    @onclick="ViewModel.ConfirmarDisparadaAsync">
+                @(ViewModel.ExecutandoDisparada ? "Movendo..." : "Confirmar e Encerrar Turno")
+            </button>
+        </div>
+    </section>
+}
 
 @if (ViewModel.ExibirModalAtaque)
 {
