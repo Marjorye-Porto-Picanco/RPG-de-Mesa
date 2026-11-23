@@ -1,0 +1,91 @@
+@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="chat-panel">
+    <div class="chat-tabs" role="tablist" aria-label="Canais da mesa">
+        <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Chat ? "ativa" : "")"
+                type="button"
+                role="tab"
+                aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Chat)"
+                @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Chat)">
+            Chat
+        </button>
+        <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Registro ? "ativa" : "")"
+                type="button"
+                role="tab"
+                aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Registro)"
+                @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Registro)">
+            Registro
+        </button>
+        <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Npc ? "ativa" : "")"
+                type="button"
+                role="tab"
+                aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Npc)"
+                @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Npc)">
+            NPCs
+        </button>
+        <button class="chat-tab @(ViewModel.AbaChatAtiva == CanaisSessao.Combate ? "ativa" : "")"
+                type="button"
+                role="tab"
+                aria-selected="@(ViewModel.AbaChatAtiva == CanaisSessao.Combate)"
+                @onclick="() => ViewModel.MudarAbaChat(CanaisSessao.Combate)">
+            Combate
+        </button>
+    </div>
+
+    <div class="chat-feed" aria-live="polite">
+        @if (ViewModel.AbaChatAtiva == CanaisSessao.Npc)
+        {
+            <p class="chat-placeholder">Canal de NPCs reservado para próximas atualizações.</p>
+        }
+        else if (!ViewModel.MensagensAbaAtiva.Any())
+        {
+            <p class="chat-placeholder">
+                @(ViewModel.AbaChatAtiva switch
+                {
+                    CanaisSessao.Registro => "Nenhuma rolagem registrada ainda.",
+                    CanaisSessao.Combate => "Nenhum ataque ou dano registrado ainda.",
+                    _ => "Nenhuma mensagem enviada ainda."
+                })
+            </p>
+        }
+        else
+        {
+            @foreach (var msg in ViewModel.MensagensAbaAtiva)
+            {
+                <p @key="msg.IdMensagem" class="chat-line @(msg.EhSistema ? "dice-line" : "")">
+                    <strong class="chat-name @(msg.EhSistema ? "sistema" : (msg.Autor == ViewModel.Estado.Mestre.Username ? "mestre" : ""))">
+                        @(msg.EhSistema ? "Sistema" : msg.Autor)
+                    </strong>
+                    <span>@msg.Conteudo</span>
+                    <time>@msg.DataEnvioLocal.ToString("HH:mm")</time>
+                </p>
+            }
+        }
+    </div>
+
+    @if (ViewModel.AbaChatAtiva == CanaisSessao.Chat)
+    {
+        <form class="chat-compose" @onsubmit="ViewModel.EnviarMensagemChatAsync" @onsubmit:preventDefault="true">
+            <input type="text"
+                   maxlength="240"
+                   placeholder="Escreva para a mesa..."
+                   aria-label="Mensagem para a mesa"
+                   autocomplete="off"
+                   @bind="ViewModel.TextoMensagem"
+                   @bind:event="oninput"
+                   disabled="@ViewModel.EnviandoMensagem" />
+            <button type="submit"
+                    aria-label="Enviar mensagem"
+                    title="Enviar mensagem"
+                    disabled="@(ViewModel.EnviandoMensagem || string.IsNullOrWhiteSpace(ViewModel.TextoMensagem))">
+                ↑
+            </button>
+        </form>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SessaoViewModel ViewModel { get; set; } = default!;
+}
