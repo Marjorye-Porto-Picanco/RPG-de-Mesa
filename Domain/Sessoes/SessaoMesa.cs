@@ -10,6 +10,7 @@ public class SessaoMesa : IAggregateRoot
     public int NumeroSessao { get; private set; } = 1;
     public string? Titulo { get; private set; }
     public int? IdMapaAtivo { get; private set; }
+    public int? IdAccountTurno { get; private set; }
     public bool Ativa { get; private set; }
     public DateTime DataInicio { get; private set; }
     public DateTime? DataFim { get; private set; }
@@ -37,6 +38,7 @@ public class SessaoMesa : IAggregateRoot
         NumeroSessao = Math.Max(1, numeroSessao);
         Titulo = string.IsNullOrWhiteSpace(titulo) ? $"Sessão #{NumeroSessao}" : titulo.Trim();
         IdMapaAtivo = idMapaInicial;
+        IdAccountTurno = null;
         Ativa = true;
         DataInicio = DateTime.UtcNow;
         DataAtualizacao = DataInicio;
@@ -54,6 +56,7 @@ public class SessaoMesa : IAggregateRoot
     public void FinalizarSessao()
     {
         Ativa = false;
+        IdAccountTurno = null;
         DataFim ??= DateTime.UtcNow;
         DataAtualizacao = DateTime.UtcNow;
     }
@@ -76,6 +79,12 @@ public class SessaoMesa : IAggregateRoot
     public void AlterarMapaAtivo(int? idMapa)
     {
         IdMapaAtivo = idMapa;
+        DataAtualizacao = DateTime.UtcNow;
+    }
+
+    public void DefinirTurnoJogador(int? idAccount)
+    {
+        IdAccountTurno = idAccount;
         DataAtualizacao = DateTime.UtcNow;
     }
 
