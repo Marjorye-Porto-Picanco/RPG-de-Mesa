@@ -195,6 +195,19 @@ public class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
+    public async Task AtualizarTurnoJogadorAsync(int idSessao, int? idAccountTurno)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+
+        var sessao = await contexto.SessoesMesa
+            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+
+        if (sessao == null) return;
+
+        sessao.DefinirTurnoJogador(idAccountTurno);
+        await contexto.SaveChangesAsync();
+    }
+
     public async Task AdicionarMensagemAsync(SessaoMensagem mensagem)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
@@ -421,16 +434,17 @@ public class SessaoRepository : ISessaoRepository
         pino.DefinirPvAtual(pvAtual);
         await contexto.SaveChangesAsync();
     }
-    public async Task AtualizarTurnoJogadorAsync(int idSessao, int? idAccountTurno)
+
+    public async Task AtualizarPvPersonagemAsync(int idPersonagem, int pvAtual)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessao = await contexto.SessoesMesa
-            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+        var personagem = await contexto.Personagens
+            .FirstOrDefaultAsync(p => p.IdPersonagem == idPersonagem);
 
-        if (sessao == null) return;
+        if (personagem == null) return;
 
-        sessao.DefinirTurnoJogador(idAccountTurno);
+        personagem.PvAtual = Math.Clamp(pvAtual, 0, Math.Max(1, personagem.PvMaximo));
         await contexto.SaveChangesAsync();
     }
 }

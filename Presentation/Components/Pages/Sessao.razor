@@ -327,7 +327,7 @@ else
                 <button class="toolbar-tool @(ViewModel.ExibirModalAtaque ? "selecionada" : "")"
                         type="button"
                         disabled="@(!ViewModel.EhMeuTurno)"
-                        title="@(ViewModel.Estado.EhMestre ? "Ação exclusiva de jogadores no turno" : (ViewModel.EhMeuTurno ? "Atacar inimigo" : "Aguarde o Mestre liberar seu turno"))"
+                        title="@(ViewModel.Estado.EhMestre ? "Ação exclusiva de jogadores no turno" : (ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno"))"
                         aria-label="Abrir ataque"
                         @onclick="ViewModel.AbrirModalAtaqueAsync">
                     <span aria-hidden="true">⚔</span>
@@ -460,7 +460,16 @@ else
                                                     </span>
                                                     <span class="pino-item-info">
                                                         <strong>@nome</strong>
-                                                        <small>@(pinoAtual != null ? $"Neste mapa: {pinoAtual.CoordenadaTexto}" : (outroMapa ?? "Clique para posicionar"))</small>
+                                                        <small>
+                                                            @if (pinoAtual != null)
+                                                            {
+                                                                <text>@pinoAtual.CoordenadaTexto@(pinoAtual.PvMaximo.HasValue ? $" · PV {pinoAtual.PvAtual ?? 0}/{pinoAtual.PvMaximo}" : "")</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                @(outroMapa ?? "Clique para posicionar")
+                                                            }
+                                                        </small>
                                                     </span>
                                                 </button>
 
@@ -499,6 +508,8 @@ else
                                             var outroMapa = ViewModel.ObterResumoOutroMapaDoPino(TiposPinoSessao.Npc, npc.IdNpc);
                                             bool selecionado = ViewModel.PinoParaPosicionar?.TipoEntidade == TiposPinoSessao.Npc
                                                 && ViewModel.PinoParaPosicionar.IdEntidade == npc.IdNpc;
+                                            int pvMaxNpc = SessaoService.CalcularPvMaximoNpc(npc);
+                                            int pvAtualNpc = pinoAtual?.PvAtual ?? pvMaxNpc;
 
                                             <div class="pino-item-card @(selecionado ? "selecionado" : "")">
                                                 <button type="button"
@@ -517,13 +528,32 @@ else
                                                     </span>
                                                     <span class="pino-item-info">
                                                         <strong>@npc.Nome</strong>
-                                                        <small>@(pinoAtual != null ? $"Neste mapa: {pinoAtual.CoordenadaTexto}" : (outroMapa ?? "Clique para posicionar"))</small>
+                                                        <small>
+                                                            @if (pinoAtual != null)
+                                                            {
+                                                                <text>@pinoAtual.CoordenadaTexto · PV @pvAtualNpc/@pvMaxNpc</text>
+                                                            }
+                                                            else
+                                                            {
+                                                                @(outroMapa ?? "Clique para posicionar")
+                                                            }
+                                                        </small>
                                                     </span>
                                                 </button>
 
                                                 @if (pinoAtual != null)
                                                 {
                                                     <div class="pino-item-acoes">
+                                                        @if (pvAtualNpc < pvMaxNpc)
+                                                        {
+                                                            <button type="button"
+                                                                    class="pino-btn-acao curar"
+                                                                    title="Restaurar PV máximo (@pvMaxNpc)"
+                                                                    disabled="@ViewModel.SalvandoPvEntidade"
+                                                                    @onclick="() => ViewModel.RestaurarPvNpcPeloPainelAsync(npc)">
+                                                                ♥
+                                                            </button>
+                                                        }
                                                         <button type="button"
                                                                 class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
                                                                 title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
@@ -596,7 +626,7 @@ else
                                                             <button type="button"
                                                                     class="pino-btn-acao curar"
                                                                     title="Restaurar PV máximo (@monstro.PvMaximo)"
-                                                                    disabled="@ViewModel.SalvandoPvMonstro"
+                                                                    disabled="@ViewModel.SalvandoPvEntidade"
                                                                     @onclick="() => ViewModel.RestaurarPvMonstroPeloPainelAsync(monstro)">
                                                                 ♥
                                                             </button>
@@ -723,18 +753,18 @@ else
                                                         && ViewModel.PinoArrastando.TipoEntidade == pino.TipoEntidade
                                                         && ViewModel.PinoArrastando.IdEntidade == pino.IdEntidade;
 
-                                                    bool monstroDerrotado = pino.TipoEntidade == TiposPinoSessao.Monstro
+                                                    bool derrotado = pino.PvMaximo.HasValue
                                                         && pino.PvAtual.HasValue
                                                         && pino.PvAtual.Value <= 0;
 
-                                                    string infoPv = pino.TipoEntidade == TiposPinoSessao.Monstro && pino.PvMaximo.HasValue
+                                                    string infoPv = pino.PvMaximo.HasValue
                                                         ? $" · PV {pino.PvAtual ?? pino.PvMaximo}/{pino.PvMaximo} · CA {pino.ClasseArmadura ?? 10}"
                                                         : string.Empty;
 
                                                     <button type="button"
                                                             @key="@($"{pino.IdMapa}-{pino.TipoEntidade}-{pino.IdEntidade}")"
                                                             draggable="false"
-                                                            class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel") @(monstroDerrotado ? "pino-derrotado" : "") @(ViewModel.Estado.EhMestre ? "arrastavel" : "") @(estaArrastando ? "arrastando" : "")"
+                                                            class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel") @(derrotado ? "pino-derrotado" : "") @(ViewModel.Estado.EhMestre ? "arrastavel" : "") @(estaArrastando ? "arrastando" : "")"
                                                             title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{infoPv}{(pino.Visivel ? "" : " · Oculto")}{(ViewModel.Estado.EhMestre ? " · Segure e arraste para mover ou clique para abrir ficha" : "")}")"
                                                             @onpointerdown="(e) => AoPressionarPino(e, pino)"
                                                             @onpointerdown:stopPropagation="true"
@@ -748,7 +778,7 @@ else
                                                         {
                                                             <span>@ObterIniciais(pino.Nome)</span>
                                                         }
-                                                        @if (monstroDerrotado)
+                                                        @if (derrotado)
                                                         {
                                                             <em class="pino-badge-derrotado" aria-label="Derrotado">✕</em>
                                                         }
@@ -1057,31 +1087,50 @@ else
                     </div>
 
                     <div class="attack-section">
-                        <p class="dice-section-label">2. Escolha o alvo no mapa</p>
-                        @if (!ViewModel.MonstrosAlvoNoMapa.Any())
+                        <p class="dice-section-label">2. Escolha o alvo no mapa (Monstro, NPC ou Jogador)</p>
+                        @if (!ViewModel.AlvosNoMapa.Any())
                         {
-                            <p class="attack-empty">Nenhum monstro visível no mapa atual.</p>
+                            <p class="attack-empty">Nenhum alvo visível no mapa atual.</p>
                         }
                         else
                         {
                             <div class="attack-choice-list">
-                                @foreach (var alvo in ViewModel.MonstrosAlvoNoMapa)
+                                @foreach (var alvo in ViewModel.AlvosNoMapa)
                                 {
                                     int pvAt = alvo.PvAtual ?? alvo.PvMaximo ?? 0;
                                     int pvMx = alvo.PvMaximo ?? 0;
                                     bool derrotado = pvAt <= 0;
-                                    bool sel = !derrotado && ViewModel.IdMonstroAlvoSelecionado == alvo.IdEntidade;
+                                    bool sel = !derrotado
+                                        && ViewModel.TipoAlvoSelecionado == alvo.TipoEntidade
+                                        && ViewModel.IdAlvoSelecionado == alvo.IdEntidade;
+
+                                    string tagClasse = alvo.TipoEntidade switch
+                                    {
+                                        TiposPinoSessao.Monstro => "alvo-tag-monstro",
+                                        TiposPinoSessao.Npc => "alvo-tag-npc",
+                                        _ => "alvo-tag-jogador"
+                                    };
+
+                                    string tagLabel = alvo.TipoEntidade switch
+                                    {
+                                        TiposPinoSessao.Monstro => "Monstro",
+                                        TiposPinoSessao.Npc => "NPC",
+                                        _ => "Jogador"
+                                    };
 
                                     <button type="button"
                                             disabled="@derrotado"
                                             class="attack-choice-card @(sel ? "selecionado" : "") @(derrotado ? "derrotado" : "")"
-                                            title="@(derrotado ? "Monstro derrotado (0 PV)" : $"Atacar {alvo.Nome}")"
-                                            @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.IdEntidade)">
-                                        <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
+                                            title="@(derrotado ? $"{alvo.Nome} está com 0 PV" : $"Atacar {alvo.Nome}")"
+                                            @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.TipoEntidade, alvo.IdEntidade)">
+                                        <div class="attack-choice-topo">
+                                            <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
+                                            <span class="alvo-tag @tagClasse">@tagLabel</span>
+                                        </div>
                                         <small>
                                             @if (derrotado)
                                             {
-                                                <text>☠️ Derrotado (0 / @pvMx PV)</text>
+                                                <text>☠️ @(alvo.TipoEntidade == TiposPinoSessao.Personagem ? "Inconsciente" : "Derrotado") (0 / @pvMx PV)</text>
                                             }
                                             else
                                             {
@@ -1165,7 +1214,7 @@ else
                             </p>
                             <p class="attack-hp-summary">
                                 PV de <b>@r.NomeAlvo</b>: @r.PvAnterior → <b>@r.PvNovo / @r.PvMaximo</b>
-                                @(r.PvNovo <= 0 ? " (Derrotado!)" : "")
+                                @(r.PvNovo <= 0 ? (r.TipoAlvo == TiposPinoSessao.Personagem ? " (Inconsciente!)" : " (Derrotado!)") : "")
                             </p>
                         }
                         else
@@ -1224,14 +1273,14 @@ else
                                 <button type="button"
                                         class="fm-btn-pv-ok"
                                         title="Salvar PV atual"
-                                        disabled="@ViewModel.SalvandoPvMonstro"
+                                        disabled="@ViewModel.SalvandoPvEntidade"
                                         @onclick="ViewModel.SalvarPvAtualMonstroAsync">
                                     ✓
                                 </button>
                                 <button type="button"
                                         class="fm-btn-pv-max"
                                         title="Restaurar PV máximo (@m.PvMaximo)"
-                                        disabled="@ViewModel.SalvandoPvMonstro"
+                                        disabled="@ViewModel.SalvandoPvEntidade"
                                         @onclick="ViewModel.RestaurarPvMaximoMonstroAsync">
                                     ↻ Máx
                                 </button>
@@ -1275,6 +1324,10 @@ else
     @if (ViewModel.NpcEmVisualizacao != null)
     {
         var n = ViewModel.NpcEmVisualizacao;
+        int pvMaxNpc = SessaoService.CalcularPvMaximoNpc(n);
+        int pvAtualNpc = ViewModel.PinoNpcEmVisualizacao?.PvAtual ?? pvMaxNpc;
+        int caNpc = SessaoService.CalcularCaBase(n.Destreza);
+
         <div class="sessao-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
 
         <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
@@ -1303,10 +1356,37 @@ else
                 </div>
 
                 <div class="fm-dados-pessoais">
-                    <div><span>Antecedente</span><strong>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</strong></div>
+                    <div>
+                        <span>PV Atual / Máximo</span>
+                        @if (ViewModel.Estado.EhMestre)
+                        {
+                            <div class="fm-pv-monstro-edit">
+                                <input type="number" min="0" max="@pvMaxNpc" @bind="ViewModel.PvAtualNpcEdicao" />
+                                <span>/ @pvMaxNpc</span>
+                                <button type="button"
+                                        class="fm-btn-pv-ok"
+                                        title="Salvar PV atual"
+                                        disabled="@ViewModel.SalvandoPvEntidade"
+                                        @onclick="ViewModel.SalvarPvAtualNpcAsync">
+                                    ✓
+                                </button>
+                                <button type="button"
+                                        class="fm-btn-pv-max"
+                                        title="Restaurar PV máximo (@pvMaxNpc)"
+                                        disabled="@ViewModel.SalvandoPvEntidade"
+                                        @onclick="ViewModel.RestaurarPvMaximoNpcAsync">
+                                    ↻ Máx
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <strong>@pvAtualNpc / @pvMaxNpc</strong>
+                        }
+                    </div>
+                    <div><span>CA</span><strong>@caNpc</strong></div>
                     <div><span>Tendência</span><strong>@(string.IsNullOrWhiteSpace(n.Tendencia) ? "Neutra" : n.Tendencia)</strong></div>
-                    <div><span>Nível</span><strong>@n.Nivel</strong></div>
-                    <div><span>Classe</span><strong>@(string.IsNullOrWhiteSpace(n.ClasseTexto) ? "—" : n.ClasseTexto)</strong></div>
+                    <div><span>Antecedente</span><strong>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</strong></div>
                 </div>
 
                 <div class="fm-bloco-pergaminho">
