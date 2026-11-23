@@ -15,6 +15,11 @@ public class SessaoParticipante
     public virtual SessaoMesa Sessao { get; private set; } = null!;
     public virtual Usuario Usuario { get; private set; } = null!;
     public virtual Personagem? Personagem { get; private set; }
+    public bool Esquivando { get; private set; }
+    public bool Escondido { get; private set; }
+
+    public void DefinirEsquiva(bool esquivando) => Esquivando = esquivando;
+    public void DefinirEscondido(bool escondido) => Escondido = escondido;
 
     protected SessaoParticipante() { }
 

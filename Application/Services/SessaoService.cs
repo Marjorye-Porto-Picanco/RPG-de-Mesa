@@ -278,6 +278,19 @@ public class SessaoService
                 }
             }
 
+            if (idAccountJogador.HasValue)
+            {
+                var sessaoComp = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
+                var partAlvo = sessaoComp?.Participantes.FirstOrDefault(p => p.IdAccount == idAccountJogador.Value);
+                if (partAlvo != null && partAlvo.Esquivando)
+                {
+                    await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(
+                        idSessao,
+                        idAccountJogador.Value,
+                        esquivando: false);
+                }
+            }
+
             await _sessaoRepo.AtualizarTurnoJogadorAsync(idSessao, idAccountJogador);
 
             string nomeExibicao = string.IsNullOrWhiteSpace(nomeJogador)
@@ -386,6 +399,20 @@ public class SessaoService
                 return (false, "Apenas o Mestre pode alterar a visibilidade dos pinos.");
 
             await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, visivel);
+
+            if (visivel && tipoEntidade == TiposPinoSessao.Personagem)
+            {
+                var sessaoComp = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
+                var part = sessaoComp?.Participantes.FirstOrDefault(p => p.IdPersonagem == idEntidade);
+                if (part != null && part.Escondido)
+                {
+                    await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(
+                        idSessao,
+                        part.IdAccount,
+                        escondido: false);
+                }
+            }
+
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -421,8 +448,173 @@ public class SessaoService
     }
 
     // =========================================================================
-    // COMBATE: ATAQUE (MONSTRO, NPC OU OUTRO JOGADOR) E CONTROLE DE PV
+    // COMBATE: ESQUIVAR (DESVANTAGEM 2D20 ATÉ RETORNAR O TURNO + PASSA TURNO)
     // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> RegistrarEsquivaAsync(
+        int idCampanha,
+        int idSessao,
+        int idAccountJogador,
+        string nomePersonagem,
+        int? idProximoAccountTurno,
+        string? nomeProximoJogador)
+    {
+        try
+        {
+            var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+            if (sessao == null || !sessao.Ativa)
+                return (false, "A sessão não está ativa.");
+
+            if (sessao.IdAccountTurno != idAccountJogador)
+                return (false, "Aguarde o Mestre liberar o seu turno para esquivar.");
+
+            await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(
+                idSessao,
+                idAccountJogador,
+                esquivando: true);
+
+            string textoSistema =
+                $"◈ {nomePersonagem} assumiu postura de Esquiva! " +
+                $"Até o turno voltar para {nomePersonagem}, ataques contra ele têm desvantagem (2d20, menor valor).";
+
+            await Task.WhenAll(
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
+
+            return await DefinirTurnoJogadorAsync(
+                idCampanha,
+                idSessao,
+                idAccountJogador,
+                idProximoAccountTurno,
+                nomeProximoJogador);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao registrar esquiva: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    // =========================================================================
+    // COMBATE: ESCONDER (TESTE DE FURTIVIDADE -> PINO INVISÍVEL + PASSA TURNO)
+    // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> RegistrarEsconderAsync(
+        int idCampanha,
+        int idSessao,
+        int? idMapa,
+        int idAccountJogador,
+        int idPersonagem,
+        ResultadoEsconderDto resultado,
+        int? idProximoAccountTurno,
+        string? nomeProximoJogador)
+    {
+        try
+        {
+            var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+            if (sessao == null || !sessao.Ativa)
+                return (false, "A sessão não está ativa.");
+
+            if (sessao.IdAccountTurno != idAccountJogador)
+                return (false, "Aguarde o Mestre liberar o seu turno para se esconder.");
+
+            await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(
+                idSessao,
+                idAccountJogador,
+                escondido: resultado.Passou);
+
+            if (resultado.Passou && idMapa.HasValue)
+            {
+                await _sessaoRepo.AlterarVisibilidadePinoAsync(
+                    idSessao,
+                    idMapa,
+                    TiposPinoSessao.Personagem,
+                    idPersonagem,
+                    visivel: false);
+            }
+
+            string partesBonus = $"DES {(resultado.ModificadorDestreza >= 0 ? "+" : "")}{resultado.ModificadorDestreza}";
+            if (resultado.BonusProficiencia > 0)
+                partesBonus += $", Prof. +{resultado.BonusProficiencia}";
+            if (resultado.BonusExtra != 0)
+                partesBonus += $", Extra {(resultado.BonusExtra > 0 ? "+" : "")}{resultado.BonusExtra}";
+
+            string textoSistema = resultado.Passou
+                ? $"🥷 {resultado.NomePersonagem} realizou um teste de Furtividade: {resultado.Total} [d20: {resultado.DadoD20} | {partesBonus}] vs CD {resultado.CdAlvo} → SUCESSO! Ficou escondido no mapa."
+                : $"⌕ {resultado.NomePersonagem} tentou se esconder (Furtividade): {resultado.Total} [d20: {resultado.DadoD20} | {partesBonus}] vs CD {resultado.CdAlvo} → FALHOU!";
+
+            await Task.WhenAll(
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
+                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
+
+            return await DefinirTurnoJogadorAsync(
+                idCampanha,
+                idSessao,
+                idAccountJogador,
+                idProximoAccountTurno,
+                nomeProximoJogador);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao registrar tentativa de esconder: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
+    // =========================================================================
+    // COMBATE: ATAQUE, ATAQUE DE OPORTUNIDADE E CONTROLE DE PV
+    // =========================================================================
+    public async Task<(bool Sucesso, string Mensagem)> RegistrarAtaquesOportunidadeAsync(
+        int idSessao,
+        int idAccountJogador,
+        int idPersonagemJogador,
+        string nomePersonagem,
+        int pvNovo,
+        int pvMaximo,
+        List<AtaqueOportunidadeDto> ataques)
+    {
+        try
+        {
+            if (ataques == null || ataques.Count == 0)
+                return (true, string.Empty);
+
+            var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
+            if (sessao == null || !sessao.Ativa)
+                return (false, "A sessão não está ativa.");
+
+            if (sessao.IdAccountTurno != idAccountJogador)
+                return (false, "Ação fora do turno atual.");
+
+            int pvFinal = Math.Clamp(pvNovo, 0, Math.Max(1, pvMaximo));
+            await _sessaoRepo.AtualizarPvPersonagemAsync(idPersonagemJogador, pvFinal);
+            InvalidarCacheCampanha(sessao.IdCampanha);
+
+            foreach (var atq in ataques)
+            {
+                string dados = string.Join(" + ", atq.ResultadosDano);
+                string mod = atq.ModificadorDano > 0
+                    ? $" + {atq.ModificadorDano}"
+                    : atq.ModificadorDano < 0
+                        ? $" - {Math.Abs(atq.ModificadorDano)}"
+                        : string.Empty;
+
+                string statusPv = atq.PvAposAtaque <= 0
+                    ? $"☠️ {nomePersonagem} caiu inconsciente! (PV: 0/{pvMaximo})"
+                    : $"PV de {nomePersonagem}: {atq.PvAposAtaque}/{pvMaximo}";
+
+                string textoSistema =
+                    $"⚡ ATAQUE DE OPORTUNIDADE! {atq.NomeMonstro} atingiu {nomePersonagem} ao sair do alcance corpo a corpo (1,5 m) sem usar Desengajar! " +
+                    $"Dano ({atq.ExpressaoDano}): -{atq.DanoTotal} PV [{dados}]{mod}. {statusPv}";
+
+                await Task.WhenAll(
+                    _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
+                    _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
+            }
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao aplicar ataque de oportunidade: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
     public async Task<(bool Sucesso, string Mensagem)> RegistrarAtaqueAsync(
         int idSessao,
         int? idMapa,
@@ -438,11 +630,31 @@ public class SessaoService
             if (sessao.IdAccountTurno != idAccountJogador)
                 return (false, "Aguarde o Mestre liberar o seu turno para atacar.");
 
+            var sessaoComp = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
+            var partAtacante = sessaoComp?.Participantes.FirstOrDefault(p => p.IdAccount == idAccountJogador);
+            if (partAtacante != null && partAtacante.Escondido)
+            {
+                await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(idSessao, idAccountJogador, escondido: false);
+                if (partAtacante.IdPersonagem.HasValue && idMapa.HasValue)
+                {
+                    await _sessaoRepo.AlterarVisibilidadePinoAsync(
+                        idSessao,
+                        idMapa,
+                        TiposPinoSessao.Personagem,
+                        partAtacante.IdPersonagem.Value,
+                        visivel: true);
+                }
+            }
+
             string modAtk = ataque.ModificadorAtaque > 0
                 ? $" + {ataque.ModificadorAtaque}"
                 : ataque.ModificadorAtaque < 0
                     ? $" - {Math.Abs(ataque.ModificadorAtaque)}"
                     : string.Empty;
+
+            string detalheDado = ataque.AlvoEsquivando
+                ? $"2d20 Desvantagem/Esquiva: [{ataque.DadoAtaque1}, {ataque.DadoAtaque2}] → {ataque.DadoAtaque}{modAtk}"
+                : $"d20: {ataque.DadoAtaque}{modAtk}";
 
             string textoSistema;
 
@@ -484,14 +696,14 @@ public class SessaoService
                 {
                     textoSistema =
                         $"💥 CRÍTICO! {ataque.NomeAtacante} acertou um golpe crítico em {ataque.NomeAlvo} com {ataque.NomeArma}! " +
-                        $"Ataque: 20 natural (Total {ataque.TotalAtaque}) vs CA {ataque.CaAlvo} → ACERTO CRÍTICO! " +
+                        $"Ataque: 20 natural [{detalheDado}] (Total {ataque.TotalAtaque}) vs CA {ataque.CaAlvo} → ACERTO CRÍTICO! " +
                         $"Dano dobrado (2× {ataque.ExpressaoDano}): {ataque.DanoTotal}{tipoDanoTxt} [{dadosDano}]{modDano}. {statusAlvo}";
                 }
                 else
                 {
                     textoSistema =
                         $"⚔️ {ataque.NomeAtacante} atacou {ataque.NomeAlvo} com {ataque.NomeArma}! " +
-                        $"Ataque: {ataque.TotalAtaque} [d20: {ataque.DadoAtaque}{modAtk}] vs CA {ataque.CaAlvo} → ACERTOU! " +
+                        $"Ataque: {ataque.TotalAtaque} [{detalheDado}] vs CA {ataque.CaAlvo} → ACERTOU! " +
                         $"Dano ({ataque.ExpressaoDano}): {ataque.DanoTotal}{tipoDanoTxt} [{dadosDano}]{modDano}. {statusAlvo}";
                 }
             }
@@ -499,7 +711,7 @@ public class SessaoService
             {
                 textoSistema =
                     $"⚔️ {ataque.NomeAtacante} atacou {ataque.NomeAlvo} com {ataque.NomeArma}. " +
-                    $"Ataque: {ataque.TotalAtaque} [d20: {ataque.DadoAtaque}{modAtk}] vs CA {ataque.CaAlvo} → FALHOU!";
+                    $"Ataque: {ataque.TotalAtaque} [{detalheDado}] vs CA {ataque.CaAlvo} → FALHOU!";
             }
 
             var msgChat = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Chat, textoSistema);
@@ -986,7 +1198,9 @@ public class SessaoService
                 AvatarUrl = !string.IsNullOrWhiteSpace(fichaAtiva?.Imagem)
                     ? fichaAtiva.Imagem
                     : infoUsuario.AvatarPerfil,
-                Online = presenca?.EstaConectadoAgora() ?? false
+                Online = presenca?.EstaConectadoAgora() ?? false,
+                Esquivando = presenca?.Esquivando ?? false,
+                Escondido = presenca?.Escondido ?? false
             });
         }
 
@@ -1007,12 +1221,16 @@ public class SessaoService
             int? pvAtual = pino.PvAtual;
             int? pvMaximo = null;
             int? classeArmadura = null;
+            bool esquivando = false;
+            bool escondido = false;
 
             if (pino.TipoEntidade == TiposPinoSessao.Personagem)
             {
                 var jog = jogadoresDto.FirstOrDefault(j => j.IdPersonagem == pino.IdEntidade);
                 nome = jog?.NomePersonagem ?? jog?.Username ?? $"Herói #{pino.IdEntidade}";
                 imagem = jog?.AvatarUrl;
+                esquivando = jog?.Esquivando ?? false;
+                escondido = jog?.Escondido ?? false;
 
                 if (fichasPorIdPersonagem.TryGetValue(pino.IdEntidade, out var fichaJog))
                 {
@@ -1056,7 +1274,9 @@ public class SessaoService
                 Visivel = pino.Visivel,
                 PvAtual = pvAtual,
                 PvMaximo = pvMaximo,
-                ClasseArmadura = classeArmadura
+                ClasseArmadura = classeArmadura,
+                Esquivando = esquivando,
+                Escondido = escondido
             });
         }
 
@@ -1152,7 +1372,20 @@ public class PinoMapaDto
     public int? PvAtual { get; set; }
     public int? PvMaximo { get; set; }
     public int? ClasseArmadura { get; set; }
+    public bool Esquivando { get; set; }
+    public bool Escondido { get; set; }
     public string CoordenadaTexto => $"{(char)('A' + Coluna)}{Linha + 1}";
+}
+
+public class AtaqueOportunidadeDto
+{
+    public int IdMonstro { get; set; }
+    public string NomeMonstro { get; set; } = string.Empty;
+    public string ExpressaoDano { get; set; } = string.Empty;
+    public List<int> ResultadosDano { get; set; } = new();
+    public int ModificadorDano { get; set; }
+    public int DanoTotal { get; set; }
+    public int PvAposAtaque { get; set; }
 }
 
 public class RegistroAtaqueDto
@@ -1165,6 +1398,9 @@ public class RegistroAtaqueDto
     public int IdEntidadeAlvo { get; set; }
     public string NomeAlvo { get; set; } = string.Empty;
     public int CaAlvo { get; set; }
+    public bool AlvoEsquivando { get; set; }
+    public int DadoAtaque1 { get; set; }
+    public int DadoAtaque2 { get; set; }
     public int DadoAtaque { get; set; }
     public int ModificadorAtaque { get; set; }
     public int TotalAtaque { get; set; }
@@ -1176,6 +1412,19 @@ public class RegistroAtaqueDto
     public int PvAnterior { get; set; }
     public int PvNovo { get; set; }
     public int PvMaximo { get; set; }
+}
+
+public class ResultadoEsconderDto
+{
+    public string NomePersonagem { get; set; } = string.Empty;
+    public int DadoD20 { get; set; }
+    public int ModificadorDestreza { get; set; }
+    public bool TemProficiencia { get; set; }
+    public int BonusProficiencia { get; set; }
+    public int BonusExtra { get; set; }
+    public int Total { get; set; }
+    public int CdAlvo { get; set; } = 12;
+    public bool Passou { get; set; }
 }
 
 public class HistoricoSessaoDto
@@ -1223,6 +1472,8 @@ public class ParticipanteSessaoDto
     public string SubtituloLinha2 { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public bool Online { get; set; }
+    public bool Esquivando { get; set; }
+    public bool Escondido { get; set; }
 }
 
 public class MensagemSessaoDto

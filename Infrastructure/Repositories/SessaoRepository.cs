@@ -195,19 +195,51 @@ public class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
-    public async Task AtualizarTurnoJogadorAsync(int idSessao, int? idAccountTurno)
+    public async Task AtualizarTurnoJogadorAsync(int idSessao, int? idAccountJogador)
     {
         await using var contexto = await _factory.CreateDbContextAsync();
 
-        var sessao = await contexto.SessoesMesa
-            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
-
+        var sessao = await contexto.SessoesMesa.FirstOrDefaultAsync(s => s.IdSessao == idSessao);
         if (sessao == null) return;
 
-        sessao.DefinirTurnoJogador(idAccountTurno);
+        sessao.DefinirTurnoJogador(idAccountJogador);
+
+        // Quando o turno volta para o jogador, o bônus de Esquiva desaparece automaticamente
+        if (idAccountJogador.HasValue)
+        {
+            var participante = await contexto.SessaoParticipantes
+                .FirstOrDefaultAsync(p => p.IdSessao == idSessao && p.IdAccount == idAccountJogador.Value);
+
+            if (participante != null && participante.Esquivando)
+            {
+                participante.DefinirEsquiva(false);
+            }
+        }
+
         await contexto.SaveChangesAsync();
     }
 
+    public async Task AtualizarEstadoCombateParticipanteAsync(
+        int idSessao,
+        int idAccount,
+        bool? esquivando = null,
+        bool? escondido = null)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+
+        var participante = await contexto.SessaoParticipantes
+            .FirstOrDefaultAsync(p => p.IdSessao == idSessao && p.IdAccount == idAccount);
+
+        if (participante == null) return;
+
+        if (esquivando.HasValue)
+            participante.DefinirEsquiva(esquivando.Value);
+
+        if (escondido.HasValue)
+            participante.DefinirEscondido(escondido.Value);
+
+        await contexto.SaveChangesAsync();
+    }
     public async Task AdicionarMensagemAsync(SessaoMensagem mensagem)
     {
         await using var contexto = await _factory.CreateDbContextAsync();

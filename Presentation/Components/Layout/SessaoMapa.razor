@@ -102,7 +102,7 @@
                                         <small>
                                             @if (pinoAtual != null)
                                             {
-                                                <text>@pinoAtual.CoordenadaTexto@(pinoAtual.PvMaximo.HasValue ? $" · PV {pinoAtual.PvAtual ?? 0}/{pinoAtual.PvMaximo}" : "")</text>
+                                                <text>@pinoAtual.CoordenadaTexto@(pinoAtual.PvMaximo.HasValue ? $" · PV {pinoAtual.PvAtual ?? 0}/{pinoAtual.PvMaximo}" : "")@(pinoAtual.Escondido ? " · 🥷 Furtivo" : "")@(pinoAtual.Esquivando ? " · ◈ Esquiva" : "")</text>
                                             }
                                             else
                                             {
@@ -406,11 +406,15 @@
                                         ? $" · PV {pino.PvAtual ?? pino.PvMaximo}/{pino.PvMaximo} · CA {pino.ClasseArmadura ?? 10}"
                                         : string.Empty;
 
+                                    string infoEstado =
+                                        (pino.Escondido ? " · 🥷 Furtivo" : (!pino.Visivel ? " · Oculto" : "")) +
+                                        (pino.Esquivando ? " · ◈ Esquivando" : "");
+
                                     <button type="button"
                                             @key="@($"{pino.IdMapa}-{pino.TipoEntidade}-{pino.IdEntidade}")"
                                             draggable="false"
-                                            class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel") @(derrotado ? "pino-derrotado" : "") @(ViewModel.Estado.EhMestre ? "arrastavel" : "") @(estaArrastando ? "arrastando" : "")"
-                                            title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{infoPv}{(pino.Visivel ? "" : " · Oculto")}{(ViewModel.Estado.EhMestre ? " · Segure e arraste para mover ou clique para abrir ficha" : "")}")"
+                                            class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel") @(pino.Escondido ? "pino-furtivo" : "") @(pino.Esquivando ? "pino-esquivando" : "") @(derrotado ? "pino-derrotado" : "") @(ViewModel.Estado.EhMestre ? "arrastavel" : "") @(estaArrastando ? "arrastando" : "")"
+                                            title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{infoPv}{infoEstado}{(ViewModel.Estado.EhMestre ? " · Segure e arraste para mover ou clique para abrir ficha" : "")}")"
                                             @onpointerdown="(e) => AoPressionarPino(e, pino)"
                                             @onpointerdown:stopPropagation="true"
                                             @onclick:stopPropagation="true"
@@ -427,9 +431,17 @@
                                         {
                                             <em class="pino-badge-derrotado" aria-label="Derrotado">✕</em>
                                         }
+                                        else if (pino.Escondido)
+                                        {
+                                            <em class="pino-badge-furtivo" aria-label="Furtivo">🥷</em>
+                                        }
                                         else if (!pino.Visivel)
                                         {
                                             <em class="pino-badge-oculto" aria-label="Oculto dos jogadores">⊘</em>
+                                        }
+                                        @if (!derrotado && pino.Esquivando)
+                                        {
+                                            <em class="pino-badge-esquiva" aria-label="Esquivando">◈</em>
                                         }
                                     </button>
                                 }
