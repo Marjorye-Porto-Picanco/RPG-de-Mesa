@@ -26,6 +26,9 @@ public partial class SessaoViewModel
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;

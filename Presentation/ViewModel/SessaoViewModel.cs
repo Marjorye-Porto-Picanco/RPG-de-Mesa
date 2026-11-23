@@ -52,17 +52,14 @@ public partial class SessaoViewModel : IAsyncDisposable
 
     public SessaoEstadoDto Estado { get; private set; } = new();
 
-    // Controle de Turno
     public bool AlterandoTurno { get; private set; }
     public bool EhMeuTurno =>
         !Estado.EhMestre &&
         Estado.IdAccountTurno.HasValue &&
         Estado.IdAccountTurno.Value == _sessaoUsuario.IdUsuarioLogado;
 
-    // Encerramento pelo Mestre (para jogadores)
     public bool SessaoEncerradaPeloMestre { get; private set; }
 
-    // Modal de Dados
     public bool ExibirModalDados { get; private set; }
 
     public SessaoViewModel(
@@ -93,6 +90,7 @@ public partial class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
@@ -246,10 +244,16 @@ public partial class SessaoViewModel : IAsyncDisposable
                         ExibirModalAtaque = false;
                         FeedbackAcao = "O Mestre encerrou o seu turno.";
                     }
-                    else if (!AlvoSelecionadoVivo)
+                    else if (!AlvoSelecionadoVivo || !AlvoSelecionadoNoAlcance)
                     {
                         SelecionarPrimeiroAlvoVivo();
                     }
+                }
+
+                if (ExibirModalMagia && EtapaMagia == 1 && !Estado.EhMestre && !EhMeuTurno)
+                {
+                    ExibirModalMagia = false;
+                    FeedbackAcao = "O Mestre encerrou o seu turno.";
                 }
 
                 if (ExibirModalEsquivar && !Estado.EhMestre && !EhMeuTurno)
@@ -291,6 +295,7 @@ public partial class SessaoViewModel : IAsyncDisposable
                     ExibirModalDados = false;
                     ExibirModalFicha = false;
                     ExibirModalAtaque = false;
+                    ExibirModalMagia = false;
                     ExibirModalEsquivar = false;
                     ExibirModalEsconder = false;
                     LimparEstadoDisparadaInterno();
@@ -314,9 +319,6 @@ public partial class SessaoViewModel : IAsyncDisposable
         }
     }
 
-    // =========================================================================
-    // CONTROLE DE TURNO PELO MESTRE
-    // =========================================================================
     public async Task AlternarTurnoJogadorAsync(ParticipanteSessaoDto jogador)
     {
         if (!Estado.EhMestre || Estado.IdSessao <= 0 || AlterandoTurno) return;
@@ -368,13 +370,11 @@ public partial class SessaoViewModel : IAsyncDisposable
         }
     }
 
-    // =========================================================================
-    // MODAL DE DADOS, FOCO E NAVEGAÇÃO / DESCONEXÃO
-    // =========================================================================
     public void AbrirModalDados()
     {
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
@@ -397,6 +397,7 @@ public partial class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         MonstroEmVisualizacao = null;

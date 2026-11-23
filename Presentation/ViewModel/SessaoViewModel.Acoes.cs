@@ -11,7 +11,6 @@ namespace RPGdeMesa.Presentation.ViewModel;
 
 public partial class SessaoViewModel
 {
-    // Modal de Ataque (Combate)
     public bool ExibirModalAtaque { get; private set; }
     public bool CarregandoAtaque { get; private set; }
     public bool ExecutandoAtaque { get; private set; }
@@ -23,20 +22,18 @@ public partial class SessaoViewModel
     public int IdAlvoSelecionado { get; private set; }
     public int ModificadorAtaque { get; set; }
     public int ModificadorDano { get; set; }
-    public int EtapaAtaque { get; private set; } = 1; // 1=Escolher arma/alvo, 2=Acertou (rolar dano), 3=Finalizado
+    public int EtapaAtaque { get; private set; } = 1;
     public RegistroAtaqueDto? ResultadoAtaqueAtual { get; private set; }
 
-    // Modal de Esquivar (Defesa: desvantagem 2d20 em ataques recebidos até próximo turno)
     public bool ExibirModalEsquivar { get; private set; }
     public bool ExecutandoEsquivar { get; private set; }
     public string? ErroEsquivar { get; private set; }
 
-    // Modal de Esconder (Teste de Destreza/Furtividade)
     public bool ExibirModalEsconder { get; private set; }
     public bool CarregandoEsconder { get; private set; }
     public bool ExecutandoEsconder { get; private set; }
     public string? ErroEsconder { get; private set; }
-    public int EtapaEsconder { get; private set; } = 1; // 1=Configurar teste, 2=Resultado
+    public int EtapaEsconder { get; private set; } = 1;
     public string NomePersonagemEsconder { get; private set; } = string.Empty;
     public int ModDestrezaEsconder { get; private set; }
     public bool TemProficienciaFurtividade { get; private set; }
@@ -45,8 +42,6 @@ public partial class SessaoViewModel
     public int CdEsconder { get; set; } = 12;
     public ResultadoEsconderDto? ResultadoEsconderAtual { get; private set; }
 
-    // Movimento no Turno: Disparada (2x deslocamento, sujeito a Ataque de Oportunidade)
-    // e Desengajar (1x deslocamento, imune a Ataque de Oportunidade)
     public bool ModoDisparadaAtivo { get; private set; }
     public bool ModoDesengajarAtivo { get; private set; }
     public bool ModoMovimentoAtivo => ModoDisparadaAtivo || ModoDesengajarAtivo;
@@ -64,7 +59,6 @@ public partial class SessaoViewModel
     public (int Coluna, int Linha)? DestinoDisparada { get; private set; }
     public decimal DistanciaDestinoMetros { get; private set; }
 
-    // Monstros vivos no raio 1x1 da casa de origem do jogador
     public List<PinoMapaDto> MonstrosAmeacandoOrigem { get; private set; } = new();
 
     public string DeslocamentoNormalTexto => FormatarMetros(DeslocamentoNormalMetros);
@@ -86,10 +80,17 @@ public partial class SessaoViewModel
         }
     }
 
+    public PinoMapaDto? PinoJogadorAtual =>
+        Estado.IdPersonagemLogado.HasValue && Estado.IdMapaAtivo.HasValue
+            ? Estado.Pinos.FirstOrDefault(p =>
+                p.IdMapa == Estado.IdMapaAtivo &&
+                p.TipoEntidade == TiposPinoSessao.Personagem &&
+                p.IdEntidade == Estado.IdPersonagemLogado.Value)
+            : null;
+
     public Item? ArmaSelecionada =>
         ArmasDisponiveisAtaque.FirstOrDefault(a => a.IdItem == IdArmaSelecionada);
 
-    // Todos os alvos visíveis no mapa atual: Monstros, NPCs e outros Jogadores (exclui o próprio atacante)
     public List<PinoMapaDto> AlvosNoMapa =>
         PinosVisiveisNoMapa
             .Where(p => !(p.TipoEntidade == TiposPinoSessao.Personagem &&
@@ -108,11 +109,55 @@ public partial class SessaoViewModel
         AlvoSelecionado != null &&
         (AlvoSelecionado.PvAtual ?? AlvoSelecionado.PvMaximo ?? 0) > 0;
 
+    public bool AlvoSelecionadoNoAlcance =>
+        AlvoSelecionado != null && AlvoDentroAlcanceArma(AlvoSelecionado);
+
+    public decimal? ObterDistanciaAlvoMetros(PinoMapaDto alvo)
+    {
+        var meuPino = PinoJogadorAtual;
+        if (meuPino is null) return null;
+        return CalcularDistanciaMetros(meuPino.Coluna, meuPino.Linha, alvo.Coluna, alvo.Linha);
+    }
+
+    public decimal ObterAlcanceArmaMetros(Item? arma)
+    {
+        if (arma is null) return 1.5m;
+
+        string props = $"{arma.Tipo} {arma.Propriedades} {arma.Nome}".ToLowerInvariant();
+        var matchMetros = Regex.Match(props.Replace(',', '.'), @"(\d+(?:\.\d+)?)\s*m\b");
+        if (matchMetros.Success &&
+            decimal.TryParse(matchMetros.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal metros) &&
+            metros > 0)
+        {
+            return metros;
+        }
+
+        if (props.Contains("distância") || props.Contains("distancia") || props.Contains("munição") ||
+            props.Contains("municao") || props.Contains("arco") || props.Contains("besta") || props.Contains("funda"))
+            return 18m;
+
+        if (props.Contains("arremesso") || props.Contains("thrown"))
+            return 6m;
+
+        if (props.Contains("alcance") || props.Contains("reach"))
+            return 3m;
+
+        return 1.5m;
+    }
+
+    public bool AlvoDentroAlcanceArma(PinoMapaDto alvo)
+    {
+        var dist = ObterDistanciaAlvoMetros(alvo);
+        if (!dist.HasValue) return true;
+        return dist.Value <= ObterAlcanceArmaMetros(ArmaSelecionada);
+    }
+
     private void FecharOutrosModaisCombate()
     {
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
@@ -123,9 +168,6 @@ public partial class SessaoViewModel
         FeedbackAcao = null;
     }
 
-    // =========================================================================
-    // SISTEMA DE ESQUIVAR
-    // =========================================================================
     public void AbrirModalEsquivar()
     {
         if (Estado.EhMestre)
@@ -210,9 +252,6 @@ public partial class SessaoViewModel
         }
     }
 
-    // =========================================================================
-    // SISTEMA DE ESCONDER (TESTE DE DESTREZA - FURTIVIDADE)
-    // =========================================================================
     public async Task AbrirModalEsconderAsync()
     {
         if (Estado.EhMestre)
@@ -264,7 +303,7 @@ public partial class SessaoViewModel
                     !string.IsNullOrWhiteSpace(p.NomePericia) &&
                     p.NomePericia.Contains("Furtividade", StringComparison.OrdinalIgnoreCase));
 
-            int bonusProfNivel = 2 + (Math.Clamp(personagem.Nivel, 1, 20) - 1) / 4;
+            int bonusProfNivel = RegrasMagiaCombate.CalcularBonusProficiencia(personagem.Nivel);
             BonusProficienciaEsconder = TemProficienciaFurtividade ? bonusProfNivel : 0;
         }
         catch (Exception ex)
@@ -291,7 +330,7 @@ public partial class SessaoViewModel
         int bonusExtra = Math.Clamp(BonusExtraEsconder, -50, 50);
         int cd = Math.Clamp(CdEsconder, 1, 40);
         int total = dado + ModDestrezaEsconder + BonusProficienciaEsconder + bonusExtra;
-        bool passou = dado == 20 || (dado != 1 && total >= cd);
+        bool passou = total >= cd;
 
         ResultadoEsconderAtual = new ResultadoEsconderDto
         {
@@ -358,9 +397,6 @@ public partial class SessaoViewModel
         Notificar();
     }
 
-    // =========================================================================
-    // SISTEMA DE DISPARADA E DESENGAJAR
-    // =========================================================================
     public Task AlternarModoDisparadaAsync() =>
         IniciarModoMovimentoAsync(desengajar: false);
 
@@ -400,10 +436,7 @@ public partial class SessaoViewModel
             return;
         }
 
-        var meuPino = Estado.Pinos.FirstOrDefault(p =>
-            p.IdMapa == Estado.IdMapaAtivo &&
-            p.TipoEntidade == TiposPinoSessao.Personagem &&
-            p.IdEntidade == Estado.IdPersonagemLogado.Value);
+        var meuPino = PinoJogadorAtual;
 
         if (meuPino is null)
         {
@@ -442,7 +475,7 @@ public partial class SessaoViewModel
         else if (MonstrosAmeacandoOrigem.Any())
         {
             string nomes = string.Join(", ", MonstrosAmeacandoOrigem.Select(m => m.Nome));
-            FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}). ⚠️ Sair do raio 1×1 de {nomes} sem Desengajar causará Ataque de Oportunidade automático.";
+            FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}). ⚠️ Sair do raio 1×1 de {nomes} sem Desengajar provocará Ataque de Oportunidade (d20 vs CA).";
         }
         else
         {
@@ -634,6 +667,7 @@ public partial class SessaoViewModel
         {
             bool caiuInconsciente = false;
             int danoTotalOportunidade = 0;
+            var errosOportunidade = new List<string>();
 
             if (!ehDesengajar && monstrosAtacantes.Count > 0)
             {
@@ -642,16 +676,37 @@ public partial class SessaoViewModel
 
                 int pvMaximo = Math.Max(1, fichaAtual?.PvMaximo ?? PinoJogadorDisparada.PvMaximo ?? 10);
                 int pvCorrente = Math.Clamp(fichaAtual?.PvAtual ?? PinoJogadorDisparada.PvAtual ?? pvMaximo, 0, pvMaximo);
+                int caJogador = PinoJogadorDisparada.ClasseArmadura ?? 10;
+                bool jogadorEsquivando = PinoJogadorDisparada.Esquivando;
 
                 var listaAtaques = new List<AtaqueOportunidadeDto>();
                 foreach (var pinoMonstro in monstrosAtacantes)
                 {
                     var monstro = Estado.MonstrosCampanha.FirstOrDefault(m => m.IdMonstro == pinoMonstro.IdEntidade);
+                    int bonusAtkMonstro = 2 + Math.Max(0, (int)Math.Floor((monstro?.NivelDesafio ?? 1m) / 2m));
+
+                    int d1 = Random.Shared.Next(1, 21);
+                    int d2 = jogadorEsquivando ? Random.Shared.Next(1, 21) : d1;
+                    int dadoD20 = jogadorEsquivando ? Math.Min(d1, d2) : d1;
+                    int totalAtk = dadoD20 + bonusAtkMonstro;
+
+                    bool falhaCritica = dadoD20 == 1;
+                    bool critico = dadoD20 == 20;
+                    bool acertou = !falhaCritica && (critico || totalAtk >= caJogador);
+
+                    if (!acertou)
+                    {
+                        string detalhe = falhaCritica ? "1 natural" : $"{dadoD20}+{bonusAtkMonstro}={totalAtk} < CA {caJogador}";
+                        errosOportunidade.Add($"{pinoMonstro.Nome} errou ({detalhe})");
+                        continue;
+                    }
+
                     string expressao = ExtrairExpressaoDanoMonstro(monstro);
                     var (qtd, faces, bonus) = InterpretarExpressaoDado(expressao);
+                    int qtdDados = critico ? qtd * 2 : qtd;
 
-                    var rolagens = new List<int>(qtd);
-                    for (int i = 0; i < qtd; i++)
+                    var rolagens = new List<int>(qtdDados);
+                    for (int i = 0; i < qtdDados; i++)
                         rolagens.Add(Random.Shared.Next(1, faces + 1));
 
                     int dano = Math.Max(1, rolagens.Sum() + bonus);
@@ -662,7 +717,7 @@ public partial class SessaoViewModel
                     {
                         IdMonstro = pinoMonstro.IdEntidade,
                         NomeMonstro = pinoMonstro.Nome,
-                        ExpressaoDano = expressao,
+                        ExpressaoDano = critico ? $"2×{expressao} (Crítico)" : expressao,
                         ResultadosDano = rolagens,
                         ModificadorDano = bonus,
                         DanoTotal = dano,
@@ -670,23 +725,34 @@ public partial class SessaoViewModel
                     });
                 }
 
-                var (okAo, erroAo) = await _sessaoService.RegistrarAtaquesOportunidadeAsync(
-                    Estado.IdSessao,
-                    _sessaoUsuario.IdUsuarioLogado,
-                    PinoJogadorDisparada.IdEntidade,
-                    NomePersonagemDisparada,
-                    pvCorrente,
-                    pvMaximo,
-                    listaAtaques);
-
-                if (!okAo)
+                if (errosOportunidade.Count > 0)
                 {
-                    DestinoDisparada = null;
-                    FeedbackAcao = erroAo ?? "Erro ao registrar Ataque de Oportunidade.";
-                    return;
+                    await _sessaoService.EnviarMensagemChatAsync(
+                        Estado.IdSessao,
+                        _sessaoUsuario.IdUsuarioLogado,
+                        $"🛡️ Ataque de Oportunidade contra {NomePersonagemDisparada}: {string.Join("; ", errosOportunidade)}.");
                 }
 
-                caiuInconsciente = pvCorrente <= 0;
+                if (listaAtaques.Count > 0)
+                {
+                    var (okAo, erroAo) = await _sessaoService.RegistrarAtaquesOportunidadeAsync(
+                        Estado.IdSessao,
+                        _sessaoUsuario.IdUsuarioLogado,
+                        PinoJogadorDisparada.IdEntidade,
+                        NomePersonagemDisparada,
+                        pvCorrente,
+                        pvMaximo,
+                        listaAtaques);
+
+                    if (!okAo)
+                    {
+                        DestinoDisparada = null;
+                        FeedbackAcao = erroAo ?? "Erro ao registrar Ataque de Oportunidade.";
+                        return;
+                    }
+
+                    caiuInconsciente = pvCorrente <= 0;
+                }
             }
 
             if (!caiuInconsciente)
@@ -755,6 +821,11 @@ public partial class SessaoViewModel
             {
                 FeedbackAcao = $"⚡ Ataque de Oportunidade! Você sofreu -{danoTotalOportunidade} PV ao sair do raio 1×1 sem Desengajar.";
                 AbaChatAtiva = CanaisSessao.Combate;
+            }
+            else if (errosOportunidade.Count > 0)
+            {
+                FeedbackAcao = $"🛡️ Você escapou! O(s) Ataque(s) de Oportunidade não superaram sua CA.";
+                AbaChatAtiva = CanaisSessao.Chat;
             }
             else
             {
@@ -848,12 +919,9 @@ public partial class SessaoViewModel
         return 9m;
     }
 
-    private static string FormatarMetros(decimal metros) =>
+    public static string FormatarMetros(decimal metros) =>
         $"{metros.ToString("0.#", new CultureInfo("pt-BR"))} m";
 
-    // =========================================================================
-    // SISTEMA DE ATAQUE (ARMA DO INVENTÁRIO -> ALVO -> D20 VS CA -> DANO)
-    // =========================================================================
     public async Task AbrirModalAtaqueAsync()
     {
         if (Estado.EhMestre)
@@ -931,15 +999,19 @@ public partial class SessaoViewModel
 
     private void SelecionarPrimeiroAlvoVivo()
     {
-        var primeiroVivo = AlvosNoMapa.FirstOrDefault(a => (a.PvAtual ?? a.PvMaximo ?? 0) > 0);
-        TipoAlvoSelecionado = primeiroVivo?.TipoEntidade;
-        IdAlvoSelecionado = primeiroVivo?.IdEntidade ?? 0;
+        var primeiroValido = AlvosNoMapa.FirstOrDefault(a =>
+            (a.PvAtual ?? a.PvMaximo ?? 0) > 0 && AlvoDentroAlcanceArma(a));
+
+        TipoAlvoSelecionado = primeiroValido?.TipoEntidade;
+        IdAlvoSelecionado = primeiroValido?.IdEntidade ?? 0;
     }
 
     public void SelecionarArmaAtaque(int idItem)
     {
         IdArmaSelecionada = idItem;
         AplicarModificadoresPadraoArma(ArmaSelecionada);
+        if (!AlvoSelecionadoVivo || !AlvoSelecionadoNoAlcance)
+            SelecionarPrimeiroAlvoVivo();
         Notificar();
     }
 
@@ -949,7 +1021,7 @@ public partial class SessaoViewModel
             a.TipoEntidade == tipoEntidade &&
             a.IdEntidade == idEntidade);
 
-        if (alvo == null || (alvo.PvAtual ?? alvo.PvMaximo ?? 0) <= 0)
+        if (alvo == null || (alvo.PvAtual ?? alvo.PvMaximo ?? 0) <= 0 || !AlvoDentroAlcanceArma(alvo))
             return;
 
         TipoAlvoSelecionado = tipoEntidade;
@@ -979,7 +1051,9 @@ public partial class SessaoViewModel
              arma.Tipo.Contains("Distância", StringComparison.OrdinalIgnoreCase)));
 
         int mod = usaDestreza ? Math.Max(modFor, modDes) : modFor;
-        ModificadorAtaque = mod;
+        int bonusProf = RegrasMagiaCombate.CalcularBonusProficiencia(PersonagemAtacante.Nivel);
+
+        ModificadorAtaque = mod + bonusProf;
         ModificadorDano = mod;
     }
 
@@ -1006,7 +1080,14 @@ public partial class SessaoViewModel
 
         if (alvo == null)
         {
-            ErroModalAtaque = "Selecione um alvo no mapa.";
+            ErroModalAtaque = "Selecione um alvo no alcance da arma.";
+            Notificar();
+            return;
+        }
+
+        if (!AlvoDentroAlcanceArma(alvo))
+        {
+            ErroModalAtaque = $"{alvo.Nome} está fora do alcance de {arma.Nome} (máx. {FormatarMetros(ObterAlcanceArmaMetros(arma))}).";
             Notificar();
             return;
         }
@@ -1031,8 +1112,9 @@ public partial class SessaoViewModel
         int totalAtk = dadoD20 + modAtk;
         int caAlvo = alvo.ClasseArmadura ?? 10;
 
+        bool ehFalhaCritica = dadoD20 == 1;
         bool ehCritico = dadoD20 == 20;
-        bool acertou = ehCritico || totalAtk >= caAlvo;
+        bool acertou = !ehFalhaCritica && (ehCritico || totalAtk >= caAlvo);
 
         ResultadoAtaqueAtual = new RegistroAtaqueDto
         {
@@ -1160,7 +1242,7 @@ public partial class SessaoViewModel
         ResultadoAtaqueAtual = null;
         ErroModalAtaque = null;
 
-        if (!AlvoSelecionadoVivo)
+        if (!AlvoSelecionadoVivo || !AlvoSelecionadoNoAlcance)
             SelecionarPrimeiroAlvoVivo();
 
         Notificar();
