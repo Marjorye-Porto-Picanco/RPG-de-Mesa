@@ -37,20 +37,34 @@
         </button>
         <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
                 type="button"
-                disabled="@(!ViewModel.EhMeuTurno)"
+                disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
                 title="@(ViewModel.EhMeuTurno ? "Dobra seu deslocamento neste turno — clique e escolha a casa no mapa" : "Aguarde o Mestre liberar seu turno")"
                 @onclick="ViewModel.AlternarModoDisparadaAsync">
             <span class="slot-icon">◷</span>
             <span>@(ViewModel.ModoDisparadaAtivo ? "Cancelar" : "Disparada")</span>
             <small>Movimento</small>
         </button>
-        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
-            <span class="slot-icon">↺</span><span>Desengajar</span><small>Ação</small>
+        <button class="action-slot @(ViewModel.ModoDesengajarAtivo ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
+                title="@(ViewModel.EhMeuTurno ? "Afaste-se de inimigos sem provocar Ataques de Oportunidade" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AlternarModoDesengajarAsync">
+            <span class="slot-icon">↺</span>
+            <span>@(ViewModel.ModoDesengajarAtivo ? "Cancelar" : "Desengajar")</span>
+            <small>Ação</small>
         </button>
-        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+        <button class="action-slot @(ViewModel.ExibirModalEsquivar ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Ataques contra você terão desvantagem (2d20, menor valor) até seu próximo turno" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AbrirModalEsquivar">
             <span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small>
         </button>
-        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+        <button class="action-slot @(ViewModel.ExibirModalEsconder ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Teste de Destreza (Furtividade) para ficar oculto no mapa" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AbrirModalEsconderAsync">
             <span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small>
         </button>
     </div>
@@ -107,6 +121,150 @@
                 @(ViewModel.ExecutandoDisparada ? "Movendo..." : "Confirmar e Encerrar Turno")
             </button>
         </div>
+    </section>
+}
+
+@if (ViewModel.ExibirModalEsquivar)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.FecharModalEsquivar"></div>
+
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-esquivar" @onclick:stopPropagation="true">
+        <header class="attack-header">
+            <div>
+                <p>Ação de Defesa</p>
+                <h2 id="titulo-esquivar">◈ Esquivar</h2>
+            </div>
+            <button class="attack-close" type="button" aria-label="Fechar esquiva" @onclick="ViewModel.FecharModalEsquivar">×</button>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(ViewModel.ErroEsquivar))
+        {
+            <div class="attack-error">@ViewModel.ErroEsquivar</div>
+        }
+
+        <div class="attack-result-box acertou">
+            <span class="attack-badge acertou">POSTURA DEFENSIVA</span>
+            <p>
+                Qualquer inimigo, NPC ou jogador que atacar você rolará <b>2d20</b> e ficará com o <b>menor valor</b>.
+                O efeito dura até o início do seu próximo turno (quando o turno retornar para você).
+            </p>
+            <p class="attack-hp-summary">
+                @if (!string.IsNullOrWhiteSpace(ViewModel.NomeProximoJogadorTurno))
+                {
+                    <text>Ao confirmar, o turno passará automaticamente para <b>@ViewModel.NomeProximoJogadorTurno</b>.</text>
+                }
+                else
+                {
+                    <text>Ao confirmar, seu turno será encerrado automaticamente.</text>
+                }
+            </p>
+        </div>
+
+        <div class="attack-footer-actions">
+            <button type="button"
+                    class="attack-btn-sec"
+                    disabled="@ViewModel.ExecutandoEsquivar"
+                    @onclick="ViewModel.FecharModalEsquivar">
+                Cancelar
+            </button>
+            <button type="button"
+                    class="attack-btn-prim"
+                    disabled="@ViewModel.ExecutandoEsquivar"
+                    @onclick="ViewModel.ConfirmarEsquivarAsync">
+                @(ViewModel.ExecutandoEsquivar ? "Ativando..." : "Confirmar Esquiva e Passar Turno")
+            </button>
+        </div>
+    </section>
+}
+
+@if (ViewModel.ExibirModalEsconder)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.FecharModalEsconder"></div>
+
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-esconder" @onclick:stopPropagation="true">
+        <header class="attack-header">
+            <div>
+                <p>Teste de Destreza (Furtividade)</p>
+                <h2 id="titulo-esconder">⌕ Esconder</h2>
+            </div>
+            <button class="attack-close" type="button" aria-label="Fechar esconder" @onclick="ViewModel.FecharModalEsconder">×</button>
+        </header>
+
+        @if (ViewModel.CarregandoEsconder)
+        {
+            <p class="attack-empty">Carregando atributos e perícias da sua ficha...</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.ErroEsconder))
+            {
+                <div class="attack-error">@ViewModel.ErroEsconder</div>
+            }
+
+            @if (ViewModel.EtapaEsconder == 1)
+            {
+                int bonusTotal = ViewModel.ModDestrezaEsconder + ViewModel.BonusProficienciaEsconder + ViewModel.BonusExtraEsconder;
+
+                <div class="stealth-summary">
+                    <div>
+                        <span>Mod. Destreza</span>
+                        <strong>@(ViewModel.ModDestrezaEsconder >= 0 ? $"+{ViewModel.ModDestrezaEsconder}" : ViewModel.ModDestrezaEsconder.ToString())</strong>
+                    </div>
+                    <div>
+                        <span>Proficiência (Furtividade)</span>
+                        <strong>@(ViewModel.TemProficienciaFurtividade ? $"+{ViewModel.BonusProficienciaEsconder}" : "Sem prof.")</strong>
+                    </div>
+                    <div>
+                        <span>Bônus Total</span>
+                        <strong>@(bonusTotal >= 0 ? $"+{bonusTotal}" : bonusTotal.ToString())</strong>
+                    </div>
+                </div>
+
+                <div class="attack-options">
+                    <label class="attack-field">
+                        CD do Teste (Mestre)
+                        <input type="number" min="1" max="40" @bind="ViewModel.CdEsconder" />
+                    </label>
+                    <label class="attack-field">
+                        Bônus Extra (opcional)
+                        <input type="number" min="-50" max="50" @bind="ViewModel.BonusExtraEsconder" />
+                    </label>
+                </div>
+
+                <button type="button"
+                        class="attack-roll"
+                        disabled="@ViewModel.ExecutandoEsconder"
+                        @onclick="ViewModel.RolarTesteEsconderAsync">
+                    @(ViewModel.ExecutandoEsconder ? "Rolando Furtividade..." : "🎲 Rolar Teste de Furtividade (1d20)")
+                </button>
+            }
+            else if (ViewModel.EtapaEsconder == 2 && ViewModel.ResultadoEsconderAtual != null)
+            {
+                var r = ViewModel.ResultadoEsconderAtual;
+                <div class="attack-result-box @(r.Passou ? "acertou" : "falhou")">
+                    <span class="attack-badge @(r.Passou ? "acertou" : "falhou")">
+                        @(r.Passou ? "🥷 SUCESSO — VOCÊ ESTÁ ESCONDIDO!" : "FALHOU NA FURTIVIDADE")
+                    </span>
+                    <strong>@r.Total</strong>
+                    <p>
+                        d20 (@r.DadoD20)
+                        @(r.ModificadorDestreza >= 0 ? $"+ {r.ModificadorDestreza}" : $"− {Math.Abs(r.ModificadorDestreza)}") (DES)
+                        @(r.BonusProficiencia > 0 ? $" + {r.BonusProficiencia} (Prof.)" : "")
+                        @(r.BonusExtra != 0 ? (r.BonusExtra > 0 ? $" + {r.BonusExtra}" : $" − {Math.Abs(r.BonusExtra)}") : "")
+                        @(r.Passou ? " ≥ " : " < ") CD @r.CdAlvo
+                    </p>
+                    <p class="attack-hp-summary">
+                        @(r.Passou
+                            ? "Seu pino agora está invisível para os outros jogadores. Apenas você e o Mestre conseguem vê-lo."
+                            : "Você não conseguiu se ocultar dos inimigos. Seu pino continua visível.")
+                    </p>
+                </div>
+
+                <div class="attack-footer-actions">
+                    <button type="button" class="attack-btn-prim" @onclick="ViewModel.FecharModalEsconder">Fechar</button>
+                </div>
+            }
+        }
     </section>
 }
 
@@ -200,6 +358,10 @@
                                         <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
                                         <span class="alvo-tag @tagClasse">@tagLabel</span>
                                     </div>
+                                    @if (alvo.Esquivando && !derrotado)
+                                    {
+                                        <small class="alvo-esquiva-aviso">◈ Esquivando (Desvantagem: 2d20, menor)</small>
+                                    }
                                     <small>
                                         @if (derrotado)
                                         {
@@ -231,7 +393,11 @@
                         class="attack-roll"
                         disabled="@(ViewModel.ExecutandoAtaque || ViewModel.ArmaSelecionada == null || !ViewModel.AlvoSelecionadoVivo)"
                         @onclick="ViewModel.RolarDadoAtaqueAsync">
-                    @(ViewModel.ExecutandoAtaque ? "Rolando..." : "🎲 3. Rolar Dado de Ataque (1d20)")
+                    @(ViewModel.ExecutandoAtaque
+                        ? "Rolando..."
+                        : (ViewModel.AlvoSelecionado?.Esquivando == true
+                            ? "🎲 3. Rolar Ataque com Desvantagem (2d20, menor)"
+                            : "🎲 3. Rolar Dado de Ataque (1d20)"))
                 </button>
             }
             else if (ViewModel.EtapaAtaque == 2 && ViewModel.ResultadoAtaqueAtual != null)
@@ -246,6 +412,13 @@
                         @if (r.EhCritico)
                         {
                             <text>20 natural acerta <b>@r.NomeAlvo</b> (CA @r.CaAlvo) automaticamente e dobra os dados da arma!</text>
+                        }
+                        else if (r.AlvoEsquivando)
+                        {
+                            <text>
+                                2d20 Desvantagem [@r.DadoAtaque1, @r.DadoAtaque2] → @r.DadoAtaque @(r.ModificadorAtaque >= 0 ? $"+ {r.ModificadorAtaque}" : $"− {Math.Abs(r.ModificadorAtaque)}")
+                                ≥ CA @r.CaAlvo de <b>@r.NomeAlvo</b>
+                            </text>
                         }
                         else
                         {
@@ -294,7 +467,15 @@
                     {
                         <strong>@r.TotalAtaque</strong>
                         <p>
-                            d20 (@r.DadoAtaque) @(r.ModificadorAtaque >= 0 ? $"+ {r.ModificadorAtaque}" : $"− {Math.Abs(r.ModificadorAtaque)}")
+                            @if (r.AlvoEsquivando)
+                            {
+                                <text>2d20 Desvantagem [@r.DadoAtaque1, @r.DadoAtaque2] → @r.DadoAtaque</text>
+                            }
+                            else
+                            {
+                                <text>d20 (@r.DadoAtaque)</text>
+                            }
+                            @(r.ModificadorAtaque >= 0 ? $" + {r.ModificadorAtaque}" : $" − {Math.Abs(r.ModificadorAtaque)}")
                             @("<") CA @r.CaAlvo de <b>@r.NomeAlvo</b>
                         </p>
                     }

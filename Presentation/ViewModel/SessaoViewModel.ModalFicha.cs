@@ -82,6 +82,8 @@ public partial class SessaoViewModel
         FeedbackFichaModal = null;
         ExibirModalDados = false;
         ExibirModalAtaque = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
