@@ -32,7 +32,11 @@
                 @onclick="ViewModel.AbrirModalAtaqueAsync">
             <span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small>
         </button>
-        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+        <button class="action-slot @(ViewModel.ExibirModalMagia ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Conjurar magia da sua ficha" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AbrirModalMagiaAsync">
             <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
         </button>
         <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
@@ -294,8 +298,10 @@
 
             @if (ViewModel.EtapaAtaque == 1)
             {
+                decimal alcanceArma = ViewModel.ObterAlcanceArmaMetros(ViewModel.ArmaSelecionada);
+
                 <div class="attack-section">
-                    <p class="attack-section-label">1. Escolha a arma do inventário</p>
+                    <p class="attack-section-label">1. Escolha a arma do inventário (Alcance: @SessaoViewModel.FormatarMetros(alcanceArma))</p>
                     @if (!ViewModel.ArmasDisponiveisAtaque.Any())
                     {
                         <p class="attack-empty">Nenhuma arma encontrada no seu inventário. Adicione uma arma na aba Inventário da sua ficha.</p>
@@ -310,7 +316,7 @@
                                         class="attack-choice-card @(sel ? "selecionado" : "")"
                                         @onclick="() => ViewModel.SelecionarArmaAtaque(arma.IdItem)">
                                     <strong>@arma.Nome</strong>
-                                    <small>Dano: @(string.IsNullOrWhiteSpace(arma.Dano) ? "1d4" : arma.Dano) @arma.TipoDano</small>
+                                    <small>Dano: @(string.IsNullOrWhiteSpace(arma.Dano) ? "1d4" : arma.Dano) @arma.TipoDano · @SessaoViewModel.FormatarMetros(ViewModel.ObterAlcanceArmaMetros(arma))</small>
                                 </button>
                             }
                         </div>
@@ -331,7 +337,10 @@
                                 int pvAt = alvo.PvAtual ?? alvo.PvMaximo ?? 0;
                                 int pvMx = alvo.PvMaximo ?? 0;
                                 bool derrotado = pvAt <= 0;
-                                bool sel = !derrotado
+                                var dist = ViewModel.ObterDistanciaAlvoMetros(alvo);
+                                bool foraAlcance = !ViewModel.AlvoDentroAlcanceArma(alvo);
+                                bool bloqueado = derrotado || foraAlcance;
+                                bool sel = !bloqueado
                                     && ViewModel.TipoAlvoSelecionado == alvo.TipoEntidade
                                     && ViewModel.IdAlvoSelecionado == alvo.IdEntidade;
 
@@ -350,15 +359,18 @@
                                 };
 
                                 <button type="button"
-                                        disabled="@derrotado"
-                                        class="attack-choice-card @(sel ? "selecionado" : "") @(derrotado ? "derrotado" : "")"
-                                        title="@(derrotado ? $"{alvo.Nome} está com 0 PV" : $"Atacar {alvo.Nome}")"
+                                        disabled="@bloqueado"
+                                        class="attack-choice-card @(sel ? "selecionado" : "") @(bloqueado ? "derrotado" : "")"
                                         @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.TipoEntidade, alvo.IdEntidade)">
                                     <div class="attack-choice-topo">
                                         <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
                                         <span class="alvo-tag @tagClasse">@tagLabel</span>
                                     </div>
-                                    @if (alvo.Esquivando && !derrotado)
+                                    @if (foraAlcance && dist.HasValue && !derrotado)
+                                    {
+                                        <small class="alvo-alcance-aviso">Fora do alcance (@SessaoViewModel.FormatarMetros(dist.Value) / máx. @SessaoViewModel.FormatarMetros(alcanceArma))</small>
+                                    }
+                                    @if (alvo.Esquivando && !bloqueado)
                                     {
                                         <small class="alvo-esquiva-aviso">◈ Esquivando (Desvantagem: 2d20, menor)</small>
                                     }
@@ -369,7 +381,7 @@
                                         }
                                         else
                                         {
-                                            <text>PV: @pvAt / @pvMx · CA: @(alvo.ClasseArmadura ?? 10)</text>
+                                            <text>PV: @pvAt / @pvMx · CA: @(alvo.ClasseArmadura ?? 10)@(dist.HasValue ? $" · {SessaoViewModel.FormatarMetros(dist.Value)}" : "")</text>
                                         }
                                     </small>
                                 </button>
@@ -380,7 +392,7 @@
 
                 <div class="attack-options">
                     <label class="attack-field">
-                        Bônus de Ataque (d20)
+                        Bônus de Ataque (Mod + Prof.)
                         <input type="number" min="-50" max="50" @bind="ViewModel.ModificadorAtaque" />
                     </label>
                     <label class="attack-field">
@@ -391,7 +403,7 @@
 
                 <button type="button"
                         class="attack-roll"
-                        disabled="@(ViewModel.ExecutandoAtaque || ViewModel.ArmaSelecionada == null || !ViewModel.AlvoSelecionadoVivo)"
+                        disabled="@(ViewModel.ExecutandoAtaque || ViewModel.ArmaSelecionada == null || !ViewModel.AlvoSelecionadoVivo || !ViewModel.AlvoSelecionadoNoAlcance)"
                         @onclick="ViewModel.RolarDadoAtaqueAsync">
                     @(ViewModel.ExecutandoAtaque
                         ? "Rolando..."
@@ -448,7 +460,9 @@
 
                 <div class="attack-result-box @classeBox">
                     <span class="attack-badge @classeBox">
-                        @(r.Acertou ? (r.EhCritico ? "💥 DANO CRÍTICO APLICADO" : "DANO APLICADO") : "ATAQUE FALHOU")
+                        @(r.Acertou
+                            ? (r.EhCritico ? "💥 DANO CRÍTICO APLICADO" : "DANO APLICADO")
+                            : (r.DadoAtaque == 1 ? "FALHA CRÍTICA (1 NATURAL)" : "ATAQUE FALHOU"))
                     </span>
 
                     @if (r.Acertou)
@@ -465,18 +479,26 @@
                     }
                     else
                     {
-                        <strong>@r.TotalAtaque</strong>
+                        <strong>@(r.DadoAtaque == 1 ? "1!" : r.TotalAtaque.ToString())</strong>
                         <p>
-                            @if (r.AlvoEsquivando)
+                            @if (r.DadoAtaque == 1)
                             {
-                                <text>2d20 Desvantagem [@r.DadoAtaque1, @r.DadoAtaque2] → @r.DadoAtaque</text>
+                                <text>1 natural sempre erra o ataque contra <b>@r.NomeAlvo</b> (CA @r.CaAlvo).</text>
                             }
                             else
                             {
-                                <text>d20 (@r.DadoAtaque)</text>
+                                @if (r.AlvoEsquivando)
+                                {
+                                    <text>2d20 Desvantagem [@r.DadoAtaque1, @r.DadoAtaque2] → @r.DadoAtaque</text>
+                                }
+                                else
+                                {
+                                    <text>d20 (@r.DadoAtaque)</text>
+                                }
+                                @(r.ModificadorAtaque >= 0 ? $" + {r.ModificadorAtaque}" : $" − {Math.Abs(r.ModificadorAtaque)}")
+                                @(" < ") @($"CA {r.CaAlvo} de ")
+                                <b>@r.NomeAlvo</b>
                             }
-                            @(r.ModificadorAtaque >= 0 ? $" + {r.ModificadorAtaque}" : $" − {Math.Abs(r.ModificadorAtaque)}")
-                            @("<") CA @r.CaAlvo de <b>@r.NomeAlvo</b>
                         </p>
                     }
                 </div>
@@ -484,6 +506,371 @@
                 <div class="attack-footer-actions">
                     <button type="button" class="attack-btn-sec" @onclick="ViewModel.NovoAtaque">Atacar novamente</button>
                     <button type="button" class="attack-btn-prim" @onclick="ViewModel.FecharModalAtaque">Fechar</button>
+                </div>
+            }
+        }
+    </section>
+}
+
+@if (ViewModel.ExibirModalMagia)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.FecharModalMagia"></div>
+
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-magia" @onclick:stopPropagation="true">
+        <header class="attack-header">
+            <div>
+                <p>Conjurador · @ViewModel.AtributoConjuracao (Atk @(ViewModel.BonusAtaqueMagico >= 0 ? $"+{ViewModel.BonusAtaqueMagico}" : ViewModel.BonusAtaqueMagico.ToString()) · CD @ViewModel.CdResistenciaMagia)</p>
+                <h2 id="titulo-magia">✧ Conjurar Magia</h2>
+            </div>
+            <button class="attack-close" type="button" aria-label="Fechar magia" @onclick="ViewModel.FecharModalMagia">×</button>
+        </header>
+
+        @if (ViewModel.CarregandoMagia)
+        {
+            <p class="attack-empty">Carregando magias da sua ficha...</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.ErroModalMagia))
+            {
+                <div class="attack-error">@ViewModel.ErroModalMagia</div>
+            }
+
+            @if (ViewModel.EtapaMagia == 1)
+            {
+                <div class="attack-section">
+                    <div class="attack-choice-topo">
+                        <p class="attack-section-label">1. Escolha a magia da ficha</p>
+                        @if (ViewModel.EspacosMaximosPorCirculo.Any())
+                        {
+                            <button type="button" class="spell-reset-btn" @onclick="ViewModel.RestaurarEspacosMagiaSessao">
+                                Restaurar espaços
+                            </button>
+                        }
+                    </div>
+
+                    @if (!ViewModel.MagiasDisponiveisSessao.Any())
+                    {
+                        <p class="attack-empty">Nenhuma magia vinculada à sua ficha. Adicione magias na aba Magias da ficha.</p>
+                    }
+                    else
+                    {
+                        <div class="attack-choice-list">
+                            @foreach (var magia in ViewModel.MagiasDisponiveisSessao)
+                            {
+                                bool sel = ViewModel.IdMagiaSelecionada == magia.IdMagia;
+                                <button type="button"
+                                        class="attack-choice-card @(sel ? "selecionado" : "")"
+                                        @onclick="() => ViewModel.SelecionarMagiaSessao(magia.IdMagia)">
+                                    <div class="attack-choice-topo">
+                                        <strong>@magia.Nome</strong>
+                                        <span class="alvo-tag alvo-tag-jogador">@(magia.CirculoNivel == 0 ? "Truque" : $"{magia.CirculoNivel}º")</span>
+                                    </div>
+                                    <small>@magia.TempoInfo.RotuloPtBr · @magia.AlcanceInfo.RotuloPtBr · @magia.DuracaoInfo.RotuloPtBr</small>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (ViewModel.MagiaSelecionada != null)
+                {
+                    var m = ViewModel.MagiaSelecionada;
+
+                    <div class="spell-meta-bar">
+                        <span><b>Tempo:</b> @m.TempoInfo.RotuloPtBr</span>
+                        <span><b>Alcance:</b> @m.AlcanceInfo.RotuloPtBr</span>
+                        <span><b>Duração:</b> @m.DuracaoInfo.RotuloPtBr@(m.DuracaoInfo.SugereConcentracao ? " (Conc.)" : "")</span>
+                        @if (!string.IsNullOrWhiteSpace(m.Componentes))
+                        {
+                            <span><b>Comp.:</b> @m.Componentes</span>
+                        }
+                    </div>
+
+                    @if (!m.TempoInfo.PermitidaEmCombate)
+                    {
+                        <div class="spell-warning">
+                            ⚠️ Tempo de conjuração longo (@m.TempoInfo.RotuloPtBr). Em combate (1 rodada = 6s), confirme com o Mestre antes de conjurar.
+                        </div>
+                    }
+
+                    @if (m.CirculoNivel > 0)
+                    {
+                        <div class="attack-section">
+                            <p class="attack-section-label">2. Círculo do espaço de magia</p>
+                            @if (!ViewModel.CirculosDisponiveisParaMagiaSelecionada.Any())
+                            {
+                                <div class="attack-error">Sua classe/nível atual não possui espaços disponíveis para o @(m.CirculoNivel)º círculo.</div>
+                            }
+                            else
+                            {
+                                <div class="spell-circle-pills">
+                                    @foreach (int circulo in ViewModel.CirculosDisponiveisParaMagiaSelecionada)
+                                    {
+                                        int rest = ViewModel.ObterEspacosRestantesCirculo(circulo);
+                                        int max = ViewModel.ObterEspacosMaximosCirculo(circulo);
+                                        bool ativo = ViewModel.CirculoConjuracaoSelecionado == circulo;
+                                        <button type="button"
+                                                class="spell-pill @(ativo ? "ativo" : "")"
+                                                disabled="@(rest <= 0)"
+                                                @onclick="() => ViewModel.SelecionarCirculoConjuracao(circulo)">
+                                            @(circulo)º <small>(@rest/@max)</small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="attack-section">
+                        <p class="attack-section-label">Resolução da magia</p>
+                        <div class="spell-mode-grid">
+                            <button type="button"
+                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.AtaqueMagico ? "ativo" : "")"
+                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.AtaqueMagico)">
+                                Ataque (vs CA)
+                            </button>
+                            <button type="button"
+                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Salvaguarda ? "ativo" : "")"
+                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Salvaguarda)">
+                                Salvaguarda
+                            </button>
+                            <button type="button"
+                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Cura ? "ativo" : "")"
+                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Cura)">
+                                Cura
+                            </button>
+                            <button type="button"
+                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Efeito ? "ativo" : "")"
+                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Efeito)">
+                                Efeito / Buff
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (ViewModel.ResolucaoMagiaAtual != ModoResolucaoMagia.Efeito)
+                    {
+                        <div class="attack-options">
+                            <label class="attack-field">
+                                @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Cura ? "Dado de Cura (ex: 1d8)" : "Dado de Dano (ex: 4d4)")
+                                <input type="text" placeholder="1d8" @bind="ViewModel.ExpressaoDadoMagia" />
+                            </label>
+                            <label class="attack-field">
+                                Bônus Extra (opcional)
+                                <input type="number" min="-50" max="50" @bind="ViewModel.BonusExtraMagia" />
+                            </label>
+                        </div>
+                    }
+
+                    @if (ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Salvaguarda)
+                    {
+                        <div class="attack-options">
+                            <label class="attack-field">
+                                Atributo da Salvaguarda (CD @ViewModel.CdResistenciaMagia)
+                                <select class="spell-field-select" @bind="ViewModel.AtributoSalvaguardaMagia">
+                                    <option value="Destreza">Destreza</option>
+                                    <option value="Constituição">Constituição</option>
+                                    <option value="Sabedoria">Sabedoria</option>
+                                    <option value="Força">Força</option>
+                                    <option value="Inteligência">Inteligência</option>
+                                    <option value="Carisma">Carisma</option>
+                                </select>
+                            </label>
+                            <label class="spell-check-row">
+                                <input type="checkbox" @bind="ViewModel.MeioDanoSePassarSalvaguarda" />
+                                <span>Metade do dano se o alvo passar</span>
+                            </label>
+                        </div>
+                    }
+
+                    @if (m.AlcanceInfo.Categoria != CategoriaAlcanceMagia.Pessoal)
+                    {
+                        <div class="attack-section">
+                            <p class="attack-section-label">Escolha o alvo (Alcance: @m.AlcanceInfo.RotuloPtBr)</p>
+                            @if (!ViewModel.AlvosParaMagia.Any())
+                            {
+                                <p class="attack-empty">Nenhum alvo visível no mapa atual.</p>
+                            }
+                            else
+                            {
+                                <div class="attack-choice-list">
+                                    @foreach (var alvo in ViewModel.AlvosParaMagia)
+                                    {
+                                        int pvAt = alvo.PvAtual ?? alvo.PvMaximo ?? 0;
+                                        int pvMx = alvo.PvMaximo ?? 0;
+                                        bool derrotado = pvAt <= 0 && ViewModel.ResolucaoMagiaAtual is ModoResolucaoMagia.AtaqueMagico or ModoResolucaoMagia.Salvaguarda;
+                                        var dist = ViewModel.ObterDistanciaAlvoMetros(alvo);
+                                        bool foraAlcance = !ViewModel.AlvoDentroAlcanceMagia(alvo);
+                                        bool bloqueado = derrotado || foraAlcance;
+                                        bool sel = !bloqueado
+                                            && ViewModel.TipoAlvoMagiaSelecionado == alvo.TipoEntidade
+                                            && ViewModel.IdAlvoMagiaSelecionado == alvo.IdEntidade;
+
+                                        string tagClasse = alvo.TipoEntidade switch
+                                        {
+                                            TiposPinoSessao.Monstro => "alvo-tag-monstro",
+                                            TiposPinoSessao.Npc => "alvo-tag-npc",
+                                            _ => "alvo-tag-jogador"
+                                        };
+
+                                        string tagLabel = alvo.TipoEntidade switch
+                                        {
+                                            TiposPinoSessao.Monstro => "Monstro",
+                                            TiposPinoSessao.Npc => "NPC",
+                                            _ => "Jogador"
+                                        };
+
+                                        <button type="button"
+                                                disabled="@bloqueado"
+                                                class="attack-choice-card @(sel ? "selecionado" : "") @(bloqueado ? "derrotado" : "")"
+                                                @onclick="() => ViewModel.SelecionarAlvoMagia(alvo.TipoEntidade, alvo.IdEntidade)">
+                                            <div class="attack-choice-topo">
+                                                <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
+                                                <span class="alvo-tag @tagClasse">@tagLabel</span>
+                                            </div>
+                                            @if (foraAlcance && dist.HasValue && !derrotado)
+                                            {
+                                                <small class="alvo-alcance-aviso">Fora do alcance (@SessaoViewModel.FormatarMetros(dist.Value) / máx. @m.AlcanceInfo.RotuloPtBr)</small>
+                                            }
+                                            @if (alvo.Esquivando && !bloqueado && ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.AtaqueMagico)
+                                            {
+                                                <small class="alvo-esquiva-aviso">◈ Esquivando (Desvantagem: 2d20, menor)</small>
+                                            }
+                                            <small>
+                                                PV: @pvAt / @pvMx · CA: @(alvo.ClasseArmadura ?? 10)@(dist.HasValue ? $" · {SessaoViewModel.FormatarMetros(dist.Value)}" : "")
+                                            </small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <button type="button"
+                            class="attack-roll"
+                            disabled="@(!ViewModel.PodeExecutarMagia)"
+                            @onclick="ViewModel.ExecutarEtapa1MagiaAsync">
+                        @(ViewModel.ExecutandoMagia
+                            ? "Conjurando..."
+                            : ViewModel.ResolucaoMagiaAtual switch
+                            {
+                                ModoResolucaoMagia.AtaqueMagico => ViewModel.AlvoMagiaSelecionado?.Esquivando == true
+                                    ? "✧ Rolar Ataque Mágico com Desvantagem (2d20)"
+                                    : "✧ Rolar Ataque Mágico (1d20)",
+                                ModoResolucaoMagia.Salvaguarda => $"✧ Conjurar (Salvaguarda de {ViewModel.AtributoSalvaguardaMagia} CD {ViewModel.CdResistenciaMagia})",
+                                ModoResolucaoMagia.Cura => $"💚 Conjurar Cura ({ViewModel.ExpressaoDadoMagia})",
+                                _ => $"✧ Conjurar {m.Nome}"
+                            })
+                    </button>
+                }
+            }
+            else if (ViewModel.EtapaMagia == 2 && ViewModel.ResultadoMagiaAtual != null)
+            {
+                var r = ViewModel.ResultadoMagiaAtual;
+                <div class="attack-result-box @(r.EhCritico ? "critico" : "acertou")">
+                    <span class="attack-badge @(r.EhCritico ? "critico" : "acertou")">
+                        @(r.EhCritico ? "💥 CRÍTICO MÁGICO! (20 NATURAL)" : "ATAQUE MÁGICO ACERTOU!")
+                    </span>
+                    <strong>@(r.EhCritico ? "20!" : r.TotalRolagem.ToString())</strong>
+                    <p>
+                        @if (r.EhCritico)
+                        {
+                            <text>20 natural acerta <b>@r.NomeAlvo</b> (CA @r.CaAlvo) e dobra os dados de <b>@r.NomeMagia</b>!</text>
+                        }
+                        else if (r.AlvoEsquivando)
+                        {
+                            <text>2d20 Desvantagem [@r.DadoD201, @r.DadoD202] → @r.DadoD20 @(r.ModificadorRolagem >= 0 ? $"+ {r.ModificadorRolagem}" : $"− {Math.Abs(r.ModificadorRolagem)}") ≥ CA @r.CaAlvo de <b>@r.NomeAlvo</b></text>
+                        }
+                        else
+                        {
+                            <text>d20 (@r.DadoD20) @(r.ModificadorRolagem >= 0 ? $"+ {r.ModificadorRolagem}" : $"− {Math.Abs(r.ModificadorRolagem)}") ≥ CA @r.CaAlvo de <b>@r.NomeAlvo</b></text>
+                        }
+                    </p>
+                </div>
+
+                <button type="button"
+                        class="attack-roll @(r.EhCritico ? "attack-crit-btn" : "attack-damage-btn")"
+                        disabled="@ViewModel.ExecutandoMagia"
+                        @onclick="ViewModel.RolarDanoMagiaEAplicarAsync">
+                    @(ViewModel.ExecutandoMagia
+                        ? "Aplicando dano..."
+                        : r.EhCritico
+                            ? $"💥 Rolar Dano Crítico (2× dados de {r.ExpressaoDado})"
+                            : $"💥 Rolar Dano da Magia ({r.ExpressaoDado})")
+                </button>
+            }
+            else if (ViewModel.EtapaMagia == 3 && ViewModel.ResultadoMagiaAtual != null)
+            {
+                var r = ViewModel.ResultadoMagiaAtual;
+                string classeBox = r.Modo == ModoResolucaoMagia.AtaqueMagico && !r.Acertou
+                    ? "falhou"
+                    : (r.EhCritico ? "critico" : "acertou");
+
+                <div class="attack-result-box @classeBox">
+                    @if (r.Modo == ModoResolucaoMagia.AtaqueMagico)
+                    {
+                        <span class="attack-badge @classeBox">
+                            @(r.Acertou
+                                ? (r.EhCritico ? "💥 DANO CRÍTICO APLICADO" : "DANO MÁGICO APLICADO")
+                                : (r.EhFalhaCritica ? "FALHA CRÍTICA (1 NATURAL)" : "MAGIA ERROU O ALVO"))
+                        </span>
+
+                        @if (r.Acertou)
+                        {
+                            <strong>-@r.ValorTotal PV</strong>
+                            <p>
+                                <b>@r.NomeMagia</b> (@(r.EhCritico ? $"2× {r.ExpressaoDado}" : r.ExpressaoDado)) · Dados: [@string.Join(" + ", r.ResultadosDado)]
+                                @(r.BonusExtra != 0 ? (r.BonusExtra > 0 ? $" + {r.BonusExtra}" : $" − {Math.Abs(r.BonusExtra)}") : "")
+                            </p>
+                            <p class="attack-hp-summary">
+                                PV de <b>@r.NomeAlvo</b>: @r.PvAnterior → <b>@r.PvNovo / @r.PvMaximo</b>
+                            </p>
+                        }
+                        else
+                        {
+                            <strong>@(r.EhFalhaCritica ? "1!" : r.TotalRolagem.ToString())</strong>
+                            <p>
+                                @(r.EhFalhaCritica
+                                    ? $"1 natural sempre erra o ataque mágico contra {r.NomeAlvo}."
+                                    : $"d20 ({r.DadoD20}) {(r.ModificadorRolagem >= 0 ? $"+ {r.ModificadorRolagem}" : $"− {Math.Abs(r.ModificadorRolagem)}")} < CA {r.CaAlvo} de {r.NomeAlvo}.")
+                            </p>
+                        }
+                    }
+                    else if (r.Modo == ModoResolucaoMagia.Salvaguarda)
+                    {
+                        <span class="attack-badge @(r.AlvoPassouSalvaguarda ? "falhou" : "acertou")">
+                            @(r.AlvoPassouSalvaguarda ? "ALVO PASSOU NA SALVAGUARDA" : "ALVO FALHOU NA SALVAGUARDA")
+                        </span>
+                        <strong>-@r.ValorTotal PV</strong>
+                        <p>
+                            <b>@r.NomeAlvo</b> rolou d20 (@r.DadoD20) em @r.AtributoSalvaguarda vs CD @r.CdAlvo · Dados: [@string.Join(" + ", r.ResultadosDado)]
+                        </p>
+                        <p class="attack-hp-summary">
+                            PV de <b>@r.NomeAlvo</b>: @r.PvAnterior → <b>@r.PvNovo / @r.PvMaximo</b>
+                        </p>
+                    }
+                    else if (r.Modo == ModoResolucaoMagia.Cura)
+                    {
+                        <span class="attack-badge acertou">💚 CURA CONJURADA</span>
+                        <strong>+@r.ValorTotal PV</strong>
+                        <p>
+                            <b>@r.NomeMagia</b> em <b>@r.NomeAlvo</b> · Dados: [@string.Join(" + ", r.ResultadosDado)]
+                            @(r.BonusExtra != 0 ? (r.BonusExtra > 0 ? $" + {r.BonusExtra}" : $" − {Math.Abs(r.BonusExtra)}") : "")
+                        </p>
+                    }
+                    else
+                    {
+                        <span class="attack-badge acertou">✧ MAGIA ATIVADA</span>
+                        <strong>@r.NomeMagia</strong>
+                        <p>
+                            Alvo: <b>@r.NomeAlvo</b> · Duração: <b>@r.DuracaoTexto</b>@(r.Concentracao ? " (Concentração)" : "")
+                        </p>
+                    }
+                </div>
+
+                <div class="attack-footer-actions">
+                    <button type="button" class="attack-btn-sec" @onclick="ViewModel.NovaConjuracao">Conjurar outra</button>
+                    <button type="button" class="attack-btn-prim" @onclick="ViewModel.FecharModalMagia">Fechar</button>
                 </div>
             }
         }

@@ -1,6 +1,3 @@
-/* ==========================================================================
-   PAINEL DE AÇÕES RÁPIDAS
-   ========================================================================== */
 .action-panel {
     display: flex;
     min-width: 0;
@@ -90,9 +87,6 @@
     font-size: 8px;
 }
 
-/* ==========================================================================
-   MODAIS DE COMBATE (ATAQUE, DISPARADA, ESQUIVAR, ESCONDER)
-   ========================================================================== */
 .attack-backdrop {
     position: fixed;
     inset: 0;
@@ -234,6 +228,11 @@
 
 .alvo-esquiva-aviso {
     color: #9ecfff !important;
+    font-weight: 600;
+}
+
+.alvo-alcance-aviso {
+    color: #f2a498 !important;
     font-weight: 600;
 }
 
@@ -485,6 +484,119 @@
     .attack-btn-prim:hover {
         background: #a87933;
     }
+
+.spell-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(207, 178, 113, 0.22);
+    border-radius: 5px;
+    background: rgba(14, 13, 11, 0.45);
+    color: #d8c9a9;
+    font-size: 10.5px;
+}
+
+    .spell-meta-bar b {
+        color: #f3d379;
+    }
+
+.spell-warning {
+    padding: 7px 10px;
+    border-left: 3px solid #e6b84c;
+    border-radius: 4px;
+    background: rgba(196, 146, 42, 0.18);
+    color: #f6e0a5;
+    font-size: 10.5px;
+}
+
+.spell-circle-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.spell-pill {
+    padding: 5px 10px;
+    border: 1px solid rgba(205, 174, 101, 0.28);
+    border-radius: 4px;
+    background: #2e2921;
+    color: #efe4ca;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .spell-pill.ativo {
+        border-color: #e6c366;
+        background: rgba(179, 141, 57, 0.32);
+        color: #fff3d1;
+        font-weight: 700;
+    }
+
+    .spell-pill:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+    }
+
+.spell-reset-btn {
+    border: 1px solid rgba(205, 174, 101, 0.3);
+    border-radius: 3px;
+    background: transparent;
+    color: #d2b665;
+    font-size: 9.5px;
+    padding: 2px 7px;
+    cursor: pointer;
+}
+
+    .spell-reset-btn:hover {
+        background: rgba(205, 174, 101, 0.14);
+    }
+
+.spell-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.spell-mode-btn {
+    padding: 6px 4px;
+    border: 1px solid rgba(205, 174, 101, 0.25);
+    border-radius: 4px;
+    background: #2b261f;
+    color: #d7c7a5;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+    .spell-mode-btn.ativo {
+        border-color: #e6c366;
+        background: rgba(179, 141, 57, 0.28);
+        color: #fff2d1;
+        font-weight: 700;
+    }
+
+.spell-field-select {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 8px;
+    border: 1px solid rgba(205, 174, 101, 0.27);
+    border-radius: 4px;
+    background: #171612;
+    color: #f1e1bd;
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 12px;
+}
+
+.spell-check-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    align-self: end;
+    min-height: 36px;
+    color: #d8c9a9;
+    font-size: 10.5px;
+    cursor: pointer;
+}
 
 @media (max-width: 560px) {
     .action-panel {

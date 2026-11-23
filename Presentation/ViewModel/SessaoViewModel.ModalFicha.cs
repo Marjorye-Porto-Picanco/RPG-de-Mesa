@@ -13,7 +13,6 @@ public partial class SessaoViewModel
     public bool SalvandoFichaModal { get; private set; }
     public string? FeedbackFichaModal { get; private set; }
 
-    // Edição de inventário dentro do modal da ficha
     public List<ItemSlotSessaoDto> ItensModalEdicao { get; private set; } = new();
     public int ModalMoedasPC { get; set; }
     public int ModalMoedasPP { get; set; }
@@ -82,6 +81,7 @@ public partial class SessaoViewModel
         FeedbackFichaModal = null;
         ExibirModalDados = false;
         ExibirModalAtaque = false;
+        ExibirModalMagia = false;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();

@@ -8,7 +8,6 @@ public partial class SessaoViewModel
 {
     private bool _moveuDuranteArraste;
 
-    // Mapa & Zoom (Grade D&D 20x20 -> 1,5m/quadrado = 30m x 30m)
     public double NivelZoom { get; private set; } = 1.0;
     public const double ZoomMinimo = 0.6;
     public const double ZoomMaximo = 2.6;
@@ -16,7 +15,6 @@ public partial class SessaoViewModel
     public const int GradeLinhas = 20;
     public const int TamanhoBaseMapaPx = 720;
 
-    // Painel de Pinos e Arraste por Pointer Events (Exclusivo do Mestre)
     public bool ExibirPainelPinos { get; private set; }
     public string AbaPinosAtiva { get; private set; } = "jogadores";
     public PinoSelecionadoParaColocar? PinoParaPosicionar { get; private set; }
@@ -367,6 +365,7 @@ public partial class SessaoViewModel
             ExibirModalDados = false;
             ExibirModalFicha = false;
             ExibirModalAtaque = false;
+            ExibirModalMagia = false;
             ExibirModalEsquivar = false;
             ExibirModalEsconder = false;
             Notificar();
@@ -383,6 +382,7 @@ public partial class SessaoViewModel
             ExibirModalDados = false;
             ExibirModalFicha = false;
             ExibirModalAtaque = false;
+            ExibirModalMagia = false;
             ExibirModalEsquivar = false;
             ExibirModalEsconder = false;
             Notificar();
