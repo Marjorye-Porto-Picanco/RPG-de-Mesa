@@ -106,8 +106,10 @@ public class SessaoViewModel : IAsyncDisposable
     public Monstro? MonstroEmVisualizacao { get; private set; }
     public PinoMapaDto? PinoMonstroEmVisualizacao { get; private set; }
     public int PvAtualMonstroEdicao { get; set; }
-    public bool SalvandoPvMonstro { get; private set; }
     public NPC? NpcEmVisualizacao { get; private set; }
+    public PinoMapaDto? PinoNpcEmVisualizacao { get; private set; }
+    public int PvAtualNpcEdicao { get; set; }
+    public bool SalvandoPvEntidade { get; private set; }
 
     // Modal de Ataque (Combate)
     public bool ExibirModalAtaque { get; private set; }
@@ -117,7 +119,8 @@ public class SessaoViewModel : IAsyncDisposable
     public List<Item> ArmasDisponiveisAtaque { get; private set; } = new();
     public Personagem? PersonagemAtacante { get; private set; }
     public int IdArmaSelecionada { get; private set; }
-    public int IdMonstroAlvoSelecionado { get; private set; }
+    public string? TipoAlvoSelecionado { get; private set; }
+    public int IdAlvoSelecionado { get; private set; }
     public int ModificadorAtaque { get; set; }
     public int ModificadorDano { get; set; }
     public int EtapaAtaque { get; private set; } = 1; // 1=Escolher arma/alvo, 2=Acertou (rolar dano), 3=Finalizado
@@ -126,18 +129,24 @@ public class SessaoViewModel : IAsyncDisposable
     public Item? ArmaSelecionada =>
         ArmasDisponiveisAtaque.FirstOrDefault(a => a.IdItem == IdArmaSelecionada);
 
-    public List<PinoMapaDto> MonstrosAlvoNoMapa =>
+    // Todos os alvos visíveis no mapa atual: Monstros, NPCs e outros Jogadores (exclui o próprio atacante)
+    public List<PinoMapaDto> AlvosNoMapa =>
         PinosVisiveisNoMapa
-            .Where(p => p.TipoEntidade == TiposPinoSessao.Monstro)
-            .OrderBy(p => p.Nome)
+            .Where(p => !(p.TipoEntidade == TiposPinoSessao.Personagem &&
+                          Estado.IdPersonagemLogado.HasValue &&
+                          p.IdEntidade == Estado.IdPersonagemLogado.Value))
+            .OrderBy(p => p.TipoEntidade == TiposPinoSessao.Monstro ? 0 : p.TipoEntidade == TiposPinoSessao.Npc ? 1 : 2)
+            .ThenBy(p => p.Nome)
             .ToList();
 
-    public PinoMapaDto? MonstroAlvoSelecionado =>
-        MonstrosAlvoNoMapa.FirstOrDefault(m => m.IdEntidade == IdMonstroAlvoSelecionado);
+    public PinoMapaDto? AlvoSelecionado =>
+        AlvosNoMapa.FirstOrDefault(a =>
+            a.TipoEntidade == TipoAlvoSelecionado &&
+            a.IdEntidade == IdAlvoSelecionado);
 
     public bool AlvoSelecionadoVivo =>
-        MonstroAlvoSelecionado != null &&
-        (MonstroAlvoSelecionado.PvAtual ?? MonstroAlvoSelecionado.PvMaximo ?? 0) > 0;
+        AlvoSelecionado != null &&
+        (AlvoSelecionado.PvAtual ?? AlvoSelecionado.PvMaximo ?? 0) > 0;
 
     // Modais (Mini janelas)
     public bool ExibirModalDados { get; private set; }
@@ -214,6 +223,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         FichaEmVisualizacao = null;
         FichasRevisao.Clear();
         FichaRevisaoSelecionada = null;
@@ -335,9 +345,17 @@ public class SessaoViewModel : IAsyncDisposable
                         p.TipoEntidade == TiposPinoSessao.Monstro &&
                         p.IdEntidade == PinoMonstroEmVisualizacao.IdEntidade);
                     if (pinoAtualizado != null)
-                    {
                         PinoMonstroEmVisualizacao = pinoAtualizado;
-                    }
+                }
+
+                if (PinoNpcEmVisualizacao != null)
+                {
+                    var pinoAtualizado = Estado.Pinos.FirstOrDefault(p =>
+                        p.IdMapa == Estado.IdMapaAtivo &&
+                        p.TipoEntidade == TiposPinoSessao.Npc &&
+                        p.IdEntidade == PinoNpcEmVisualizacao.IdEntidade);
+                    if (pinoAtualizado != null)
+                        PinoNpcEmVisualizacao = pinoAtualizado;
                 }
 
                 if (ExibirModalAtaque && EtapaAtaque == 1)
@@ -349,8 +367,7 @@ public class SessaoViewModel : IAsyncDisposable
                     }
                     else if (!AlvoSelecionadoVivo)
                     {
-                        var proximoVivo = MonstrosAlvoNoMapa.FirstOrDefault(m => (m.PvAtual ?? m.PvMaximo ?? 0) > 0);
-                        IdMonstroAlvoSelecionado = proximoVivo?.IdEntidade ?? 0;
+                        SelecionarPrimeiroAlvoVivo();
                     }
                 }
 
@@ -363,6 +380,7 @@ public class SessaoViewModel : IAsyncDisposable
                     MonstroEmVisualizacao = null;
                     PinoMonstroEmVisualizacao = null;
                     NpcEmVisualizacao = null;
+                    PinoNpcEmVisualizacao = null;
                     _desconectado = true;
                     _syncCts?.Cancel();
                 }
@@ -464,6 +482,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         FeedbackAcao = null;
 
         ExibirModalAtaque = true;
@@ -502,9 +521,7 @@ public class SessaoViewModel : IAsyncDisposable
 
             IdArmaSelecionada = ArmasDisponiveisAtaque.FirstOrDefault()?.IdItem ?? 0;
             AplicarModificadoresPadraoArma(ArmaSelecionada);
-
-            var primeiroAlvoVivo = MonstrosAlvoNoMapa.FirstOrDefault(m => (m.PvAtual ?? m.PvMaximo ?? 0) > 0);
-            IdMonstroAlvoSelecionado = primeiroAlvoVivo?.IdEntidade ?? 0;
+            SelecionarPrimeiroAlvoVivo();
         }
         catch (Exception ex)
         {
@@ -518,6 +535,13 @@ public class SessaoViewModel : IAsyncDisposable
         }
     }
 
+    private void SelecionarPrimeiroAlvoVivo()
+    {
+        var primeiroVivo = AlvosNoMapa.FirstOrDefault(a => (a.PvAtual ?? a.PvMaximo ?? 0) > 0);
+        TipoAlvoSelecionado = primeiroVivo?.TipoEntidade;
+        IdAlvoSelecionado = primeiroVivo?.IdEntidade ?? 0;
+    }
+
     public void SelecionarArmaAtaque(int idItem)
     {
         IdArmaSelecionada = idItem;
@@ -525,13 +549,17 @@ public class SessaoViewModel : IAsyncDisposable
         Notificar();
     }
 
-    public void SelecionarAlvoAtaque(int idMonstro)
+    public void SelecionarAlvoAtaque(string tipoEntidade, int idEntidade)
     {
-        var alvo = MonstrosAlvoNoMapa.FirstOrDefault(m => m.IdEntidade == idMonstro);
+        var alvo = AlvosNoMapa.FirstOrDefault(a =>
+            a.TipoEntidade == tipoEntidade &&
+            a.IdEntidade == idEntidade);
+
         if (alvo == null || (alvo.PvAtual ?? alvo.PvMaximo ?? 0) <= 0)
             return;
 
-        IdMonstroAlvoSelecionado = idMonstro;
+        TipoAlvoSelecionado = tipoEntidade;
+        IdAlvoSelecionado = idEntidade;
         ErroModalAtaque = null;
         Notificar();
     }
@@ -573,7 +601,7 @@ public class SessaoViewModel : IAsyncDisposable
         }
 
         var arma = ArmaSelecionada;
-        var alvo = MonstroAlvoSelecionado;
+        var alvo = AlvoSelecionado;
 
         if (arma == null)
         {
@@ -584,7 +612,7 @@ public class SessaoViewModel : IAsyncDisposable
 
         if (alvo == null)
         {
-            ErroModalAtaque = "Selecione um monstro alvo no mapa.";
+            ErroModalAtaque = "Selecione um alvo no mapa.";
             Notificar();
             return;
         }
@@ -614,7 +642,8 @@ public class SessaoViewModel : IAsyncDisposable
             NomeArma = arma.Nome,
             ExpressaoDano = string.IsNullOrWhiteSpace(arma.Dano) ? "1d4" : arma.Dano.Trim(),
             TipoDano = arma.TipoDano,
-            IdMonstroAlvo = alvo.IdEntidade,
+            TipoAlvo = alvo.TipoEntidade,
+            IdEntidadeAlvo = alvo.IdEntidade,
             NomeAlvo = alvo.Nome,
             CaAlvo = caAlvo,
             DadoAtaque = dadoD20,
@@ -732,10 +761,7 @@ public class SessaoViewModel : IAsyncDisposable
         ErroModalAtaque = null;
 
         if (!AlvoSelecionadoVivo)
-        {
-            var proximoVivo = MonstrosAlvoNoMapa.FirstOrDefault(m => (m.PvAtual ?? m.PvMaximo ?? 0) > 0);
-            IdMonstroAlvoSelecionado = proximoVivo?.IdEntidade ?? 0;
-        }
+            SelecionarPrimeiroAlvoVivo();
 
         Notificar();
     }
@@ -768,46 +794,74 @@ public class SessaoViewModel : IAsyncDisposable
     }
 
     // =========================================================================
-    // AJUSTE E RESTAURAÇÃO DE PV DO MONSTRO (EXCLUSIVO DO MESTRE)
+    // AJUSTE E RESTAURAÇÃO DE PV DE MONSTRO E NPC (EXCLUSIVO DO MESTRE)
     // =========================================================================
     public async Task SalvarPvAtualMonstroAsync()
     {
-        if (!Estado.EhMestre || MonstroEmVisualizacao == null || SalvandoPvMonstro) return;
+        if (!Estado.EhMestre || MonstroEmVisualizacao == null || SalvandoPvEntidade) return;
 
         int novoPv = Math.Clamp(PvAtualMonstroEdicao, 0, Math.Max(1, MonstroEmVisualizacao.PvMaximo));
         PvAtualMonstroEdicao = novoPv;
 
-        await AtualizarPvMonstroInternoAsync(MonstroEmVisualizacao.IdMonstro, novoPv);
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Monstro, MonstroEmVisualizacao.IdMonstro, novoPv);
     }
 
     public async Task RestaurarPvMaximoMonstroAsync()
     {
-        if (!Estado.EhMestre || MonstroEmVisualizacao == null || SalvandoPvMonstro) return;
+        if (!Estado.EhMestre || MonstroEmVisualizacao == null || SalvandoPvEntidade) return;
 
         PvAtualMonstroEdicao = MonstroEmVisualizacao.PvMaximo;
-        await AtualizarPvMonstroInternoAsync(MonstroEmVisualizacao.IdMonstro, MonstroEmVisualizacao.PvMaximo);
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Monstro, MonstroEmVisualizacao.IdMonstro, MonstroEmVisualizacao.PvMaximo);
     }
 
     public async Task RestaurarPvMonstroPeloPainelAsync(Monstro monstro)
     {
-        if (!Estado.EhMestre || SalvandoPvMonstro) return;
-        await AtualizarPvMonstroInternoAsync(monstro.IdMonstro, monstro.PvMaximo);
+        if (!Estado.EhMestre || SalvandoPvEntidade) return;
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Monstro, monstro.IdMonstro, monstro.PvMaximo);
     }
 
-    private async Task AtualizarPvMonstroInternoAsync(int idMonstro, int novoPv)
+    public async Task SalvarPvAtualNpcAsync()
     {
-        SalvandoPvMonstro = true;
+        if (!Estado.EhMestre || NpcEmVisualizacao == null || SalvandoPvEntidade) return;
+
+        int pvMax = SessaoService.CalcularPvMaximoNpc(NpcEmVisualizacao);
+        int novoPv = Math.Clamp(PvAtualNpcEdicao, 0, pvMax);
+        PvAtualNpcEdicao = novoPv;
+
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Npc, NpcEmVisualizacao.IdNpc, novoPv);
+    }
+
+    public async Task RestaurarPvMaximoNpcAsync()
+    {
+        if (!Estado.EhMestre || NpcEmVisualizacao == null || SalvandoPvEntidade) return;
+
+        int pvMax = SessaoService.CalcularPvMaximoNpc(NpcEmVisualizacao);
+        PvAtualNpcEdicao = pvMax;
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Npc, NpcEmVisualizacao.IdNpc, pvMax);
+    }
+
+    public async Task RestaurarPvNpcPeloPainelAsync(NPC npc)
+    {
+        if (!Estado.EhMestre || SalvandoPvEntidade) return;
+        int pvMax = SessaoService.CalcularPvMaximoNpc(npc);
+        await AtualizarPvEntidadeInternoAsync(TiposPinoSessao.Npc, npc.IdNpc, pvMax);
+    }
+
+    private async Task AtualizarPvEntidadeInternoAsync(string tipoEntidade, int idEntidade, int novoPv)
+    {
+        SalvandoPvEntidade = true;
         Notificar();
 
         await _dbLock.WaitAsync();
         try
         {
-            var (sucesso, msg) = await _sessaoService.AtualizarPvMonstroNoMapaAsync(
+            var (sucesso, msg) = await _sessaoService.AtualizarPvPinoNoMapaAsync(
                 Estado.IdCampanha,
                 Estado.IdSessao,
                 Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
-                idMonstro,
+                tipoEntidade,
+                idEntidade,
                 novoPv);
 
             FeedbackAcao = msg;
@@ -820,18 +874,26 @@ public class SessaoViewModel : IAsyncDisposable
             if (atualizado != null)
             {
                 Estado = atualizado;
-                if (MonstroEmVisualizacao != null && MonstroEmVisualizacao.IdMonstro == idMonstro)
+
+                if (tipoEntidade == TiposPinoSessao.Monstro && MonstroEmVisualizacao?.IdMonstro == idEntidade)
                 {
                     PinoMonstroEmVisualizacao = Estado.Pinos.FirstOrDefault(p =>
                         p.IdMapa == Estado.IdMapaAtivo &&
                         p.TipoEntidade == TiposPinoSessao.Monstro &&
-                        p.IdEntidade == idMonstro);
+                        p.IdEntidade == idEntidade);
+                }
+                else if (tipoEntidade == TiposPinoSessao.Npc && NpcEmVisualizacao?.IdNpc == idEntidade)
+                {
+                    PinoNpcEmVisualizacao = Estado.Pinos.FirstOrDefault(p =>
+                        p.IdMapa == Estado.IdMapaAtivo &&
+                        p.TipoEntidade == TiposPinoSessao.Npc &&
+                        p.IdEntidade == idEntidade);
                 }
             }
         }
         finally
         {
-            SalvandoPvMonstro = false;
+            SalvandoPvEntidade = false;
             _dbLock.Release();
             Notificar();
         }
@@ -1148,6 +1210,7 @@ public class SessaoViewModel : IAsyncDisposable
             PinoMonstroEmVisualizacao = pino;
             PvAtualMonstroEdicao = pino.PvAtual ?? MonstroEmVisualizacao?.PvMaximo ?? 0;
             NpcEmVisualizacao = null;
+            PinoNpcEmVisualizacao = null;
             ExibirModalDados = false;
             ExibirModalFicha = false;
             ExibirModalAtaque = false;
@@ -1158,6 +1221,8 @@ public class SessaoViewModel : IAsyncDisposable
         if (pino.TipoEntidade == TiposPinoSessao.Npc)
         {
             NpcEmVisualizacao = Estado.NpcsCampanha.FirstOrDefault(n => n.IdNpc == pino.IdEntidade);
+            PinoNpcEmVisualizacao = pino;
+            PvAtualNpcEdicao = pino.PvAtual ?? (NpcEmVisualizacao != null ? SessaoService.CalcularPvMaximoNpc(NpcEmVisualizacao) : 0);
             MonstroEmVisualizacao = null;
             PinoMonstroEmVisualizacao = null;
             ExibirModalDados = false;
@@ -1182,6 +1247,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         Notificar();
     }
 
@@ -1324,6 +1390,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         ExibirModalDados = true;
         Notificar();
     }
@@ -1393,6 +1460,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         AbaFichaModalAtiva = abaInicial;
         CarregandoFichaModal = true;
         Notificar();
@@ -1545,6 +1613,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         FeedbackAcao = null;
         Notificar();
     }
@@ -1594,6 +1663,7 @@ public class SessaoViewModel : IAsyncDisposable
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
         Notificar();
 
         _desconectado = true;

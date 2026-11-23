@@ -2566,44 +2566,67 @@ textarea {
 /* ==========================================================================
    PINOS (TOKENS) NO MAPA
    ========================================================================== */
+.mapa-grade-20x20 {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    grid-template-rows: repeat(20, minmax(0, 1fr));
+}
+
 .celula-grade {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1px;
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border-right: 1px solid rgba(236, 218, 171, 0.24);
+    border-bottom: 1px solid rgba(236, 218, 171, 0.24);
+    transition: background-color 110ms ease;
 }
 
 .mapa-pino {
+    grid-area: 1 / 1;
     position: relative;
     z-index: 6;
     display: grid;
     place-items: center;
-    width: 88%;
-    height: 88%;
+    width: 84%;
+    height: 84%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
     padding: 0;
+    box-sizing: border-box;
     border: 2px solid #d4b460;
     border-radius: 50%;
     background: #2b241c;
     color: #fff3d6;
     font-size: 9px;
     font-weight: 700;
+    line-height: 1;
     overflow: hidden;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
     transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-    .mapa-pino:hover {
-        transform: scale(1.14);
-        z-index: 9;
-        box-shadow: 0 0 0 2px rgba(240, 209, 127, 0.65), 0 4px 10px rgba(0, 0, 0, 0.85);
-    }
-
     .mapa-pino img {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center;
         display: block;
+    }
+
+    .mapa-pino span {
+        position: relative;
+        z-index: 1;
+        line-height: 1;
     }
 
     .mapa-pino.tipo-personagem {
@@ -3270,3 +3293,36 @@ textarea {
     .fm-btn-pv-max:hover:not(:disabled) {
         filter: brightness(1.12);
     }
+.attack-choice-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.alvo-tag {
+    flex: 0 0 auto;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.alvo-tag-monstro {
+    background: rgba(224, 108, 91, 0.22);
+    color: #f4a498;
+    border: 1px solid rgba(224, 108, 91, 0.45);
+}
+
+.alvo-tag-npc {
+    background: rgba(135, 196, 122, 0.2);
+    color: #a9e09d;
+    border: 1px solid rgba(135, 196, 122, 0.45);
+}
+
+.alvo-tag-jogador {
+    background: rgba(102, 179, 255, 0.2);
+    color: #9ecfff;
+    border: 1px solid rgba(102, 179, 255, 0.45);
+}

@@ -6,6 +6,7 @@ using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
+using RPGdeMesa.Domain.ValueObjects;
 
 namespace RPGdeMesa.Application.Services;
 
@@ -367,7 +368,7 @@ public class SessaoService
     }
 
     // =========================================================================
-    // COMBATE: ATAQUE E CONTROLE DE PV ATUAL DO MONSTRO
+    // COMBATE: ATAQUE (MONSTRO, NPC OU OUTRO JOGADOR) E CONTROLE DE PV
     // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> RegistrarAtaqueAsync(
         int idSessao,
@@ -394,12 +395,20 @@ public class SessaoService
 
             if (ataque.Acertou)
             {
-                await _sessaoRepo.AtualizarPvPinoAsync(
-                    idSessao,
-                    idMapa,
-                    TiposPinoSessao.Monstro,
-                    ataque.IdMonstroAlvo,
-                    ataque.PvNovo);
+                if (ataque.TipoAlvo == TiposPinoSessao.Personagem)
+                {
+                    await _sessaoRepo.AtualizarPvPersonagemAsync(ataque.IdEntidadeAlvo, ataque.PvNovo);
+                    InvalidarCacheCampanha(sessao.IdCampanha);
+                }
+                else
+                {
+                    await _sessaoRepo.AtualizarPvPinoAsync(
+                        idSessao,
+                        idMapa,
+                        ataque.TipoAlvo,
+                        ataque.IdEntidadeAlvo,
+                        ataque.PvNovo);
+                }
 
                 string dadosDano = string.Join(" + ", ataque.ResultadosDano);
                 string modDano = ataque.ModificadorDano > 0
@@ -413,7 +422,9 @@ public class SessaoService
                     : $" ({ataque.TipoDano})";
 
                 string statusAlvo = ataque.PvNovo <= 0
-                    ? $"☠️ {ataque.NomeAlvo} foi derrotado! (PV: 0/{ataque.PvMaximo})"
+                    ? (ataque.TipoAlvo == TiposPinoSessao.Personagem
+                        ? $"☠️ {ataque.NomeAlvo} caiu inconsciente! (PV: 0/{ataque.PvMaximo})"
+                        : $"☠️ {ataque.NomeAlvo} foi derrotado! (PV: 0/{ataque.PvMaximo})")
                     : $"PV de {ataque.NomeAlvo}: {ataque.PvNovo}/{ataque.PvMaximo}";
 
                 if (ataque.EhCritico)
@@ -453,12 +464,13 @@ public class SessaoService
         }
     }
 
-    public async Task<(bool Sucesso, string Mensagem)> AtualizarPvMonstroNoMapaAsync(
+    public async Task<(bool Sucesso, string Mensagem)> AtualizarPvPinoNoMapaAsync(
         int idCampanha,
         int idSessao,
         int? idMapa,
         int idAccountMestre,
-        int idMonstro,
+        string tipoEntidade,
+        int idEntidade,
         int pvAtual)
     {
         try
@@ -468,20 +480,28 @@ public class SessaoService
                 return (false, "Campanha não encontrada.");
 
             if (campanha.IdAccount != idAccountMestre)
-                return (false, "Apenas o Mestre pode alterar o PV do monstro manualmente.");
+                return (false, "Apenas o Mestre pode alterar o PV manualmente.");
 
-            await _sessaoRepo.AtualizarPvPinoAsync(
-                idSessao,
-                idMapa,
-                TiposPinoSessao.Monstro,
-                idMonstro,
-                Math.Max(0, pvAtual));
+            if (tipoEntidade == TiposPinoSessao.Personagem)
+            {
+                await _sessaoRepo.AtualizarPvPersonagemAsync(idEntidade, Math.Max(0, pvAtual));
+                InvalidarCacheCampanha(idCampanha);
+            }
+            else
+            {
+                await _sessaoRepo.AtualizarPvPinoAsync(
+                    idSessao,
+                    idMapa,
+                    tipoEntidade,
+                    idEntidade,
+                    Math.Max(0, pvAtual));
+            }
 
-            return (true, "PV do monstro atualizado.");
+            return (true, "PV atualizado.");
         }
         catch (Exception ex)
         {
-            return (false, $"Erro ao atualizar PV do monstro: {ex.InnerException?.Message ?? ex.Message}");
+            return (false, $"Erro ao atualizar PV: {ex.InnerException?.Message ?? ex.Message}");
         }
     }
 
@@ -564,6 +584,7 @@ public class SessaoService
 
             await _personagemRepo.AtualizarAsync(ficha);
             await _personagemRepo.SalvarInventarioPersonagem3FNAsync(ficha.IdPersonagem, dadosInventario, itens);
+            InvalidarCacheCampanha(idCampanha);
 
             return (true, "Alterações salvas na ficha da sessão!");
         }
@@ -772,6 +793,18 @@ public class SessaoService
         }
     }
 
+    public static int CalcularPvMaximoNpc(NPC npc)
+    {
+        int modCon = AtributosBase.CalcularModificador(npc.Constituicao);
+        int nivel = Math.Max(1, npc.Nivel);
+        int pvNivel1 = Math.Max(1, 8 + modCon);
+        int pvPorNivel = Math.Max(1, 5 + modCon);
+        return pvNivel1 + (nivel - 1) * pvPorNivel;
+    }
+
+    public static int CalcularCaBase(int destreza) =>
+        Math.Max(1, 10 + AtributosBase.CalcularModificador(destreza));
+
     private static string FormatarDuracao(TimeSpan duracao)
     {
         if (duracao.TotalMinutes < 1)
@@ -872,12 +905,19 @@ public class SessaoService
         }
 
         var jogadoresDto = new List<ParticipanteSessaoDto>();
+        var fichasPorIdPersonagem = new Dictionary<int, Personagem>();
+
         foreach (var (idConta, infoUsuario) in contasJogadores.OrderBy(x => x.Value.Username))
         {
             presencaPorConta.TryGetValue(idConta, out var presenca);
             fichasAceitasPorConta.TryGetValue(idConta, out var ficha);
 
             var fichaAtiva = presenca?.Personagem ?? ficha;
+            if (fichaAtiva != null)
+            {
+                fichasPorIdPersonagem[fichaAtiva.IdPersonagem] = fichaAtiva;
+            }
+
             string nomeFicha = fichaAtiva?.Nome ?? "Sem ficha aceita";
             string classeNivel = fichaAtiva != null ? FormatarClasseENivel(fichaAtiva) : string.Empty;
 
@@ -920,12 +960,25 @@ public class SessaoService
                 var jog = jogadoresDto.FirstOrDefault(j => j.IdPersonagem == pino.IdEntidade);
                 nome = jog?.NomePersonagem ?? jog?.Username ?? $"Herói #{pino.IdEntidade}";
                 imagem = jog?.AvatarUrl;
+
+                if (fichasPorIdPersonagem.TryGetValue(pino.IdEntidade, out var fichaJog))
+                {
+                    pvMaximo = fichaJog.PvMaximo;
+                    pvAtual = fichaJog.PvAtual;
+                    classeArmadura = CalcularCaBase(fichaJog.Destreza);
+                }
             }
             else if (pino.TipoEntidade == TiposPinoSessao.Npc)
             {
                 var npc = npcsCampanha.FirstOrDefault(n => n.IdNpc == pino.IdEntidade);
                 nome = npc?.Nome ?? $"NPC #{pino.IdEntidade}";
                 imagem = npc?.Imagem;
+                if (npc != null)
+                {
+                    pvMaximo = CalcularPvMaximoNpc(npc);
+                    pvAtual = pino.PvAtual ?? pvMaximo;
+                    classeArmadura = CalcularCaBase(npc.Destreza);
+                }
             }
             else if (pino.TipoEntidade == TiposPinoSessao.Monstro)
             {
@@ -1055,7 +1108,8 @@ public class RegistroAtaqueDto
     public string NomeArma { get; set; } = string.Empty;
     public string ExpressaoDano { get; set; } = string.Empty;
     public string? TipoDano { get; set; }
-    public int IdMonstroAlvo { get; set; }
+    public string TipoAlvo { get; set; } = TiposPinoSessao.Monstro;
+    public int IdEntidadeAlvo { get; set; }
     public string NomeAlvo { get; set; } = string.Empty;
     public int CaAlvo { get; set; }
     public int DadoAtaque { get; set; }
