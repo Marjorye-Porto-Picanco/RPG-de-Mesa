@@ -1,0 +1,255 @@
+@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="action-panel">
+    <div class="action-heading">
+        <span>Ações rápidas</span>
+        @if (ViewModel.Estado.EhMestre)
+        {
+            <small class="@(ViewModel.Estado.IdAccountTurno.HasValue ? "turno-liberado-txt" : "")">
+                @(string.IsNullOrWhiteSpace(ViewModel.Estado.NomeJogadorTurno)
+                    ? "🔒 Turnos bloqueados"
+                    : $"⏳ Turno: {ViewModel.Estado.NomeJogadorTurno}")
+            </small>
+        }
+        else
+        {
+            <small class="@(ViewModel.EhMeuTurno ? "turno-liberado-txt" : "turno-bloqueado-txt")">
+                @(ViewModel.EhMeuTurno
+                    ? "✓ Seu turno liberado!"
+                    : (!string.IsNullOrWhiteSpace(ViewModel.Estado.NomeJogadorTurno)
+                        ? $"⏳ Turno de {ViewModel.Estado.NomeJogadorTurno}"
+                        : "🔒 Aguardando Mestre liberar turno"))
+            </small>
+        }
+    </div>
+
+    <div class="action-slots">
+        <button class="action-slot @(ViewModel.ExibirModalAtaque ? "ativa" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
+                @onclick="ViewModel.AbrirModalAtaqueAsync">
+            <span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small>
+        </button>
+        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+            <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
+        </button>
+        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+            <span class="slot-icon">◷</span><span>Disparada</span><small>Movimento</small>
+        </button>
+        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+            <span class="slot-icon">↺</span><span>Desengajar</span><small>Ação</small>
+        </button>
+        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+            <span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small>
+        </button>
+        <button class="action-slot" type="button" disabled="@(!ViewModel.EhMeuTurno)">
+            <span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small>
+        </button>
+    </div>
+</div>
+
+@if (ViewModel.ExibirModalAtaque)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.FecharModalAtaque"></div>
+
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ataque" @onclick:stopPropagation="true">
+        <header class="attack-header">
+            <div>
+                <p>Ação de Combate</p>
+                <h2 id="titulo-ataque">⚔ Realizar Ataque</h2>
+            </div>
+            <button class="attack-close" type="button" aria-label="Fechar ataque" @onclick="ViewModel.FecharModalAtaque">×</button>
+        </header>
+
+        @if (ViewModel.CarregandoAtaque)
+        {
+            <p class="attack-empty">Carregando armas do seu inventário...</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(ViewModel.ErroModalAtaque))
+            {
+                <div class="attack-error">@ViewModel.ErroModalAtaque</div>
+            }
+
+            @if (ViewModel.EtapaAtaque == 1)
+            {
+                <div class="attack-section">
+                    <p class="attack-section-label">1. Escolha a arma do inventário</p>
+                    @if (!ViewModel.ArmasDisponiveisAtaque.Any())
+                    {
+                        <p class="attack-empty">Nenhuma arma encontrada no seu inventário. Adicione uma arma na aba Inventário da sua ficha.</p>
+                    }
+                    else
+                    {
+                        <div class="attack-choice-list">
+                            @foreach (var arma in ViewModel.ArmasDisponiveisAtaque)
+                            {
+                                bool sel = ViewModel.IdArmaSelecionada == arma.IdItem;
+                                <button type="button"
+                                        class="attack-choice-card @(sel ? "selecionado" : "")"
+                                        @onclick="() => ViewModel.SelecionarArmaAtaque(arma.IdItem)">
+                                    <strong>@arma.Nome</strong>
+                                    <small>Dano: @(string.IsNullOrWhiteSpace(arma.Dano) ? "1d4" : arma.Dano) @arma.TipoDano</small>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="attack-section">
+                    <p class="attack-section-label">2. Escolha o alvo no mapa (Monstro, NPC ou Jogador)</p>
+                    @if (!ViewModel.AlvosNoMapa.Any())
+                    {
+                        <p class="attack-empty">Nenhum alvo visível no mapa atual.</p>
+                    }
+                    else
+                    {
+                        <div class="attack-choice-list">
+                            @foreach (var alvo in ViewModel.AlvosNoMapa)
+                            {
+                                int pvAt = alvo.PvAtual ?? alvo.PvMaximo ?? 0;
+                                int pvMx = alvo.PvMaximo ?? 0;
+                                bool derrotado = pvAt <= 0;
+                                bool sel = !derrotado
+                                    && ViewModel.TipoAlvoSelecionado == alvo.TipoEntidade
+                                    && ViewModel.IdAlvoSelecionado == alvo.IdEntidade;
+
+                                string tagClasse = alvo.TipoEntidade switch
+                                {
+                                    TiposPinoSessao.Monstro => "alvo-tag-monstro",
+                                    TiposPinoSessao.Npc => "alvo-tag-npc",
+                                    _ => "alvo-tag-jogador"
+                                };
+
+                                string tagLabel = alvo.TipoEntidade switch
+                                {
+                                    TiposPinoSessao.Monstro => "Monstro",
+                                    TiposPinoSessao.Npc => "NPC",
+                                    _ => "Jogador"
+                                };
+
+                                <button type="button"
+                                        disabled="@derrotado"
+                                        class="attack-choice-card @(sel ? "selecionado" : "") @(derrotado ? "derrotado" : "")"
+                                        title="@(derrotado ? $"{alvo.Nome} está com 0 PV" : $"Atacar {alvo.Nome}")"
+                                        @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.TipoEntidade, alvo.IdEntidade)">
+                                    <div class="attack-choice-topo">
+                                        <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
+                                        <span class="alvo-tag @tagClasse">@tagLabel</span>
+                                    </div>
+                                    <small>
+                                        @if (derrotado)
+                                        {
+                                            <text>☠️ @(alvo.TipoEntidade == TiposPinoSessao.Personagem ? "Inconsciente" : "Derrotado") (0 / @pvMx PV)</text>
+                                        }
+                                        else
+                                        {
+                                            <text>PV: @pvAt / @pvMx · CA: @(alvo.ClasseArmadura ?? 10)</text>
+                                        }
+                                    </small>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="attack-options">
+                    <label class="attack-field">
+                        Bônus de Ataque (d20)
+                        <input type="number" min="-50" max="50" @bind="ViewModel.ModificadorAtaque" />
+                    </label>
+                    <label class="attack-field">
+                        Bônus de Dano
+                        <input type="number" min="-50" max="50" @bind="ViewModel.ModificadorDano" />
+                    </label>
+                </div>
+
+                <button type="button"
+                        class="attack-roll"
+                        disabled="@(ViewModel.ExecutandoAtaque || ViewModel.ArmaSelecionada == null || !ViewModel.AlvoSelecionadoVivo)"
+                        @onclick="ViewModel.RolarDadoAtaqueAsync">
+                    @(ViewModel.ExecutandoAtaque ? "Rolando..." : "🎲 3. Rolar Dado de Ataque (1d20)")
+                </button>
+            }
+            else if (ViewModel.EtapaAtaque == 2 && ViewModel.ResultadoAtaqueAtual != null)
+            {
+                var r = ViewModel.ResultadoAtaqueAtual;
+                <div class="attack-result-box @(r.EhCritico ? "critico" : "acertou")">
+                    <span class="attack-badge @(r.EhCritico ? "critico" : "acertou")">
+                        @(r.EhCritico ? "💥 ACERTO CRÍTICO! (20 NATURAL)" : "ACERTOU!")
+                    </span>
+                    <strong>@(r.EhCritico ? "20!" : r.TotalAtaque.ToString())</strong>
+                    <p>
+                        @if (r.EhCritico)
+                        {
+                            <text>20 natural acerta <b>@r.NomeAlvo</b> (CA @r.CaAlvo) automaticamente e dobra os dados da arma!</text>
+                        }
+                        else
+                        {
+                            <text>
+                                d20 (@r.DadoAtaque) @(r.ModificadorAtaque >= 0 ? $"+ {r.ModificadorAtaque}" : $"− {Math.Abs(r.ModificadorAtaque)}")
+                                ≥ CA @r.CaAlvo de <b>@r.NomeAlvo</b>
+                            </text>
+                        }
+                    </p>
+                </div>
+
+                <button type="button"
+                        class="attack-roll @(r.EhCritico ? "attack-crit-btn" : "attack-damage-btn")"
+                        disabled="@ViewModel.ExecutandoAtaque"
+                        @onclick="ViewModel.RolarDanoEAplicarAsync">
+                    @(ViewModel.ExecutandoAtaque
+                        ? "Aplicando dano..."
+                        : r.EhCritico
+                            ? $"💥 Rolar Dano Crítico (2× dados de {r.ExpressaoDano})"
+                            : $"💥 Rolar Dano da Arma ({r.ExpressaoDano})")
+                </button>
+            }
+            else if (ViewModel.EtapaAtaque == 3 && ViewModel.ResultadoAtaqueAtual != null)
+            {
+                var r = ViewModel.ResultadoAtaqueAtual;
+                string classeBox = r.Acertou ? (r.EhCritico ? "critico" : "acertou") : "falhou";
+
+                <div class="attack-result-box @classeBox">
+                    <span class="attack-badge @classeBox">
+                        @(r.Acertou ? (r.EhCritico ? "💥 DANO CRÍTICO APLICADO" : "DANO APLICADO") : "ATAQUE FALHOU")
+                    </span>
+
+                    @if (r.Acertou)
+                    {
+                        <strong>-@r.DanoTotal PV</strong>
+                        <p>
+                            Arma: <b>@r.NomeArma</b> (@(r.EhCritico ? $"2× {r.ExpressaoDano}" : r.ExpressaoDano)) · Dados: [@string.Join(" + ", r.ResultadosDano)]
+                            @(r.ModificadorDano != 0 ? (r.ModificadorDano > 0 ? $" + {r.ModificadorDano}" : $" − {Math.Abs(r.ModificadorDano)}") : "")
+                        </p>
+                        <p class="attack-hp-summary">
+                            PV de <b>@r.NomeAlvo</b>: @r.PvAnterior → <b>@r.PvNovo / @r.PvMaximo</b>
+                            @(r.PvNovo <= 0 ? (r.TipoAlvo == TiposPinoSessao.Personagem ? " (Inconsciente!)" : " (Derrotado!)") : "")
+                        </p>
+                    }
+                    else
+                    {
+                        <strong>@r.TotalAtaque</strong>
+                        <p>
+                            d20 (@r.DadoAtaque) @(r.ModificadorAtaque >= 0 ? $"+ {r.ModificadorAtaque}" : $"− {Math.Abs(r.ModificadorAtaque)}")
+                            @("<") CA @r.CaAlvo de <b>@r.NomeAlvo</b>
+                        </p>
+                    }
+                </div>
+
+                <div class="attack-footer-actions">
+                    <button type="button" class="attack-btn-sec" @onclick="ViewModel.NovoAtaque">Atacar novamente</button>
+                    <button type="button" class="attack-btn-prim" @onclick="ViewModel.FecharModalAtaque">Fechar</button>
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public SessaoViewModel ViewModel { get; set; } = default!;
+}

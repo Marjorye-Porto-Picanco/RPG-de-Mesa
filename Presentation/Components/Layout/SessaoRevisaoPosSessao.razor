@@ -1,0 +1,190 @@
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="revisao-shell">
+    <header class="revisao-header">
+        <div class="revisao-heading">
+            <p>Revisão Pós-Sessão · Sessão #@ViewModel.Estado.NumeroSessao</p>
+            <h1>@ViewModel.Estado.NomeCampanha</h1>
+        </div>
+
+        <div class="revisao-header-acoes">
+            <div class="xp-lote-box">
+                <label for="xp-lote-input">XP para todos:</label>
+                <input id="xp-lote-input" type="number" min="0" step="50" @bind="ViewModel.XpEmLote" />
+                <button type="button" class="revisao-btn-sec" @onclick="ViewModel.AplicarXpEmLote">Aplicar</button>
+            </div>
+
+            <button type="button"
+                    class="revisao-btn-prim"
+                    disabled="@ViewModel.SalvandoRevisao"
+                    @onclick="ViewModel.ConcluirRevisaoPosSessaoAsync">
+                @(ViewModel.SalvandoRevisao ? "Salvando e devolvendo..." : "✓ Concluir Revisão e Salvar Histórico")
+            </button>
+        </div>
+    </header>
+
+    <div class="revisao-layout">
+        <aside class="revisao-lista" aria-label="Fichas dos jogadores">
+            <div class="revisao-lista-titulo">
+                <h2>Fichas dos Jogadores (@ViewModel.FichasRevisao.Count)</h2>
+                <small>Clique em uma ficha para revisar, ajustar ou dar XP</small>
+            </div>
+
+            @if (!ViewModel.FichasRevisao.Any())
+            {
+                <p class="revisao-vazio">Nenhuma ficha aceita encontrada nesta campanha.</p>
+            }
+            else
+            {
+                @foreach (var item in ViewModel.FichasRevisao)
+                {
+                    bool selecionada = ViewModel.FichaRevisaoSelecionada == item;
+                    <button type="button"
+                            class="revisao-card-btn @(selecionada ? "selecionada" : "")"
+                            @onclick="() => ViewModel.SelecionarFichaRevisao(item)">
+                        <img src="@(string.IsNullOrWhiteSpace(item.Personagem.Imagem) ? "img/armaduraprata.png" : item.Personagem.Imagem)"
+                             alt="@item.Personagem.Nome" />
+                        <div>
+                            <strong>@item.Personagem.Nome</strong>
+                            <small>@(item.Personagem.Usuario?.UsarName ?? "Jogador") · Nv. @item.Personagem.Nivel</small>
+                            <span class="revisao-xp-tag">
+                                XP: @item.Personagem.ExperienciaXp
+                                @if (item.XpGanhoSessao > 0)
+                                {
+                                    <b> (+@item.XpGanhoSessao)</b>
+                                }
+                            </span>
+                        </div>
+                    </button>
+                }
+            }
+        </aside>
+
+        <main class="revisao-editor">
+            @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackRevisao))
+            {
+                <div class="revisao-aviso">@ViewModel.FeedbackRevisao</div>
+            }
+
+            <section class="revisao-painel revisao-resumo-box">
+                <div class="revisao-ficha-topo">
+                    <div>
+                        <h2>Diário da Sessão #@ViewModel.Estado.NumeroSessao</h2>
+                        <p>Este registro ficará salvo na aba <strong>Histórico</strong> da campanha.</p>
+                    </div>
+                </div>
+
+                <div class="revisao-resumo-campos">
+                    <label>
+                        <span>Título da Sessão</span>
+                        <input type="text"
+                               maxlength="150"
+                               placeholder="Ex.: A Emboscada na Estrada Real"
+                               @bind="ViewModel.TituloSessaoRevisao" />
+                    </label>
+                    <label>
+                        <span>Resumo do que aconteceu</span>
+                        <textarea rows="4"
+                                  placeholder="Anote eventos marcantes, decisões do grupo, NPCs encontrados, ganchos para a próxima sessão..."
+                                  @bind="ViewModel.ResumoSessaoRevisao"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            @if (ViewModel.FichaRevisaoSelecionada != null)
+            {
+                var f = ViewModel.FichaRevisaoSelecionada;
+                var p = f.Personagem;
+
+                <section class="revisao-painel">
+                    <div class="revisao-ficha-topo">
+                        <div>
+                            <h2>@p.Nome</h2>
+                            <p>Jogador: <strong>@(p.Usuario?.UsarName ?? "—")</strong> · @(p.RacaTexto ?? "Raça") · @(p.ClasseTexto ?? "Classe")</p>
+                        </div>
+                        <div class="revisao-xp-destaque">
+                            <label>XP ganho nesta sessão</label>
+                            <input type="number" min="0" step="10" @bind="f.XpGanhoSessao" />
+                            <small>Total após concluir: <strong>@(p.ExperienciaXp + Math.Max(0, f.XpGanhoSessao)) XP</strong></small>
+                        </div>
+                    </div>
+
+                    <div class="revisao-grid-stats">
+                        <label><span>Nível</span><input type="number" min="1" max="20" @bind="p.Nivel" /></label>
+                        <label><span>PV Atual</span><input type="number" min="0" max="9999" @bind="p.PvAtual" /></label>
+                        <label><span>PV Máximo</span><input type="number" min="1" max="9999" @bind="p.PvMaximo" /></label>
+                        <label><span>XP Atual (Base)</span><input type="number" min="0" @bind="p.ExperienciaXp" /></label>
+                    </div>
+
+                    <h3 class="revisao-subtitulo">Atributos</h3>
+                    <div class="revisao-grid-atributos">
+                        <label><span>FOR</span><input type="number" min="1" max="30" @bind="p.Forca" /></label>
+                        <label><span>DES</span><input type="number" min="1" max="30" @bind="p.Destreza" /></label>
+                        <label><span>CON</span><input type="number" min="1" max="30" @bind="p.Constituicao" /></label>
+                        <label><span>INT</span><input type="number" min="1" max="30" @bind="p.Inteligencia" /></label>
+                        <label><span>SAB</span><input type="number" min="1" max="30" @bind="p.Sabedoria" /></label>
+                        <label><span>CAR</span><input type="number" min="1" max="30" @bind="p.Carisma" /></label>
+                    </div>
+
+                    <h3 class="revisao-subtitulo">Moedas e Inventário</h3>
+                    <div class="revisao-grid-moedas">
+                        <label><span>PC</span><input type="number" min="0" @bind="f.MoedasPC" /></label>
+                        <label><span>PP</span><input type="number" min="0" @bind="f.MoedasPP" /></label>
+                        <label><span>PE</span><input type="number" min="0" @bind="f.MoedasPE" /></label>
+                        <label><span>PO</span><input type="number" min="0" @bind="f.MoedasPO" /></label>
+                        <label><span>PL</span><input type="number" min="0" @bind="f.MoedasPL" /></label>
+                    </div>
+
+                    <div class="revisao-itens-box">
+                        <div class="revisao-itens-topo">
+                            <span>Itens na Mochila (@f.Itens.Count)</span>
+                            <button type="button" class="revisao-btn-sec" @onclick="() => ViewModel.AdicionarItemRevisao(f)">
+                                + Adicionar item da campanha
+                            </button>
+                        </div>
+
+                        @if (f.Itens.Any())
+                        {
+                            @foreach (var slot in f.Itens)
+                            {
+                                <div class="revisao-item-linha">
+                                    <select @bind="slot.IdItem">
+                                        <option value="0">Selecione um item...</option>
+                                        @foreach (var itemOpcao in ViewModel.ItensCampanhaRevisao)
+                                        {
+                                            <option value="@itemOpcao.IdItem">@itemOpcao.Nome (@(itemOpcao.Tipo ?? "Geral"))</option>
+                                        }
+                                    </select>
+                                    <input type="number" min="1" max="999" @bind="slot.Quantidade" />
+                                    <button type="button" class="revisao-remover-btn" title="Remover item" @onclick="() => ViewModel.RemoverItemRevisao(f, slot)">×</button>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <p class="revisao-vazio">Nenhum item no inventário.</p>
+                        }
+                    </div>
+
+                    <div class="revisao-grid-notas">
+                        <label><span>Notas do Inventário</span><textarea rows="3" @bind="f.NotasInventario"></textarea></label>
+                        <label><span>Tesouro Pessoal</span><textarea rows="3" @bind="p.Tesouro"></textarea></label>
+                        <label><span>Características e Habilidades</span><textarea rows="3" @bind="p.Caracteristicas"></textarea></label>
+                        <label><span>História / Anotações da Campanha</span><textarea rows="3" @bind="p.Historia"></textarea></label>
+                    </div>
+                </section>
+            }
+            else
+            {
+                <div class="revisao-painel">
+                    <p class="revisao-vazio">Nenhuma ficha para revisar. Preencha o resumo acima e clique em "Concluir Revisão e Salvar Histórico".</p>
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SessaoViewModel ViewModel { get; set; } = default!;
+}

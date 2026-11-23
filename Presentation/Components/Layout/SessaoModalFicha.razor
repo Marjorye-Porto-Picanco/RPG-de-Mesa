@@ -1,0 +1,427 @@
+@using System.Globalization
+@using RPGdeMesa.Domain.Personagens
+@using RPGdeMesa.Domain.ValueObjects
+@using RPGdeMesa.Presentation.ViewModel
+
+@if (ViewModel.ExibirModalFicha && ViewModel.FichaEmVisualizacao != null)
+{
+    var p = ViewModel.FichaEmVisualizacao;
+    decimal pesoModal = ViewModel.CalcularPesoModal();
+    decimal capModal = Math.Round(Math.Max(1, p.Forca) * 7.5m, 1);
+
+    <div class="ficha-modal-backdrop" @onclick="ViewModel.FecharModalFicha"></div>
+
+    <section class="ficha-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha-modal" @onclick:stopPropagation="true">
+        <header class="ficha-modal-header">
+            <div class="ficha-modal-identidade">
+                <img class="ficha-modal-retrato"
+                     src="@(string.IsNullOrWhiteSpace(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)"
+                     alt="@p.Nome" />
+                <div>
+                    <p class="ficha-modal-sub">
+                        Ficha na Sessão
+                        @if (!string.IsNullOrWhiteSpace(p.Usuario?.UsarName))
+                        {
+                            <text> · Jogador: @p.Usuario.UsarName</text>
+                        }
+                    </p>
+                    <h2 id="titulo-ficha-modal">@p.Nome</h2>
+                    <small>@(p.RacaTexto ?? "Raça") • @ObterResumoClasses(p) • Nível @p.Nivel • @p.ExperienciaXp.ToString("N0") XP</small>
+                </div>
+            </div>
+
+            <div class="ficha-modal-header-acoes">
+                @if (ViewModel.Estado.EhMestre && ViewModel.Estado.Jogadores.Count(j => j.IdPersonagem.HasValue) > 1)
+                {
+                    <select class="fm-trocar-jogador"
+                            aria-label="Trocar ficha do jogador"
+                            value="@p.IdPersonagem"
+                            @onchange="AoTrocarJogadorModalAsync">
+                        @foreach (var jog in ViewModel.Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
+                        {
+                            <option value="@jog.IdPersonagem">@jog.Username (@jog.NomePersonagem)</option>
+                        }
+                    </select>
+                }
+
+                <div class="ficha-modal-pv">
+                    <span>PV</span>
+                    @if (ViewModel.PodeEditarFichaModal)
+                    {
+                        <div class="fm-pv-inputs">
+                            <input type="number" min="0" max="9999" @bind="p.PvAtual" aria-label="PV atual" />
+                            <span>/</span>
+                            <input type="number" min="1" max="9999" @bind="p.PvMaximo" aria-label="PV máximo" />
+                        </div>
+                    }
+                    else
+                    {
+                        <strong>@p.PvAtual / @p.PvMaximo</strong>
+                    }
+                </div>
+                <button class="ficha-modal-close" type="button" aria-label="Fechar ficha" @onclick="ViewModel.FecharModalFicha">×</button>
+            </div>
+        </header>
+
+        <nav class="ficha-modal-abas" role="tablist">
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("atributos")'>Atributos & Perícias</button>
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem</button>
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("inventario")'>Inventário (@ViewModel.ItensModalEdicao.Count)</button>
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@p.PersonagemMagias.Count)</button>
+        </nav>
+
+        <div class="ficha-modal-corpo">
+            @if (ViewModel.AbaFichaModalAtiva == "atributos")
+            {
+                <div class="fm-grid-atributos">
+                    @if (ViewModel.PodeEditarFichaModal)
+                    {
+                        <label class="fm-attr-card"><span>Força</span><input type="number" min="1" max="30" @bind="p.Forca" /><small>@FormatarMod(p.Forca)</small></label>
+                        <label class="fm-attr-card"><span>Destreza</span><input type="number" min="1" max="30" @bind="p.Destreza" /><small>@FormatarMod(p.Destreza)</small></label>
+                        <label class="fm-attr-card"><span>Constituição</span><input type="number" min="1" max="30" @bind="p.Constituicao" /><small>@FormatarMod(p.Constituicao)</small></label>
+                        <label class="fm-attr-card"><span>Inteligência</span><input type="number" min="1" max="30" @bind="p.Inteligencia" /><small>@FormatarMod(p.Inteligencia)</small></label>
+                        <label class="fm-attr-card"><span>Sabedoria</span><input type="number" min="1" max="30" @bind="p.Sabedoria" /><small>@FormatarMod(p.Sabedoria)</small></label>
+                        <label class="fm-attr-card"><span>Carisma</span><input type="number" min="1" max="30" @bind="p.Carisma" /><small>@FormatarMod(p.Carisma)</small></label>
+                    }
+                    else
+                    {
+                        <div class="fm-attr-card"><span>Força</span><strong>@p.Forca</strong><small>@FormatarMod(p.Forca)</small></div>
+                        <div class="fm-attr-card"><span>Destreza</span><strong>@p.Destreza</strong><small>@FormatarMod(p.Destreza)</small></div>
+                        <div class="fm-attr-card"><span>Constituição</span><strong>@p.Constituicao</strong><small>@FormatarMod(p.Constituicao)</small></div>
+                        <div class="fm-attr-card"><span>Inteligência</span><strong>@p.Inteligencia</strong><small>@FormatarMod(p.Inteligencia)</small></div>
+                        <div class="fm-attr-card"><span>Sabedoria</span><strong>@p.Sabedoria</strong><small>@FormatarMod(p.Sabedoria)</small></div>
+                        <div class="fm-attr-card"><span>Carisma</span><strong>@p.Carisma</strong><small>@FormatarMod(p.Carisma)</small></div>
+                    }
+                </div>
+
+                <div class="fm-grid-2">
+                    <div class="fm-box-escuro">
+                        <h3>Salvaguardas Treinadas</h3>
+                        @if (p.Salvaguardas.Any())
+                        {
+                            <div class="fm-tags">
+                                @foreach (var s in p.Salvaguardas)
+                                {
+                                    <span class="fm-tag">@s.Atributo</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="fm-vazio">Nenhuma salvaguarda treinada.</p>
+                        }
+
+                        <h3 style="margin-top: 14px;">Perícias Treinadas</h3>
+                        @if (p.Pericias.Any())
+                        {
+                            <div class="fm-tags">
+                                @foreach (var per in p.Pericias)
+                                {
+                                    <span class="fm-tag">@per.NomePericia</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="fm-vazio">Nenhuma perícia treinada.</p>
+                        }
+                    </div>
+
+                    <div class="fm-coluna-notas">
+                        <div class="fm-bloco-pergaminho">
+                            <h3>Traços de Personalidade</h3>
+                            @if (ViewModel.PodeEditarFichaModal)
+                            {
+                                <textarea class="fm-textarea" rows="2" @bind="p.TracosPersonalidade"></textarea>
+                            }
+                            else
+                            {
+                                <p>@(string.IsNullOrWhiteSpace(p.TracosPersonalidade) ? "—" : p.TracosPersonalidade)</p>
+                            }
+                        </div>
+                        <div class="fm-bloco-pergaminho">
+                            <h3>Ponto de Vista Atual</h3>
+                            @if (ViewModel.PodeEditarFichaModal)
+                            {
+                                <textarea class="fm-textarea" rows="2" @bind="p.PontoDeVista"></textarea>
+                            }
+                            else
+                            {
+                                <p>@(string.IsNullOrWhiteSpace(p.PontoDeVista) ? "—" : p.PontoDeVista)</p>
+                            }
+                        </div>
+                        <div class="fm-bloco-pergaminho">
+                            <h3>Ideais / Ligações / Defeitos / Idiomas</h3>
+                            <p><strong>Ideais:</strong> @(string.IsNullOrWhiteSpace(p.Ideais) ? "—" : p.Ideais)</p>
+                            <p><strong>Ligações:</strong> @(string.IsNullOrWhiteSpace(p.Ligacoes) ? "—" : p.Ligacoes)</p>
+                            <p><strong>Defeitos:</strong> @(string.IsNullOrWhiteSpace(p.Defeitos) ? "—" : p.Defeitos)</p>
+                            <p><strong>Idiomas:</strong> @(string.IsNullOrWhiteSpace(p.Idiomas) ? "—" : p.Idiomas)</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (ViewModel.AbaFichaModalAtiva == "personagem")
+            {
+                <div class="fm-dados-pessoais">
+                    <div><span>Antecedente</span><strong>@(p.AntecedenteTexto ?? "—")</strong></div>
+                    <div><span>Tendência</span><strong>@(p.Tendencia ?? "Neutra")</strong></div>
+                    <div><span>Idade</span><strong>@(p.Idade ?? "—")</strong></div>
+                    <div><span>Gênero</span><strong>@(p.Genero ?? "—")</strong></div>
+                    <div><span>Altura</span><strong>@(p.Altura ?? "—")</strong></div>
+                    <div><span>Peso</span><strong>@(p.Peso ?? "—")</strong></div>
+                    <div><span>Deslocamento</span><strong>@(p.Deslocamento ?? 9)m</strong></div>
+                    <div><span>Iniciativa</span><strong>@(p.Iniciativa ?? 0)</strong></div>
+                </div>
+
+                <div class="fm-grid-2">
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Aparência</h3>
+                        <p>@(string.IsNullOrWhiteSpace(p.Aparencia) ? "—" : p.Aparencia)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Aliados e Organizações</h3>
+                        <p>@(string.IsNullOrWhiteSpace(p.Aliados) ? "—" : p.Aliados)</p>
+                    </div>
+                    <div class="fm-bloco-pergaminho fm-span-2">
+                        <h3>História do Personagem</h3>
+                        @if (ViewModel.PodeEditarFichaModal)
+                        {
+                            <textarea class="fm-textarea" rows="4" @bind="p.Historia"></textarea>
+                        }
+                        else
+                        {
+                            <p>@(string.IsNullOrWhiteSpace(p.Historia) ? "—" : p.Historia)</p>
+                        }
+                    </div>
+                    <div class="fm-bloco-pergaminho">
+                        <h3>Características e Habilidades</h3>
+                        @if (ViewModel.PodeEditarFichaModal)
+                        {
+                            <textarea class="fm-textarea" rows="3" @bind="p.Caracteristicas"></textarea>
+                        }
+                        else
+                        {
+                            <p>@(string.IsNullOrWhiteSpace(p.Caracteristicas) ? "—" : p.Caracteristicas)</p>
+                        }
+                    </div>
+                    <div class="fm-box-escuro">
+                        <h3>Tesouro Pessoal</h3>
+                        @if (ViewModel.PodeEditarFichaModal)
+                        {
+                            <textarea class="fm-textarea escuro" rows="3" @bind="p.Tesouro"></textarea>
+                        }
+                        else
+                        {
+                            <p>@(string.IsNullOrWhiteSpace(p.Tesouro) ? "—" : p.Tesouro)</p>
+                        }
+                    </div>
+                </div>
+            }
+            else if (ViewModel.AbaFichaModalAtiva == "inventario")
+            {
+                <div class="fm-inv-layout">
+                    <div class="fm-inv-lista">
+                        <div class="fm-inv-topo">
+                            <h3>Itens na Mochila (@ViewModel.ItensModalEdicao.Count)</h3>
+                            @if (ViewModel.PodeEditarFichaModal)
+                            {
+                                <button type="button" class="fm-btn-add" title="Adicionar item da campanha" @onclick="ViewModel.AdicionarItemModal">+</button>
+                            }
+                        </div>
+
+                        @if (ViewModel.ItensModalEdicao.Any())
+                        {
+                            <div class="fm-itens-detalhados">
+                                @foreach (var slot in ViewModel.ItensModalEdicao)
+                                {
+                                    var itemInfo = ViewModel.ObterDetalhesItem(slot.IdItem);
+                                    <div class="fm-item-card">
+                                        @if (ViewModel.PodeEditarFichaModal)
+                                        {
+                                            <div class="fm-item-edit-row">
+                                                <select @bind="slot.IdItem">
+                                                    <option value="0">Selecione um item da campanha...</option>
+                                                    @foreach (var itemOpcao in ViewModel.Estado.ItensCampanha)
+                                                    {
+                                                        <option value="@itemOpcao.IdItem">@itemOpcao.Nome (@(itemOpcao.Tipo ?? "Geral"))</option>
+                                                    }
+                                                </select>
+                                                <input type="number" min="1" max="999" @bind="slot.Quantidade" />
+                                                <button type="button" class="fm-btn-rem" title="Remover item" @onclick="() => ViewModel.RemoverItemModal(slot)">×</button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="fm-item-readonly-topo">
+                                                <strong>@(slot.Quantidade)x @(itemInfo?.Nome ?? "Item")</strong>
+                                                <span>@(itemInfo?.Tipo ?? "Geral")</span>
+                                            </div>
+                                        }
+
+                                        @if (itemInfo != null)
+                                        {
+                                            <div class="fm-item-meta">
+                                                <span><b>Tipo:</b> @(itemInfo.Tipo ?? "Geral")</span>
+                                                <span><b>Peso:</b> @(((itemInfo.Peso ?? 0m) * Math.Max(1, slot.Quantidade)).ToString("0.##")) kg</span>
+                                                <span><b>Preço:</b> @(itemInfo.Preco.HasValue ? $"{itemInfo.Preco:0.##} PO" : "—")</span>
+                                                @if (!string.IsNullOrWhiteSpace(itemInfo.Raridade))
+                                                {
+                                                    <span><b>Raridade:</b> @itemInfo.Raridade</span>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(itemInfo.Dano))
+                                                {
+                                                    <span><b>Dano:</b> @itemInfo.Dano @itemInfo.TipoDano</span>
+                                                }
+                                                @if (itemInfo.CaBonus > 0)
+                                                {
+                                                    <span><b>CA:</b> +@itemInfo.CaBonus</span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(itemInfo.Propriedades))
+                                            {
+                                                <p class="fm-item-desc"><b>Propriedades:</b> @itemInfo.Propriedades</p>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(itemInfo.Descricao))
+                                            {
+                                                <p class="fm-item-desc">@itemInfo.Descricao</p>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="fm-vazio-claro">Nenhum item cadastrado no inventário desta ficha.</p>
+                        }
+                    </div>
+
+                    <aside class="fm-inv-resumo">
+                        <div class="fm-box-escuro">
+                            <h3>Moedas</h3>
+                            <div class="fm-moedas">
+                                @if (ViewModel.PodeEditarFichaModal)
+                                {
+                                    <div><span>PC</span><input type="number" min="0" @bind="ViewModel.ModalMoedasPC" /></div>
+                                    <div><span>PP</span><input type="number" min="0" @bind="ViewModel.ModalMoedasPP" /></div>
+                                    <div><span>PE</span><input type="number" min="0" @bind="ViewModel.ModalMoedasPE" /></div>
+                                    <div><span>PO</span><input type="number" min="0" @bind="ViewModel.ModalMoedasPO" /></div>
+                                    <div><span>PL</span><input type="number" min="0" @bind="ViewModel.ModalMoedasPL" /></div>
+                                }
+                                else
+                                {
+                                    <div><span>PC</span><strong>@ViewModel.ModalMoedasPC</strong></div>
+                                    <div><span>PP</span><strong>@ViewModel.ModalMoedasPP</strong></div>
+                                    <div><span>PE</span><strong>@ViewModel.ModalMoedasPE</strong></div>
+                                    <div><span>PO</span><strong>@ViewModel.ModalMoedasPO</strong></div>
+                                    <div><span>PL</span><strong>@ViewModel.ModalMoedasPL</strong></div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="fm-box-escuro">
+                            <h3>Carga</h3>
+                            <p class="fm-carga-texto"><strong>@pesoModal.ToString("0.0") kg</strong> / @capModal.ToString("0.0") kg</p>
+                            <progress max="@capModal.ToString("0.0", CultureInfo.InvariantCulture)"
+                                      value="@Math.Min(pesoModal, capModal).ToString("0.0", CultureInfo.InvariantCulture)"></progress>
+                        </div>
+
+                        <div class="fm-box-escuro">
+                            <h3>Notas do Inventário</h3>
+                            @if (ViewModel.PodeEditarFichaModal)
+                            {
+                                <textarea class="fm-textarea escuro" rows="4" @bind="ViewModel.ModalNotasInventario" placeholder="Anote itens encontrados ou detalhes..."></textarea>
+                            }
+                            else
+                            {
+                                <p>@(string.IsNullOrWhiteSpace(ViewModel.ModalNotasInventario) ? "Sem anotações." : ViewModel.ModalNotasInventario)</p>
+                            }
+                        </div>
+                    </aside>
+                </div>
+            }
+            else if (ViewModel.AbaFichaModalAtiva == "grimorio")
+            {
+                var magias = p.PersonagemMagias
+                    .Where(pm => pm.Magia != null)
+                    .Select(pm => pm.Magia!)
+                    .OrderBy(m => m.CirculoNivel)
+                    .ThenBy(m => m.Nome)
+                    .ToList();
+
+                if (magias.Any())
+                {
+                    <div class="fm-magias-grid">
+                        @foreach (var m in magias)
+                        {
+                            <article class="fm-magia-card">
+                                <header>
+                                    <strong>@m.Nome</strong>
+                                    <span>@(m.CirculoNivel == 0 ? "Truque" : $"{m.CirculoNivel}º Círculo")</span>
+                                </header>
+                                <small>
+                                    @(m.Escola ?? "Escola não informada")
+                                    • Conj.: @(m.TempoConjuracao ?? "—")
+                                    • Alcance: @(m.Alcance ?? "—")
+                                </small>
+                                <small>
+                                    Comp.: @(m.Componentes ?? "—")
+                                    • Duração: @(m.Duracao ?? "—")
+                                </small>
+                                @if (!string.IsNullOrWhiteSpace(m.DanoEfeito))
+                                {
+                                    <p><b>Efeito:</b> @m.DanoEfeito</p>
+                                }
+                            </article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="fm-vazio-claro">Nenhuma magia preparada no grimório desta ficha.</p>
+                }
+            }
+        </div>
+
+        @if (ViewModel.PodeEditarFichaModal)
+        {
+            <footer class="ficha-modal-footer">
+                <span class="fm-feedback">@ViewModel.FeedbackFichaModal</span>
+                <button type="button" class="fm-btn-salvar" disabled="@ViewModel.SalvandoFichaModal" @onclick="ViewModel.SalvarFichaEmVisualizacaoAsync">
+                    @(ViewModel.SalvandoFichaModal ? "Salvando..." : "Salvar Alterações na Ficha")
+                </button>
+            </footer>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public SessaoViewModel ViewModel { get; set; } = default!;
+
+    private async Task AoTrocarJogadorModalAsync(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int idPersonagem))
+        {
+            var jogador = ViewModel.Estado.Jogadores.FirstOrDefault(j => j.IdPersonagem == idPersonagem);
+            if (jogador != null)
+            {
+                await ViewModel.AbrirFichaParticipanteAsync(jogador, ViewModel.AbaFichaModalAtiva);
+            }
+        }
+    }
+
+    private static string FormatarMod(int valor)
+    {
+        int mod = AtributosBase.CalcularModificador(valor);
+        return mod >= 0 ? $"+{mod}" : mod.ToString();
+    }
+
+    private static string ObterResumoClasses(Personagem personagem)
+    {
+        if (personagem.PersonagemClasses.Any(pc => pc.Classe != null))
+            return string.Join(" / ", personagem.PersonagemClasses.Where(pc => pc.Classe != null).Select(pc => $"{pc.Classe!.Nome} {pc.NivelNaClasse}"));
+
+        return string.IsNullOrWhiteSpace(personagem.ClasseTexto) ? "Classe" : personagem.ClasseTexto;
+    }
+}

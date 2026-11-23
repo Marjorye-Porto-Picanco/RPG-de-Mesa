@@ -1,0 +1,715 @@
+/* ==========================================================================
+   BARRA SUPERIOR DO MAPA
+   ========================================================================== */
+.map-toolbar {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 10px;
+    border: 1px solid var(--game-line);
+    background: rgba(36, 37, 31, 0.92);
+}
+
+.map-location {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+}
+
+.location-mark {
+    color: var(--game-gold);
+    font-size: 19px;
+}
+
+.map-location strong,
+.map-location small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.map-location strong {
+    color: #e8ddc5;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.map-location small {
+    margin-top: 3px;
+    color: #a69b83;
+    font-size: 9px;
+}
+
+.map-controls {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    color: #c0b294;
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 10px;
+}
+
+.map-select-mestre {
+    max-width: 210px;
+    height: 27px;
+    padding: 0 8px;
+    margin-right: 4px;
+    border: 1px solid rgba(207, 178, 113, 0.34);
+    border-radius: 3px;
+    background: #302e27;
+    color: #efe4ca;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .map-select-mestre:hover {
+        border-color: var(--game-gold);
+    }
+
+.map-controls button {
+    display: grid;
+    width: 28px;
+    height: 27px;
+    place-items: center;
+    border: 1px solid rgba(207, 178, 113, 0.19);
+    border-radius: 3px;
+    background: #302e27;
+    color: #e4d7bb;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+    .map-controls button:hover {
+        border-color: #90794b;
+        color: var(--game-gold);
+    }
+
+    .map-controls button:focus-visible,
+    .map-select-mestre:focus-visible {
+        outline: 2px solid #ead18a;
+        outline-offset: 2px;
+    }
+
+#nivel-zoom {
+    min-width: 37px;
+    text-align: center;
+}
+
+/* ==========================================================================
+   PALCO DO MAPA & TABULEIRO 20x20
+   ========================================================================== */
+.map-stage {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(207, 178, 113, 0.28);
+    background-color: #22251f;
+    background-image: radial-gradient(ellipse at center, rgba(125, 128, 94, 0.1), transparent 74%);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+}
+
+.map-alert {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100% - 24px);
+    padding: 7px 12px;
+    border: 1px solid rgba(212, 180, 96, 0.55);
+    border-radius: 4px;
+    background: rgba(36, 26, 20, 0.94);
+    color: #f3e4c3;
+    font-size: 11px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+    .map-alert button {
+        border: 0;
+        background: transparent;
+        color: var(--game-gold);
+        font-size: 15px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+.map-viewport {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: grid;
+    place-items: safe center;
+    padding: 16px;
+    scrollbar-color: #675a41 transparent;
+    scrollbar-width: thin;
+}
+
+.map-board-wrapper {
+    display: grid;
+    grid-template-columns: var(--board-size);
+    grid-template-rows: var(--board-size);
+    flex-shrink: 0;
+}
+
+    .map-board-wrapper.com-coordenadas {
+        grid-template-columns: var(--header-size) var(--board-size);
+        grid-template-rows: var(--header-size) var(--board-size);
+    }
+
+.grade-canto {
+    background: #1c1713;
+    border-top: 1px solid rgba(236, 218, 171, 0.3);
+    border-left: 1px solid rgba(236, 218, 171, 0.3);
+    user-select: none;
+    pointer-events: none;
+}
+
+.grade-eixo-colunas {
+    display: grid;
+    grid-template-columns: repeat(20, 1fr);
+    background: #1c1713;
+    border-top: 1px solid rgba(236, 218, 171, 0.3);
+    border-right: 1px solid rgba(236, 218, 171, 0.3);
+    user-select: none;
+    pointer-events: none;
+}
+
+.grade-eixo-linhas {
+    display: grid;
+    grid-template-rows: repeat(20, 1fr);
+    background: #1c1713;
+    border-left: 1px solid rgba(236, 218, 171, 0.3);
+    border-bottom: 1px solid rgba(236, 218, 171, 0.3);
+    user-select: none;
+    pointer-events: none;
+}
+
+.eixo-label {
+    display: grid;
+    place-items: center;
+    color: #d8c394;
+    font-family: "Trebuchet MS", sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    border-right: 1px solid rgba(236, 218, 171, 0.14);
+    border-bottom: 1px solid rgba(236, 218, 171, 0.14);
+}
+
+.map-art {
+    position: relative;
+    flex-shrink: 0;
+    border: 1px solid rgba(236, 218, 171, 0.3);
+    background: #1a1c17;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+    .map-art > img.map-bg-img {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: fill;
+        user-select: none;
+        pointer-events: none;
+    }
+
+.map-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    color: var(--game-muted);
+    font-size: 12px;
+}
+
+.map-art.modo-posicionar .celula-grade {
+    cursor: crosshair;
+}
+
+    .map-art.modo-posicionar .celula-grade:hover {
+        background-color: rgba(212, 180, 96, 0.35);
+    }
+
+/* ==========================================================================
+   GRADE E PINOS PADRONIZADOS
+   ========================================================================== */
+.mapa-grade-20x20 {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(20, minmax(0, 1fr));
+    grid-template-rows: repeat(20, minmax(0, 1fr));
+}
+
+.celula-grade {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border-right: 1px solid rgba(236, 218, 171, 0.24);
+    border-bottom: 1px solid rgba(236, 218, 171, 0.24);
+    transition: background-color 110ms ease;
+}
+
+    .celula-grade:hover {
+        background-color: rgba(212, 180, 96, 0.2);
+    }
+
+    .celula-grade.celula-drop-alvo {
+        background-color: rgba(212, 180, 96, 0.38) !important;
+        box-shadow: inset 0 0 0 2px #f0d17f;
+    }
+
+.mapa-pino {
+    grid-area: 1 / 1;
+    position: relative;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    width: 84%;
+    height: 84%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    box-sizing: border-box;
+    border: 2px solid #d4b460;
+    border-radius: 50%;
+    background: #2b241c;
+    color: #fff3d6;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+    .mapa-pino:hover {
+        transform: scale(1.14);
+        z-index: 9;
+        box-shadow: 0 0 0 2px rgba(240, 209, 127, 0.65), 0 4px 10px rgba(0, 0, 0, 0.85);
+    }
+
+    .mapa-pino img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+    }
+
+    .mapa-pino span {
+        position: relative;
+        z-index: 1;
+        line-height: 1;
+    }
+
+    .mapa-pino.tipo-personagem {
+        border-color: #66b3ff;
+        background: #1f3347;
+    }
+
+    .mapa-pino.tipo-npc {
+        border-color: #87c47a;
+        background: #243b24;
+    }
+
+    .mapa-pino.tipo-monstro {
+        border-color: #e06c5b;
+        background: #4a201b;
+    }
+
+    .mapa-pino.pino-invisivel {
+        opacity: 0.45;
+        border-style: dashed;
+    }
+
+    .mapa-pino.pino-derrotado {
+        filter: grayscale(100%);
+        opacity: 0.55;
+    }
+
+    .mapa-pino.arrastavel {
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+    }
+
+        .mapa-pino.arrastavel:active {
+            cursor: grabbing;
+        }
+
+        .mapa-pino.arrastavel img {
+            pointer-events: none;
+            -webkit-user-drag: none;
+        }
+
+    .mapa-pino.arrastando {
+        opacity: 0.45;
+        transform: scale(0.92);
+    }
+
+.pino-badge-oculto {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: rgba(15, 12, 10, 0.55);
+    color: #ffd89b;
+    font-style: normal;
+    font-size: 11px;
+    pointer-events: none;
+}
+
+.pino-badge-derrotado {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: rgba(110, 20, 15, 0.62);
+    color: #ffd5cf;
+    font-style: normal;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+.map-caption {
+    position: absolute;
+    bottom: 10px;
+    left: 11px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    border: 1px solid rgba(218, 196, 143, 0.2);
+    background: rgba(27, 25, 20, 0.86);
+    color: #d3c4a7;
+    font-size: 9px;
+    pointer-events: none;
+}
+
+    .map-caption > span:not(.map-caption-dot) {
+        color: #867959;
+    }
+
+.map-caption-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #9cac74;
+    box-shadow: 0 0 9px rgba(156, 172, 116, 0.55);
+}
+
+/* ==========================================================================
+   GAVETA LATERAL DO MESTRE: ADMINISTRAÇÃO DE PINOS
+   ========================================================================== */
+.pinos-drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 18;
+    width: 265px;
+    max-width: calc(100% - 16px);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(212, 180, 96, 0.35);
+    background: rgba(29, 24, 19, 0.96);
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.65);
+}
+
+.pinos-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid var(--game-line);
+}
+
+    .pinos-drawer-header h3 {
+        margin: 0;
+        color: #f3e6ca;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+.panel-kicker {
+    margin: 0 0 4px;
+    color: var(--game-gold);
+    font-size: 8px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.pinos-drawer-close {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--game-line);
+    border-radius: 50%;
+    background: transparent;
+    color: #d8c59e;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.pinos-visibilidade-padrao {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--game-line);
+    color: #cbbba0;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .pinos-visibilidade-padrao input {
+        accent-color: #d4b460;
+    }
+
+.pinos-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--game-line);
+}
+
+.pinos-tab {
+    padding: 8px 4px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #a69a80;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .pinos-tab.ativa {
+        color: #f3d78c;
+        border-bottom-color: #d4b460;
+        background: rgba(212, 180, 96, 0.08);
+    }
+
+.pinos-lista {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-color: #675a41 transparent;
+    scrollbar-width: thin;
+}
+
+.pinos-vazio {
+    margin: 14px 6px;
+    color: var(--game-muted);
+    font-size: 11px;
+    font-style: italic;
+    text-align: center;
+}
+
+.pino-item-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    border: 1px solid rgba(207, 178, 113, 0.2);
+    border-radius: 5px;
+    background: rgba(45, 38, 30, 0.85);
+}
+
+    .pino-item-card.selecionado {
+        border-color: #f0d17f;
+        background: rgba(164, 122, 45, 0.28);
+    }
+
+.pino-item-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pino-mini-avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    border: 2px solid #d4b460;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff2d4;
+}
+
+    .pino-mini-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .pino-mini-avatar.tipo-personagem {
+        border-color: #66b3ff;
+        background: #1f3347;
+    }
+
+    .pino-mini-avatar.tipo-npc {
+        border-color: #87c47a;
+        background: #243b24;
+    }
+
+    .pino-mini-avatar.tipo-monstro {
+        border-color: #e06c5b;
+        background: #4a201b;
+    }
+
+.pino-item-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+    .pino-item-info strong,
+    .pino-item-info small {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .pino-item-info strong {
+        font-size: 11px;
+        color: #f3e6ca;
+    }
+
+    .pino-item-info small {
+        font-size: 9.5px;
+        color: #b7a88b;
+    }
+
+.pino-item-acoes {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pino-btn-acao {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(207, 178, 113, 0.28);
+    border-radius: 4px;
+    background: rgba(24, 20, 16, 0.8);
+    color: #e6d4ad;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+    .pino-btn-acao.oculto {
+        color: #a69a80;
+        border-style: dashed;
+    }
+
+    .pino-btn-acao.curar {
+        color: #9ed98f;
+        border-color: rgba(135, 196, 122, 0.45);
+    }
+
+        .pino-btn-acao.curar:hover:not(:disabled) {
+            background: rgba(135, 196, 122, 0.24);
+        }
+
+    .pino-btn-acao.remover {
+        color: #f0a08a;
+        border-color: rgba(224, 108, 91, 0.4);
+    }
+
+        .pino-btn-acao.remover:hover {
+            background: rgba(173, 72, 58, 0.35);
+        }
+
+@media (max-width: 560px) {
+    .map-toolbar {
+        padding: 0 6px;
+    }
+
+    .map-location {
+        gap: 5px;
+    }
+
+        .map-location strong {
+            max-width: 110px;
+            font-size: 9px;
+        }
+
+        .map-location small {
+            max-width: 110px;
+            font-size: 7px;
+        }
+
+    .map-select-mestre {
+        max-width: 115px;
+        height: 25px;
+        font-size: 9px;
+    }
+
+    .map-controls {
+        gap: 2px;
+    }
+
+        .map-controls button {
+            width: 23px;
+            height: 25px;
+        }
+
+    #nivel-zoom {
+        min-width: 31px;
+        font-size: 8px;
+    }
+
+    .map-caption {
+        bottom: 6px;
+        left: 6px;
+        gap: 5px;
+        padding: 5px 6px;
+        font-size: 7px;
+    }
+}

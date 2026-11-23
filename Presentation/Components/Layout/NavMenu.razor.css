@@ -27,7 +27,6 @@ body {
     font-family: Cambria, Georgia, "Times New Roman", serif;
 }
 
-    /* Reset de links da barra */
     .barra-rpg ::deep a,
     .barra-rpg a {
         text-decoration: none !important;
@@ -77,7 +76,7 @@ body {
             display: none;
         }
 
-    .barra-rpg .nav-link-rpg {
+    .barra-rpg ::deep .nav-link-rpg {
         display: inline-flex;
         min-height: 100%;
         flex: 0 0 auto;
@@ -89,10 +88,9 @@ body {
         transition: color 0.2s, border-color 0.2s;
     }
 
-        /* Estado ativo do NavLink no Blazor */
-        .barra-rpg .nav-link-rpg:hover,
-        .barra-rpg .nav-link-rpg.active,
-        .barra-rpg .nav-link-rpg[aria-current="page"] {
+        .barra-rpg ::deep .nav-link-rpg:hover,
+        .barra-rpg ::deep .nav-link-rpg.active,
+        .barra-rpg ::deep .nav-link-rpg[aria-current="page"] {
             border-bottom-color: #d3ac60;
             color: #f5e4bf !important;
         }
@@ -128,121 +126,427 @@ body {
             background: rgba(212, 170, 86, 0.1);
         }
 
-    .barra-rpg .perfil-iniciais {
-        display: grid;
-        width: 32px;
-        height: 32px;
-        aspect-ratio: 1;
-        place-items: center;
-        overflow: hidden;
-        border: 1px solid #9e7b3e;
-        border-radius: 50%;
-        background: #344239;
-        color: #f0dfbb;
-        font-size: 10px;
-        font-weight: bold;
+.perfil-iniciais {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #9e7b3e;
+    border-radius: 50%;
+    background: #344239;
+    color: #f0dfbb;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.perfil-avatar-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.barra-rpg .perfil-seta {
+    color: #c5b79d;
+    font-size: 10px;
+    transition: transform 0.15s ease;
+}
+
+.barra-rpg .perfil-rpg.aberto .perfil-seta {
+    transform: rotate(180deg);
+}
+
+.barra-rpg .perfil-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: transparent;
+}
+
+.barra-rpg .perfil-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 110;
+    min-width: 155px;
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    border: 1px solid rgba(212, 170, 86, 0.45);
+    border-radius: 6px;
+    background: #1d140f;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+}
+
+.barra-rpg .perfil-menu-item {
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #f0dfbb;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+    .barra-rpg .perfil-menu-item:hover {
+        background: rgba(212, 170, 86, 0.16);
+        color: #fff3d6;
     }
 
-    .barra-rpg .perfil-avatar-img {
-        display: block;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%;
+    .barra-rpg .perfil-menu-item.sair {
+        margin-top: 2px;
+        border-top: 1px solid rgba(212, 170, 86, 0.15);
+        color: #e89c8e;
     }
 
-    .barra-rpg .perfil-seta {
-        color: #c5b79d;
-        font-size: 10px;
-        transition: transform 0.15s ease;
-    }
-
-    .barra-rpg .perfil-rpg.aberto .perfil-seta {
-        transform: rotate(180deg);
-    }
-
-    .barra-rpg .perfil-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 90;
-        background: transparent;
-    }
-
-    .barra-rpg .perfil-menu {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
-        z-index: 110;
-        min-width: 155px;
-        display: flex;
-        flex-direction: column;
-        padding: 5px;
-        border: 1px solid rgba(212, 170, 86, 0.45);
-        border-radius: 6px;
-        background: #1d140f;
-        box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
-    }
-
-    .barra-rpg .perfil-menu-item {
-        width: 100%;
-        padding: 9px 12px;
-        border: 0;
-        border-radius: 4px;
-        background: transparent;
-        color: #f0dfbb;
-        font-family: inherit;
-        font-size: 12px;
-        text-align: left;
-        cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
-    }
-
-        .barra-rpg .perfil-menu-item:hover {
-            background: rgba(212, 170, 86, 0.16);
-            color: #fff3d6;
+        .barra-rpg .perfil-menu-item.sair:hover {
+            background: rgba(180, 62, 48, 0.24);
+            color: #ffd5cd;
         }
 
-        .barra-rpg .perfil-menu-item.sair {
-            margin-top: 2px;
-            border-top: 1px solid rgba(212, 170, 86, 0.15);
-            color: #e89c8e;
-        }
-
-            .barra-rpg .perfil-menu-item.sair:hover {
-                background: rgba(180, 62, 48, 0.24);
-                color: #ffd5cd;
-            }
+/* Oculta o overlay mobile no desktop */
+.mobile-menu-overlay {
+    display: none;
+}
 
 /* ==========================================================================
    RESPONSIVIDADE (MOBILE)
    ========================================================================== */
 @media (max-width: 600px) {
     .barra-rpg {
-        min-height: 54px;
-        height: 54px;
-        gap: 12px;
-        padding: 0 10px;
+        min-height: 56px;
+        height: 56px;
+        gap: 10px;
+        padding: 0 12px;
     }
 
         .barra-rpg .marca-rpg {
-            gap: 5px;
-            font-size: 13px;
+            gap: 7px;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .barra-rpg .marca-icone {
-            font-size: 17px;
+            font-size: 18px;
         }
 
-        .barra-rpg .nav-link-rpg {
-            font-size: 11px;
-        }
-
-        .barra-rpg .perfil-nome {
+        .barra-rpg .nav-rpg,
+        .barra-rpg .perfil-nome,
+        .barra-rpg .perfil-seta,
+        .barra-rpg .perfil-menu,
+        .barra-rpg .perfil-backdrop {
             display: none;
         }
 
-        .barra-rpg .perfil-iniciais {
-            width: 28px;
-            height: 28px;
+        .barra-rpg .perfil-dropdown-wrap {
+            display: block;
         }
+
+        .barra-rpg .perfil-rpg {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            justify-content: center;
+            padding: 3px;
+            border: 1px solid rgba(212, 170, 86, 0.34);
+            border-radius: 50%;
+            background: rgba(39, 27, 20, 0.72);
+        }
+
+        .barra-rpg .perfil-iniciais {
+            width: 36px;
+            height: 36px;
+            font-size: 11px;
+        }
+
+    .mobile-menu-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: stretch;
+        justify-content: flex-end;
+        background: rgba(8, 6, 5, 0.62);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        animation: menu-overlay-entrar 180ms ease-out both;
+    }
+
+    .mobile-menu-scrim {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .mobile-menu-drawer {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: min(80vw, 320px);
+        min-width: 0;
+        height: 100%;
+        height: 100dvh;
+        flex-direction: column;
+        margin-left: auto;
+        padding: 18px 16px 20px;
+        border-left: 1px solid rgba(212, 170, 86, 0.42);
+        border-radius: 16px 0 0 16px;
+        background: radial-gradient(ellipse at top right, rgba(160, 114, 46, 0.2), transparent 56%), linear-gradient(180deg, #211712 0%, #17100c 100%);
+        box-shadow: -18px 0 48px rgba(0, 0, 0, 0.6);
+        font-family: Cambria, Georgia, "Times New Roman", serif;
+        overflow: hidden;
+        animation: menu-gaveta-entrar 220ms cubic-bezier(.2, .75, .25, 1) both;
+    }
+
+    .mobile-menu-topo {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(212, 170, 86, 0.22);
+    }
+
+    .mobile-menu-identidade {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        gap: 11px;
+    }
+
+        .mobile-menu-identidade .perfil-iniciais {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            flex: 0 0 44px;
+            overflow: hidden;
+            border: 1px solid rgba(212, 170, 86, 0.65);
+            border-radius: 50%;
+            font-size: 12px;
+        }
+
+        .mobile-menu-identidade .perfil-avatar-img {
+            display: block;
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
+    .mobile-menu-identidade-texto {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+        .mobile-menu-identidade-texto strong {
+            color: #f3e4c3;
+            font-size: 15px;
+            font-weight: 500;
+            line-height: 1.25;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mobile-menu-identidade-texto small {
+            color: #bfa97e;
+            font-family: "Trebuchet MS", sans-serif;
+            font-size: 10px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+    .mobile-menu-fechar {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        border: 1px solid rgba(212, 170, 86, 0.34);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #eedcb7;
+        font-size: 26px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 140ms ease, border-color 140ms ease;
+    }
+
+        .mobile-menu-fechar:hover,
+        .mobile-menu-fechar:active {
+            border-color: rgba(212, 170, 86, 0.6);
+            background: rgba(212, 170, 86, 0.16);
+        }
+
+    .mobile-menu-opcoes {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 18px;
+        overflow-y: auto;
+    }
+
+    /* ::deep obrigatório para estilizar os <NavLink> (<a>) junto com os <button> */
+    .mobile-menu-drawer ::deep .mobile-menu-opcao,
+    .mobile-menu-opcao {
+        display: flex;
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        min-height: 54px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        border: 1px solid rgba(212, 170, 86, 0.14);
+        border-radius: 10px;
+        background: rgba(255, 251, 239, 0.03);
+        color: #eadbc0 !important;
+        font-family: inherit;
+        font-size: 14px;
+        text-align: left;
+        text-decoration: none !important;
+        white-space: nowrap;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+        .mobile-menu-drawer ::deep .mobile-menu-opcao > .mobile-menu-icone,
+        .mobile-menu-opcao > .mobile-menu-icone {
+            display: grid;
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+            place-items: center;
+            border: 1px solid rgba(212, 170, 86, 0.28);
+            border-radius: 8px;
+            background: rgba(212, 170, 86, 0.08);
+            color: #d9b76d;
+            font-size: 14px;
+        }
+
+        .mobile-menu-drawer ::deep .mobile-menu-opcao > .mobile-menu-label,
+        .mobile-menu-opcao > .mobile-menu-label {
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mobile-menu-drawer ::deep .mobile-menu-opcao > b,
+        .mobile-menu-opcao > b {
+            margin-left: auto;
+            color: #a89166;
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .mobile-menu-drawer ::deep .mobile-menu-opcao:hover,
+        .mobile-menu-drawer ::deep .mobile-menu-opcao.active,
+        .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"],
+        .mobile-menu-opcao:hover,
+        .mobile-menu-opcao.active,
+        .mobile-menu-opcao[aria-current="page"] {
+            border-color: rgba(212, 170, 86, 0.45);
+            border-left: 3px solid #d9b263;
+            background: rgba(212, 170, 86, 0.14);
+            color: #fff2d6 !important;
+            text-decoration: none !important;
+        }
+
+            .mobile-menu-drawer ::deep .mobile-menu-opcao.active > .mobile-menu-icone,
+            .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"] > .mobile-menu-icone,
+            .mobile-menu-opcao.active > .mobile-menu-icone,
+            .mobile-menu-opcao[aria-current="page"] > .mobile-menu-icone {
+                border-color: rgba(240, 209, 127, 0.65);
+                background: rgba(212, 170, 86, 0.2);
+                color: #f5d88e;
+            }
+
+            .mobile-menu-drawer ::deep .mobile-menu-opcao.active > b,
+            .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"] > b,
+            .mobile-menu-opcao.active > b,
+            .mobile-menu-opcao[aria-current="page"] > b {
+                color: #f0d17f;
+            }
+
+    .mobile-menu-rodape {
+        margin-top: auto;
+        padding-top: 14px;
+        border-top: 1px solid rgba(212, 170, 86, 0.2);
+    }
+
+    .mobile-menu-sair {
+        width: 100%;
+        border-color: rgba(196, 112, 89, 0.28);
+        background: rgba(150, 52, 42, 0.1);
+        color: #eda997 !important;
+    }
+
+        .mobile-menu-sair:hover,
+        .mobile-menu-sair:active {
+            border-color: rgba(224, 130, 112, 0.5);
+            background: rgba(180, 62, 48, 0.22);
+            color: #ffd6cc !important;
+        }
+
+        .mobile-menu-sair > .mobile-menu-icone {
+            border-color: rgba(196, 112, 89, 0.35);
+            background: rgba(180, 62, 48, 0.14);
+            color: #eda997;
+        }
+
+        .mobile-menu-sair > b {
+            color: #d48d7c;
+        }
+
+    @keyframes menu-overlay-entrar {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes menu-gaveta-entrar {
+        from {
+            opacity: 0.75;
+            transform: translateX(22px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .mobile-menu-overlay,
+        .mobile-menu-drawer {
+            animation: none;
+        }
+    }
 }

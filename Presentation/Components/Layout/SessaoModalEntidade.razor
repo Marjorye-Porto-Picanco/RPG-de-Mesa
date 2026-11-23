@@ -1,0 +1,169 @@
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Domain.ValueObjects
+@using RPGdeMesa.Presentation.ViewModel
+
+@if (ViewModel.MonstroEmVisualizacao != null)
+{
+    var m = ViewModel.MonstroEmVisualizacao;
+    int pvAtualMonstro = ViewModel.PinoMonstroEmVisualizacao?.PvAtual ?? m.PvMaximo;
+
+    <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+
+    <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-modal" @onclick:stopPropagation="true">
+        <header class="em-header">
+            <div class="em-identidade">
+                <img class="em-retrato"
+                     src="@(string.IsNullOrWhiteSpace(m.Imagem) ? "img/capacampanha2.png" : m.Imagem)"
+                     alt="@m.Nome" />
+                <div>
+                    <p class="em-sub">Bestiário da Campanha</p>
+                    <h2 id="titulo-monstro-modal">@m.Nome</h2>
+                    <small>@(m.TipoMonstro ?? "Criatura") • @(m.Tamanho ?? "Médio") • @(m.Tendencia ?? "Neutra")</small>
+                </div>
+            </div>
+            <button class="em-close" type="button" aria-label="Fechar ficha do monstro" @onclick="ViewModel.FecharModalEntidade">×</button>
+        </header>
+
+        <div class="em-corpo">
+            <div class="em-dados-pessoais">
+                <div>
+                    <span>PV Atual / Máximo</span>
+                    @if (ViewModel.Estado.EhMestre)
+                    {
+                        <div class="em-pv-edit">
+                            <input type="number" min="0" max="@m.PvMaximo" @bind="ViewModel.PvAtualMonstroEdicao" />
+                            <span>/ @m.PvMaximo</span>
+                            <button type="button"
+                                    class="em-btn-pv-ok"
+                                    title="Salvar PV atual"
+                                    disabled="@ViewModel.SalvandoPvEntidade"
+                                    @onclick="ViewModel.SalvarPvAtualMonstroAsync">
+                                ✓
+                            </button>
+                            <button type="button"
+                                    class="em-btn-pv-max"
+                                    title="Restaurar PV máximo (@m.PvMaximo)"
+                                    disabled="@ViewModel.SalvandoPvEntidade"
+                                    @onclick="ViewModel.RestaurarPvMaximoMonstroAsync">
+                                ↻ Máx
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <strong>@pvAtualMonstro / @m.PvMaximo</strong>
+                    }
+                </div>
+                <div><span>CA</span><strong>@m.ClasseArmadura</strong></div>
+                <div><span>ND</span><strong>@(m.NivelDesafio?.ToString("0.##") ?? "—")</strong></div>
+                <div><span>Deslocamento</span><strong>@(string.IsNullOrWhiteSpace(m.Deslocamento) ? "—" : m.Deslocamento)</strong></div>
+            </div>
+
+            <div class="em-grid-2">
+                <div class="em-bloco-pergaminho">
+                    <h3>Sentidos</h3>
+                    <p>@(string.IsNullOrWhiteSpace(m.Sentidos) ? "—" : m.Sentidos)</p>
+                </div>
+                <div class="em-bloco-pergaminho">
+                    <h3>Resistências</h3>
+                    <p>@(string.IsNullOrWhiteSpace(m.Resistencias) ? "—" : m.Resistencias)</p>
+                </div>
+                <div class="em-box-escuro em-span-2">
+                    <h3>Habilidades</h3>
+                    <p>@(string.IsNullOrWhiteSpace(m.Habilidades) ? "—" : m.Habilidades)</p>
+                </div>
+                <div class="em-bloco-pergaminho em-span-2">
+                    <h3>Descrição</h3>
+                    <p>@(string.IsNullOrWhiteSpace(m.Descricao) ? "Sem descrição registrada." : m.Descricao)</p>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
+@if (ViewModel.NpcEmVisualizacao != null)
+{
+    var n = ViewModel.NpcEmVisualizacao;
+    int pvMaxNpc = SessaoService.CalcularPvMaximoNpc(n);
+    int pvAtualNpc = ViewModel.PinoNpcEmVisualizacao?.PvAtual ?? pvMaxNpc;
+    int caNpc = SessaoService.CalcularCaBase(n.Destreza);
+
+    <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+
+    <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
+        <header class="em-header">
+            <div class="em-identidade">
+                <img class="em-retrato"
+                     src="@(string.IsNullOrWhiteSpace(n.Imagem) ? "img/capacampanha3.png" : n.Imagem)"
+                     alt="@n.Nome" />
+                <div>
+                    <p class="em-sub">NPC da Campanha</p>
+                    <h2 id="titulo-npc-modal">@n.Nome</h2>
+                    <small>@(n.RacaTexto ?? "Raça") • @(n.ClasseTexto ?? "NPC") • Nível @n.Nivel</small>
+                </div>
+            </div>
+            <button class="em-close" type="button" aria-label="Fechar ficha do NPC" @onclick="ViewModel.FecharModalEntidade">×</button>
+        </header>
+
+        <div class="em-corpo">
+            <div class="em-grid-atributos">
+                <div class="em-attr-card"><span>FOR</span><strong>@n.Forca</strong><small>@FormatarMod(n.Forca)</small></div>
+                <div class="em-attr-card"><span>DES</span><strong>@n.Destreza</strong><small>@FormatarMod(n.Destreza)</small></div>
+                <div class="em-attr-card"><span>CON</span><strong>@n.Constituicao</strong><small>@FormatarMod(n.Constituicao)</small></div>
+                <div class="em-attr-card"><span>INT</span><strong>@n.Inteligencia</strong><small>@FormatarMod(n.Inteligencia)</small></div>
+                <div class="em-attr-card"><span>SAB</span><strong>@n.Sabedoria</strong><small>@FormatarMod(n.Sabedoria)</small></div>
+                <div class="em-attr-card"><span>CAR</span><strong>@n.Carisma</strong><small>@FormatarMod(n.Carisma)</small></div>
+            </div>
+
+            <div class="em-dados-pessoais">
+                <div>
+                    <span>PV Atual / Máximo</span>
+                    @if (ViewModel.Estado.EhMestre)
+                    {
+                        <div class="em-pv-edit">
+                            <input type="number" min="0" max="@pvMaxNpc" @bind="ViewModel.PvAtualNpcEdicao" />
+                            <span>/ @pvMaxNpc</span>
+                            <button type="button"
+                                    class="em-btn-pv-ok"
+                                    title="Salvar PV atual"
+                                    disabled="@ViewModel.SalvandoPvEntidade"
+                                    @onclick="ViewModel.SalvarPvAtualNpcAsync">
+                                ✓
+                            </button>
+                            <button type="button"
+                                    class="em-btn-pv-max"
+                                    title="Restaurar PV máximo (@pvMaxNpc)"
+                                    disabled="@ViewModel.SalvandoPvEntidade"
+                                    @onclick="ViewModel.RestaurarPvMaximoNpcAsync">
+                                ↻ Máx
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <strong>@pvAtualNpc / @pvMaxNpc</strong>
+                    }
+                </div>
+                <div><span>CA</span><strong>@caNpc</strong></div>
+                <div><span>Tendência</span><strong>@(string.IsNullOrWhiteSpace(n.Tendencia) ? "Neutra" : n.Tendencia)</strong></div>
+                <div><span>Antecedente</span><strong>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</strong></div>
+            </div>
+
+            <div class="em-bloco-pergaminho">
+                <h3>História & Notas</h3>
+                <p>@(string.IsNullOrWhiteSpace(n.Historia) ? "Sem história registrada." : n.Historia)</p>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public SessaoViewModel ViewModel { get; set; } = default!;
+
+    private static string FormatarMod(int valor)
+    {
+        int mod = AtributosBase.CalcularModificador(valor);
+        return mod >= 0 ? $"+{mod}" : mod.ToString();
+    }
+}
