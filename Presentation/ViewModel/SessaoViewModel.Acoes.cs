@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
@@ -25,20 +26,50 @@ public partial class SessaoViewModel
     public int EtapaAtaque { get; private set; } = 1; // 1=Escolher arma/alvo, 2=Acertou (rolar dano), 3=Finalizado
     public RegistroAtaqueDto? ResultadoAtaqueAtual { get; private set; }
 
-    // Modo Disparada (Movimento: Botão -> Clique na casa <= 2x deslocamento -> Confirmação -> Próximo turno)
+    // Modal de Esquivar (Defesa: desvantagem 2d20 em ataques recebidos até próximo turno)
+    public bool ExibirModalEsquivar { get; private set; }
+    public bool ExecutandoEsquivar { get; private set; }
+    public string? ErroEsquivar { get; private set; }
+
+    // Modal de Esconder (Teste de Destreza/Furtividade)
+    public bool ExibirModalEsconder { get; private set; }
+    public bool CarregandoEsconder { get; private set; }
+    public bool ExecutandoEsconder { get; private set; }
+    public string? ErroEsconder { get; private set; }
+    public int EtapaEsconder { get; private set; } = 1; // 1=Configurar teste, 2=Resultado
+    public string NomePersonagemEsconder { get; private set; } = string.Empty;
+    public int ModDestrezaEsconder { get; private set; }
+    public bool TemProficienciaFurtividade { get; private set; }
+    public int BonusProficienciaEsconder { get; private set; }
+    public int BonusExtraEsconder { get; set; }
+    public int CdEsconder { get; set; } = 12;
+    public ResultadoEsconderDto? ResultadoEsconderAtual { get; private set; }
+
+    // Movimento no Turno: Disparada (2x deslocamento, sujeito a Ataque de Oportunidade)
+    // e Desengajar (1x deslocamento, imune a Ataque de Oportunidade)
     public bool ModoDisparadaAtivo { get; private set; }
+    public bool ModoDesengajarAtivo { get; private set; }
+    public bool ModoMovimentoAtivo => ModoDisparadaAtivo || ModoDesengajarAtivo;
     public bool ExibirModalConfirmarDisparada { get; private set; }
     public bool ExecutandoDisparada { get; private set; }
     public string? ErroDisparada { get; private set; }
+
     public PinoMapaDto? PinoJogadorDisparada { get; private set; }
+    public Personagem? PersonagemMovimentoAtual { get; private set; }
     public string NomePersonagemDisparada { get; private set; } = string.Empty;
     public decimal DeslocamentoNormalMetros { get; private set; } = 9m;
     public decimal DeslocamentoDisparadaMetros => DeslocamentoNormalMetros * 2m;
+    public decimal AlcanceMovimentoAtualMetros => ModoDesengajarAtivo ? DeslocamentoNormalMetros : DeslocamentoDisparadaMetros;
+
     public (int Coluna, int Linha)? DestinoDisparada { get; private set; }
     public decimal DistanciaDestinoMetros { get; private set; }
 
+    // Monstros vivos no raio 1x1 da casa de origem do jogador
+    public List<PinoMapaDto> MonstrosAmeacandoOrigem { get; private set; } = new();
+
     public string DeslocamentoNormalTexto => FormatarMetros(DeslocamentoNormalMetros);
     public string DeslocamentoDisparadaTexto => FormatarMetros(DeslocamentoDisparadaMetros);
+    public string AlcanceMovimentoAtualTexto => FormatarMetros(AlcanceMovimentoAtualMetros);
     public string DistanciaDestinoTexto => FormatarMetros(DistanciaDestinoMetros);
 
     public string DestinoDisparadaTexto =>
@@ -77,34 +108,294 @@ public partial class SessaoViewModel
         AlvoSelecionado != null &&
         (AlvoSelecionado.PvAtual ?? AlvoSelecionado.PvMaximo ?? 0) > 0;
 
-    // =========================================================================
-    // SISTEMA DE DISPARADA (DOBRA DESLOCAMENTO -> CLIQUE NA CASA -> PRÓXIMO TURNO)
-    // =========================================================================
-    public async Task AlternarModoDisparadaAsync()
+    private void FecharOutrosModaisCombate()
     {
-        if (ModoDisparadaAtivo)
-        {
-            CancelarDisparada();
-            return;
-        }
+        ExibirModalDados = false;
+        ExibirModalFicha = false;
+        ExibirModalAtaque = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
+        LimparEstadoDisparadaInterno();
+        MonstroEmVisualizacao = null;
+        PinoMonstroEmVisualizacao = null;
+        NpcEmVisualizacao = null;
+        PinoNpcEmVisualizacao = null;
+        FeedbackAcao = null;
+    }
 
+    // =========================================================================
+    // SISTEMA DE ESQUIVAR
+    // =========================================================================
+    public void AbrirModalEsquivar()
+    {
         if (Estado.EhMestre)
         {
-            FeedbackAcao = "A ação de Disparada é usada pelo jogador no turno dele.";
+            FeedbackAcao = "A ação de Esquivar é exclusiva dos jogadores no turno.";
             Notificar();
             return;
         }
 
         if (!EhMeuTurno)
         {
-            FeedbackAcao = "Aguarde o Mestre liberar o seu turno para usar Disparada.";
+            FeedbackAcao = "Aguarde o Mestre liberar o seu turno para esquivar.";
+            Notificar();
+            return;
+        }
+
+        FecharOutrosModaisCombate();
+        ErroEsquivar = null;
+        ExibirModalEsquivar = true;
+        Notificar();
+    }
+
+    public void FecharModalEsquivar()
+    {
+        if (ExecutandoEsquivar) return;
+        ExibirModalEsquivar = false;
+        ErroEsquivar = null;
+        Notificar();
+    }
+
+    public async Task ConfirmarEsquivarAsync()
+    {
+        if (ExecutandoEsquivar || !EhMeuTurno || Estado.IdSessao <= 0) return;
+
+        ExecutandoEsquivar = true;
+        ErroEsquivar = null;
+        Notificar();
+
+        var eu = Estado.Jogadores.FirstOrDefault(j => j.IdAccount == _sessaoUsuario.IdUsuarioLogado);
+        string meuNome = eu?.NomePersonagem ?? _sessaoUsuario.NomeUsuario;
+        var proximo = ObterProximoJogadorTurno();
+        string? nomeProximo = proximo is null ? null : (proximo.NomePersonagem ?? proximo.Username);
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (ok, erro) = await _sessaoService.RegistrarEsquivaAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado,
+                meuNome,
+                proximo?.IdAccount,
+                nomeProximo);
+
+            if (!ok)
+            {
+                ErroEsquivar = erro;
+                return;
+            }
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            ExibirModalEsquivar = false;
+            FeedbackAcao = null;
+            AbaChatAtiva = CanaisSessao.Chat;
+        }
+        catch (Exception ex)
+        {
+            ErroEsquivar = $"Erro ao esquivar: {ex.Message}";
+        }
+        finally
+        {
+            ExecutandoEsquivar = false;
+            _dbLock.Release();
+            Notificar();
+        }
+    }
+
+    // =========================================================================
+    // SISTEMA DE ESCONDER (TESTE DE DESTREZA - FURTIVIDADE)
+    // =========================================================================
+    public async Task AbrirModalEsconderAsync()
+    {
+        if (Estado.EhMestre)
+        {
+            FeedbackAcao = "A ação de Esconder é exclusiva dos jogadores no turno.";
+            Notificar();
+            return;
+        }
+
+        if (!EhMeuTurno)
+        {
+            FeedbackAcao = "Aguarde o Mestre liberar o seu turno para se esconder.";
+            Notificar();
+            return;
+        }
+
+        if (!Estado.IdPersonagemLogado.HasValue)
+        {
+            FeedbackAcao = "Você precisa de uma ficha aprovada na sessão para se esconder.";
+            Notificar();
+            return;
+        }
+
+        FecharOutrosModaisCombate();
+        ExibirModalEsconder = true;
+        CarregandoEsconder = true;
+        ErroEsconder = null;
+        EtapaEsconder = 1;
+        ResultadoEsconderAtual = null;
+        BonusExtraEsconder = 0;
+        CdEsconder = 12;
+        Notificar();
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var personagem = await _sessaoService.ObterFichaCompletaAsync(Estado.IdPersonagemLogado.Value);
+            if (personagem == null)
+            {
+                ErroEsconder = "Não foi possível carregar sua ficha.";
+                return;
+            }
+
+            NomePersonagemEsconder = personagem.Nome;
+            ModDestrezaEsconder = AtributosBase.CalcularModificador(personagem.Destreza);
+
+            TemProficienciaFurtividade = personagem.Pericias != null &&
+                personagem.Pericias.Any(p =>
+                    !string.IsNullOrWhiteSpace(p.NomePericia) &&
+                    p.NomePericia.Contains("Furtividade", StringComparison.OrdinalIgnoreCase));
+
+            int bonusProfNivel = 2 + (Math.Clamp(personagem.Nivel, 1, 20) - 1) / 4;
+            BonusProficienciaEsconder = TemProficienciaFurtividade ? bonusProfNivel : 0;
+        }
+        catch (Exception ex)
+        {
+            ErroEsconder = $"Erro ao carregar ficha: {ex.Message}";
+        }
+        finally
+        {
+            CarregandoEsconder = false;
+            _dbLock.Release();
+            Notificar();
+        }
+    }
+
+    public async Task RolarTesteEsconderAsync()
+    {
+        if (ExecutandoEsconder || !EhMeuTurno || !Estado.IdPersonagemLogado.HasValue) return;
+
+        ExecutandoEsconder = true;
+        ErroEsconder = null;
+        Notificar();
+
+        int dado = Random.Shared.Next(1, 21);
+        int bonusExtra = Math.Clamp(BonusExtraEsconder, -50, 50);
+        int cd = Math.Clamp(CdEsconder, 1, 40);
+        int total = dado + ModDestrezaEsconder + BonusProficienciaEsconder + bonusExtra;
+        bool passou = dado == 20 || (dado != 1 && total >= cd);
+
+        ResultadoEsconderAtual = new ResultadoEsconderDto
+        {
+            NomePersonagem = NomePersonagemEsconder,
+            DadoD20 = dado,
+            ModificadorDestreza = ModDestrezaEsconder,
+            TemProficiencia = TemProficienciaFurtividade,
+            BonusProficiencia = BonusProficienciaEsconder,
+            BonusExtra = bonusExtra,
+            Total = total,
+            CdAlvo = cd,
+            Passou = passou
+        };
+
+        var proximo = ObterProximoJogadorTurno();
+        string? nomeProximo = proximo is null ? null : (proximo.NomePersonagem ?? proximo.Username);
+
+        await _dbLock.WaitAsync();
+        try
+        {
+            var (ok, erro) = await _sessaoService.RegistrarEsconderAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                Estado.IdMapaAtivo,
+                _sessaoUsuario.IdUsuarioLogado,
+                Estado.IdPersonagemLogado.Value,
+                ResultadoEsconderAtual,
+                proximo?.IdAccount,
+                nomeProximo);
+
+            if (!ok)
+                ErroEsconder = erro;
+
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha,
+                Estado.IdSessao,
+                _sessaoUsuario.IdUsuarioLogado);
+
+            if (atualizado != null)
+                Estado = atualizado;
+
+            EtapaEsconder = 2;
+            AbaChatAtiva = CanaisSessao.Chat;
+        }
+        catch (Exception ex)
+        {
+            ErroEsconder = $"Erro ao executar teste de Furtividade: {ex.Message}";
+        }
+        finally
+        {
+            ExecutandoEsconder = false;
+            _dbLock.Release();
+            Notificar();
+        }
+    }
+
+    public void FecharModalEsconder()
+    {
+        if (ExecutandoEsconder) return;
+        ExibirModalEsconder = false;
+        ErroEsconder = null;
+        EtapaEsconder = 1;
+        ResultadoEsconderAtual = null;
+        Notificar();
+    }
+
+    // =========================================================================
+    // SISTEMA DE DISPARADA E DESENGAJAR
+    // =========================================================================
+    public Task AlternarModoDisparadaAsync() =>
+        IniciarModoMovimentoAsync(desengajar: false);
+
+    public Task AlternarModoDesengajarAsync() =>
+        IniciarModoMovimentoAsync(desengajar: true);
+
+    private async Task IniciarModoMovimentoAsync(bool desengajar)
+    {
+        if (ExecutandoDisparada) return;
+
+        if ((desengajar && ModoDesengajarAtivo) || (!desengajar && ModoDisparadaAtivo))
+        {
+            CancelarDisparada();
+            return;
+        }
+
+        string nomeAcao = desengajar ? "Desengajar" : "Disparada";
+
+        if (Estado.EhMestre)
+        {
+            FeedbackAcao = $"A ação de {nomeAcao} é usada pelo jogador no turno dele.";
+            Notificar();
+            return;
+        }
+
+        if (!EhMeuTurno)
+        {
+            FeedbackAcao = $"Aguarde o Mestre liberar o seu turno para usar {nomeAcao}.";
             Notificar();
             return;
         }
 
         if (!Estado.IdPersonagemLogado.HasValue || !Estado.IdMapaAtivo.HasValue)
         {
-            FeedbackAcao = "É preciso ter uma ficha aprovada e um mapa ativo para usar Disparada.";
+            FeedbackAcao = $"É preciso ter uma ficha aprovada e um mapa ativo para usar {nomeAcao}.";
             Notificar();
             return;
         }
@@ -121,20 +412,14 @@ public partial class SessaoViewModel
             return;
         }
 
-        ExibirModalDados = false;
-        ExibirModalFicha = false;
-        ExibirModalAtaque = false;
-        MonstroEmVisualizacao = null;
-        PinoMonstroEmVisualizacao = null;
-        NpcEmVisualizacao = null;
-        PinoNpcEmVisualizacao = null;
+        FecharOutrosModaisCombate();
 
         await _dbLock.WaitAsync();
         try
         {
-            var personagem = await _sessaoService.ObterFichaCompletaAsync(Estado.IdPersonagemLogado.Value);
-            NomePersonagemDisparada = personagem?.Nome ?? meuPino.Nome;
-            DeslocamentoNormalMetros = ExtrairDeslocamentoEmMetros(personagem?.Deslocamento);
+            PersonagemMovimentoAtual = await _sessaoService.ObterFichaCompletaAsync(Estado.IdPersonagemLogado.Value);
+            NomePersonagemDisparada = PersonagemMovimentoAtual?.Nome ?? meuPino.Nome;
+            DeslocamentoNormalMetros = ExtrairDeslocamentoEmMetros(PersonagemMovimentoAtual?.Deslocamento);
         }
         finally
         {
@@ -146,8 +431,24 @@ public partial class SessaoViewModel
         DistanciaDestinoMetros = 0m;
         ErroDisparada = null;
         ExibirModalConfirmarDisparada = false;
-        ModoDisparadaAtivo = true;
-        FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}): clique em uma casa destacada no mapa para se mover.";
+        ModoDisparadaAtivo = !desengajar;
+        ModoDesengajarAtivo = desengajar;
+        AtualizarMonstrosAmeacandoOrigem();
+
+        if (desengajar)
+        {
+            FeedbackAcao = $"↺ Desengajar ativo (até {DeslocamentoNormalTexto}, imune a Ataques de Oportunidade): clique em uma casa verde no mapa para recuar.";
+        }
+        else if (MonstrosAmeacandoOrigem.Any())
+        {
+            string nomes = string.Join(", ", MonstrosAmeacandoOrigem.Select(m => m.Nome));
+            FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}). ⚠️ Sair do raio 1×1 de {nomes} sem Desengajar causará Ataque de Oportunidade automático.";
+        }
+        else
+        {
+            FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}): clique em uma casa destacada no mapa para se mover.";
+        }
+
         Notificar();
     }
 
@@ -162,44 +463,97 @@ public partial class SessaoViewModel
     private void LimparEstadoDisparadaInterno()
     {
         ModoDisparadaAtivo = false;
+        ModoDesengajarAtivo = false;
         ExibirModalConfirmarDisparada = false;
         PinoJogadorDisparada = null;
+        PersonagemMovimentoAtual = null;
         DestinoDisparada = null;
         DistanciaDestinoMetros = 0m;
         ErroDisparada = null;
+        MonstrosAmeacandoOrigem.Clear();
+    }
+
+    private void AtualizarMonstrosAmeacandoOrigem()
+    {
+        if (PinoJogadorDisparada is null)
+        {
+            MonstrosAmeacandoOrigem = new List<PinoMapaDto>();
+            return;
+        }
+
+        MonstrosAmeacandoOrigem = PinosVisiveisNoMapa
+            .Where(p => p.TipoEntidade == TiposPinoSessao.Monstro
+                        && (p.PvAtual ?? p.PvMaximo ?? 0) > 0
+                        && CalcularDistanciaQuadrados(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, p.Coluna, p.Linha) <= 1)
+            .ToList();
+    }
+
+    private List<PinoMapaDto> ObterMonstrosQueAtacamAoMover(int colDestino, int linDestino)
+    {
+        if (ModoDesengajarAtivo || MonstrosAmeacandoOrigem.Count == 0)
+            return new List<PinoMapaDto>();
+
+        return MonstrosAmeacandoOrigem
+            .Where(m => CalcularDistanciaQuadrados(colDestino, linDestino, m.Coluna, m.Linha) > 1)
+            .ToList();
     }
 
     public bool EhCasaOrigemDisparada(int coluna, int linha) =>
-        ModoDisparadaAtivo &&
+        ModoMovimentoAtivo &&
         PinoJogadorDisparada is not null &&
         PinoJogadorDisparada.Coluna == coluna &&
         PinoJogadorDisparada.Linha == linha;
 
     public bool CasaDentroDoAlcanceDisparada(int coluna, int linha)
     {
-        if (!ModoDisparadaAtivo || PinoJogadorDisparada is null)
+        if (!ModoMovimentoAtivo || PinoJogadorDisparada is null)
             return false;
 
         decimal dist = CalcularDistanciaMetros(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, coluna, linha);
-        return dist > 0m && dist <= DeslocamentoDisparadaMetros;
+        return dist > 0m && dist <= AlcanceMovimentoAtualMetros;
+    }
+
+    public bool CelulaProvocaAtaqueOportunidade(int coluna, int linha)
+    {
+        if (!ModoDisparadaAtivo || ModoDesengajarAtivo || MonstrosAmeacandoOrigem.Count == 0)
+            return false;
+
+        if (!CasaDentroDoAlcanceDisparada(coluna, linha))
+            return false;
+
+        return ObterMonstrosQueAtacamAoMover(coluna, linha).Count > 0;
     }
 
     public string ObterTooltipCelulaDisparada(int coluna, int linha, string coordTexto)
     {
-        if (!ModoDisparadaAtivo || PinoJogadorDisparada is null)
+        if (!ModoMovimentoAtivo || PinoJogadorDisparada is null)
             return $"{coordTexto} (1,5m)";
 
         if (PinoJogadorDisparada.Coluna == coluna && PinoJogadorDisparada.Linha == linha)
             return $"{coordTexto} · Sua posição atual";
 
         decimal dist = CalcularDistanciaMetros(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, coluna, linha);
-        return dist <= DeslocamentoDisparadaMetros
-            ? $"{coordTexto} · {FormatarMetros(dist)} (clique para Disparada)"
-            : $"{coordTexto} · {FormatarMetros(dist)} (fora do alcance de {DeslocamentoDisparadaTexto})";
+        if (dist > AlcanceMovimentoAtualMetros)
+            return $"{coordTexto} · {FormatarMetros(dist)} (fora do alcance de {AlcanceMovimentoAtualTexto})";
+
+        if (ModoDesengajarAtivo)
+            return $"{coordTexto} · {FormatarMetros(dist)} (Desengajar seguro — sem Ataque de Oportunidade)";
+
+        var ameacadores = ObterMonstrosQueAtacamAoMover(coluna, linha);
+        if (ameacadores.Count > 0)
+        {
+            string nomes = string.Join(", ", ameacadores.Select(m => m.Nome));
+            return $"{coordTexto} · {FormatarMetros(dist)} · ⚠️ Provoca Ataque de Oportunidade de {nomes}";
+        }
+
+        return $"{coordTexto} · {FormatarMetros(dist)} (clique para Disparada)";
     }
 
-    private void ProcessarCliqueCelulaDisparada(int coluna, int linha)
+    private async Task ProcessarCliqueCelulaDisparadaAsync(int coluna, int linha)
     {
+        if (ExecutandoDisparada)
+            return;
+
         if (PinoJogadorDisparada is null)
         {
             CancelarDisparada();
@@ -222,18 +576,20 @@ public partial class SessaoViewModel
             return;
         }
 
-        if (distancia > DeslocamentoDisparadaMetros)
+        if (distancia > AlcanceMovimentoAtualMetros)
         {
-            FeedbackAcao = $"Casa fora do alcance da Disparada! Distância: {FormatarMetros(distancia)} (máximo: {DeslocamentoDisparadaTexto}).";
+            string acao = ModoDesengajarAtivo ? "Desengajar" : "Disparada";
+            FeedbackAcao = $"Casa fora do alcance de {acao}! Distância: {FormatarMetros(distancia)} (máximo: {AlcanceMovimentoAtualTexto}).";
             Notificar();
             return;
         }
 
+        AtualizarMonstrosAmeacandoOrigem();
         DestinoDisparada = (colClamped, linClamped);
         DistanciaDestinoMetros = distancia;
         ErroDisparada = null;
-        ExibirModalConfirmarDisparada = true;
-        Notificar();
+
+        await ExecutarMovimentoDiretoAsync();
     }
 
     public void VoltarEscolhaCasaDisparada()
@@ -248,6 +604,11 @@ public partial class SessaoViewModel
 
     public async Task ConfirmarDisparadaAsync()
     {
+        await ExecutarMovimentoDiretoAsync();
+    }
+
+    private async Task ExecutarMovimentoDiretoAsync()
+    {
         if (ExecutandoDisparada || !EhMeuTurno || PinoJogadorDisparada is null || DestinoDisparada is null || !Estado.IdMapaAtivo.HasValue)
             return;
 
@@ -256,44 +617,111 @@ public partial class SessaoViewModel
         Notificar();
 
         var destino = DestinoDisparada.Value;
+        bool ehDesengajar = ModoDesengajarAtivo;
         string origemTexto = PinoJogadorDisparada.CoordenadaTexto;
         string destinoTexto = DestinoDisparadaTexto;
         var proximoJogador = ObterProximoJogadorTurno();
+        string nomeProximo = proximoJogador is not null
+            ? (proximoJogador.NomePersonagem ?? proximoJogador.Username)
+            : string.Empty;
+
+        var monstrosAtacantes = ehDesengajar
+            ? new List<PinoMapaDto>()
+            : ObterMonstrosQueAtacamAoMover(destino.Coluna, destino.Linha);
 
         await _dbLock.WaitAsync();
         try
         {
-            var (okMove, erroMove) = await _sessaoService.PosicionarPinoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                Estado.IdMapaAtivo,
-                _sessaoUsuario.IdUsuarioLogado,
-                TiposPinoSessao.Personagem,
-                PinoJogadorDisparada.IdEntidade,
-                destino.Coluna,
-                destino.Linha,
-                PinoJogadorDisparada.Visivel);
+            bool caiuInconsciente = false;
+            int danoTotalOportunidade = 0;
 
-            if (!okMove)
+            if (!ehDesengajar && monstrosAtacantes.Count > 0)
             {
-                ErroDisparada = erroMove ?? "Não foi possível mover seu pino.";
-                return;
+                var fichaAtual = await _sessaoService.ObterFichaCompletaAsync(PinoJogadorDisparada.IdEntidade)
+                                 ?? PersonagemMovimentoAtual;
+
+                int pvMaximo = Math.Max(1, fichaAtual?.PvMaximo ?? PinoJogadorDisparada.PvMaximo ?? 10);
+                int pvCorrente = Math.Clamp(fichaAtual?.PvAtual ?? PinoJogadorDisparada.PvAtual ?? pvMaximo, 0, pvMaximo);
+
+                var listaAtaques = new List<AtaqueOportunidadeDto>();
+                foreach (var pinoMonstro in monstrosAtacantes)
+                {
+                    var monstro = Estado.MonstrosCampanha.FirstOrDefault(m => m.IdMonstro == pinoMonstro.IdEntidade);
+                    string expressao = ExtrairExpressaoDanoMonstro(monstro);
+                    var (qtd, faces, bonus) = InterpretarExpressaoDado(expressao);
+
+                    var rolagens = new List<int>(qtd);
+                    for (int i = 0; i < qtd; i++)
+                        rolagens.Add(Random.Shared.Next(1, faces + 1));
+
+                    int dano = Math.Max(1, rolagens.Sum() + bonus);
+                    danoTotalOportunidade += dano;
+                    pvCorrente = Math.Max(0, pvCorrente - dano);
+
+                    listaAtaques.Add(new AtaqueOportunidadeDto
+                    {
+                        IdMonstro = pinoMonstro.IdEntidade,
+                        NomeMonstro = pinoMonstro.Nome,
+                        ExpressaoDano = expressao,
+                        ResultadosDano = rolagens,
+                        ModificadorDano = bonus,
+                        DanoTotal = dano,
+                        PvAposAtaque = pvCorrente
+                    });
+                }
+
+                var (okAo, erroAo) = await _sessaoService.RegistrarAtaquesOportunidadeAsync(
+                    Estado.IdSessao,
+                    _sessaoUsuario.IdUsuarioLogado,
+                    PinoJogadorDisparada.IdEntidade,
+                    NomePersonagemDisparada,
+                    pvCorrente,
+                    pvMaximo,
+                    listaAtaques);
+
+                if (!okAo)
+                {
+                    DestinoDisparada = null;
+                    FeedbackAcao = erroAo ?? "Erro ao registrar Ataque de Oportunidade.";
+                    return;
+                }
+
+                caiuInconsciente = pvCorrente <= 0;
             }
 
-            string nomeProximo = proximoJogador is not null
-                ? (proximoJogador.NomePersonagem ?? proximoJogador.Username)
-                : string.Empty;
+            if (!caiuInconsciente)
+            {
+                var (okMove, erroMove) = await _sessaoService.PosicionarPinoAsync(
+                    Estado.IdCampanha,
+                    Estado.IdSessao,
+                    Estado.IdMapaAtivo,
+                    _sessaoUsuario.IdUsuarioLogado,
+                    TiposPinoSessao.Personagem,
+                    PinoJogadorDisparada.IdEntidade,
+                    destino.Coluna,
+                    destino.Linha,
+                    PinoJogadorDisparada.Visivel);
 
-            string textoTurno = proximoJogador is not null
-                ? $" Turno passado para {nomeProximo}."
-                : " Turno encerrado.";
+                if (!okMove)
+                {
+                    DestinoDisparada = null;
+                    FeedbackAcao = erroMove ?? "Não foi possível mover seu pino.";
+                    return;
+                }
 
-            string mensagem = $"◷ {NomePersonagemDisparada} usou Disparada ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}) e moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}).{textoTurno}";
+                string textoTurno = proximoJogador is not null
+                    ? $" Turno passado para {nomeProximo}."
+                    : " Turno encerrado.";
 
-            await _sessaoService.EnviarMensagemChatAsync(
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado,
-                mensagem);
+                string mensagem = ehDesengajar
+                    ? $"↺ {NomePersonagemDisparada} usou Desengajar e recuou com segurança de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}), evitando Ataques de Oportunidade.{textoTurno}"
+                    : $"◷ {NomePersonagemDisparada} usou Disparada ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}) e moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}).{textoTurno}";
+
+                await _sessaoService.EnviarMensagemChatAsync(
+                    Estado.IdSessao,
+                    _sessaoUsuario.IdUsuarioLogado,
+                    mensagem);
+            }
 
             var (okTurno, erroTurno) = await _sessaoService.DefinirTurnoJogadorAsync(
                 Estado.IdCampanha,
@@ -304,7 +732,8 @@ public partial class SessaoViewModel
 
             if (!okTurno)
             {
-                ErroDisparada = erroTurno ?? "Pino movido, mas não foi possível passar o turno.";
+                DestinoDisparada = null;
+                FeedbackAcao = erroTurno ?? "Ação concluída, mas não foi possível passar o turno.";
                 return;
             }
 
@@ -317,12 +746,26 @@ public partial class SessaoViewModel
                 Estado = atualizado;
 
             LimparEstadoDisparadaInterno();
-            FeedbackAcao = null;
-            AbaChatAtiva = CanaisSessao.Chat;
+            if (caiuInconsciente)
+            {
+                FeedbackAcao = $"☠️ Ataque de Oportunidade (-{danoTotalOportunidade} PV)! Você caiu inconsciente antes de completar o movimento.";
+                AbaChatAtiva = CanaisSessao.Combate;
+            }
+            else if (danoTotalOportunidade > 0)
+            {
+                FeedbackAcao = $"⚡ Ataque de Oportunidade! Você sofreu -{danoTotalOportunidade} PV ao sair do raio 1×1 sem Desengajar.";
+                AbaChatAtiva = CanaisSessao.Combate;
+            }
+            else
+            {
+                FeedbackAcao = null;
+                AbaChatAtiva = CanaisSessao.Chat;
+            }
         }
         catch (Exception ex)
         {
-            ErroDisparada = $"Erro ao concluir Disparada: {ex.Message}";
+            DestinoDisparada = null;
+            FeedbackAcao = $"Erro ao concluir movimento: {ex.Message}";
         }
         finally
         {
@@ -357,10 +800,31 @@ public partial class SessaoViewModel
         return proximo.IdAccount == _sessaoUsuario.IdUsuarioLogado ? null : proximo;
     }
 
-    private static decimal CalcularDistanciaMetros(int colOrigem, int linOrigem, int colDestino, int linDestino)
+    private static int CalcularDistanciaQuadrados(int colOrigem, int linOrigem, int colDestino, int linDestino) =>
+        Math.Max(Math.Abs(colDestino - colOrigem), Math.Abs(linDestino - linOrigem));
+
+    private static decimal CalcularDistanciaMetros(int colOrigem, int linOrigem, int colDestino, int linDestino) =>
+        CalcularDistanciaQuadrados(colOrigem, linOrigem, colDestino, linDestino) * 1.5m;
+
+    private static string ExtrairExpressaoDanoMonstro(Monstro? monstro)
     {
-        int quadrados = Math.Max(Math.Abs(colDestino - colOrigem), Math.Abs(linDestino - linOrigem));
-        return quadrados * 1.5m;
+        if (monstro is not null)
+        {
+            string?[] campos = [monstro.Habilidades, monstro.Descricao];
+            foreach (var texto in campos)
+            {
+                if (string.IsNullOrWhiteSpace(texto)) continue;
+
+                var match = Regex.Match(texto, @"\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\b", RegexOptions.IgnoreCase);
+                if (match.Success)
+                    return match.Groups[1].Value.Replace(" ", "");
+            }
+
+            int bonusNd = Math.Max(0, (int)Math.Floor(monstro.NivelDesafio ?? 1m));
+            return bonusNd > 0 ? $"1d6+{bonusNd}" : "1d4";
+        }
+
+        return "1d6";
     }
 
     private static decimal ExtrairDeslocamentoEmMetros(object? valorDeslocamento)
@@ -413,14 +877,7 @@ public partial class SessaoViewModel
             return;
         }
 
-        ExibirModalDados = false;
-        ExibirModalFicha = false;
-        LimparEstadoDisparadaInterno();
-        MonstroEmVisualizacao = null;
-        PinoMonstroEmVisualizacao = null;
-        NpcEmVisualizacao = null;
-        PinoNpcEmVisualizacao = null;
-        FeedbackAcao = null;
+        FecharOutrosModaisCombate();
 
         ExibirModalAtaque = true;
         CarregandoAtaque = true;
@@ -565,7 +1022,11 @@ public partial class SessaoViewModel
         }
 
         ErroModalAtaque = null;
-        int dadoD20 = Random.Shared.Next(1, 21);
+        bool alvoEsquivando = alvo.Esquivando;
+        int dado1 = Random.Shared.Next(1, 21);
+        int dado2 = alvoEsquivando ? Random.Shared.Next(1, 21) : dado1;
+        int dadoD20 = alvoEsquivando ? Math.Min(dado1, dado2) : dado1;
+
         int modAtk = Math.Clamp(ModificadorAtaque, -50, 50);
         int totalAtk = dadoD20 + modAtk;
         int caAlvo = alvo.ClasseArmadura ?? 10;
@@ -583,6 +1044,9 @@ public partial class SessaoViewModel
             IdEntidadeAlvo = alvo.IdEntidade,
             NomeAlvo = alvo.Nome,
             CaAlvo = caAlvo,
+            AlvoEsquivando = alvoEsquivando,
+            DadoAtaque1 = dado1,
+            DadoAtaque2 = dado2,
             DadoAtaque = dadoD20,
             ModificadorAtaque = modAtk,
             TotalAtaque = totalAtk,

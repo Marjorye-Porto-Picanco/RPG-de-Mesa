@@ -580,6 +580,8 @@ public class AppDbContext : DbContext
             e.Property(sp => sp.IdPersonagem).HasColumnName("id_personagem");
             e.Property(sp => sp.Online).HasColumnName("online");
             e.Property(sp => sp.UltimoHeartbeat).HasColumnName("ultimo_heartbeat");
+            e.Property(sp => sp.Esquivando).HasColumnName("esquivando");
+            e.Property(sp => sp.Escondido).HasColumnName("escondido");
 
             e.HasOne(sp => sp.Sessao)
              .WithMany(s => s.Participantes)

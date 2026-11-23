@@ -227,6 +227,14 @@ else
                                 {
                                     <span class="turno-badge">⚔ Em turno</span>
                                 }
+                                @if (jogador.Esquivando)
+                                {
+                                    <span class="turno-badge">◈ Esquivando</span>
+                                }
+                                @if (jogador.Escondido && (ViewModel.Estado.EhMestre || jogador.IdPersonagem == ViewModel.Estado.IdPersonagemLogado))
+                                {
+                                    <span class="turno-badge">🥷 Furtivo</span>
+                                }
                                 @if (ViewModel.Estado.EhMestre && jogador.IdPersonagem.HasValue)
                                 {
                                     <button type="button"

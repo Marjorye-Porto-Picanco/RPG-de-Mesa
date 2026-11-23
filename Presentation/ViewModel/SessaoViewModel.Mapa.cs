@@ -32,9 +32,14 @@ public partial class SessaoViewModel
                 return Enumerable.Empty<PinoMapaDto>();
 
             var pinosDoMapa = Estado.Pinos.Where(p => p.IdMapa == Estado.IdMapaAtivo);
-            return Estado.EhMestre
-                ? pinosDoMapa
-                : pinosDoMapa.Where(p => p.Visivel);
+            if (Estado.EhMestre)
+                return pinosDoMapa;
+
+            return pinosDoMapa.Where(p =>
+                p.Visivel ||
+                (p.TipoEntidade == TiposPinoSessao.Personagem &&
+                 Estado.IdPersonagemLogado.HasValue &&
+                 p.IdEntidade == Estado.IdPersonagemLogado.Value));
         }
     }
 
@@ -212,9 +217,9 @@ public partial class SessaoViewModel
 
     public async Task AoClicarCelulaMapaAsync(int coluna, int linha)
     {
-        if (ModoDisparadaAtivo && EhMeuTurno)
+        if (ModoMovimentoAtivo && EhMeuTurno)
         {
-            ProcessarCliqueCelulaDisparada(coluna, linha);
+            await ProcessarCliqueCelulaDisparadaAsync(coluna, linha);
             return;
         }
 
@@ -346,9 +351,9 @@ public partial class SessaoViewModel
 
     public async Task AoClicarPinoMapaAsync(PinoMapaDto pino)
     {
-        if (ModoDisparadaAtivo && EhMeuTurno)
+        if (ModoMovimentoAtivo && EhMeuTurno)
         {
-            ProcessarCliqueCelulaDisparada(pino.Coluna, pino.Linha);
+            await ProcessarCliqueCelulaDisparadaAsync(pino.Coluna, pino.Linha);
             return;
         }
 
@@ -362,6 +367,8 @@ public partial class SessaoViewModel
             ExibirModalDados = false;
             ExibirModalFicha = false;
             ExibirModalAtaque = false;
+            ExibirModalEsquivar = false;
+            ExibirModalEsconder = false;
             Notificar();
             return;
         }
@@ -376,6 +383,8 @@ public partial class SessaoViewModel
             ExibirModalDados = false;
             ExibirModalFicha = false;
             ExibirModalAtaque = false;
+            ExibirModalEsquivar = false;
+            ExibirModalEsconder = false;
             Notificar();
             return;
         }

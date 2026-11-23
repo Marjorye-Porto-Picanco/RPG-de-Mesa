@@ -93,6 +93,8 @@ public partial class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;
@@ -250,7 +252,19 @@ public partial class SessaoViewModel : IAsyncDisposable
                     }
                 }
 
-                if (ModoDisparadaAtivo)
+                if (ExibirModalEsquivar && !Estado.EhMestre && !EhMeuTurno)
+                {
+                    ExibirModalEsquivar = false;
+                    FeedbackAcao = "O Mestre encerrou o seu turno.";
+                }
+
+                if (ExibirModalEsconder && EtapaEsconder == 1 && !Estado.EhMestre && !EhMeuTurno)
+                {
+                    ExibirModalEsconder = false;
+                    FeedbackAcao = "O Mestre encerrou o seu turno.";
+                }
+
+                if (ModoMovimentoAtivo)
                 {
                     if (!Estado.EhMestre && !EhMeuTurno)
                     {
@@ -277,6 +291,8 @@ public partial class SessaoViewModel : IAsyncDisposable
                     ExibirModalDados = false;
                     ExibirModalFicha = false;
                     ExibirModalAtaque = false;
+                    ExibirModalEsquivar = false;
+                    ExibirModalEsconder = false;
                     LimparEstadoDisparadaInterno();
                     MonstroEmVisualizacao = null;
                     PinoMonstroEmVisualizacao = null;
@@ -359,6 +375,8 @@ public partial class SessaoViewModel : IAsyncDisposable
     {
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
@@ -379,11 +397,13 @@ public partial class SessaoViewModel : IAsyncDisposable
         ExibirModalDados = false;
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
+        ExibirModalEsquivar = false;
+        ExibirModalEsconder = false;
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
         PinoNpcEmVisualizacao = null;
-        if (!ModoDisparadaAtivo)
+        if (!ModoMovimentoAtivo)
             FeedbackAcao = null;
         Notificar();
     }
@@ -392,7 +412,7 @@ public partial class SessaoViewModel : IAsyncDisposable
     {
         FeedbackAcao = null;
         PinoParaPosicionar = null;
-        if (ModoDisparadaAtivo)
+        if (ModoMovimentoAtivo)
             LimparEstadoDisparadaInterno();
         Notificar();
     }

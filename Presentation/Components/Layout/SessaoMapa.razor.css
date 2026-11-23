@@ -742,3 +742,46 @@
         font-size: 7px;
     }
 }
+
+.mapa-pino.pino-furtivo {
+    opacity: 0.62;
+    border-style: dashed;
+    border-color: #a98bff;
+    box-shadow: 0 0 10px rgba(169, 139, 255, 0.55);
+}
+
+.pino-badge-furtivo {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: rgba(24, 18, 42, 0.58);
+    color: #e2d6ff;
+    font-style: normal;
+    font-size: 13px;
+    pointer-events: none;
+}
+
+.mapa-pino.pino-esquivando {
+    box-shadow: 0 0 0 2px #66b3ff, 0 0 12px rgba(102, 179, 255, 0.75);
+}
+
+.pino-badge-esquiva {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #1b3652;
+    border: 1px solid #8ac4ff;
+    color: #dff0ff;
+    font-style: normal;
+    font-size: 9px;
+    line-height: 1;
+    pointer-events: none;
+}

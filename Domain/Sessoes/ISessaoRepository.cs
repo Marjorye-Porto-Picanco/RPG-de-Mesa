@@ -33,4 +33,5 @@ public interface ISessaoRepository
     Task AtualizarPvPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int pvAtual);
     Task AtualizarPvPersonagemAsync(int idPersonagem, int pvAtual);
     Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade);
+    Task AtualizarEstadoCombateParticipanteAsync( int idSessao, int idAccount, bool? esquivando = null, bool? escondido = null);
 }

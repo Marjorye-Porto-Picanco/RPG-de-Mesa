@@ -91,7 +91,7 @@
 }
 
 /* ==========================================================================
-   MODAL DE ATAQUE
+   MODAIS DE COMBATE (ATAQUE, DISPARADA, ESQUIVAR, ESCONDER)
    ========================================================================== */
 .attack-backdrop {
     position: fixed;
@@ -232,6 +232,11 @@
     gap: 6px;
 }
 
+.alvo-esquiva-aviso {
+    color: #9ecfff !important;
+    font-weight: 600;
+}
+
 .alvo-tag {
     flex: 0 0 auto;
     padding: 1px 6px;
@@ -258,6 +263,36 @@
     color: #9ecfff;
     border: 1px solid rgba(102, 179, 255, 0.45);
 }
+
+.stealth-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+    .stealth-summary div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        padding: 8px 6px;
+        border: 1px solid rgba(207, 178, 113, 0.25);
+        border-radius: 5px;
+        background: rgba(14, 13, 11, 0.45);
+        text-align: center;
+    }
+
+    .stealth-summary span {
+        font-size: 9px;
+        color: #bdb095;
+        text-transform: uppercase;
+    }
+
+    .stealth-summary strong {
+        font-size: 16px;
+        color: #f3d379;
+        font-family: "Trebuchet MS", sans-serif;
+    }
 
 .attack-options {
     display: grid;
