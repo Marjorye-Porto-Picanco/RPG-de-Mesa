@@ -83,7 +83,7 @@ body {
         align-items: center;
         border-bottom: 2px solid transparent;
         color: #c5b79d !important;
-        font-size: 13px;
+        font-size: 15px;
         white-space: nowrap;
         transition: color 0.2s, border-color 0.2s;
     }

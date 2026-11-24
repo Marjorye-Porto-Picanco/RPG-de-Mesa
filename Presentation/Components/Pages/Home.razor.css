@@ -19,9 +19,13 @@
         font-weight: 500;
     }
 
-.home-date {
+        #app .home-greeting h1 span {
+            font-size: 0.62em;
+        }
+
+#app .home-date {
     color: #b5a68c;
-    font-size: 11px;
+    font-size: 13px;
 }
 
 .home-hero {
@@ -284,8 +288,8 @@
         font-size: 18px;
     }
 
-    .home-date {
-        font-size: 9px;
+    #app .home-date {
+        font-size: 11px;
     }
 
     .home-hero {

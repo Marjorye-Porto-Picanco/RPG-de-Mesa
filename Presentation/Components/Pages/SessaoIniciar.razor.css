@@ -20,18 +20,18 @@ button, a, input, select, textarea {
 }
 
 select {
-    background-color: rgba(13, 20, 34, 0.85);
+    background-color: rgba(42, 27, 18, 0.92);
     color: #f5eedf;
-    border: 1px solid rgba(151, 168, 195, 0.28);
+    border: 1px solid rgba(217, 184, 120, 0.4);
 }
 
     select option {
-        background-color: #161b26;
+        background-color: #2a1b12;
         color: #ffffff;
     }
 
         select option:checked {
-            background-color: #3b4252;
+            background-color: #5e4522;
             color: #d1a951;
         }
 
@@ -234,7 +234,7 @@ select {
     .summary-details dt {
         margin-bottom: 5px;
         color: var(--muted);
-        font-size: 11px;
+        font-size: 14px;
     }
 
     .summary-details dd {
@@ -318,7 +318,7 @@ select {
 
     .configuration-heading > span {
         color: var(--muted);
-        font-size: 11px;
+    font-size: 13px;
     }
 
 /* ============================================================
@@ -551,15 +551,15 @@ select {
         width: 100%;
         min-height: 38px;
         padding: 9px 10px;
-        border: 1px solid rgba(151, 168, 195, .28);
+        border: 1px solid rgba(217, 184, 120, .4);
         border-radius: 3px;
-        background: rgba(13, 20, 34, .82);
+        background: rgba(42, 27, 18, .92);
         color: #e9e2d4;
-        font-size: 12px;
+        font-size: 14px;
     }
 
         .form-field select option {
-            background-color: #131a29;
+            background-color: #2a1b12;
             color: #f5eedf;
         }
 
@@ -796,11 +796,11 @@ select {
 .form-field ::deep .entrada-arquivo-mapa {
     width: 100%;
     padding: 6px;
-    border: 1px solid rgba(151, 168, 195, .28);
+    border: 1px solid rgba(217, 184, 120, .4);
     border-radius: 3px;
-    background: rgba(13, 20, 34, .82);
+    background: rgba(42, 27, 18, .92);
     color: #c5b79d;
-    font-size: 11px;
+    font-size: 13px;
 }
 
     .form-field ::deep .entrada-arquivo-mapa::file-selector-button {
@@ -937,7 +937,7 @@ select {
 }
 
     .history-fields-row select option {
-        background-color: #131a29;
+        background-color: #2a1b12;
         color: #f5eedf;
     }
 
@@ -1021,7 +1021,7 @@ select {
 .history-entry-preview {
     margin: 0;
     color: #d7c7a9;
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.45;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -1173,7 +1173,7 @@ select {
 
     .history-chat-line time {
         color: #8b7d66;
-        font-size: 9px;
+        font-size: 12px;
         white-space: nowrap;
     }
 
@@ -1185,7 +1185,7 @@ select {
 
 .history-chat-author {
     color: #ebd59b;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -1771,7 +1771,7 @@ textarea:focus-visible {
     padding: 8px 10px;
     border: 1px solid rgba(217, 184, 120, .28);
     border-radius: 3px;
-    background: rgba(13, 20, 34, .6);
+    background: rgba(42, 27, 18, .72);
 }
 
 .npc-foto-preview {
@@ -1884,7 +1884,7 @@ textarea:focus-visible {
     padding: 8px 6px;
     border: 1px solid rgba(217, 184, 120, .24);
     border-radius: 4px;
-    background: rgba(13, 20, 34, .65);
+    background: rgba(42, 27, 18, .72);
     color: #d2bd94;
     font-size: 10px;
 }
@@ -1899,9 +1899,9 @@ textarea:focus-visible {
         max-width: 62px;
         min-height: 32px;
         padding: 4px;
-        border: 1px solid rgba(151, 168, 195, .28);
+        border: 1px solid rgba(217, 184, 120, .4);
         border-radius: 3px;
-        background: rgba(24, 17, 13, .85);
+        background: rgba(25, 17, 13, .92);
         color: #f3e7ce;
         text-align: center;
         font-size: 14px;
@@ -1957,20 +1957,20 @@ textarea:focus-visible {
 
     .session-layout {
         grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
     }
 
     .session-nav {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     }
 
     .session-nav-link {
-        justify-content: center;
-        padding: 0 6px;
-        text-align: center;
+        min-height: 44px;
+        padding: 6px 10px;
     }
 
     .session-players {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     }
 
     .resource-tabs {
@@ -2000,6 +2000,12 @@ textarea:focus-visible {
         width: 76px;
         height: 76px;
     }
+
+    .configuration-content,
+    .history-content,
+    .mapas-painel {
+        width: 100%;
+    }
 }
 
 @media (max-width: 480px) {
@@ -2019,7 +2025,14 @@ textarea:focus-visible {
         font-size: 26px;
     }
 
-    .session-nav,
+    .session-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .session-nav-link {
+        font-size: 12px;
+    }
+
     .session-players,
     .summary-details,
     .history-fields-row,
@@ -2043,6 +2056,33 @@ textarea:focus-visible {
     .resource-browser,
     .resource-editor {
         padding: 14px;
+    }
+
+    .resource-tab,
+    .link-tab {
+        min-height: 40px;
+        font-size: 12px;
+    }
+
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        min-height: 44px;
+    }
+
+    .history-editor,
+    .history-list-panel {
+        padding: 12px;
+    }
+
+    .history-list {
+        max-height: 52dvh;
+    }
+
+    .editor-actions button,
+    .history-actions button {
+        flex: 1 1 100%;
+        min-height: 44px;
     }
 
     .save-button {

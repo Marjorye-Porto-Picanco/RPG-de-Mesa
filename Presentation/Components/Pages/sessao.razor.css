@@ -37,7 +37,8 @@ textarea {
     display: grid;
     width: 100%;
     height: 100vh;
-    min-height: 600px;
+    height: 100dvh;
+    min-height: min(600px, 100dvh);
     grid-template-rows: 62px minmax(0, 1fr);
     overflow: hidden;
     background: var(--game-bg);
@@ -885,12 +886,20 @@ textarea {
 
 @media (max-width: 560px) {
     .sala-jogo {
-        grid-template-rows: 54px minmax(0, 1fr);
+        height: auto;
+        min-height: 100dvh;
+        grid-template-rows: auto minmax(0, 1fr);
     }
 
     .game-header {
+        min-height: 56px;
+        flex-wrap: wrap;
         gap: 8px;
-        padding: 0 8px;
+        padding: 8px;
+    }
+
+    .game-heading {
+        flex: 1 1 100px;
     }
 
     .game-home {
@@ -904,8 +913,8 @@ textarea {
     }
 
     .game-heading h1 {
-        max-width: 130px;
-        font-size: 12px;
+        max-width: 100%;
+        font-size: 14px;
     }
 
     .game-presence {
@@ -914,24 +923,36 @@ textarea {
 
     .game-exit,
     .game-finish {
-        min-height: 29px;
-        padding: 0 7px;
-        font-size: 9px;
+        min-height: 36px;
+        padding: 0 10px;
+        font-size: 11px;
     }
 
     .game-layout {
-        grid-template-columns: 43px minmax(0, 1fr);
-        grid-template-rows: minmax(570px, 1fr) auto;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto;
     }
 
     .game-toolbar {
+        position: sticky;
+        top: 0;
+        grid-row: auto;
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: flex-start;
+        overflow-x: auto;
         gap: 7px;
-        padding: 9px 3px;
+        padding: 7px 8px;
+        border-right: 0;
+        border-bottom: 1px solid var(--game-line);
     }
 
         .game-toolbar button {
-            width: 35px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
             font-size: 15px;
         }
 
@@ -940,20 +961,24 @@ textarea {
         }
 
     .toolbar-avatar {
-        width: 27px;
-        height: 27px;
+        width: 29px;
+        height: 29px;
+    }
+
+    .toolbar-spacer {
+        flex: 0 0 4px;
     }
 
     .game-main {
-        min-height: 570px;
-        grid-template-rows: 43px minmax(260px, 1fr) 245px;
+        min-height: 0;
+        grid-template-rows: 44px minmax(260px, 55dvh) minmax(220px, auto);
         gap: 6px;
         padding: 6px;
     }
 
     .game-console {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(100px, 1fr) 126px;
+        grid-template-rows: minmax(120px, auto) minmax(126px, auto);
         gap: 6px;
     }
 
@@ -961,6 +986,10 @@ textarea {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: 32px 74px 25px;
         min-height: 131px;
+    }
+
+    .players-list {
+        min-width: 0;
     }
 
     .players-heading {
@@ -1004,6 +1033,20 @@ textarea {
 
     .players-footer {
         min-height: 25px;
-        font-size: 8px;
+        font-size: 11px;
+    }
+}
+
+@media (min-width: 821px) and (max-height: 700px) {
+    .sala-jogo {
+        min-height: 0;
+    }
+
+    .game-main {
+        grid-template-rows: 42px minmax(180px, 1fr) 165px;
+    }
+
+    .game-console {
+        grid-template-columns: minmax(190px, 0.8fr) minmax(260px, 1.2fr);
     }
 }

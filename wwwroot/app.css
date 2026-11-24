@@ -1,5 +1,68 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: Cambria, Georgia, "Times New Roman", serif;
+}
+
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: #000;
+}
+
+.loading-mascot {
+    display: block;
+    width: min(56vw, 240px);
+    height: auto;
+    align-self: center;
+    margin-inline: auto;
+    object-fit: contain;
+}
+
+.loading-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    height: 18px;
+    align-self: center;
+    margin-inline: auto;
+}
+
+    .loading-dots span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #fff;
+        animation: loading-hop 0.9s ease-in-out infinite;
+    }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+@keyframes loading-hop {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-11px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-dots span {
+        animation: none;
+    }
 }
 
 a, .btn-link {
@@ -13,7 +76,7 @@ a, .btn-link {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 .content {
@@ -91,19 +154,19 @@ h1:focus {
     text-align: center;
 }
 
-.confirm-dialog h2 {
-    margin: 0;
-    color: #553d20;
-    font-size: 23px;
-    font-weight: 500;
-}
+    .confirm-dialog h2 {
+        margin: 0;
+        color: #553d20;
+        font-size: 23px;
+        font-weight: 500;
+    }
 
-.confirm-dialog p {
-    margin: 14px 0 24px;
-    color: #493519;
-    font-size: 15px;
-    line-height: 1.6;
-}
+    .confirm-dialog p {
+        margin: 14px 0 24px;
+        color: #493519;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
 .confirm-actions {
     display: flex;
@@ -111,16 +174,16 @@ h1:focus {
     gap: 12px;
 }
 
-.confirm-actions button {
-    min-width: 92px;
-    min-height: 40px;
-    padding: 0 18px;
-    border: 1px solid #8e6c35;
-    border-radius: 3px;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
+    .confirm-actions button {
+        min-width: 92px;
+        min-height: 40px;
+        padding: 0 18px;
+        border: 1px solid #8e6c35;
+        border-radius: 3px;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
 
 .confirm-exit {
     background: #94702f;
@@ -155,7 +218,10 @@ h1:focus {
 }
 
 .status-bar-safe-area {
-    display: none;
+    display: block;
+    width: 100%;
+    height: env(safe-area-inset-top, 0px);
+    background: #000;
 }
 
 @supports (-webkit-touch-callout: none) {
@@ -173,6 +239,124 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+:root {
+    --font-family-base: Cambria, Georgia, "Times New Roman", serif;
+    --font-body: 0.95rem;
+    --font-control: 0.9rem;
+    --font-meta: 0.82rem;
+    --font-kicker: 0.75rem;
+    --font-title-1: clamp(1.5rem, 1.2rem + 1.15vw, 2rem);
+    --font-title-2: clamp(1.25rem, 1.1rem + 0.65vw, 1.65rem);
+    --font-title-3: clamp(1.1rem, 1rem + 0.35vw, 1.35rem);
+}
+
+#app {
+    font-family: var(--font-family-base);
+    font-size: var(--font-body);
+    line-height: 1.5;
+}
+
+    #app :not(.ph) {
+        font-family: var(--font-family-base);
+    }
+
+    #app h1,
+    #app h2,
+    #app h3,
+    #app h4 {
+        line-height: 1.25;
+    }
+
+    #app h1 {
+        font-size: var(--font-title-1);
+    }
+
+    #app h2 {
+        font-size: var(--font-title-2);
+    }
+
+    #app h3 {
+        font-size: var(--font-title-3);
+    }
+
+    #app h4 {
+        font-size: 1rem;
+    }
+
+    #app :is(p, label, li, dt, dd) {
+        font-size: var(--font-body);
+        line-height: 1.5;
+    }
+
+    #app :is(small, time, span, strong) {
+        font-size: var(--font-meta);
+    }
+
+    #app :is(button, input, select, textarea) {
+        font-size: var(--font-control);
+    }
+
+    #app :is(.page-kicker, .summary-kicker, .panel-kicker, .game-heading p) {
+        font-size: var(--font-kicker);
+    }
+
+    #app .game-heading h1 {
+        font-size: clamp(1rem, 1rem + 0.35vw, 1.25rem);
+    }
+
+    #app .game-toolbar button {
+        font-size: 1.1rem;
+    }
+
+    #app .game-toolbar .toolbar-dice {
+        font-size: 1.4rem;
+    }
+
+    #app .game-home {
+        font-size: 1.125rem;
+    }
+
+    #app .game-toolbar span {
+        font-size: inherit;
+    }
+
+    #app .game-toolbar .toolbar-avatar {
+        font-size: 0.7rem;
+    }
+
+    #app :is(.action-primary, .action-secondary, .action-quiet, .botao-dourado, .botao-secundario-dourado, .botao-dourado-cheio, .btn-upload, .exit-prompt-link, .upload-imagem-botao, .confirm-actions button, .confirmacao-dialog button) {
+        min-height: 42px;
+        padding: 0.55rem 1rem;
+        font-size: var(--font-control);
+        line-height: 1.2;
+    }
+
+    #app :is(.botao-aba, .library-tab, .aba-ficha, .diario-tab) {
+        min-height: 40px;
+        padding: 0.5rem 0.875rem;
+        font-size: var(--font-control);
+        line-height: 1.2;
+    }
+
+    #app :is(.inventario-popup, .painel-convite-card, .confirm-dialog, .confirmacao-dialog, .entry-dialog, .modal-content-custom) button:not(.dice-close):not(.dialog-close):not(.btn-fechar):not(.modal-close-btn) {
+        min-height: 42px;
+        padding: 0.55rem 1rem;
+        font-size: var(--font-control);
+        line-height: 1.2;
+    }
+
+    #app :is(.app-shell, .tela-rpg, .mesa-edicao) button:not(.game-home):not(.toolbar-tool):not(.toolbar-user):not(.toolbar-dice):not(.dice-close):not(.dialog-close):not(.btn-fechar):not(.modal-close-btn):not(.btn-add-item):not(.btn-add-item-edicao):not(.remover-item-edicao):not(.mais-adicionar):not(.btn-vinculo):not(.add-button) {
+        min-height: 42px;
+        padding: 0.55rem 1rem;
+        line-height: 1.2;
+    }
+
+    #app :is(.dice-close, .dialog-close, .btn-fechar, .modal-close-btn) {
+        min-height: 36px;
+        font-size: 1.25rem;
+    }
+
 /* Barra RPG */
 .barra-rpg {
     position: relative;
@@ -250,6 +434,23 @@ h1:focus {
         }
 
 @media (max-width: 650px) {
+    .status-bar-safe-area {
+        /* Alguns WebViews Android não expõem o inset CSS, embora a barra seja sobreposta. */
+        height: max(env(safe-area-inset-top, 0px), 24px);
+    }
+
+    #app :is(input, select, textarea),
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
+    button,
+    [role="button"] {
+        touch-action: manipulation;
+    }
+
     .barra-rpg {
         min-height: 54px;
         gap: 16px;

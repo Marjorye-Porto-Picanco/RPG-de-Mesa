@@ -170,7 +170,7 @@ body {
 .botao-aba {
     background: none;
     border: none;
-    color: #8c7d6b;
+    color: #c5b79d;
     font-family: inherit;
     font-size: 15px;
     font-weight: 500;
@@ -352,7 +352,7 @@ body {
 
 .info-personagem small {
     margin-top: auto;
-    color: #8c6a34;
+    color: #654820;
     font-size: 10px;
     font-style: italic;
 }

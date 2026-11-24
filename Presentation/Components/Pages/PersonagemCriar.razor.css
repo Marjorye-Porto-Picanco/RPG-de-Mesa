@@ -210,7 +210,7 @@
 
 .upload-help {
     margin: 0;
-    color: #b7a78b;
+    color: #d0c3aa;
     font-size: 11px;
     overflow-wrap: anywhere;
 }
@@ -256,7 +256,7 @@
     }
 
     .aside-summary .aside-hint {
-        color: #b7a78b;
+        color: #d0c3aa;
         font-size: 11px;
         line-height: 1.45;
         overflow-wrap: anywhere;
@@ -289,7 +289,7 @@
 }
 
     .progress-current span {
-        color: #b7a78b;
+        color: #d0c3aa;
         font-size: 10px;
         font-weight: bold;
         letter-spacing: 0.12em;
