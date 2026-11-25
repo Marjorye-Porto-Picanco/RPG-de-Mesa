@@ -8,7 +8,7 @@ public enum AfinidadeDano2014 { Normal, Resistencia, Imunidade, Vulnerabilidade 
 public enum Momento2014 { InicioTurno, FimTurno, Manual }
 public enum Atributo2014 { Forca, Destreza, Constituicao, Inteligencia, Sabedoria, Carisma }
 public enum TipoAcao2014 { Acao, Bonus, Reacao, Lendaria, Covil }
-public enum AcaoBasica2014 { Esquivar, Desengajar, Disparada, Ajudar, Preparar }
+public enum AcaoBasica2014 { Esquivar, Desengajar, Disparada, Ajudar, Preparar, Esconder }
 public enum SistemaArea2014 { AlvosMarcados, Raio, Linha, Cone }
 public enum Condicao2014
 {

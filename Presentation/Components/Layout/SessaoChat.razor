@@ -33,14 +33,6 @@
         </button>
     </div>
 
-    @if (ViewModel.AbaChatAtiva == CanaisSessao.Combate && ViewModel.Estado.EhMestre)
-    {
-        <div class="chat-combat-tools">
-            <button type="button" class="chat-combat-action" @onclick="ViewModel.AbrirCombateMestre">Atacar com monstro ou NPC</button>
-            <button type="button" class="chat-combat-action" @onclick="ViewModel.AbrirPainel2014">Encontro 5e</button>
-        </div>
-    }
-
     @if (ViewModel.AbaChatAtiva == CanaisSessao.Combate && ViewModel.Estado.Encontro.Rodada > 0)
     {
         var encontro = ViewModel.Estado.Encontro;

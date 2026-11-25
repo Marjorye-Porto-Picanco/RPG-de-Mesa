@@ -42,6 +42,13 @@ public partial class SessaoRepository
                 if (movidos == 0) throw new DomainException("A posição da criatura mudou durante a reação.");
             }
 
+            if (resultado.IdPinoParaOcultar is int idPino)
+            {
+                int ocultos = await contexto.SessaoPinos.Where(p => p.IdPino == idPino && p.IdSessao == idSessao &&
+                    p.IdMapa == idMapa && p.Visivel).ExecuteUpdateAsync(p => p.SetProperty(x => x.Visivel, false));
+                if (ocultos == 0) throw new DomainException("A visibilidade ou o mapa do pino mudou. Confira o pino e tente novamente.");
+            }
+
             if (resultado.SincronizarTurno)
             {
                 var atual = pinos.Find(p => p.IdPino == controle.ObterMapa(idMapa).IdPinoAtual);

@@ -67,7 +67,9 @@
             @foreach (var (acao, categoria, imagem, simbolo) in AcoesBasicasMestre)
             {
                 <button class="action-slot @(_acaoBasicaMestre == acao ? "ativa" : "")" type="button"
-                        disabled="@(ocupado || !podeAgir)" @onclick="() => AbrirAcaoBasicaMestre(acao)">
+                        disabled="@(ocupado || !podeAgir || (acao == AcaoBasica2014.Esconder && !pino.Visivel))"
+                        title="@(acao == AcaoBasica2014.Esconder && !pino.Visivel ? "O pino já está oculto para os jogadores" : null)"
+                        @onclick="() => AbrirAcaoBasicaMestre(acao)">
                     @if (imagem is not null)
                     {
                         <img class="slot-icon-image" src="@imagem" width="24" height="24" alt="" />
@@ -79,9 +81,6 @@
                     <span>@acao</span><small>@categoria</small>
                 </button>
             }
-            <button class="action-slot" type="button" disabled="@ocupado" @onclick="() => ViewModel.AbrirFichaPinoAcoesMestreAsync(pino.IdPino)">
-                <span class="slot-icon" aria-hidden="true">▤</span><span>Ficha</span><small>Visualizar</small>
-            </button>
         </div>
         @if (_acaoBasicaMestre is null && !_exibirHabilidadeMestre && !ViewModel.ExibirCombateMestre && !ViewModel.ExibirPainel2014 &&
             !string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
@@ -151,7 +150,7 @@
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0)"
                     title="@(ViewModel.EhMeuTurno ? "Teste de Destreza (Furtividade) para ficar oculto no mapa" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalEsconderAsync">
-                <img class="slot-icon-image" src="/img/acoes/esconder.png" width="24" height="24" alt="" />
+                <img class="slot-icon-image" src="@IconeEsconder" width="24" height="24" alt="" />
                 <span>Esconder</span><small>Furtividade</small>
             </button>
             @if (ViewModel.EhMeuTurno)
@@ -202,6 +201,16 @@
                 {
                     <label class="attack-field">Gatilho<input maxlength="180" @bind="_gatilhoAcaoMestre" /></label>
                 }
+                @if (acaoBasica == AcaoBasica2014.Esconder)
+                {
+                    <label class="attack-field">CD do teste
+                        <input type="number" min="1" max="40" @bind="_cdEsconderMestre" />
+                    </label>
+                    <label class="attack-field">Modificador de Furtividade
+                        <input type="number" min="-50" max="50" @bind="_modificadorEsconderMestre" />
+                    </label>
+                    <p class="attack-empty">Se o teste passar, o pino fica oculto para os outros jogadores.</p>
+                }
                 @if (ficha is not null)
                 {
                     <p class="attack-empty">Ação @(ficha.AcaoUsada ? "usada" : "livre") · Bônus @(ficha.BonusUsado ? "usado" : "livre") · Reação @(ficha.ReacaoUsada ? "usada" : "livre")</p>
@@ -210,7 +219,9 @@
                         <p class="attack-empty">Ação preparada · @gatilho</p>
                     }
                 }
-                <button class="attack-roll" type="button" @onclick="() => UsarAcaoBasicaMestreAsync(pinoEmAcao.IdPino, acaoBasica)">Usar ação</button>
+                <button class="attack-roll" type="button" @onclick="() => UsarAcaoBasicaMestreAsync(pinoEmAcao.IdPino, acaoBasica)">
+                    @(acaoBasica == AcaoBasica2014.Esconder ? "Rolar Furtividade (1d20)" : "Usar ação")
+                </button>
             </fieldset>
             @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
             {
@@ -1133,6 +1144,7 @@
     private const string IconeDisparada = "/img/acoes/disparada.png";
     private const string IconeDesengajar = "/img/acoes/desengajar.png";
     private const string IconeEsquivar = "/img/acoes/esquivar.png";
+    private const string IconeEsconder = "/img/acoes/esconder.png";
 
     private static readonly (AcaoBasica2014 Acao, string Categoria, string? Imagem, string? Simbolo)[] AcoesBasicasMestre =
     [
@@ -1140,7 +1152,8 @@
         (AcaoBasica2014.Desengajar, "Ação", IconeDesengajar, null),
         (AcaoBasica2014.Esquivar, "Defesa", IconeEsquivar, null),
         (AcaoBasica2014.Ajudar, "Ação", null, "+"),
-        (AcaoBasica2014.Preparar, "Ação", null, "⚑")
+        (AcaoBasica2014.Preparar, "Ação", null, "⚑"),
+        (AcaoBasica2014.Esconder, "Furtividade", IconeEsconder, null)
     ];
 
     private int? _idPinoAcoesMestre;
@@ -1148,6 +1161,8 @@
     private TipoAcao2014 _tipoAcaoBasicaMestre;
     private int _idAlvoAjudaMestre;
     private string _gatilhoAcaoMestre = string.Empty;
+    private int _cdEsconderMestre;
+    private int _modificadorEsconderMestre;
     private bool _exibirHabilidadeMestre;
 
     protected override void OnParametersSet()
@@ -1166,6 +1181,11 @@
         _tipoAcaoBasicaMestre = TipoAcao2014.Acao;
         _idAlvoAjudaMestre = 0;
         _gatilhoAcaoMestre = string.Empty;
+        if (acao == AcaoBasica2014.Esconder)
+        {
+            _cdEsconderMestre = 12;
+            _modificadorEsconderMestre = ViewModel.PinoAcoesMestre?.Modificador(Atributo2014.Destreza) ?? 0;
+        }
         _acaoBasicaMestre = acao;
     }
 
@@ -1186,7 +1206,11 @@
     private async Task UsarAcaoBasicaMestreAsync(int idPino, AcaoBasica2014 acao)
     {
         var (alvo, gatilho, tipo) = (_idAlvoAjudaMestre, _gatilhoAcaoMestre, _tipoAcaoBasicaMestre);
-        if (await ViewModel.UsarControle2014Async((s, e, conta) => s.UsarAcaoBasica2014Async(e, conta, idPino, acao, alvo, gatilho, tipo)))
+        var (cd, modificador) = (_cdEsconderMestre, _modificadorEsconderMestre);
+        bool sucesso = await ViewModel.UsarControle2014Async((s, e, conta) => acao == AcaoBasica2014.Esconder
+            ? s.EsconderPino2014Async(e, conta, idPino, tipo, cd, modificador)
+            : s.UsarAcaoBasica2014Async(e, conta, idPino, acao, alvo, gatilho, tipo));
+        if (sucesso)
             FecharAcaoPinoMestre();
     }
 }

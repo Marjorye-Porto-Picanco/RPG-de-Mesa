@@ -1143,7 +1143,7 @@ textarea {
     }
 
     .game-toolbar-master {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
     }
 
     .game-toolbar > button,
@@ -1346,6 +1346,23 @@ textarea {
     .players-expanded .players-footer-with-action {
         border-top: 1px solid var(--game-line);
         padding: 4px 10px;
+    }
+}
+
+@media (max-width: 351px) {
+    .game-toolbar-master {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 561px) and (max-height: 440px) {
+    .game-toolbar-master {
+        gap: 2px;
+        padding-block: 4px;
+    }
+
+    .game-toolbar-master .toolbar-spacer {
+        display: none;
     }
 }
 

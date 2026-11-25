@@ -139,6 +139,19 @@ else
                     <span class="toolbar-label" aria-hidden="true">Ataque</span>
                 </button>
 
+                @if (ViewModel.Estado.EhMestre)
+                {
+                    <button class="toolbar-tool @(ViewModel.ExibirPainel2014 ? "selecionada" : "")"
+                            type="button"
+                            title="Encontro 5e 2014"
+                            aria-label="Abrir Encontro 5e 2014"
+                            aria-haspopup="dialog"
+                            @onclick="ViewModel.AbrirPainel2014">
+                        <span class="toolbar-icon" aria-hidden="true">5e</span>
+                        <span class="toolbar-label" aria-hidden="true">Encontro</span>
+                    </button>
+                }
+
                 <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva != "inventario" ? "selecionada" : "")"
                         type="button"
                         title="Ficha do Personagem"

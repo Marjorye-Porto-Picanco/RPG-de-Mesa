@@ -23,7 +23,7 @@ public sealed record AlteracaoPvCombate2014(int IdPino, int PvAnterior, int PvMa
 
 public sealed record ResultadoComandoCombate2014(string? Mensagem = null,
     IReadOnlyList<AlteracaoPvCombate2014>? AlteracoesPv = null, bool SincronizarTurno = false,
-    MovimentoPendente2014? MovimentoConfirmado = null);
+    MovimentoPendente2014? MovimentoConfirmado = null, int? IdPinoParaOcultar = null);
 
 public sealed record MovimentoPendente2014(int IdMovendo, int ColunaOrigem, int LinhaOrigem, int Coluna, int Linha,
     List<int> ReacoesPendentes);

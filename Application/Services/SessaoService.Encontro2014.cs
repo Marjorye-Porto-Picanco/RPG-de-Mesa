@@ -95,6 +95,26 @@ public partial class SessaoService
             return new($"{pino.Nome} usou {acao}{(acao == AcaoBasica2014.Preparar ? $" ({ficha.GatilhoPreparado})" : "")}.");
         });
 
+    public Task<(bool Sucesso, string Mensagem)> EsconderPino2014Async(SessaoEstadoDto estado, int conta,
+        int ator, TipoAcao2014 tipo, int cd, int modificador) =>
+        RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
+        {
+            if (tipo is not (TipoAcao2014.Acao or TipoAcao2014.Bonus) || cd is < 1 or > 40 || modificador is < -50 or > 50)
+                throw new DomainException("Confira o tipo de ação, a CD e o modificador de Furtividade.");
+
+            var pino = ExigirPino(estado, pinos, ator);
+            if (pinos.Any(p => p.IdPino == ator && !p.Visivel))
+                throw new DomainException("O pino selecionado já está oculto.");
+
+            ConsumirAcao(encontro, pino, tipo);
+            int dado = RegrasCombate2014.RolarD20(Rolagem2014.Normal, out int _, out int? _);
+            int total = dado + modificador;
+            bool passou = total >= cd;
+            string resultado = passou ? "Ficou escondido no mapa." : "O teste falhou.";
+            return new($"{pino.Nome} rolou Furtividade: {total} (d20 {dado}, modificador {modificador:+0;-0;0}) contra CD {cd}. {resultado}",
+                IdPinoParaOcultar: passou ? ator : null);
+        });
+
     public Task<(bool Sucesso, string Mensagem)> ConfigurarRecurso2014Async(SessaoEstadoDto estado, int conta, int ator,
         string nome, int maximo, int recarga, bool curto, int lendarias, int resistencias) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
