@@ -56,17 +56,27 @@
             <button class="action-slot @(ViewModel.ExibirCombateMestre ? "ativa" : "")" type="button"
                     disabled="@(ocupado || !podeAgir || pino.TipoEntidade == TiposPinoSessao.Personagem)"
                     @onclick="ViewModel.AbrirAtaquePinoAcoesMestre">
-                <span class="slot-icon" aria-hidden="true">⚔</span><span>Ataque</span><small>Ação</small>
+                <img class="slot-icon-image" src="@IconeAtaque" width="24" height="24" alt="" />
+                <span>Ataque</span><small>Ação</small>
             </button>
             <button class="action-slot @(_exibirHabilidadeMestre ? "ativa" : "")" type="button"
                     disabled="@(ocupado || !podeAgir)" @onclick="AbrirHabilidadeMestre">
-                <span class="slot-icon" aria-hidden="true">✧</span><span>Habilidades</span><small>Ação</small>
+                <img class="slot-icon-image" src="@IconeMagia" width="24" height="24" alt="" />
+                <span>Habilidades</span><small>Ação</small>
             </button>
-            @foreach (var (acao, icone, categoria) in AcoesBasicasMestre)
+            @foreach (var (acao, categoria, imagem, simbolo) in AcoesBasicasMestre)
             {
                 <button class="action-slot @(_acaoBasicaMestre == acao ? "ativa" : "")" type="button"
                         disabled="@(ocupado || !podeAgir)" @onclick="() => AbrirAcaoBasicaMestre(acao)">
-                    <span class="slot-icon" aria-hidden="true">@icone</span><span>@acao</span><small>@categoria</small>
+                    @if (imagem is not null)
+                    {
+                        <img class="slot-icon-image" src="@imagem" width="24" height="24" alt="" />
+                    }
+                    else
+                    {
+                        <span class="slot-icon" aria-hidden="true">@simbolo</span>
+                    }
+                    <span>@acao</span><small>@categoria</small>
                 </button>
             }
             <button class="action-slot" type="button" disabled="@ocupado" @onclick="() => ViewModel.AbrirFichaPinoAcoesMestreAsync(pino.IdPino)">
@@ -91,28 +101,31 @@
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
                     title="Movimente seu pino até o deslocamento da raça; não consome ação"
                     @onclick="ViewModel.AlternarModoMovimentoLivreAsync">
-                <span class="slot-icon">➤</span><span>@(ViewModel.ModoMovimentoLivreAtivo ? "Cancelar movimento" : "Mover")</span><small>Deslocamento</small>
+                <img class="slot-icon-image" src="/img/acoes/mover.png" width="24" height="24" alt="" />
+                <span>@(ViewModel.ModoMovimentoLivreAtivo ? "Cancelar movimento" : "Mover")</span><small>Deslocamento</small>
             </button>
             <button class="action-slot @(ViewModel.ExibirModalAtaque ? "ativa" : "")"
                     type="button"
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
                     title="@(ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalAtaqueAsync">
-                <span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small>
+                <img class="slot-icon-image" src="@IconeAtaque" width="24" height="24" alt="" />
+                <span>Ataque</span><small>Ação</small>
             </button>
             <button class="action-slot @(ViewModel.ExibirModalMagia ? "ativa" : "")"
                     type="button"
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
                     title="@(ViewModel.EhMeuTurno ? "Conjurar magia da sua ficha" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalMagiaAsync">
-                <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
+                <img class="slot-icon-image" src="@IconeMagia" width="24" height="24" alt="" />
+                <span>Conjurar Magia</span><small>Ação</small>
             </button>
             <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
                     type="button"
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada || ViewModel.AcoesDisponiveisNoTurno <= 0)"
                     title="@(ViewModel.EhMeuTurno ? "Dobra seu deslocamento neste turno — clique e escolha a casa no mapa" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AlternarModoDisparadaAsync">
-                <span class="slot-icon">◷</span>
+                <img class="slot-icon-image" src="@IconeDisparada" width="24" height="24" alt="" />
                 <span>@(ViewModel.ModoDisparadaAtivo ? "Cancelar" : "Disparada")</span>
                 <small>Ação</small>
             </button>
@@ -121,7 +134,7 @@
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada || ViewModel.AcoesDisponiveisNoTurno <= 0)"
                     title="@(ViewModel.EhMeuTurno ? "Afaste-se de inimigos sem provocar Ataques de Oportunidade" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AlternarModoDesengajarAsync">
-                <span class="slot-icon">↺</span>
+                <img class="slot-icon-image" src="@IconeDesengajar" width="24" height="24" alt="" />
                 <span>@(ViewModel.ModoDesengajarAtivo ? "Cancelar" : "Desengajar")</span>
                 <small>Ação</small>
             </button>
@@ -130,14 +143,16 @@
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0)"
                     title="@(ViewModel.EhMeuTurno ? "Ataques contra você terão desvantagem (2d20, menor valor) até seu próximo turno" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalEsquivar">
-                <span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small>
+                <img class="slot-icon-image" src="@IconeEsquivar" width="24" height="24" alt="" />
+                <span>Esquivar</span><small>Defesa</small>
             </button>
             <button class="action-slot @(ViewModel.ExibirModalEsconder ? "ativa" : "")"
                     type="button"
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0)"
                     title="@(ViewModel.EhMeuTurno ? "Teste de Destreza (Furtividade) para ficar oculto no mapa" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalEsconderAsync">
-                <span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small>
+                <img class="slot-icon-image" src="/img/acoes/esconder.png" width="24" height="24" alt="" />
+                <span>Esconder</span><small>Furtividade</small>
             </button>
             @if (ViewModel.EhMeuTurno)
             {
@@ -1113,13 +1128,19 @@
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
 
-    private static readonly (AcaoBasica2014 Acao, string Icone, string Categoria)[] AcoesBasicasMestre =
+    private const string IconeAtaque = "/img/acoes/ataque.png";
+    private const string IconeMagia = "/img/acoes/conjurar-magia.png";
+    private const string IconeDisparada = "/img/acoes/disparada.png";
+    private const string IconeDesengajar = "/img/acoes/desengajar.png";
+    private const string IconeEsquivar = "/img/acoes/esquivar.png";
+
+    private static readonly (AcaoBasica2014 Acao, string Categoria, string? Imagem, string? Simbolo)[] AcoesBasicasMestre =
     [
-        (AcaoBasica2014.Disparada, "◷", "Movimento"),
-        (AcaoBasica2014.Desengajar, "↺", "Ação"),
-        (AcaoBasica2014.Esquivar, "◈", "Defesa"),
-        (AcaoBasica2014.Ajudar, "+", "Ação"),
-        (AcaoBasica2014.Preparar, "⚑", "Ação")
+        (AcaoBasica2014.Disparada, "Movimento", IconeDisparada, null),
+        (AcaoBasica2014.Desengajar, "Ação", IconeDesengajar, null),
+        (AcaoBasica2014.Esquivar, "Defesa", IconeEsquivar, null),
+        (AcaoBasica2014.Ajudar, "Ação", null, "+"),
+        (AcaoBasica2014.Preparar, "Ação", null, "⚑")
     ];
 
     private int? _idPinoAcoesMestre;

@@ -2,27 +2,6 @@ html, body {
     font-family: Cambria, Georgia, "Times New Roman", serif;
 }
 
-.loading-screen {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-    background: #000;
-}
-
-.loading-mascot {
-    display: block;
-    width: min(56vw, 240px);
-    height: auto;
-    align-self: center;
-    margin-inline: auto;
-    object-fit: contain;
-}
-
 .loading-dots {
     display: flex;
     align-items: center;
@@ -63,6 +42,13 @@ html, body {
     .loading-dots span {
         animation: none;
     }
+}
+
+.loading-message {
+    margin: 0;
+    padding-inline: 1rem;
+    color: #efe4ca;
+    text-align: center;
 }
 
 a, .btn-link {
@@ -221,7 +207,7 @@ h1:focus {
     display: block;
     width: 100%;
     height: env(safe-area-inset-top, 0px);
-    background: #000;
+    background-color: var(--rpg-fundo-base);
 }
 
 @supports (-webkit-touch-callout: none) {
@@ -230,7 +216,6 @@ h1:focus {
         position: sticky;
         top: 0;
         height: env(safe-area-inset-top);
-        background-color: #f7f7f7;
         width: 100%;
         z-index: 1;
     }

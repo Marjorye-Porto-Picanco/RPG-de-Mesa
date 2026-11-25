@@ -8,8 +8,12 @@
 
 @if (ViewModel.Carregando)
 {
-    <div class="sala-jogo sala-estado">
-        <p>Preparando a mesa da sessão...</p>
+    <div class="loading-screen" role="status">
+        <img class="loading-mascot" src="img/mascote-carregamento.png" width="607" height="720" alt="" />
+        <div class="loading-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+        </div>
+        <p class="loading-message">Preparando a mesa da sessão…</p>
     </div>
 }
 else if (ViewModel.SessaoEncerradaPeloMestre)
@@ -41,7 +45,7 @@ else
 {
     <div class="sala-jogo @(ViewModel.PinoArrastando != null ? "em-arraste-pino" : "")"
          @onpointerup="ViewModel.FinalizarArrastePino">
-        <header class="game-header">
+        <header class="game-header @(ViewModel.Estado.EhMestre ? "" : "game-header-player")">
             <button type="button"
                     class="game-home"
                     aria-label="Voltar às campanhas"
@@ -53,6 +57,16 @@ else
             <div class="game-heading">
                 <p>@(ViewModel.Estado.EhMestre ? "Mesa do Mestre" : "Sessão em andamento")</p>
                 <h1>@ViewModel.Estado.NomeCampanha</h1>
+                <div class="game-mobile-turn" role="status">
+                    @if (ViewModel.EhMeuTurno)
+                    {
+                        <span class="game-turn-own"><span aria-hidden="true">⚔</span> Seu turno</span>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(ViewModel.Estado.NomeJogadorTurno))
+                    {
+                        <span><span aria-hidden="true">⚔</span> Turno de @ViewModel.Estado.NomeJogadorTurno</span>
+                    }
+                </div>
             </div>
 
             <div class="game-presence @(ViewModel.Reconectando ? "is-reconnecting" : null)" role="status">
@@ -93,13 +107,14 @@ else
 
         <div class="game-layout">
             <!-- BARRA LATERAL DE FERRAMENTAS -->
-            <aside class="game-toolbar" aria-label="Ferramentas da mesa">
+            <aside class="game-toolbar @(ViewModel.Estado.EhMestre ? "game-toolbar-master" : "")" aria-label="Ferramentas da mesa">
                 <button class="toolbar-dice @(ViewModel.ExibirModalDados ? "selecionada" : "")"
                         type="button"
                         title="Rolar dados"
                         aria-label="Abrir dados para rolar"
                         @onclick="ViewModel.AbrirModalDados">
-                    <span aria-hidden="true">⚄</span>
+                    <span class="toolbar-icon" aria-hidden="true">⚄</span>
+                    <span class="toolbar-label" aria-hidden="true">Dados</span>
                 </button>
 
                 @if (ViewModel.Estado.EhMestre)
@@ -109,7 +124,8 @@ else
                             title="Administrar Pinos no Mapa (Jogadores, NPCs e Monstros)"
                             aria-label="Administrar pinos no mapa"
                             @onclick="ViewModel.AlternarPainelPinos">
-                        <span aria-hidden="true">▦</span>
+                        <span class="toolbar-icon" aria-hidden="true">▦</span>
+                        <span class="toolbar-label" aria-hidden="true">Pinos</span>
                     </button>
                 }
 
@@ -119,7 +135,8 @@ else
                         title="@(ViewModel.Estado.EhMestre ? "Atacar com monstro ou NPC" : (ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno"))"
                         aria-label="Abrir ataque"
                         @onclick="ViewModel.AbrirModalAtaqueAsync">
-                    <span aria-hidden="true">⚔</span>
+                    <span class="toolbar-icon" aria-hidden="true">⚔</span>
+                    <span class="toolbar-label" aria-hidden="true">Ataque</span>
                 </button>
 
                 <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva != "inventario" ? "selecionada" : "")"
@@ -127,21 +144,26 @@ else
                         title="Ficha do Personagem"
                         aria-label="Abrir ficha do personagem"
                         @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
-                    <span aria-hidden="true">▤</span>
+                    <span class="toolbar-icon" aria-hidden="true">▤</span>
+                    <span class="toolbar-label" aria-hidden="true">Ficha</span>
                 </button>
 
                 <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva == "inventario" ? "selecionada" : "")"
                         type="button"
                         title="Inventário"
-                        aria-label="Abrir inventário"
+                        aria-label="Abrir itens do inventário"
                         @onclick='() => ViewModel.AbrirFichaPropriaAsync("inventario")'>
-                    <span aria-hidden="true">◇</span>
+                    <span class="toolbar-icon" aria-hidden="true">◇</span>
+                    <span class="toolbar-label" aria-hidden="true">Itens</span>
                 </button>
 
                 <span class="toolbar-spacer"></span>
 
                 <details class="toolbar-settings">
-                    <summary title="Configurações da mesa" aria-label="Configurações da mesa">⚙</summary>
+                    <summary title="Configurações da mesa" aria-label="Ajustes da mesa">
+                        <span class="toolbar-icon" aria-hidden="true">⚙</span>
+                        <span class="toolbar-label" aria-hidden="true">Ajustes</span>
+                    </summary>
                     <div class="toolbar-settings-menu">
                         <label class="toolbar-settings-item toolbar-settings-toggle">
                             Coordenadas do mapa
@@ -167,16 +189,29 @@ else
             </main>
 
             <!-- PAINEL LATERAL DIREITO: MESTRE E JOGADORES -->
-            <aside class="players-panel" aria-labelledby="jogadores-titulo">
+            <aside class="players-panel @(_exibirJogadoresMobile ? "players-expanded" : "")" aria-label="Jogadores">
+                @{ bool podeBloquearTurno = ViewModel.Estado.EhMestre && ViewModel.Estado.IdAccountTurno.HasValue; }
+                <button type="button"
+                        class="players-toggle"
+                        aria-expanded="@(_exibirJogadoresMobile ? "true" : "false")"
+                        aria-controls="jogadores-lista"
+                        @onclick="() => _exibirJogadoresMobile = !_exibirJogadoresMobile">
+                    <span class="players-toggle-label">Jogadores</span>
+                    <span class="players-toggle-count">
+                        <span class="presence-light" aria-hidden="true"></span>
+                        @ContarOnline() / @(ViewModel.Estado.Jogadores.Count + 1) conectados
+                    </span>
+                    <span class="players-chevron" aria-hidden="true"></span>
+                </button>
                 <div class="players-heading">
                     <div>
                         <p class="panel-kicker">Na mesa</p>
-                        <h2 id="jogadores-titulo">Jogadores</h2>
+                        <h2>Jogadores</h2>
                     </div>
                     <span class="players-count">@ContarOnline()</span>
                 </div>
 
-                <div class="players-list">
+                <div id="jogadores-lista" class="players-list">
                     @{
                         var mestre = ViewModel.Estado.Mestre;
                     }
@@ -196,6 +231,7 @@ else
                             <span class="player-class">Mestre</span>
                         </div>
                         <span class="mic-status @(mestre.Online ? "" : "desconectado")"
+                              role="img"
                               title="@(mestre.Online ? "Conectado" : "Fora da sessão")"
                               aria-label="@(mestre.Online ? "Conectado" : "Fora da sessão")">●</span>
                     </article>
@@ -223,7 +259,19 @@ else
                                 }
                             </span>
                             <div class="player-info">
-                                <strong>@jogador.Username</strong>
+                                @if (podeAbrirFicha)
+                                {
+                                    <button type="button" class="player-sheet-button"
+                                            aria-label="Abrir ficha de @(jogador.NomePersonagem ?? jogador.Username)"
+                                            @onclick:stopPropagation="true"
+                                            @onclick="() => ViewModel.AbrirFichaParticipanteAsync(jogador)">
+                                        <strong>@jogador.Username</strong>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <strong>@jogador.Username</strong>
+                                }
                                 <span class="player-sheet">@jogador.SubtituloLinha1</span>
                                 @if (!string.IsNullOrWhiteSpace(jogador.SubtituloLinha2))
                                 {
@@ -253,20 +301,22 @@ else
                                 }
                             </div>
                             <span class="mic-status @(jogador.Online ? "" : "desconectado")"
+                                  role="img"
                                   title="@(jogador.Online ? "Conectado" : "Fora da sessão")"
                                   aria-label="@(jogador.Online ? "Conectado" : "Fora da sessão")">●</span>
                         </article>
                     }
                 </div>
 
-                <div class="players-footer">
+                <div class="players-footer @(podeBloquearTurno ? "players-footer-with-action" : "")">
                     <span class="presence-light"></span>
                     <span>@ContarOnline() / @(ViewModel.Estado.Jogadores.Count + 1) conectados</span>
-                    @if (ViewModel.Estado.EhMestre && ViewModel.Estado.IdAccountTurno.HasValue)
+                    @if (podeBloquearTurno)
                     {
                         <button type="button"
                                 class="btn-bloquear-turno-footer"
                                 title="Bloquear turno atual"
+                                aria-label="Bloquear turno atual"
                                 disabled="@ViewModel.AlterandoTurno"
                                 @onclick="ViewModel.EncerrarTurnoAtualAsync">
                             🔒
@@ -375,6 +425,7 @@ else
     private int _ultimoIdCampanha = -1;
     private int? _ultimoIdPersonagem;
     private bool _mostrarCoordenadas = true;
+    private bool _exibirJogadoresMobile;
 
     private readonly int[] _facesPadrao = [4, 6, 8, 10, 12, 20, 100];
     private int _facesSelecionadas = 20;

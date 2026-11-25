@@ -204,45 +204,105 @@
         }
 
 @media (max-width: 560px) {
-    .chat-panel,
-    .chat-feed {
-        min-height: 0;
+    .chat-panel {
+        border-radius: 8px;
     }
 
     .chat-tabs {
-        min-height: 27px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2px;
+        padding: 3px 4px 0;
+        overflow: visible;
     }
 
     .chat-tab {
-        min-width: 42px;
-        padding: 0 7px;
-        font-size: 8px;
+        min-width: 0;
+        min-height: 44px;
+        padding: 4px 2px;
+        border-right: 0;
+        border-radius: 5px 5px 0 0;
+        color: #d3c4a8;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .chat-tab:focus-visible {
+        outline-offset: -3px;
+    }
+
+    .chat-feed {
+        flex: 0 1 auto;
+        max-height: clamp(9rem, 24dvh, 14rem);
+        overflow-y: auto;
     }
 
     .chat-feed-content {
-        gap: 5px;
-        padding: 6px 7px;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .chat-placeholder {
+        margin: 0;
+        padding: 3px 0;
+        color: #b9ad95;
     }
 
     .chat-line {
-        grid-template-columns: auto minmax(0, 1fr);
-        gap: 4px 6px;
-        font-size: 8px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2px 8px;
+        color: var(--game-text);
     }
 
-        .chat-line time {
-            display: none;
-        }
+    #app .chat-line > span {
+        grid-column: 1 / -1;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
 
-    .chat-name {
-        font-size: 8px;
+    .chat-line .chat-name {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .chat-line time {
+        grid-column: 2;
+        grid-row: 1;
+        color: #b9ad95;
+    }
+
+    .chat-combat-action {
+        min-height: 44px;
+        max-width: 100%;
+        padding: 5px 10px;
+        overflow-wrap: anywhere;
     }
 
     .chat-compose {
-        min-height: 31px;
+        gap: 6px;
+        padding: 6px;
     }
 
-        .chat-compose input {
-            font-size: 9px;
-        }
+    .chat-compose input,
+    .chat-compose button {
+        min-height: 44px;
+        border-radius: 5px;
+    }
+
+    .chat-compose input {
+        padding: 6px 9px;
+        border-color: #8d7954;
+    }
+
+    .chat-compose input::placeholder {
+        color: #b9ad95;
+    }
+
+    .chat-compose input:focus-visible {
+        outline: 2px solid #ead18a;
+    }
+
+    .chat-compose button {
+        width: 44px;
+    }
 }

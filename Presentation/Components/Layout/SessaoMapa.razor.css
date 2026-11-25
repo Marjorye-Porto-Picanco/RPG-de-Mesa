@@ -101,6 +101,14 @@
     text-align: center;
 }
 
+.map-fit-label {
+    display: none;
+}
+
+#app .map-fit > span:first-child {
+    font-size: inherit;
+}
+
 /* ==========================================================================
    PALCO DO MAPA & TABULEIRO 20x20
    ========================================================================== */
@@ -157,15 +165,17 @@
 }
 
 .map-board-wrapper {
+    --layout-board-size: var(--board-size);
+    --layout-header-size: var(--header-size);
     display: grid;
-    grid-template-columns: var(--board-size);
-    grid-template-rows: var(--board-size);
+    grid-template-columns: var(--layout-board-size);
+    grid-template-rows: var(--layout-board-size);
     flex-shrink: 0;
 }
 
     .map-board-wrapper.com-coordenadas {
-        grid-template-columns: var(--header-size) var(--board-size);
-        grid-template-rows: var(--header-size) var(--board-size);
+        grid-template-columns: var(--layout-header-size) var(--layout-board-size);
+        grid-template-rows: var(--layout-header-size) var(--layout-board-size);
     }
 
 .grade-canto {
@@ -209,6 +219,8 @@
 
 .map-art {
     position: relative;
+    width: var(--layout-board-size);
+    height: var(--layout-board-size);
     flex-shrink: 0;
     border: 1px solid rgba(236, 218, 171, 0.3);
     background: #1a1c17;
@@ -702,49 +714,172 @@
 
 @media (max-width: 560px) {
     .map-toolbar {
-        padding: 0 6px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+        padding: 10px;
     }
 
     .map-location {
-        gap: 5px;
+        align-items: flex-start;
+        gap: 8px;
     }
 
+        .map-location > span:last-child {
+            min-width: 0;
+        }
+
+        .map-location strong,
+        .map-location small {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
         .map-location strong {
-            max-width: 110px;
-            font-size: 9px;
+            color: #f3e6ca;
+            font-size: 16px;
+            line-height: 1.25;
         }
 
         .map-location small {
-            max-width: 110px;
-            font-size: 7px;
+            color: #cbbba0;
+            font-size: 12px;
+            line-height: 1.3;
         }
 
     .map-select-mestre {
-        max-width: 115px;
-        height: 25px;
-        font-size: 9px;
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        height: 44px;
+        margin: 0;
+        font-size: 16px;
     }
 
     .map-controls {
-        gap: 2px;
+        display: grid;
+        grid-template-columns: 44px 44px 44px minmax(0, 1fr);
+        gap: 6px;
     }
 
         .map-controls button {
-            width: 23px;
-            height: 25px;
+            width: 100%;
+            height: 44px;
+            border-color: rgba(207, 178, 113, 0.38);
+            font-size: 20px;
+        }
+
+        .map-controls .map-fit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            color: #f0d17f;
+        }
+
+        .map-fit-label {
+            display: inline;
+            font-size: 12px;
         }
 
     #nivel-zoom {
-        min-width: 31px;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .map-viewport {
+        padding: 8px;
+        overscroll-behavior-x: contain;
+    }
+
+    .map-board-wrapper {
+        --layout-header-size: 0px;
+        --layout-board-size: calc((min(100vw - 2 * var(--game-mobile-gutter), var(--game-map-stage-size)) - 18px - var(--layout-header-size)) * var(--map-zoom));
+    }
+
+    @supports (width: 1cqi) {
+        .map-viewport {
+            container-type: size;
+        }
+
+        .map-board-wrapper {
+            --layout-board-size: calc((min(100cqi, 100cqb) - var(--layout-header-size)) * var(--map-zoom));
+        }
+    }
+
+    .map-board-wrapper.com-coordenadas {
+        --layout-header-size: 20px;
+    }
+
+    .grade-eixo-colunas {
+        grid-template-columns: repeat(20, minmax(0, 1fr));
+    }
+
+    .grade-eixo-linhas {
+        grid-template-rows: repeat(20, minmax(0, 1fr));
+    }
+
+    .eixo-label {
         font-size: 8px;
+        line-height: 1;
     }
 
     .map-caption {
-        bottom: 6px;
-        left: 6px;
-        gap: 5px;
-        padding: 5px 6px;
-        font-size: 7px;
+        display: none;
+    }
+
+    .map-alert {
+        inset: 8px 8px auto;
+        justify-content: space-between;
+        max-width: none;
+        padding: 4px 4px 4px 10px;
+        transform: none;
+        font-size: 13px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .map-alert button,
+    .pinos-drawer-close,
+    .pino-btn-acao {
+        width: 44px;
+        min-height: 44px;
+        flex-shrink: 0;
+    }
+
+    .pinos-drawer {
+        width: clamp(270px, 84%, 350px);
+    }
+
+    .pinos-visibilidade-padrao,
+    .pinos-tab {
+        min-height: 44px;
+        font-size: 12px;
+    }
+
+    .pinos-lista {
+        overscroll-behavior: contain;
+    }
+
+    .pino-item-card {
+        flex-wrap: wrap;
+    }
+
+    .pino-item-main {
+        min-height: 44px;
+        flex: 1 1 9rem;
+    }
+
+    .pino-item-acoes {
+        flex-wrap: wrap;
+        margin-inline-start: auto;
+    }
+
+    .map-alert button:focus-visible,
+    .pinos-drawer :is(button, input):focus-visible {
+        outline: 2px solid #ead18a;
+        outline-offset: -2px;
     }
 }
 

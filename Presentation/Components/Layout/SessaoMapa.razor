@@ -18,7 +18,7 @@
         </span>
     </div>
 
-    <div class="map-controls" aria-label="Controles do mapa">
+    <div class="map-controls" role="group" aria-label="Controles do mapa">
         @if (ViewModel.Estado.EhMestre)
         {
             <select class="map-select-mestre"
@@ -36,7 +36,10 @@
         <button type="button" title="Diminuir zoom" aria-label="Diminuir zoom" @onclick="ViewModel.DiminuirZoom">−</button>
         <span id="nivel-zoom">@($"{Math.Round(ViewModel.NivelZoom * 100)}%")</span>
         <button type="button" title="Aumentar zoom" aria-label="Aumentar zoom" @onclick="ViewModel.AumentarZoom">+</button>
-        <button type="button" title="Ajustar mapa" aria-label="Ajustar mapa" @onclick="ViewModel.ResetarZoom">⤢</button>
+        <button type="button" class="map-fit" title="Ajustar mapa" aria-label="Ajustar mapa" @onclick="ViewModel.ResetarZoom">
+            <span aria-hidden="true">⤢</span>
+            <span class="map-fit-label" aria-hidden="true">Ajustar</span>
+        </button>
     </div>
 </div>
 
@@ -331,9 +334,10 @@
         @{
             int tamanhoPx = (int)Math.Round(SessaoViewModel.TamanhoBaseMapaPx * ViewModel.NivelZoom);
             int cabecalhoPx = MostrarCoordenadas ? Math.Max(22, (int)Math.Round(26 * ViewModel.NivelZoom)) : 0;
+            string zoom = ViewModel.NivelZoom.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
         <div class="map-board-wrapper @(MostrarCoordenadas ? "com-coordenadas" : "")"
-             style="--board-size: @(tamanhoPx)px; --header-size: @(cabecalhoPx)px;">
+             style="--board-size: @(tamanhoPx)px; --header-size: @(cabecalhoPx)px; --map-zoom: @zoom;">
 
             @if (MostrarCoordenadas)
             {
@@ -354,8 +358,7 @@
                 </div>
             }
 
-            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "") @(ViewModel.ModoMovimentoAtivo || ViewModel.ModoDisparadaAtivo ? "modo-disparada" : "")"
-                 style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
+            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "") @(ViewModel.ModoMovimentoAtivo || ViewModel.ModoDisparadaAtivo ? "modo-disparada" : "")">
                 @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
                 {
                     <img class="map-bg-img"

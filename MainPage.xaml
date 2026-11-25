@@ -4,9 +4,9 @@
              xmlns:local="clr-namespace:RPGdeMesa"
              xmlns:components="clr-namespace:RPGdeMesa.Presentation.Components"
              x:Class="RPGdeMesa.MainPage"
-             BackgroundColor="Black">
+             BackgroundColor="#20150f">
 
-    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html" BackgroundColor="Black">
+    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html" BackgroundColor="#20150f">
         <BlazorWebView.RootComponents>
             <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
         </BlazorWebView.RootComponents>
