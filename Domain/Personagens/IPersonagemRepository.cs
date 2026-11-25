@@ -10,6 +10,9 @@ public interface IPersonagemRepository
     Task<List<Classe>> ListarClassesAsync();
     Task AdicionarAsync(Personagem personagem);
     Task AtualizarAsync(Personagem personagem);
+    Task SalvarClassesPersonagemAsync(
+        int idPersonagem,
+        IEnumerable<(string NomeClasse, int Nivel)> classes);
     Task SalvarFichaCompleta3FNAsync(
         int idPersonagem,
         IEnumerable<(string NomeClasse, int Nivel)> classes,

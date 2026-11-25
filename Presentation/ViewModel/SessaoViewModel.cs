@@ -19,10 +19,17 @@ public class MagiaSlotSessaoDto
     public int IdMagia { get; set; }
 }
 
+public class ClasseSlotSessaoDto
+{
+    public string NomeClasse { get; set; } = "Guerreiro";
+    public int Nivel { get; set; } = 1;
+}
+
 public class SalvarFichaSessaoArgs
 {
     public Personagem Personagem { get; set; } = new();
     public Inventario DadosInventario { get; set; } = new();
+    public List<(string NomeClasse, int Nivel)> Classes { get; set; } = new();
     public List<(int IdItem, int Quantidade)> Itens { get; set; } = new();
     public List<int> IdsMagias { get; set; } = new();
 }
@@ -37,6 +44,7 @@ public class FichaRevisaoItemVm
     public int MoedasPO { get; set; }
     public int MoedasPL { get; set; }
     public string NotasInventario { get; set; } = string.Empty;
+    public List<ClasseSlotSessaoDto> Classes { get; set; } = new();
     public List<ItemSlotSessaoDto> Itens { get; set; } = new();
     public List<MagiaSlotSessaoDto> Magias { get; set; } = new();
 }

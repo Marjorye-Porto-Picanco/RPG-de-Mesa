@@ -21,6 +21,8 @@ public partial class SessaoService
     private readonly ConcurrentDictionary<int, (Campanha Campanha, DateTime AtualizadoEmUtc)> _cacheCampanhas = new();
     private List<Magia>? _cacheMagiasCatalogo;
     private DateTime _cacheMagiasAtualizadoEmUtc = DateTime.MinValue;
+    private List<Classe>? _cacheClassesCatalogo;
+    private DateTime _cacheClassesAtualizadoEmUtc = DateTime.MinValue;
 
     public SessaoService(
         ISessaoRepository sessaoRepo,
@@ -66,6 +68,21 @@ public partial class SessaoService
         _cacheMagiasCatalogo = magias;
         _cacheMagiasAtualizadoEmUtc = DateTime.UtcNow;
         return magias;
+    }
+
+    private async Task<List<Classe>> ObterClassesCatalogoComCacheAsync(bool forcarAtualizacao = false)
+    {
+        if (!forcarAtualizacao &&
+            _cacheClassesCatalogo != null &&
+            (DateTime.UtcNow - _cacheClassesAtualizadoEmUtc) < ValidadeCacheCampanha)
+        {
+            return _cacheClassesCatalogo;
+        }
+
+        var classes = await _personagemRepo.ListarClassesAsync();
+        _cacheClassesCatalogo = classes;
+        _cacheClassesAtualizadoEmUtc = DateTime.UtcNow;
+        return classes;
     }
 
     public Task<bool> VerificarSessaoAtivaAsync(int idCampanha) =>
@@ -909,7 +926,8 @@ public partial class SessaoService
         Personagem ficha,
         Inventario dadosInventario,
         IEnumerable<(int IdItem, int Quantidade)> itens,
-        IEnumerable<int>? idsMagia = null)
+        IEnumerable<int>? idsMagia = null,
+        IEnumerable<(string NomeClasse, int Nivel)>? classes = null)
     {
         try
         {
@@ -921,7 +939,24 @@ public partial class SessaoService
             if (!ehMestre && ficha.IdAccount != idAccount)
                 return (false, "Você não tem permissão para alterar esta ficha.");
 
+            List<(string NomeClasse, int Nivel)>? classesNormalizadas = null;
+            if (classes != null)
+            {
+                classesNormalizadas = NormalizarClasses(classes);
+                int nivelTotal = classesNormalizadas.Sum(c => c.Nivel);
+                if (classesNormalizadas.Count == 0 || nivelTotal < 1 || nivelTotal > 20)
+                    return (false, "Informe ao menos uma classe e mantenha o nível total entre 1 e 20.");
+
+                AplicarResumoClassesNoPersonagem(ficha, classesNormalizadas);
+            }
+
             await _personagemRepo.AtualizarAsync(ficha);
+
+            if (classesNormalizadas != null)
+            {
+                await _personagemRepo.SalvarClassesPersonagemAsync(ficha.IdPersonagem, classesNormalizadas);
+            }
+
             await _personagemRepo.SalvarInventarioPersonagem3FNAsync(ficha.IdPersonagem, dadosInventario, itens);
 
             if (idsMagia != null)
@@ -955,8 +990,9 @@ public partial class SessaoService
             var tarefaFichas = _sessaoRepo.ListarFichasAceitasCompletasAsync(idCampanha);
             var tarefaItens = _sessaoRepo.ListarItensCampanhaAsync(idCampanha);
             var tarefaMagias = ObterMagiasCatalogoComCacheAsync(forcarAtualizacao: true);
+            var tarefaClasses = ObterClassesCatalogoComCacheAsync(forcarAtualizacao: true);
 
-            await Task.WhenAll(tarefaFichas, tarefaItens, tarefaMagias);
+            await Task.WhenAll(tarefaFichas, tarefaItens, tarefaMagias, tarefaClasses);
 
             return (true, string.Empty, new RevisaoPosSessaoDto
             {
@@ -964,7 +1000,8 @@ public partial class SessaoService
                 NomeCampanha = campanha.Nome,
                 Fichas = tarefaFichas.Result,
                 ItensCampanha = tarefaItens.Result,
-                MagiasCatalogo = tarefaMagias.Result
+                MagiasCatalogo = tarefaMagias.Result,
+                ClassesCatalogo = tarefaClasses.Result
             });
         }
         catch (Exception ex)
@@ -990,9 +1027,21 @@ public partial class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode concluir a revisão das fichas.");
 
+            var listaRevisadas = fichasRevisadas.ToList();
+            foreach (var item in listaRevisadas)
+            {
+                if (item.Classes != null)
+                {
+                    var classesNorm = NormalizarClasses(item.Classes);
+                    int nivelTotal = classesNorm.Sum(c => c.Nivel);
+                    if (classesNorm.Count == 0 || nivelTotal < 1 || nivelTotal > 20)
+                        return (false, $"As classes de {item.Personagem.Nome} devem somar nível total entre 1 e 20.");
+                }
+            }
+
             int xpTotalDistribuido = 0;
 
-            foreach (var item in fichasRevisadas)
+            foreach (var item in listaRevisadas)
             {
                 int xpGanho = Math.Max(0, item.XpGanhoSessao);
                 xpTotalDistribuido += xpGanho;
@@ -1002,7 +1051,22 @@ public partial class SessaoService
                 item.Personagem.PvAtual = Math.Clamp(item.Personagem.PvAtual, 0, item.Personagem.PvMaximo);
                 item.Personagem.Nivel = Math.Clamp(item.Personagem.Nivel, 1, 20);
 
+                List<(string NomeClasse, int Nivel)>? classesNormalizadas = null;
+                if (item.Classes != null)
+                {
+                    classesNormalizadas = NormalizarClasses(item.Classes);
+                    AplicarResumoClassesNoPersonagem(item.Personagem, classesNormalizadas);
+                }
+
                 await _personagemRepo.AtualizarAsync(item.Personagem);
+
+                if (classesNormalizadas != null)
+                {
+                    await _personagemRepo.SalvarClassesPersonagemAsync(
+                        item.Personagem.IdPersonagem,
+                        classesNormalizadas);
+                }
+
                 await _personagemRepo.SalvarInventarioPersonagem3FNAsync(
                     item.Personagem.IdPersonagem,
                     item.DadosInventario,
@@ -1022,7 +1086,7 @@ public partial class SessaoService
             }
 
             InvalidarCacheCampanha(idCampanha);
-            return (true, "Revisão concluída! Fichas, XPs, magias e resumo da sessão foram salvos.");
+            return (true, "Revisão concluída! Fichas, classes, XPs, magias e resumo da sessão foram salvos.");
         }
         catch (Exception ex)
         {
@@ -1151,6 +1215,28 @@ public partial class SessaoService
     public static int CalcularCaBase(int destreza) =>
         Math.Max(1, 10 + AtributosBase.CalcularModificador(destreza));
 
+    private static List<(string NomeClasse, int Nivel)> NormalizarClasses(
+        IEnumerable<(string NomeClasse, int Nivel)> classes) =>
+        classes
+            .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+            .GroupBy(c => c.NomeClasse.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => (NomeClasse: g.Key, Nivel: g.Sum(x => Math.Max(1, x.Nivel))))
+            .ToList();
+
+    private static void AplicarResumoClassesNoPersonagem(
+        Personagem personagem,
+        List<(string NomeClasse, int Nivel)> classesNormalizadas)
+    {
+        int nivelTotal = Math.Clamp(classesNormalizadas.Sum(c => c.Nivel), 1, 20);
+        personagem.Nivel = nivelTotal;
+
+        string textoResumo = classesNormalizadas.Count == 1
+            ? classesNormalizadas[0].NomeClasse
+            : string.Join(" / ", classesNormalizadas.Select(c => $"{c.NomeClasse} {c.Nivel}"));
+
+        personagem.ClasseTexto = textoResumo.Length > 50 ? textoResumo[..50] : textoResumo;
+    }
+
     private static string FormatarDuracao(TimeSpan duracao)
     {
         if (duracao.TotalMinutes < 1)
@@ -1173,13 +1259,15 @@ public partial class SessaoService
         var tarefaMensagens = _sessaoRepo.ListarMensagensAsync(idSessao, cancellationToken: cancellationToken);
         var tarefaPinos = _sessaoRepo.ListarPinosSessaoAsync(idSessao, cancellationToken);
         var tarefaMagias = ObterMagiasCatalogoComCacheAsync(cancellationToken: cancellationToken);
+        var tarefaClasses = ObterClassesCatalogoComCacheAsync();
 
-        await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos, tarefaMagias);
+        await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos, tarefaMagias, tarefaClasses);
 
         var sessaoCompleta = tarefaSessao.Result;
         var mensagens = tarefaMensagens.Result;
         var pinosDb = tarefaPinos.Result;
         var magiasCatalogo = tarefaMagias.Result;
+        var classesCatalogo = tarefaClasses.Result;
 
         var mapasDisponiveis = campanha.MapaCampanhas
             .Where(mc => mc.Mapa != null)
@@ -1396,6 +1484,7 @@ public partial class SessaoService
             MapasDisponiveis = mapasDisponiveis,
             ItensCampanha = itensCampanha,
             MagiasCatalogo = magiasCatalogo,
+            ClassesCatalogo = classesCatalogo,
             NpcsCampanha = npcsCampanha,
             MonstrosCampanha = monstrosCampanha,
             Pinos = pinosDto,
@@ -1454,6 +1543,7 @@ public class SessaoEstadoDto
     public List<MapaSessaoDto> MapasDisponiveis { get; set; } = new();
     public List<Item> ItensCampanha { get; set; } = new();
     public List<Magia> MagiasCatalogo { get; set; } = new();
+    public List<Classe> ClassesCatalogo { get; set; } = new();
     public List<NPC> NpcsCampanha { get; set; } = new();
     public List<Monstro> MonstrosCampanha { get; set; } = new();
     public List<PinoMapaDto> Pinos { get; set; } = new();
@@ -1631,6 +1721,7 @@ public class RevisaoPosSessaoDto
     public List<Personagem> Fichas { get; set; } = new();
     public List<Item> ItensCampanha { get; set; } = new();
     public List<Magia> MagiasCatalogo { get; set; } = new();
+    public List<Classe> ClassesCatalogo { get; set; } = new();
 }
 
 public class RevisaoFichaSalvarDto
@@ -1638,6 +1729,7 @@ public class RevisaoFichaSalvarDto
     public Personagem Personagem { get; set; } = new();
     public int XpGanhoSessao { get; set; }
     public Inventario DadosInventario { get; set; } = new();
+    public List<(string NomeClasse, int Nivel)>? Classes { get; set; }
     public List<(int IdItem, int Quantidade)> Itens { get; set; } = new();
     public List<int> IdsMagias { get; set; } = new();
 }

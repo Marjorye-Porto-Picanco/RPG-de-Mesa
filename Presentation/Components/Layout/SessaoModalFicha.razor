@@ -26,7 +26,7 @@
                         }
                     </p>
                     <h2 id="titulo-ficha-modal">@p.Nome</h2>
-                    <small>@(p.RacaTexto ?? "Raça") • @ObterResumoClasses(p) • Nível @p.Nivel • @p.ExperienciaXp.ToString("N0") XP</small>
+                    <small>@(p.RacaTexto ?? "Raça") • @ViewModel.ObterResumoClassesModal() • Nível @p.Nivel • @p.ExperienciaXp.ToString("N0") XP</small>
                 </div>
             </div>
 
@@ -65,7 +65,7 @@
 
         <nav class="ficha-modal-abas" role="tablist">
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("atributos")'>Atributos & Perícias</button>
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem</button>
+            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem & Classes</button>
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("inventario")'>Inventário (@ViewModel.ItensModalEdicao.Count)</button>
             <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@ViewModel.MagiasModalEdicao.Count)</button>
         </nav>
@@ -172,6 +172,75 @@
                     <div><span>Peso</span><strong>@(p.Peso ?? "—")</strong></div>
                     <div><span>Deslocamento</span><strong>@(p.Deslocamento ?? 9)m</strong></div>
                     <div><span>Iniciativa</span><strong>@(p.Iniciativa ?? 0)</strong></div>
+                </div>
+
+                <div class="fm-classes-box">
+                    <div class="fm-classes-topo">
+                        <h3>Classes do Personagem (Nível Total: @p.Nivel)</h3>
+                        @if (ViewModel.PodeEditarFichaModal)
+                        {
+                            <button type="button"
+                                    class="fm-btn-add"
+                                    title="Adicionar classe (Multiclasse)"
+                                    aria-label="Adicionar classe"
+                                    @onclick="ViewModel.AdicionarClasseModal">
+                                +
+                            </button>
+                        }
+                    </div>
+
+                    @if (ViewModel.PodeEditarFichaModal)
+                    {
+                        <div class="fm-classes-cabecalho">
+                            <span>Classe</span>
+                            <span>Nível</span>
+                            <span></span>
+                        </div>
+                        <div class="fm-classes-lista">
+                            @foreach (var cl in ViewModel.ClassesModalEdicao)
+                            {
+                                <div @key="cl" class="fm-classe-row">
+                                    <select value="@cl.NomeClasse"
+                                            aria-label="Classe do personagem"
+                                            @onchange="e => ViewModel.AlterarNomeClasseModal(cl, e.Value?.ToString())">
+                                        @foreach (var op in ViewModel.ObterOpcoesClassesModal(cl.NomeClasse))
+                                        {
+                                            <option value="@op">@op</option>
+                                        }
+                                    </select>
+                                    <input type="number"
+                                           min="1"
+                                           max="20"
+                                           aria-label="Nível na classe"
+                                           value="@cl.Nivel"
+                                           @onchange="e => ViewModel.AlterarNivelClasseModal(cl, e.Value?.ToString())" />
+                                    @if (ViewModel.ClassesModalEdicao.Count > 1)
+                                    {
+                                        <button type="button"
+                                                class="fm-btn-rem"
+                                                title="Remover classe"
+                                                aria-label="Remover @cl.NomeClasse"
+                                                @onclick="() => ViewModel.RemoverClasseModal(cl)">
+                                            ×
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span></span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="fm-classes-readonly">
+                            @foreach (var cl in ViewModel.ClassesModalEdicao)
+                            {
+                                <span class="fm-classe-pill">@cl.NomeClasse • Nv. @cl.Nivel</span>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="fm-grid-2">
@@ -495,12 +564,4 @@
 
     private static string FormatarCirculo(int circuloNivel) =>
         circuloNivel == 0 ? "Truque" : $"{circuloNivel}º Círculo";
-
-    private static string ObterResumoClasses(Personagem personagem)
-    {
-        if (personagem.PersonagemClasses.Any(pc => pc.Classe != null))
-            return string.Join(" / ", personagem.PersonagemClasses.Where(pc => pc.Classe != null).Select(pc => $"{pc.Classe!.Nome} {pc.NivelNaClasse}"));
-
-        return string.IsNullOrWhiteSpace(personagem.ClasseTexto) ? "Classe" : personagem.ClasseTexto;
-    }
 }

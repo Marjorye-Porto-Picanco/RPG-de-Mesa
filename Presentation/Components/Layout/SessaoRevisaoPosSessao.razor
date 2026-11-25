@@ -112,10 +112,66 @@
                     </div>
 
                     <div class="revisao-grid-stats">
-                        <label><span>Nível</span><input type="number" min="1" max="20" @bind="p.Nivel" /></label>
+                        <label>
+                            <span>Nível Total</span>
+                            <input type="number" value="@p.Nivel" readonly title="Calculado automaticamente pela soma das classes abaixo" />
+                        </label>
                         <label><span>PV Atual</span><input type="number" min="0" max="9999" @bind="p.PvAtual" /></label>
                         <label><span>PV Máximo</span><input type="number" min="1" max="9999" @bind="p.PvMaximo" /></label>
                         <label><span>XP Atual (Base)</span><input type="number" min="0" @bind="p.ExperienciaXp" /></label>
+                    </div>
+
+                    <h3 class="revisao-subtitulo">Classes e Multiclasse</h3>
+                    <div class="revisao-itens-box">
+                        <div class="revisao-itens-topo">
+                            <span>Classes da Ficha (Nível Total: @p.Nivel / 20)</span>
+                            <button type="button"
+                                    class="revisao-btn-sec"
+                                    title="Adicionar classe (Multiclasse)"
+                                    @onclick="() => ViewModel.AdicionarClasseRevisao(f)">
+                                + Adicionar classe
+                            </button>
+                        </div>
+
+                        <div class="revisao-classe-cabecalho">
+                            <span>Classe</span>
+                            <span>Nível na Classe</span>
+                            <span></span>
+                        </div>
+
+                        @foreach (var cl in f.Classes)
+                        {
+                            <div @key="cl" class="revisao-classe-linha">
+                                <select value="@cl.NomeClasse"
+                                        aria-label="Classe do personagem"
+                                        @onchange="e => ViewModel.AlterarNomeClasseRevisao(f, cl, e.Value?.ToString())">
+                                    @foreach (var op in ViewModel.ObterOpcoesClassesRevisao(f, cl.NomeClasse))
+                                    {
+                                        <option value="@op">@op</option>
+                                    }
+                                </select>
+                                <input type="number"
+                                       min="1"
+                                       max="20"
+                                       aria-label="Nível na classe"
+                                       value="@cl.Nivel"
+                                       @onchange="e => ViewModel.AlterarNivelClasseRevisao(f, cl, e.Value?.ToString())" />
+                                @if (f.Classes.Count > 1)
+                                {
+                                    <button type="button"
+                                            class="revisao-remover-btn"
+                                            title="Remover classe"
+                                            aria-label="Remover @cl.NomeClasse"
+                                            @onclick="() => ViewModel.RemoverClasseRevisao(f, cl)">
+                                        ×
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span></span>
+                                }
+                            </div>
+                        }
                     </div>
 
                     <h3 class="revisao-subtitulo">Atributos</h3>

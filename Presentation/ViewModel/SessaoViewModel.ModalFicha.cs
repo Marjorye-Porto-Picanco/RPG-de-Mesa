@@ -8,12 +8,21 @@ namespace RPGdeMesa.Presentation.ViewModel;
 
 public partial class SessaoViewModel
 {
+    private static readonly string[] ClassesPadraoFallback =
+    [
+        "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
+        "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro"
+    ];
+
     public Personagem? FichaEmVisualizacao { get; private set; }
     public bool ExibirModalFicha { get; private set; }
     public string AbaFichaModalAtiva { get; private set; } = "atributos";
     public bool CarregandoFichaModal { get; private set; }
     public bool SalvandoFichaModal { get; private set; }
     public string? FeedbackFichaModal { get; private set; }
+
+    // Edição de classes (multiclasse) dentro do modal da ficha
+    public List<ClasseSlotSessaoDto> ClassesModalEdicao { get; private set; } = new();
 
     // Edição de inventário dentro do modal da ficha
     public List<ItemSlotSessaoDto> ItensModalEdicao { get; private set; } = new();
@@ -59,6 +68,25 @@ public partial class SessaoViewModel
                     (m.DanoEfeito != null && m.DanoEfeito.Contains(TermoBuscaMagiaModal, StringComparison.OrdinalIgnoreCase)));
         }
     }
+
+    public List<string> ObterOpcoesClassesModal(string? classeAtual = null) =>
+        ObterOpcoesClassesComFallback(Estado.ClassesCatalogo, ClassesModalEdicao, classeAtual);
+
+    public string ObterResumoClassesModal()
+    {
+        var validas = ClassesModalEdicao
+            .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+            .ToList();
+
+        if (validas.Any())
+            return string.Join(" / ", validas.Select(c => $"{c.NomeClasse} {Math.Clamp(c.Nivel, 1, 20)}"));
+
+        if (FichaEmVisualizacao != null && !string.IsNullOrWhiteSpace(FichaEmVisualizacao.ClasseTexto))
+            return FichaEmVisualizacao.ClasseTexto;
+
+        return "Classe";
+    }
+
     public void MudarAbaFichaModal(string aba)
     {
         AbaFichaModalAtiva = aba;
@@ -138,6 +166,7 @@ public partial class SessaoViewModel
                 return;
             }
 
+            CarregarClassesModal(FichaEmVisualizacao);
             CarregarInventarioModal(FichaEmVisualizacao);
             CarregarMagiasModal(FichaEmVisualizacao);
             ExibirModalFicha = true;
@@ -153,6 +182,77 @@ public partial class SessaoViewModel
             _dbLock.Release();
             Notificar();
         }
+    }
+
+    private void CarregarClassesModal(Personagem p)
+    {
+        ClassesModalEdicao = ExtrairClassesDePersonagem(p);
+        SincronizarClassesModal();
+    }
+
+    public void AdicionarClasseModal()
+    {
+        if (!PodeEditarFichaModal || FichaEmVisualizacao == null) return;
+
+        if (ClassesModalEdicao.Sum(c => Math.Max(1, c.Nivel)) >= 20)
+        {
+            FeedbackFichaModal = "A soma dos níveis das classes já atingiu o limite máximo (20).";
+            Notificar();
+            return;
+        }
+
+        var opcoes = ObterOpcoesClassesModal();
+        string novaClasse = opcoes.FirstOrDefault(op =>
+            !ClassesModalEdicao.Any(c => c.NomeClasse.Equals(op, StringComparison.OrdinalIgnoreCase)))
+            ?? opcoes.FirstOrDefault()
+            ?? "Guerreiro";
+
+        ClassesModalEdicao.Add(new ClasseSlotSessaoDto
+        {
+            NomeClasse = novaClasse,
+            Nivel = 1
+        });
+
+        FeedbackFichaModal = null;
+        SincronizarClassesModal();
+        Notificar();
+    }
+
+    public void RemoverClasseModal(ClasseSlotSessaoDto classe)
+    {
+        if (!PodeEditarFichaModal || ClassesModalEdicao.Count <= 1) return;
+
+        ClassesModalEdicao.Remove(classe);
+        FeedbackFichaModal = null;
+        SincronizarClassesModal();
+        Notificar();
+    }
+
+    public void AlterarNomeClasseModal(ClasseSlotSessaoDto classe, string? novoNome)
+    {
+        if (!PodeEditarFichaModal) return;
+
+        classe.NomeClasse = string.IsNullOrWhiteSpace(novoNome) ? "Guerreiro" : novoNome.Trim();
+        SincronizarClassesModal();
+        Notificar();
+    }
+
+    public void AlterarNivelClasseModal(ClasseSlotSessaoDto classe, string? valorTexto)
+    {
+        if (!PodeEditarFichaModal) return;
+
+        if (int.TryParse(valorTexto, out int nivel))
+        {
+            classe.Nivel = Math.Clamp(nivel, 1, 20);
+            SincronizarClassesModal();
+            Notificar();
+        }
+    }
+
+    private void SincronizarClassesModal()
+    {
+        if (FichaEmVisualizacao == null) return;
+        AplicarResumoClassesNoModelo(FichaEmVisualizacao, ClassesModalEdicao);
     }
 
     private void CarregarInventarioModal(Personagem p)
@@ -251,6 +351,21 @@ public partial class SessaoViewModel
     {
         if (SalvandoFichaModal || FichaEmVisualizacao == null || Estado.IdCampanha <= 0) return;
 
+        var classesParaSalvar = ClassesModalEdicao
+            .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+            .Select(c => (NomeClasse: c.NomeClasse.Trim(), Nivel: Math.Max(1, c.Nivel)))
+            .ToList();
+
+        int somaNiveis = classesParaSalvar.Sum(c => c.Nivel);
+        if (classesParaSalvar.Count == 0 || somaNiveis < 1 || somaNiveis > 20)
+        {
+            FeedbackFichaModal = "Informe ao menos uma classe e mantenha a soma dos níveis entre 1 e 20.";
+            Notificar();
+            return;
+        }
+
+        SincronizarClassesModal();
+
         SalvandoFichaModal = true;
         FeedbackFichaModal = null;
         Notificar();
@@ -283,6 +398,8 @@ public partial class SessaoViewModel
             Notas = ModalNotasInventario
         };
 
+        bool salvouComSucesso = false;
+
         await _dbLock.WaitAsync();
         try
         {
@@ -292,14 +409,17 @@ public partial class SessaoViewModel
                 FichaEmVisualizacao,
                 dadosInv,
                 itensAgrupados,
-                idsMagias);
+                idsMagias,
+                classesParaSalvar);
 
             FeedbackFichaModal = mensagem;
+            salvouComSucesso = sucesso;
 
             if (sucesso)
             {
                 FichaEmVisualizacao = await _sessaoService.ObterFichaCompletaAsync(FichaEmVisualizacao.IdPersonagem)
                                       ?? FichaEmVisualizacao;
+                CarregarClassesModal(FichaEmVisualizacao);
                 CarregarInventarioModal(FichaEmVisualizacao);
                 CarregarMagiasModal(FichaEmVisualizacao);
             }
@@ -314,6 +434,11 @@ public partial class SessaoViewModel
             _dbLock.Release();
             Notificar();
         }
+
+        if (salvouComSucesso)
+        {
+            await SincronizarAgoraAsync();
+        }
     }
 
     public void FecharModalFicha()
@@ -321,5 +446,83 @@ public partial class SessaoViewModel
         ExibirModalFicha = false;
         FeedbackFichaModal = null;
         Notificar();
+    }
+
+    private static List<ClasseSlotSessaoDto> ExtrairClassesDePersonagem(Personagem p)
+    {
+        var lista = p.PersonagemClasses?
+            .Where(pc => pc.Classe != null && !string.IsNullOrWhiteSpace(pc.Classe.Nome))
+            .Select(pc => new ClasseSlotSessaoDto
+            {
+                NomeClasse = pc.Classe!.Nome.Trim(),
+                Nivel = Math.Clamp(pc.NivelNaClasse, 1, 20)
+            })
+            .ToList() ?? new List<ClasseSlotSessaoDto>();
+
+        if (!lista.Any())
+        {
+            string nomeFallback = string.IsNullOrWhiteSpace(p.ClasseTexto)
+                ? "Guerreiro"
+                : p.ClasseTexto.Split('/')[0].Trim();
+
+            lista.Add(new ClasseSlotSessaoDto
+            {
+                NomeClasse = string.IsNullOrWhiteSpace(nomeFallback) ? "Guerreiro" : nomeFallback,
+                Nivel = Math.Clamp(p.Nivel, 1, 20)
+            });
+        }
+
+        return lista;
+    }
+
+    private static List<string> ObterOpcoesClassesComFallback(
+        IEnumerable<Classe> catalogo,
+        IEnumerable<ClasseSlotSessaoDto>? atuais,
+        string? classeAtual = null)
+    {
+        var nomes = catalogo
+            .Select(c => c.Nome)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n.Trim())
+            .ToList();
+
+        if (!nomes.Any())
+            nomes.AddRange(ClassesPadraoFallback);
+
+        if (atuais != null)
+        {
+            nomes.AddRange(atuais
+                .Select(c => c.NomeClasse)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(classeAtual))
+            nomes.Add(classeAtual.Trim());
+
+        return nomes
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private static void AplicarResumoClassesNoModelo(Personagem personagem, List<ClasseSlotSessaoDto> classes)
+    {
+        var validas = classes.Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse)).ToList();
+        if (!validas.Any())
+        {
+            personagem.Nivel = 1;
+            personagem.ClasseTexto = "Guerreiro";
+            return;
+        }
+
+        int somaNiveis = validas.Sum(c => Math.Clamp(c.Nivel, 1, 20));
+        personagem.Nivel = Math.Clamp(somaNiveis, 1, 20);
+
+        string textoResumo = validas.Count == 1
+            ? validas[0].NomeClasse.Trim()
+            : string.Join(" / ", validas.Select(c => $"{c.NomeClasse.Trim()} {Math.Clamp(c.Nivel, 1, 20)}"));
+
+        personagem.ClasseTexto = textoResumo.Length > 50 ? textoResumo[..50] : textoResumo;
     }
 }
