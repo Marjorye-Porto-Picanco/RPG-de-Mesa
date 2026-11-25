@@ -1,0 +1,42 @@
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Domain.Sessoes
+
+<fieldset class="combat-pin-picker" disabled="@Desabilitado">
+    <legend>@Titulo</legend>
+    @if (Pinos.Count == 0)
+    {
+        <p class="combat-pin-empty">Nenhum alvo vivo no mapa.</p>
+    }
+    else
+    {
+        <div class="combat-pin-list">
+            @foreach (var pino in Pinos)
+            {
+                var tipo = pino.TipoEntidade == TiposPinoSessao.Personagem ? "Jogador" : pino.TipoEntidade;
+                <label class="combat-pin-option" @key="pino.IdPino">
+                    <input type="radio" name="@NomeGrupo" value="@pino.IdPino" checked="@(IdSelecionado == pino.IdPino)"
+                           data-dialog-initial="@(FocoInicial && pino.IdPino == Pinos[0].IdPino ? "" : null)"
+                           @onchange="() => AoSelecionar.InvokeAsync(pino.IdPino)" />
+                    <span class="combat-pin-portrait">
+                        <RetratoComIniciais Nome="@pino.Nome" Imagem="@pino.ImagemUrl" AceitarBase64="true" />
+                    </span>
+                    <span class="combat-pin-text">
+                        <strong class="combat-pin-name">@pino.Nome</strong>
+                        <small class="combat-pin-details">@tipo · @pino.CoordenadaTexto</small>
+                    </span>
+                    <span class="combat-pin-mark" aria-hidden="true"></span>
+                </label>
+            }
+        </div>
+    }
+</fieldset>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string NomeGrupo { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<PinoMapaDto> Pinos { get; set; } = [];
+    [Parameter] public int IdSelecionado { get; set; }
+    [Parameter] public EventCallback<int> AoSelecionar { get; set; }
+    [Parameter] public bool Desabilitado { get; set; }
+    [Parameter] public bool FocoInicial { get; set; }
+}

@@ -1,11 +1,12 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa.Presentation.ViewModel;
 
-public sealed record PinoSelecionadoParaColocar(string TipoEntidade, int IdEntidade, string Nome);
+public sealed record PinoSelecionadoParaColocar(string TipoEntidade, int IdEntidade, string Nome, bool NovaInstancia = false);
 
 public class ItemSlotSessaoDto
 {
@@ -45,21 +46,30 @@ public partial class SessaoViewModel : IAsyncDisposable
     private readonly SessaoService _sessaoService;
     private readonly SessaoUsuarioService _sessaoUsuario;
     private readonly NavigationManager _nav;
+    private readonly ILogger<SessaoViewModel> _logger;
     private readonly SemaphoreSlim _dbLock = new(1, 1);
 
     private CancellationTokenSource? _syncCts;
     private Task? _syncTask;
     private bool _desconectado;
+    private (int? Jogador, Guid Id)? _turnoPendente;
 
     public event Action? OnChange;
 
     public bool Carregando { get; private set; } = true;
     public string? ErroCarregamento { get; private set; }
     public string? FeedbackAcao { get; private set; }
+    public bool Reconectando { get; private set; }
 
     public SessaoEstadoDto Estado { get; private set; } = new();
 
     public bool AlterandoTurno { get; private set; }
+    private int _acoesUsadasNoTurno;
+    private int _acoesExtrasNoTurno;
+    private int? _turnoObservado;
+    private decimal _distanciaMovidaNoTurno;
+    private bool _disparadaUsadaNoTurno;
+    public int AcoesDisponiveisNoTurno => Math.Max(0, 1 + _acoesExtrasNoTurno - _acoesUsadasNoTurno);
     public bool EhMeuTurno =>
         !Estado.EhMestre &&
         Estado.IdAccountTurno.HasValue &&
@@ -72,11 +82,13 @@ public partial class SessaoViewModel : IAsyncDisposable
     public SessaoViewModel(
         SessaoService sessaoService,
         SessaoUsuarioService sessaoUsuario,
-        NavigationManager nav)
+        NavigationManager nav,
+        ILogger<SessaoViewModel> logger)
     {
         _sessaoService = sessaoService;
         _sessaoUsuario = sessaoUsuario;
         _nav = nav;
+        _logger = logger;
     }
 
     public async Task InicializarAsync(int idCampanha, int? idPersonagem = null)
@@ -98,6 +110,10 @@ public partial class SessaoViewModel : IAsyncDisposable
         ExibirModalFicha = false;
         ExibirModalAtaque = false;
         ExibirModalMagia = false;
+        ConjuracaoEmCarregamento = false;
+        TurnosRestantesConjuracao = 0;
+        _idMagiaEmCarregamento = 0;
+        _circuloEmCarregamento = 0;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
         LimparEstadoDisparadaInterno();
@@ -106,6 +122,7 @@ public partial class SessaoViewModel : IAsyncDisposable
         PinoArrastando = null;
         CelulaDestinoArraste = null;
         _moveuDuranteArraste = false;
+        _idPinoAcoesMestre = null;
         MonstroEmVisualizacao = null;
         PinoMonstroEmVisualizacao = null;
         NpcEmVisualizacao = null;
@@ -116,6 +133,10 @@ public partial class SessaoViewModel : IAsyncDisposable
         TituloSessaoRevisao = string.Empty;
         ResumoSessaoRevisao = string.Empty;
         _desconectado = false;
+        _turnoPendente = null;
+        _mensagemPendente = null;
+        FeedbackChat = null;
+        Reconectando = false;
         Notificar();
 
         if (!_sessaoUsuario.EstaLogado)
@@ -150,6 +171,11 @@ public partial class SessaoViewModel : IAsyncDisposable
             }
 
             Estado = resultado.Estado;
+            _turnoObservado = Estado.IdAccountTurno;
+            _acoesUsadasNoTurno = 0;
+            _distanciaMovidaNoTurno = 0m;
+            _disparadaUsadaNoTurno = false;
+            _acoesExtrasNoTurno = 0;
             Carregando = false;
             Notificar();
         }
@@ -207,29 +233,59 @@ public partial class SessaoViewModel : IAsyncDisposable
 
     private async Task SincronizarAgoraAsync(CancellationToken ct = default)
     {
-        if (Estado.IdSessao <= 0 || _desconectado || ModoRevisaoPosSessao || PinoArrastando != null)
+        if (Estado.IdSessao <= 0 || _desconectado || ModoRevisaoPosSessao || PinoArrastando != null ||
+            (ct.CanBeCanceled && _dbLock.CurrentCount == 0))
             return;
 
-        await _dbLock.WaitAsync(ct);
+        var estadoAnterior = Estado;
+        bool bloqueioObtido = false;
         try
         {
-            if (PinoArrastando != null) return;
-
             var novoEstado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
+                estadoAnterior.IdCampanha, estadoAnterior.IdSessao, _sessaoUsuario.IdUsuarioLogado, ct);
+            bloqueioObtido = await _dbLock.WaitAsync(ct.CanBeCanceled ? 0 : Timeout.Infinite, ct);
+            if (!bloqueioObtido || !ReferenceEquals(Estado, estadoAnterior) ||
+                PinoArrastando != null || _gravandoMovimentoPino || _desconectado || ModoRevisaoPosSessao)
+                return;
 
             if (novoEstado != null)
             {
+                var mensagensAnterior = Estado.Mensagens.Select(m => m.IdMensagem).ToHashSet();
+                foreach (var mensagem in novoEstado.Mensagens.Where(m => !mensagensAnterior.Contains(m.IdMensagem)))
+                {
+                    if (mensagem.Conteudo.Contains("iniciou um descanso longo da mesa", StringComparison.OrdinalIgnoreCase))
+                        await AplicarDescansoRecebido(longo: true);
+                    else if (mensagem.Conteudo.Contains("iniciou um descanso curto da mesa", StringComparison.OrdinalIgnoreCase))
+                        await AplicarDescansoRecebido(longo: false);
+                }
+
+                bool turnoMudou = _turnoObservado != novoEstado.IdAccountTurno;
+                if (ConjuracaoEmCarregamento && Estado.IdPersonagemLogado.HasValue)
+                {
+                    var anterior = Estado.Pinos.FirstOrDefault(p => p.TipoEntidade == TiposPinoSessao.Personagem && p.IdEntidade == Estado.IdPersonagemLogado.Value);
+                    var atualizado = novoEstado.Pinos.FirstOrDefault(p => p.TipoEntidade == TiposPinoSessao.Personagem && p.IdEntidade == Estado.IdPersonagemLogado.Value);
+                    if (anterior?.PvAtual.HasValue == true && atualizado?.PvAtual.HasValue == true && atualizado.PvAtual.Value < anterior.PvAtual.Value)
+                        CancelarConjuracaoAtual();
+                }
                 Estado = novoEstado;
+                ConcluirDeslocamento2014();
+                if (turnoMudou)
+                {
+                    _turnoObservado = Estado.IdAccountTurno;
+                    _acoesUsadasNoTurno = 0;
+                    _distanciaMovidaNoTurno = 0m;
+                    _disparadaUsadaNoTurno = false;
+                    _acoesExtrasNoTurno = 0;
+                    if (Estado.IdAccountTurno.HasValue)
+                        AvancarTurnoConjuracao();
+                }
 
                 if (PinoMonstroEmVisualizacao != null)
                 {
                     var pinoAtualizado = Estado.Pinos.FirstOrDefault(p =>
                         p.IdMapa == Estado.IdMapaAtivo &&
                         p.TipoEntidade == TiposPinoSessao.Monstro &&
-                        p.IdEntidade == PinoMonstroEmVisualizacao.IdEntidade);
+                        p.IdPino == PinoMonstroEmVisualizacao.IdPino);
                     if (pinoAtualizado != null)
                         PinoMonstroEmVisualizacao = pinoAtualizado;
                 }
@@ -239,7 +295,7 @@ public partial class SessaoViewModel : IAsyncDisposable
                     var pinoAtualizado = Estado.Pinos.FirstOrDefault(p =>
                         p.IdMapa == Estado.IdMapaAtivo &&
                         p.TipoEntidade == TiposPinoSessao.Npc &&
-                        p.IdEntidade == PinoNpcEmVisualizacao.IdEntidade);
+                        p.IdPino == PinoNpcEmVisualizacao.IdPino);
                     if (pinoAtualizado != null)
                         PinoNpcEmVisualizacao = pinoAtualizado;
                 }
@@ -314,21 +370,36 @@ public partial class SessaoViewModel : IAsyncDisposable
                     _syncCts?.Cancel();
                 }
 
-                Notificar();
             }
+            bool recuperou = Reconectando;
+            Reconectando = false;
+            if (novoEstado is not null || recuperou)
+                Notificar();
         }
-        catch
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            if (!ReferenceEquals(Estado, estadoAnterior) || _desconectado || Reconectando)
+                return;
+
+            _logger.LogWarning(ex, "Falha ao sincronizar a sessão {IdSessao}", estadoAnterior.IdSessao);
+            Reconectando = true;
+            Notificar();
         }
         finally
         {
-            _dbLock.Release();
+            if (bloqueioObtido)
+                _dbLock.Release();
         }
     }
 
     public async Task AlternarTurnoJogadorAsync(ParticipanteSessaoDto jogador)
     {
         if (!Estado.EhMestre || Estado.IdSessao <= 0 || AlterandoTurno) return;
+        if (Estado.Encontro.Rodada > 0) { AbrirPainel2014(); return; }
 
         bool jaEstaNoTurno = Estado.IdAccountTurno == jogador.IdAccount;
         int? novoId = jaEstaNoTurno ? null : jogador.IdAccount;
@@ -340,14 +411,46 @@ public partial class SessaoViewModel : IAsyncDisposable
     public async Task EncerrarTurnoAtualAsync()
     {
         if (!Estado.EhMestre || Estado.IdSessao <= 0 || AlterandoTurno) return;
+        if (Estado.Encontro.Rodada > 0) { await AvancarEncontro2014Async(); return; }
         await DefinirTurnoInternoAsync(null, null);
+    }
+
+    public async Task PassarMeuTurnoAsync()
+    {
+        if (!EhMeuTurno || AlterandoTurno) return;
+        if (Estado.Encontro.Rodada > 0) { await AvancarEncontro2014Async(); return; }
+        await DefinirTurnoInternoAsync(null, null);
+    }
+
+    public bool ConsumirAcaoDoTurno()
+    {
+        if (!EhMeuTurno || AcoesDisponiveisNoTurno <= 0)
+        {
+            FeedbackAcao = "Sua ação deste turno já foi usada.";
+            Notificar();
+            return false;
+        }
+
+        _acoesUsadasNoTurno++;
+        Notificar();
+        return true;
+    }
+
+    public void ConcederAcaoExtraPorHabilidade(int quantidade = 1)
+    {
+        _acoesExtrasNoTurno = Math.Max(0, _acoesExtrasNoTurno + Math.Max(0, quantidade));
+        Notificar();
     }
 
     private async Task DefinirTurnoInternoAsync(int? idAccountJogador, string? nomeJogador)
     {
+        if (_turnoPendente is not { } pendente || pendente.Jogador != idAccountJogador)
+            _turnoPendente = (idAccountJogador, Guid.NewGuid());
+        var idOperacao = _turnoPendente.Value.Id;
         AlterandoTurno = true;
         Notificar();
 
+        bool confirmado = false;
         await _dbLock.WaitAsync();
         try
         {
@@ -356,24 +459,31 @@ public partial class SessaoViewModel : IAsyncDisposable
                 Estado.IdSessao,
                 _sessaoUsuario.IdUsuarioLogado,
                 idAccountJogador,
-                nomeJogador);
+                nomeJogador,
+                idOperacao);
 
+            confirmado = sucesso;
             if (!sucesso)
                 FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
+            else
+            {
+                _turnoPendente = null;
+                FeedbackAcao = null;
+            }
         }
         finally
         {
-            AlterandoTurno = false;
             _dbLock.Release();
-            Notificar();
+            try
+            {
+                if (confirmado)
+                    await SincronizarAgoraAsync();
+            }
+            finally
+            {
+                AlterandoTurno = false;
+                Notificar();
+            }
         }
     }
 

@@ -1,14 +1,30 @@
 @using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Application.Services
 @using RPGdeMesa.Presentation.ViewModel
+
+@{ var pinoSelecionado = ViewModel.PinoAcoesMestre; }
 
 <div class="action-panel">
     <div class="action-heading">
         <span>Ações rápidas</span>
-        @if (ViewModel.Estado.EhMestre)
+        @if (ViewModel.ConjuracaoEmCarregamento)
+        {
+            <small class="turno-liberado-txt">
+                @(ViewModel.ConjuracaoPronta ? "Conjuração pronta" : $"Magia carregando · {ViewModel.TurnosRestantesConjuracao} turno(s)")
+            </small>
+            <button class="action-slot" type="button" @onclick="ViewModel.CancelarConjuracaoAtual">Cancelar magia</button>
+        }
+        @if (pinoSelecionado is not null)
+        {
+            <small class="turno-liberado-txt action-target" aria-live="polite" title="@pinoSelecionado.Nome">
+                @pinoSelecionado.Nome · @pinoSelecionado.CoordenadaTexto
+            </small>
+        }
+        else if (ViewModel.Estado.EhMestre)
         {
             <small class="@(ViewModel.Estado.IdAccountTurno.HasValue ? "turno-liberado-txt" : "")">
                 @(string.IsNullOrWhiteSpace(ViewModel.Estado.NomeJogadorTurno)
-                    ? "🔒 Turnos bloqueados"
+                    ? "Selecione um pino no mapa"
                     : $"⏳ Turno: {ViewModel.Estado.NomeJogadorTurno}")
             </small>
         }
@@ -24,55 +40,191 @@
         }
     </div>
 
-    <div class="action-slots">
-        <button class="action-slot @(ViewModel.ExibirModalAtaque ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno)"
-                title="@(ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AbrirModalAtaqueAsync">
-            <span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small>
-        </button>
-        <button class="action-slot @(ViewModel.ExibirModalMagia ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno)"
-                title="@(ViewModel.EhMeuTurno ? "Conjurar magia da sua ficha" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AbrirModalMagiaAsync">
-            <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
-        </button>
-        <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
-                title="@(ViewModel.EhMeuTurno ? "Dobra seu deslocamento neste turno — clique e escolha a casa no mapa" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AlternarModoDisparadaAsync">
-            <span class="slot-icon">◷</span>
-            <span>@(ViewModel.ModoDisparadaAtivo ? "Cancelar" : "Disparada")</span>
-            <small>Movimento</small>
-        </button>
-        <button class="action-slot @(ViewModel.ModoDesengajarAtivo ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
-                title="@(ViewModel.EhMeuTurno ? "Afaste-se de inimigos sem provocar Ataques de Oportunidade" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AlternarModoDesengajarAsync">
-            <span class="slot-icon">↺</span>
-            <span>@(ViewModel.ModoDesengajarAtivo ? "Cancelar" : "Desengajar")</span>
-            <small>Ação</small>
-        </button>
-        <button class="action-slot @(ViewModel.ExibirModalEsquivar ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno)"
-                title="@(ViewModel.EhMeuTurno ? "Ataques contra você terão desvantagem (2d20, menor valor) até seu próximo turno" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AbrirModalEsquivar">
-            <span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small>
-        </button>
-        <button class="action-slot @(ViewModel.ExibirModalEsconder ? "ativa" : "")"
-                type="button"
-                disabled="@(!ViewModel.EhMeuTurno)"
-                title="@(ViewModel.EhMeuTurno ? "Teste de Destreza (Furtividade) para ficar oculto no mapa" : "Aguarde o Mestre liberar seu turno")"
-                @onclick="ViewModel.AbrirModalEsconderAsync">
-            <span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small>
-        </button>
-    </div>
+    @if (pinoSelecionado is { } pino)
+    {
+        var ficha = ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(pino.IdPino);
+        bool podeAgir = (pino.PvAtual ?? pino.PvMaximo ?? 0) > 0 && !RegrasCombate2014.Incapacitado(ficha);
+        bool ocupado = ViewModel.ExecutandoAtaqueEntidade;
+        @if (ViewModel.Estado.Encontro.MovimentoPendente?.ReacoesPendentes.Contains(pino.IdPino) == true)
+        {
+            <div class="action-reactions" role="group" aria-label="Ataque de oportunidade">
+                <button class="action-slot" type="button" disabled="@ocupado" @onclick="() => ViewModel.AbrirAtaqueOportunidade2014(pino.IdPino)">Usar reação</button>
+                <button class="action-slot" type="button" disabled="@ocupado" @onclick="() => ViewModel.DispensarOportunidade2014Async(pino.IdPino)">Deixar passar</button>
+            </div>
+        }
+        <div class="action-slots">
+            <button class="action-slot @(ViewModel.ExibirCombateMestre ? "ativa" : "")" type="button"
+                    disabled="@(ocupado || !podeAgir || pino.TipoEntidade == TiposPinoSessao.Personagem)"
+                    @onclick="ViewModel.AbrirAtaquePinoAcoesMestre">
+                <span class="slot-icon" aria-hidden="true">⚔</span><span>Ataque</span><small>Ação</small>
+            </button>
+            <button class="action-slot @(_exibirHabilidadeMestre ? "ativa" : "")" type="button"
+                    disabled="@(ocupado || !podeAgir)" @onclick="AbrirHabilidadeMestre">
+                <span class="slot-icon" aria-hidden="true">✧</span><span>Habilidades</span><small>Ação</small>
+            </button>
+            @foreach (var (acao, icone, categoria) in AcoesBasicasMestre)
+            {
+                <button class="action-slot @(_acaoBasicaMestre == acao ? "ativa" : "")" type="button"
+                        disabled="@(ocupado || !podeAgir)" @onclick="() => AbrirAcaoBasicaMestre(acao)">
+                    <span class="slot-icon" aria-hidden="true">@icone</span><span>@acao</span><small>@categoria</small>
+                </button>
+            }
+            <button class="action-slot" type="button" disabled="@ocupado" @onclick="() => ViewModel.AbrirFichaPinoAcoesMestreAsync(pino.IdPino)">
+                <span class="slot-icon" aria-hidden="true">▤</span><span>Ficha</span><small>Visualizar</small>
+            </button>
+        </div>
+        @if (_acaoBasicaMestre is null && !_exibirHabilidadeMestre && !ViewModel.ExibirCombateMestre && !ViewModel.ExibirPainel2014 &&
+            !string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+        {
+            <p class="action-pin-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+        }
+    }
+    else
+    {
+        @if (ViewModel.EhMeuTurno)
+        {
+            <div class="turn-action-status">Ações restantes: @ViewModel.AcoesDisponiveisNoTurno</div>
+        }
+        <div class="action-slots">
+            <button class="action-slot @(ViewModel.ModoMovimentoLivreAtivo ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
+                    title="Movimente seu pino até o deslocamento da raça; não consome ação"
+                    @onclick="ViewModel.AlternarModoMovimentoLivreAsync">
+                <span class="slot-icon">➤</span><span>@(ViewModel.ModoMovimentoLivreAtivo ? "Cancelar movimento" : "Mover")</span><small>Deslocamento</small>
+            </button>
+            <button class="action-slot @(ViewModel.ExibirModalAtaque ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
+                    title="@(ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AbrirModalAtaqueAsync">
+                <span class="slot-icon">⚔</span><span>Ataque</span><small>Ação</small>
+            </button>
+            <button class="action-slot @(ViewModel.ExibirModalMagia ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
+                    title="@(ViewModel.EhMeuTurno ? "Conjurar magia da sua ficha" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AbrirModalMagiaAsync">
+                <span class="slot-icon">✧</span><span>Conjurar Magia</span><small>Ação</small>
+            </button>
+            <button class="action-slot @(ViewModel.ModoDisparadaAtivo ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada || ViewModel.AcoesDisponiveisNoTurno <= 0)"
+                    title="@(ViewModel.EhMeuTurno ? "Dobra seu deslocamento neste turno — clique e escolha a casa no mapa" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AlternarModoDisparadaAsync">
+                <span class="slot-icon">◷</span>
+                <span>@(ViewModel.ModoDisparadaAtivo ? "Cancelar" : "Disparada")</span>
+                <small>Ação</small>
+            </button>
+            <button class="action-slot @(ViewModel.ModoDesengajarAtivo ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada || ViewModel.AcoesDisponiveisNoTurno <= 0)"
+                    title="@(ViewModel.EhMeuTurno ? "Afaste-se de inimigos sem provocar Ataques de Oportunidade" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AlternarModoDesengajarAsync">
+                <span class="slot-icon">↺</span>
+                <span>@(ViewModel.ModoDesengajarAtivo ? "Cancelar" : "Desengajar")</span>
+                <small>Ação</small>
+            </button>
+            <button class="action-slot @(ViewModel.ExibirModalEsquivar ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0)"
+                    title="@(ViewModel.EhMeuTurno ? "Ataques contra você terão desvantagem (2d20, menor valor) até seu próximo turno" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AbrirModalEsquivar">
+                <span class="slot-icon">◈</span><span>Esquivar</span><small>Defesa</small>
+            </button>
+            <button class="action-slot @(ViewModel.ExibirModalEsconder ? "ativa" : "")"
+                    type="button"
+                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0)"
+                    title="@(ViewModel.EhMeuTurno ? "Teste de Destreza (Furtividade) para ficar oculto no mapa" : "Aguarde o Mestre liberar seu turno")"
+                    @onclick="ViewModel.AbrirModalEsconderAsync">
+                <span class="slot-icon">⌕</span><span>Esconder</span><small>Furtividade</small>
+            </button>
+            @if (ViewModel.EhMeuTurno)
+            {
+                <button class="action-slot" type="button" @onclick="ViewModel.PassarMeuTurnoAsync">
+                    <span class="slot-icon">↪</span><span>Passar turno</span><small>Encerrar</small>
+                </button>
+            }
+        </div>
+    }
 </div>
+
+@if (ViewModel.PinoAcoesMestre is { } pinoEmAcao)
+{
+    @if (_acaoBasicaMestre is { } acaoBasica)
+    {
+        var ficha = ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(pinoEmAcao.IdPino);
+        <div class="attack-backdrop" @onclick="FecharAcaoPinoMestre"></div>
+        <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-acao-pino">
+            <header class="attack-header">
+                <div>
+                    <p>@pinoEmAcao.Nome · @pinoEmAcao.CoordenadaTexto</p>
+                    <h2 id="titulo-acao-pino">@acaoBasica</h2>
+                </div>
+                <button class="attack-close" type="button" aria-label="Fechar ação" data-dialog-close
+                        disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="FecharAcaoPinoMestre">×</button>
+            </header>
+            <fieldset class="quick-action-form" disabled="@ViewModel.ExecutandoAtaqueEntidade">
+                <label class="attack-field">Uso
+                    <select @bind="_tipoAcaoBasicaMestre">
+                        <option value="Acao">Ação</option>
+                        <option value="Bonus">Ação bônus da ficha</option>
+                    </select>
+                </label>
+                @if (acaoBasica == AcaoBasica2014.Ajudar)
+                {
+                    <label class="attack-field">Alvo adjacente
+                        <select @bind="_idAlvoAjudaMestre">
+                            <option value="0">Selecione um pino</option>
+                            @foreach (var alvo in ViewModel.PinosVisiveisNoMapa.Where(p => p.IdPino != pinoEmAcao.IdPino && SessaoService.DistanciaPinos(pinoEmAcao, p) <= 1.5m).OrderBy(p => p.Nome))
+                            {
+                                <option value="@alvo.IdPino">@alvo.Nome · @alvo.CoordenadaTexto</option>
+                            }
+                        </select>
+                    </label>
+                }
+                @if (acaoBasica == AcaoBasica2014.Preparar)
+                {
+                    <label class="attack-field">Gatilho<input maxlength="180" @bind="_gatilhoAcaoMestre" /></label>
+                }
+                @if (ficha is not null)
+                {
+                    <p class="attack-empty">Ação @(ficha.AcaoUsada ? "usada" : "livre") · Bônus @(ficha.BonusUsado ? "usado" : "livre") · Reação @(ficha.ReacaoUsada ? "usada" : "livre")</p>
+                    @if (ficha.GatilhoPreparado is { } gatilho)
+                    {
+                        <p class="attack-empty">Ação preparada · @gatilho</p>
+                    }
+                }
+                <button class="attack-roll" type="button" @onclick="() => UsarAcaoBasicaMestreAsync(pinoEmAcao.IdPino, acaoBasica)">Usar ação</button>
+            </fieldset>
+            @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+            {
+                <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+            }
+        </section>
+    }
+    else if (_exibirHabilidadeMestre)
+    {
+        <div class="attack-backdrop" @onclick="FecharAcaoPinoMestre"></div>
+        <section class="attack-popup encounter-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-habilidade-pino">
+            <header class="attack-header">
+                <div>
+                    <p>@pinoEmAcao.Nome · @pinoEmAcao.CoordenadaTexto</p>
+                    <h2 id="titulo-habilidade-pino">Habilidades</h2>
+                </div>
+                <button class="attack-close" type="button" aria-label="Fechar habilidades" data-dialog-close
+                        disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="FecharAcaoPinoMestre">×</button>
+            </header>
+            <fieldset class="combate2014-form quick-action-form" disabled="@ViewModel.ExecutandoAtaqueEntidade">
+                <SessaoHabilidade2014 @key="pinoEmAcao.IdPino" ViewModel="ViewModel" IdOrigem="pinoEmAcao.IdPino" />
+            </fieldset>
+            @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+            {
+                <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+            }
+        </section>
+    }
+}
 
 @if (ViewModel.ExibirModalConfirmarDisparada && ViewModel.PinoJogadorDisparada != null && ViewModel.DestinoDisparada != null)
 {
@@ -82,7 +234,7 @@
         <header class="attack-header">
             <div>
                 <p>Confirmar Disparada</p>
-                <h2 id="titulo-disparada">◷ Mover e Encerrar Turno</h2>
+                <h2 id="titulo-disparada">◷ Confirmar movimento</h2>
             </div>
             <button class="attack-close" type="button" aria-label="Fechar disparada" @onclick="ViewModel.VoltarEscolhaCasaDisparada">×</button>
         </header>
@@ -93,21 +245,14 @@
         }
 
         <div class="attack-result-box acertou">
-            <span class="attack-badge acertou">ALCANCE VÁLIDO (MÁX. @ViewModel.DeslocamentoDisparadaTexto)</span>
+            <span class="attack-badge acertou">ALCANCE VÁLIDO (MÁX. @ViewModel.AlcanceMovimentoAtualTexto)</span>
             <strong>@ViewModel.PinoJogadorDisparada.CoordenadaTexto → @ViewModel.DestinoDisparadaTexto</strong>
             <p>
                 Distância percorrida: <b>@ViewModel.DistanciaDestinoTexto</b>
-                (Deslocamento dobrado de @ViewModel.DeslocamentoNormalTexto para @ViewModel.DeslocamentoDisparadaTexto).
+                Deslocamento normal: @ViewModel.DeslocamentoNormalTexto.
             </p>
             <p class="attack-hp-summary">
-                @if (!string.IsNullOrWhiteSpace(ViewModel.NomeProximoJogadorTurno))
-                {
-                    <text>Ao confirmar, seu pino será movido e o turno passará para <b>@ViewModel.NomeProximoJogadorTurno</b>.</text>
-                }
-                else
-                {
-                    <text>Ao confirmar, seu pino será movido e seu turno será encerrado.</text>
-                }
+                <text>Ao confirmar, seu pino será movido. Você ainda poderá realizar sua ação e passar o turno quando desejar.</text>
             </p>
         </div>
 
@@ -122,7 +267,7 @@
                     class="attack-btn-prim"
                     disabled="@ViewModel.ExecutandoDisparada"
                     @onclick="ViewModel.ConfirmarDisparadaAsync">
-                @(ViewModel.ExecutandoDisparada ? "Movendo..." : "Confirmar e Encerrar Turno")
+                @(ViewModel.ExecutandoDisparada ? "Movendo..." : "Confirmar movimento")
             </button>
         </div>
     </section>
@@ -152,16 +297,7 @@
                 Qualquer inimigo, NPC ou jogador que atacar você rolará <b>2d20</b> e ficará com o <b>menor valor</b>.
                 O efeito dura até o início do seu próximo turno (quando o turno retornar para você).
             </p>
-            <p class="attack-hp-summary">
-                @if (!string.IsNullOrWhiteSpace(ViewModel.NomeProximoJogadorTurno))
-                {
-                    <text>Ao confirmar, o turno passará automaticamente para <b>@ViewModel.NomeProximoJogadorTurno</b>.</text>
-                }
-                else
-                {
-                    <text>Ao confirmar, seu turno será encerrado automaticamente.</text>
-                }
-            </p>
+            <p class="attack-hp-summary">A Esquiva ficará ativa até seu próximo turno. Você ainda poderá se mover; passe o turno quando terminar.</p>
         </div>
 
         <div class="attack-footer-actions">
@@ -175,7 +311,7 @@
                     class="attack-btn-prim"
                     disabled="@ViewModel.ExecutandoEsquivar"
                     @onclick="ViewModel.ConfirmarEsquivarAsync">
-                @(ViewModel.ExecutandoEsquivar ? "Ativando..." : "Confirmar Esquiva e Passar Turno")
+                @(ViewModel.ExecutandoEsquivar ? "Ativando..." : "Confirmar Esquiva")
             </button>
         </div>
     </section>
@@ -272,6 +408,114 @@
     </section>
 }
 
+@if (ViewModel.ExibirPainel2014)
+{
+    <div class="attack-backdrop" @onclick="ViewModel.FecharPainel2014"></div>
+    <section class="attack-popup encounter-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-encontro2014">
+        <header class="attack-header">
+            <h2 id="titulo-encontro2014">Encontro 5e · 2014</h2>
+            <button class="attack-close" type="button" aria-label="Fechar encontro" data-dialog-close
+                    disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.FecharPainel2014">×</button>
+        </header>
+        <SessaoPainelCombate2014 ViewModel="ViewModel" />
+        @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+        { <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p> }
+    </section>
+}
+
+@if (ViewModel.ExibirCombateMestre)
+{
+    var atacantes = ViewModel.AtacantesMestre.ToList();
+    var ataques = ViewModel.AtaquesMestre.ToList();
+    var alvos = ViewModel.AlvosMestre.ToList();
+
+    <div class="attack-backdrop" @onclick="ViewModel.FecharCombateMestre"></div>
+    <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ataque-mestre">
+        <header class="attack-header">
+            <h2 id="titulo-ataque-mestre">Ataque do mestre</h2>
+            <button class="attack-close" type="button" aria-label="Fechar ataque" data-dialog-close
+                    disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.FecharCombateMestre">×</button>
+        </header>
+
+        @if (atacantes.Count == 0)
+        {
+            <p class="attack-empty">Coloque um monstro ou NPC vivo no mapa ativo para atacar.</p>
+        }
+        else
+        {
+        @if (ViewModel.AtaqueMestreComAtacanteFixo)
+        {
+            <p class="attack-master-distance">Atacante · @atacantes[0].Nome · @atacantes[0].CoordenadaTexto</p>
+        }
+        else
+        {
+            <SeletorPinosCombate Titulo="Atacante" NomeGrupo="atacante-mestre" Pinos="atacantes"
+                                 IdSelecionado="ViewModel.IdPinoAtacanteMestre" AoSelecionar="ViewModel.SelecionarAtacanteMestre"
+                                 Desabilitado="ViewModel.ExecutandoAtaqueEntidade" FocoInicial="true" />
+        }
+
+            @if (ViewModel.IdPinoAtacanteMestre > 0)
+            {
+                <label class="attack-field">
+                    Ataque
+                    <select @bind="ViewModel.IdAtaqueMestre" @bind:after="ViewModel.LimparFeedbackCombateMestre"
+                            disabled="@(ViewModel.ExecutandoAtaqueEntidade || ataques.Count == 0)">
+                        <option value="0">@(ataques.Count == 0 ? "Nenhum ataque vinculado" : "Escolha um ataque")</option>
+                        @foreach (var ataque in ataques)
+                        {
+                            <option @key="ataque.Id" value="@ataque.Id" disabled="@(!ataque.TemFormulaDano)">
+                                @ataque.Nome · @(ataque.TemFormulaDano ? ataque.Dano : string.IsNullOrWhiteSpace(ataque.Dano) ? "sem dano cadastrado" : "fórmula inválida")
+                            </option>
+                        }
+                    </select>
+                </label>
+                @if (ataques.Count > 0 && ataques.All(a => !a.TemFormulaDano))
+                {
+                    <p class="attack-empty">Preencha o campo Dano na ficha para rolar um golpe. Para efeitos sem dano, selecione o pino no mapa e abra Habilidades em Ações rápidas.</p>
+                }
+                <SeletorPinosCombate Titulo="Alvo" NomeGrupo="alvo-mestre" Pinos="alvos"
+                                     IdSelecionado="ViewModel.IdPinoAlvoMestre" AoSelecionar="ViewModel.SelecionarAlvoMestre"
+                                     Desabilitado="ViewModel.ExecutandoAtaqueEntidade" />
+
+                @if (ViewModel.DistanciaAtaqueMestre is decimal distancia)
+                {
+                    <p class="attack-master-distance">Distância até o alvo @distancia.ToString("0.#") m</p>
+                }
+                <details class="attack-master-options">
+                    <summary>Opções do golpe</summary>
+                    <OpcoesGolpeMestre2014 ViewModel="ViewModel" />
+                </details>
+                @if (!ViewModel.AtaqueOportunidade2014)
+                {
+                    <div class="attack-footer-actions">
+                        <button class="attack-btn-sec" type="button" disabled="@(!ViewModel.PodeAdicionarGolpeMestre || ViewModel.GolpesMestre.Count >= 12)"
+                                @onclick="ViewModel.AdicionarGolpeMestre">Adicionar ao multiataque</button>
+                    </div>
+                }
+                @if (ViewModel.GolpesMestre.Count > 0)
+                {
+                    <ol class="attack-master-queue">
+                        @foreach (var golpe in ViewModel.GolpesMestre)
+                        {
+                            <li>@ataques.Find(a => a.Id == golpe.IdAtaque)?.Nome → @alvos.Find(a => a.IdPino == golpe.IdAlvo)?.Nome</li>
+                        }
+                    </ol>
+                    <button class="attack-btn-sec" type="button" disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.GolpesMestre.Clear">Limpar sequência</button>
+                }
+            }
+
+            <button class="attack-roll" type="button" disabled="@(!ViewModel.PodeAtacarComoMestre)" @onclick="ViewModel.ConfirmarAtaqueMestreAsync">
+                @(ViewModel.ExecutandoAtaqueEntidade ? "Resolvendo ataque…" : ViewModel.GolpesMestre.Count > 0 ? "Rolar multiataque" : "Rolar ataque")
+            </button>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+        {
+            <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+        }
+    </section>
+}
+
 @if (ViewModel.ExibirModalAtaque)
 {
     <div class="attack-backdrop" @onclick="ViewModel.FecharModalAtaque"></div>
@@ -342,7 +586,7 @@
                                 bool bloqueado = derrotado || foraAlcance;
                                 bool sel = !bloqueado
                                     && ViewModel.TipoAlvoSelecionado == alvo.TipoEntidade
-                                    && ViewModel.IdAlvoSelecionado == alvo.IdEntidade;
+                                    && ViewModel.IdAlvoSelecionado == alvo.IdPino;
 
                                 string tagClasse = alvo.TipoEntidade switch
                                 {
@@ -361,7 +605,7 @@
                                 <button type="button"
                                         disabled="@bloqueado"
                                         class="attack-choice-card @(sel ? "selecionado" : "") @(bloqueado ? "derrotado" : "")"
-                                        @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.TipoEntidade, alvo.IdEntidade)">
+                                        @onclick="() => ViewModel.SelecionarAlvoAtaque(alvo.TipoEntidade, alvo.IdPino)">
                                     <div class="attack-choice-topo">
                                         <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
                                         <span class="alvo-tag @tagClasse">@tagLabel</span>
@@ -525,6 +769,11 @@
             <button class="attack-close" type="button" aria-label="Fechar magia" @onclick="ViewModel.FecharModalMagia">×</button>
         </header>
 
+        @if (ViewModel.PersonagemConjurador is not null)
+        {
+            <ResumoCirculosMagicos Personagem="ViewModel.PersonagemConjurador" />
+        }
+
         @if (ViewModel.CarregandoMagia)
         {
             <p class="attack-empty">Carregando magias da sua ficha...</p>
@@ -541,12 +790,6 @@
                 <div class="attack-section">
                     <div class="attack-choice-topo">
                         <p class="attack-section-label">1. Escolha a magia da ficha</p>
-                        @if (ViewModel.EspacosMaximosPorCirculo.Any())
-                        {
-                            <button type="button" class="spell-reset-btn" @onclick="ViewModel.RestaurarEspacosMagiaSessao">
-                                Restaurar espaços
-                            </button>
-                        }
                     </div>
 
                     @if (!ViewModel.MagiasDisponiveisSessao.Any())
@@ -624,28 +867,13 @@
 
                     <div class="attack-section">
                         <p class="attack-section-label">Resolução da magia</p>
-                        <div class="spell-mode-grid">
-                            <button type="button"
-                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.AtaqueMagico ? "ativo" : "")"
-                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.AtaqueMagico)">
-                                Ataque (vs CA)
-                            </button>
-                            <button type="button"
-                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Salvaguarda ? "ativo" : "")"
-                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Salvaguarda)">
-                                Salvaguarda
-                            </button>
-                            <button type="button"
-                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Cura ? "ativo" : "")"
-                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Cura)">
-                                Cura
-                            </button>
-                            <button type="button"
-                                    class="spell-mode-btn @(ViewModel.ResolucaoMagiaAtual == ModoResolucaoMagia.Efeito ? "ativo" : "")"
-                                    @onclick="() => ViewModel.SelecionarModoResolucaoMagia(ModoResolucaoMagia.Efeito)">
-                                Efeito / Buff
-                            </button>
-                        </div>
+                        <p class="spell-resolution-readonly">@(ViewModel.ResolucaoMagiaAtual switch
+                        {
+                            ModoResolucaoMagia.AtaqueMagico => "Ataque (vs CA)",
+                            ModoResolucaoMagia.Salvaguarda => "Salvaguarda",
+                            ModoResolucaoMagia.Cura => "Cura",
+                            _ => "Efeito / Buff"
+                        })</p>
                     </div>
 
                     @if (ViewModel.ResolucaoMagiaAtual != ModoResolucaoMagia.Efeito)
@@ -704,7 +932,7 @@
                                         bool bloqueado = derrotado || foraAlcance;
                                         bool sel = !bloqueado
                                             && ViewModel.TipoAlvoMagiaSelecionado == alvo.TipoEntidade
-                                            && ViewModel.IdAlvoMagiaSelecionado == alvo.IdEntidade;
+                                            && ViewModel.IdAlvoMagiaSelecionado == alvo.IdPino;
 
                                         string tagClasse = alvo.TipoEntidade switch
                                         {
@@ -723,7 +951,7 @@
                                         <button type="button"
                                                 disabled="@bloqueado"
                                                 class="attack-choice-card @(sel ? "selecionado" : "") @(bloqueado ? "derrotado" : "")"
-                                                @onclick="() => ViewModel.SelecionarAlvoMagia(alvo.TipoEntidade, alvo.IdEntidade)">
+                                                @onclick="() => ViewModel.SelecionarAlvoMagia(alvo.TipoEntidade, alvo.IdPino)">
                                             <div class="attack-choice-topo">
                                                 <strong>@alvo.Nome (@alvo.CoordenadaTexto)</strong>
                                                 <span class="alvo-tag @tagClasse">@tagLabel</span>
@@ -748,9 +976,13 @@
 
                     <button type="button"
                             class="attack-roll"
-                            disabled="@(!ViewModel.PodeExecutarMagia)"
+                            disabled="@(!ViewModel.PodeExecutarMagia || (ViewModel.ConjuracaoEmCarregamento && !ViewModel.ConjuracaoPronta))"
                             @onclick="ViewModel.ExecutarEtapa1MagiaAsync">
-                        @(ViewModel.ExecutandoMagia
+                        @(ViewModel.ConjuracaoPronta
+                            ? $"Concluir conjuração de {m.Nome}"
+                            : ViewModel.ConjuracaoEmCarregamento
+                                ? $"Carregando · {ViewModel.TurnosRestantesConjuracao} turno(s)"
+                                : ViewModel.ExecutandoMagia
                             ? "Conjurando..."
                             : ViewModel.ResolucaoMagiaAtual switch
                             {
@@ -880,4 +1112,60 @@
 @code {
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
+
+    private static readonly (AcaoBasica2014 Acao, string Icone, string Categoria)[] AcoesBasicasMestre =
+    [
+        (AcaoBasica2014.Disparada, "◷", "Movimento"),
+        (AcaoBasica2014.Desengajar, "↺", "Ação"),
+        (AcaoBasica2014.Esquivar, "◈", "Defesa"),
+        (AcaoBasica2014.Ajudar, "+", "Ação"),
+        (AcaoBasica2014.Preparar, "⚑", "Ação")
+    ];
+
+    private int? _idPinoAcoesMestre;
+    private AcaoBasica2014? _acaoBasicaMestre;
+    private TipoAcao2014 _tipoAcaoBasicaMestre;
+    private int _idAlvoAjudaMestre;
+    private string _gatilhoAcaoMestre = string.Empty;
+    private bool _exibirHabilidadeMestre;
+
+    protected override void OnParametersSet()
+    {
+        int? idPino = ViewModel.PinoAcoesMestre?.IdPino;
+        if (_idPinoAcoesMestre == idPino) return;
+
+        _idPinoAcoesMestre = idPino;
+        _acaoBasicaMestre = null;
+        _exibirHabilidadeMestre = false;
+    }
+
+    private void AbrirAcaoBasicaMestre(AcaoBasica2014 acao)
+    {
+        ViewModel.LimparFeedbackCombateMestre();
+        _tipoAcaoBasicaMestre = TipoAcao2014.Acao;
+        _idAlvoAjudaMestre = 0;
+        _gatilhoAcaoMestre = string.Empty;
+        _acaoBasicaMestre = acao;
+    }
+
+    private void AbrirHabilidadeMestre()
+    {
+        ViewModel.LimparFeedbackCombateMestre();
+        _exibirHabilidadeMestre = true;
+    }
+
+    private void FecharAcaoPinoMestre()
+    {
+        if (ViewModel.ExecutandoAtaqueEntidade) return;
+
+        _acaoBasicaMestre = null;
+        _exibirHabilidadeMestre = false;
+    }
+
+    private async Task UsarAcaoBasicaMestreAsync(int idPino, AcaoBasica2014 acao)
+    {
+        var (alvo, gatilho, tipo) = (_idAlvoAjudaMestre, _gatilhoAcaoMestre, _tipoAcaoBasicaMestre);
+        if (await ViewModel.UsarControle2014Async((s, e, conta) => s.UsarAcaoBasica2014Async(e, conta, idPino, acao, alvo, gatilho, tipo)))
+            FecharAcaoPinoMestre();
+    }
 }

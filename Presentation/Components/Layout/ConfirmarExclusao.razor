@@ -12,7 +12,8 @@
                 <p class="confirmacao-erro" role="alert">@Erro</p>
             }
             <footer>
-                <button type="button" class="confirmacao-cancelar" disabled="@Processando" @onclick="OnCancelar">Cancelar</button>
+                <button type="button" class="confirmacao-cancelar" data-dialog-close data-dialog-initial
+                        disabled="@Processando" @onclick="OnCancelar">Cancelar</button>
                 <button type="button" class="confirmacao-confirmar" disabled="@Processando" @onclick="OnConfirmar">
                     @(Processando ? "Aguarde..." : "Confirmar")
                 </button>

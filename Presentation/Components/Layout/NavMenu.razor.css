@@ -105,60 +105,91 @@ body {
     }
 
     .barra-rpg .perfil-rpg {
-        display: inline-flex;
+        position: relative;
+        z-index: 100;
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr) 27px;
+        min-height: 46px;
+        max-width: clamp(148px, 26vw, 240px);
         align-items: center;
-        gap: 8px;
-        padding: 4px 8px;
-        border: 1px solid transparent;
-        border-radius: 6px;
-        background: transparent;
-        color: #e2ceaa !important;
+        gap: 10px;
+        padding: 4px 5px 4px 4px;
+        border: 1px solid rgba(232, 196, 129, 0.36);
+        border-radius: 100px;
+        background: var(--perfil-painel);
+        color: var(--perfil-texto);
         font-family: inherit;
-        font-size: 12px;
-        white-space: nowrap;
+        font-size: 0.94rem;
+        font-weight: 600;
+        line-height: 1;
         cursor: pointer;
-        transition: background 0.15s ease, border-color 0.15s ease;
+        transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
     }
 
-        .barra-rpg .perfil-rpg:hover,
-        .barra-rpg .perfil-rpg.aberto {
-            border-color: rgba(212, 170, 86, 0.35);
-            background: rgba(212, 170, 86, 0.1);
+        .barra-rpg .perfil-rpg:hover {
+            border-color: var(--rpg-acao-borda);
+            background: var(--perfil-pedra);
         }
 
-.perfil-iniciais {
-    display: grid;
-    width: 32px;
-    height: 32px;
-    aspect-ratio: 1;
-    place-items: center;
+        .barra-rpg .perfil-rpg.aberto {
+            border-color: var(--rpg-acao-borda);
+            background: var(--rpg-acao);
+            color: var(--rpg-acao-texto);
+        }
+
+.perfil-retrato {
+    position: relative;
+    width: 36px;
+    height: 36px;
     overflow: hidden;
-    border: 1px solid #9e7b3e;
+    border: 1px solid var(--rpg-acao);
     border-radius: 50%;
-    background: #344239;
-    color: #f0dfbb;
-    font-size: 10px;
-    font-weight: bold;
 }
 
-.perfil-avatar-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
+.perfil-retrato ::deep .retrato-rpg img {
+    position: absolute;
+    inset: 0;
+}
+
+#app .perfil-rpg .perfil-nome {
+    min-width: 0;
+    overflow: hidden;
+    font-size: inherit;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perfil-dropdown-wrap,
+.mobile-menu-overlay {
+    --perfil-texto: #f4e7cd;
+    --perfil-painel: #241912;
+    --perfil-pedra: #39291e;
+    --perfil-saida: #f3b4a4;
 }
 
 .barra-rpg .perfil-seta {
-    color: #c5b79d;
-    font-size: 10px;
-    transition: transform 0.15s ease;
+    display: grid;
+    width: 27px;
+    height: 27px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--perfil-pedra);
+    color: var(--rpg-acao);
 }
 
-.barra-rpg .perfil-rpg.aberto .perfil-seta {
-    transform: rotate(180deg);
+.perfil-seta::before {
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 160ms ease;
+    content: "";
+}
+
+.perfil-rpg.aberto .perfil-seta::before {
+    transform: translateY(2px) rotate(225deg);
 }
 
 .barra-rpg .perfil-backdrop {
@@ -173,45 +204,100 @@ body {
     top: calc(100% + 8px);
     right: 0;
     z-index: 110;
-    min-width: 155px;
-    display: flex;
-    flex-direction: column;
-    padding: 5px;
-    border: 1px solid rgba(212, 170, 86, 0.45);
-    border-radius: 6px;
-    background: #1d140f;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
+    display: grid;
+    width: min(224px, calc(100vw - 24px));
+    gap: 3px;
+    padding: 7px;
+    border: 1px solid rgba(232, 196, 129, 0.4);
+    border-radius: 13px;
+    background: var(--perfil-painel);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.44);
 }
 
 .barra-rpg .perfil-menu-item {
+    display: grid;
     width: 100%;
-    padding: 9px 12px;
+    min-height: 44px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 5px 8px;
     border: 0;
-    border-radius: 4px;
+    border-radius: 7px;
     background: transparent;
-    color: #f0dfbb;
+    color: var(--perfil-texto);
     font-family: inherit;
-    font-size: 12px;
+    font-size: 0.94rem;
+    line-height: 1.35;
     text-align: left;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background-color 160ms ease;
 }
 
+    #app .perfil-menu-item > span:last-child {
+        font-size: inherit;
+    }
+
     .barra-rpg .perfil-menu-item:hover {
-        background: rgba(212, 170, 86, 0.16);
-        color: #fff3d6;
+        background: var(--perfil-pedra);
     }
 
     .barra-rpg .perfil-menu-item.sair {
-        margin-top: 2px;
-        border-top: 1px solid rgba(212, 170, 86, 0.15);
-        color: #e89c8e;
+        color: var(--perfil-saida);
     }
 
-        .barra-rpg .perfil-menu-item.sair:hover {
-            background: rgba(180, 62, 48, 0.24);
-            color: #ffd5cd;
-        }
+    .barra-rpg .perfil-menu-item.sair:hover {
+        background: #422820;
+    }
+
+.perfil-menu-icone {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: var(--perfil-pedra);
+    color: var(--rpg-acao);
+}
+
+.perfil-icone-pessoa::before,
+.perfil-icone-pessoa::after {
+    position: absolute;
+    left: 50%;
+    border: 1.5px solid currentColor;
+    transform: translateX(-50%);
+    content: "";
+}
+
+.perfil-icone-pessoa::before {
+    top: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.perfil-icone-pessoa::after {
+    bottom: 6px;
+    width: 14px;
+    height: 9px;
+    border-radius: 7px 7px 3px 3px;
+}
+
+.perfil-icone-saida {
+    display: grid;
+    place-items: center;
+}
+
+.perfil-icone-saida img {
+    border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .barra-rpg .perfil-rpg,
+    .perfil-seta::before,
+    .barra-rpg .perfil-menu-item {
+        transition: none;
+    }
+}
 
 /* Oculta o overlay mobile no desktop */
 .mobile-menu-overlay {
@@ -240,8 +326,7 @@ body {
         }
 
         .barra-rpg .nav-rpg,
-        .barra-rpg .perfil-nome,
-        .barra-rpg .perfil-seta,
+        #app .perfil-rpg .perfil-nome,
         .barra-rpg .perfil-menu,
         .barra-rpg .perfil-backdrop {
             display: none;
@@ -252,20 +337,19 @@ body {
         }
 
         .barra-rpg .perfil-rpg {
-            position: relative;
-            width: 44px;
-            height: 44px;
-            justify-content: center;
-            padding: 3px;
-            border: 1px solid rgba(212, 170, 86, 0.34);
-            border-radius: 50%;
-            background: rgba(39, 27, 20, 0.72);
+            grid-template-columns: 34px 23px;
+            min-height: 44px;
+            gap: 5px;
         }
 
-        .barra-rpg .perfil-iniciais {
-            width: 36px;
-            height: 36px;
-            font-size: 11px;
+        .barra-rpg .perfil-retrato {
+            width: 34px;
+            height: 34px;
+        }
+
+        .barra-rpg .perfil-seta {
+            width: 23px;
+            height: 23px;
         }
 
     .mobile-menu-overlay {
@@ -275,6 +359,7 @@ body {
         display: flex;
         align-items: stretch;
         justify-content: flex-end;
+        overflow: hidden;
         background: rgba(8, 6, 5, 0.62);
         -webkit-backdrop-filter: blur(6px);
         backdrop-filter: blur(6px);
@@ -294,31 +379,28 @@ body {
     .mobile-menu-drawer {
         position: relative;
         z-index: 1;
-        display: flex;
-        width: min(80vw, 320px);
+        display: grid;
+        width: 50%;
         min-width: 0;
-        height: 100%;
-        height: 100dvh;
-        flex-direction: column;
-        margin-left: auto;
-        padding: 18px 16px 20px;
-        border-left: 1px solid rgba(212, 170, 86, 0.42);
-        border-radius: 16px 0 0 16px;
-        background: radial-gradient(ellipse at top right, rgba(160, 114, 46, 0.2), transparent 56%), linear-gradient(180deg, #211712 0%, #17100c 100%);
-        box-shadow: -18px 0 48px rgba(0, 0, 0, 0.6);
-        font-family: Cambria, Georgia, "Times New Roman", serif;
+        grid-template-rows: auto minmax(0, 1fr) auto;
         overflow: hidden;
-        animation: menu-gaveta-entrar 220ms cubic-bezier(.2, .75, .25, 1) both;
+        padding: calc(8px + env(safe-area-inset-top, 0px))
+            calc(7px + env(safe-area-inset-right, 0px))
+            calc(8px + env(safe-area-inset-bottom, 0px)) 7px;
+        border-left: 1px solid rgba(232, 196, 129, 0.4);
+        border-radius: 12px 0 0 12px;
+        background: var(--perfil-painel);
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.46);
+        color: var(--perfil-texto);
     }
 
     .mobile-menu-topo {
         display: flex;
-        min-height: 64px;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid rgba(212, 170, 86, 0.22);
+        gap: 4px;
+        padding-bottom: 7px;
+        border-bottom: 1px solid rgba(232, 196, 129, 0.24);
     }
 
     .mobile-menu-identidade {
@@ -326,200 +408,131 @@ body {
         min-width: 0;
         flex: 1;
         align-items: center;
-        gap: 11px;
+        gap: 6px;
     }
 
-        .mobile-menu-identidade .perfil-iniciais {
-            width: 44px;
-            height: 44px;
-            min-width: 44px;
-            min-height: 44px;
-            flex: 0 0 44px;
-            overflow: hidden;
-            border: 1px solid rgba(212, 170, 86, 0.65);
-            border-radius: 50%;
-            font-size: 12px;
-        }
+    .mobile-menu-identidade .perfil-retrato {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+    }
 
-        .mobile-menu-identidade .perfil-avatar-img {
-            display: block;
-            width: 44px;
-            height: 44px;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-
-    .mobile-menu-identidade-texto {
-        display: flex;
+    #app .mobile-menu-nome {
         min-width: 0;
-        flex-direction: column;
-        gap: 2px;
+        overflow: hidden;
+        font-size: 0.9rem;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
-
-        .mobile-menu-identidade-texto strong {
-            color: #f3e4c3;
-            font-size: 15px;
-            font-weight: 500;
-            line-height: 1.25;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .mobile-menu-identidade-texto small {
-            color: #bfa97e;
-            font-family: "Trebuchet MS", sans-serif;
-            font-size: 10px;
-            letter-spacing: 0.6px;
-            text-transform: uppercase;
-        }
 
     .mobile-menu-fechar {
         display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
         place-items: center;
-        width: 46px;
-        height: 46px;
-        flex: 0 0 46px;
-        border: 1px solid rgba(212, 170, 86, 0.34);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #eedcb7;
-        font-size: 26px;
-        line-height: 1;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: var(--perfil-pedra);
+        color: var(--perfil-texto);
         cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 140ms ease, border-color 140ms ease;
+        transition: background-color 140ms ease;
     }
 
-        .mobile-menu-fechar:hover,
-        .mobile-menu-fechar:active {
-            border-color: rgba(212, 170, 86, 0.6);
-            background: rgba(212, 170, 86, 0.16);
-        }
+    #app .mobile-menu-fechar span {
+        font-size: 1.5rem;
+        line-height: 1;
+    }
+
+    .mobile-menu-fechar:hover,
+    .mobile-menu-fechar:active {
+        background: #533b27;
+    }
 
     .mobile-menu-opcoes {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding-top: 18px;
+        display: grid;
+        align-content: start;
+        gap: 2px;
+        padding: 7px 0;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #775d3a transparent;
     }
 
-    /* ::deep obrigatório para estilizar os <NavLink> (<a>) junto com os <button> */
-    .mobile-menu-drawer ::deep .mobile-menu-opcao,
-    .mobile-menu-opcao {
-        display: flex;
+    .mobile-menu-drawer ::deep .mobile-menu-opcao {
+        display: grid;
         width: 100%;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        min-height: 54px;
+        min-height: 46px;
+        grid-template-columns: 26px minmax(0, 1fr) auto;
         align-items: center;
-        gap: 12px;
-        padding: 0 12px;
-        border: 1px solid rgba(212, 170, 86, 0.14);
-        border-radius: 10px;
-        background: rgba(255, 251, 239, 0.03);
-        color: #eadbc0 !important;
-        font-family: inherit;
-        font-size: 14px;
+        gap: 7px;
+        padding: 5px 4px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--perfil-texto);
+        font-size: 0.9rem;
         text-align: left;
-        text-decoration: none !important;
-        white-space: nowrap;
+        text-decoration: none;
         cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+        transition: background-color 140ms ease;
     }
 
-        .mobile-menu-drawer ::deep .mobile-menu-opcao > .mobile-menu-icone,
-        .mobile-menu-opcao > .mobile-menu-icone {
-            display: grid;
-            width: 32px;
-            height: 32px;
-            flex: 0 0 32px;
-            place-items: center;
-            border: 1px solid rgba(212, 170, 86, 0.28);
-            border-radius: 8px;
-            background: rgba(212, 170, 86, 0.08);
-            color: #d9b76d;
-            font-size: 14px;
-        }
+    .mobile-menu-icone {
+        display: grid;
+        width: 26px;
+        height: 30px;
+        place-items: center;
+        border-radius: 6px;
+        background: var(--perfil-pedra);
+        color: var(--rpg-acao);
+    }
 
-        .mobile-menu-drawer ::deep .mobile-menu-opcao > .mobile-menu-label,
-        .mobile-menu-opcao > .mobile-menu-label {
-            min-width: 0;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
+    .mobile-menu-opcao > .perfil-menu-icone {
+        width: 26px;
+    }
 
-        .mobile-menu-drawer ::deep .mobile-menu-opcao > b,
-        .mobile-menu-opcao > b {
-            margin-left: auto;
-            color: #a89166;
-            font-size: 20px;
-            font-weight: 400;
-            line-height: 1;
-        }
+    #app .mobile-menu-drawer .mobile-menu-label {
+        min-width: 0;
+        overflow: hidden;
+        font-size: inherit;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-        .mobile-menu-drawer ::deep .mobile-menu-opcao:hover,
-        .mobile-menu-drawer ::deep .mobile-menu-opcao.active,
-        .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"],
-        .mobile-menu-opcao:hover,
-        .mobile-menu-opcao.active,
-        .mobile-menu-opcao[aria-current="page"] {
-            border-color: rgba(212, 170, 86, 0.45);
-            border-left: 3px solid #d9b263;
-            background: rgba(212, 170, 86, 0.14);
-            color: #fff2d6 !important;
-            text-decoration: none !important;
-        }
+    #app .mobile-menu-drawer .mobile-menu-opcao b {
+        color: #c5a976;
+        font-size: 1.15rem;
+        font-weight: 400;
+        line-height: 1;
+    }
 
-            .mobile-menu-drawer ::deep .mobile-menu-opcao.active > .mobile-menu-icone,
-            .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"] > .mobile-menu-icone,
-            .mobile-menu-opcao.active > .mobile-menu-icone,
-            .mobile-menu-opcao[aria-current="page"] > .mobile-menu-icone {
-                border-color: rgba(240, 209, 127, 0.65);
-                background: rgba(212, 170, 86, 0.2);
-                color: #f5d88e;
-            }
+    .mobile-menu-drawer ::deep .mobile-menu-opcao:hover,
+    .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"] {
+        background: var(--perfil-pedra);
+    }
 
-            .mobile-menu-drawer ::deep .mobile-menu-opcao.active > b,
-            .mobile-menu-drawer ::deep .mobile-menu-opcao[aria-current="page"] > b,
-            .mobile-menu-opcao.active > b,
-            .mobile-menu-opcao[aria-current="page"] > b {
-                color: #f0d17f;
-            }
+    .mobile-menu-drawer ::deep :is(.mobile-menu-opcao, .mobile-menu-fechar):focus-visible {
+        outline: 2px solid var(--rpg-acao);
+        outline-offset: -2px;
+    }
 
     .mobile-menu-rodape {
-        margin-top: auto;
-        padding-top: 14px;
-        border-top: 1px solid rgba(212, 170, 86, 0.2);
+        padding-top: 6px;
+        border-top: 1px solid rgba(232, 196, 129, 0.24);
     }
 
-    .mobile-menu-sair {
-        width: 100%;
-        border-color: rgba(196, 112, 89, 0.28);
-        background: rgba(150, 52, 42, 0.1);
-        color: #eda997 !important;
+    .mobile-menu-drawer .mobile-menu-sair {
+        grid-template-columns: 26px minmax(0, 1fr);
+        color: var(--perfil-saida);
     }
 
-        .mobile-menu-sair:hover,
-        .mobile-menu-sair:active {
-            border-color: rgba(224, 130, 112, 0.5);
-            background: rgba(180, 62, 48, 0.22);
-            color: #ffd6cc !important;
-        }
-
-        .mobile-menu-sair > .mobile-menu-icone {
-            border-color: rgba(196, 112, 89, 0.35);
-            background: rgba(180, 62, 48, 0.14);
-            color: #eda997;
-        }
-
-        .mobile-menu-sair > b {
-            color: #d48d7c;
-        }
+    .mobile-menu-drawer .mobile-menu-sair:hover {
+        background: #422820;
+    }
 
     @keyframes menu-overlay-entrar {
         from {
@@ -531,21 +544,8 @@ body {
         }
     }
 
-    @keyframes menu-gaveta-entrar {
-        from {
-            opacity: 0.75;
-            transform: translateX(22px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
     @media (prefers-reduced-motion: reduce) {
-        .mobile-menu-overlay,
-        .mobile-menu-drawer {
+        .mobile-menu-overlay {
             animation: none;
         }
     }

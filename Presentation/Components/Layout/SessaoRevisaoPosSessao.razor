@@ -42,8 +42,9 @@
                     <button type="button"
                             class="revisao-card-btn @(selecionada ? "selecionada" : "")"
                             @onclick="() => ViewModel.SelecionarFichaRevisao(item)">
-                        <img src="@(string.IsNullOrWhiteSpace(item.Personagem.Imagem) ? "img/armaduraprata.png" : item.Personagem.Imagem)"
-                             alt="@item.Personagem.Nome" />
+                        <span class="revisao-card-retrato">
+                            <RetratoComIniciais Nome="@item.Personagem.Nome" Imagem="@item.Personagem.Imagem" />
+                        </span>
                         <div>
                             <strong>@item.Personagem.Nome</strong>
                             <small>@(item.Personagem.Usuario?.UsarName ?? "Jogador") · Nv. @item.Personagem.Nivel</small>
@@ -97,6 +98,7 @@
                 var p = f.Personagem;
 
                 <section class="revisao-painel">
+                    <ResumoCirculosMagicos Personagem="p" />
                     <div class="revisao-ficha-topo">
                         <div>
                             <h2>@p.Nome</h2>

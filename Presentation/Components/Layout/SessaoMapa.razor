@@ -193,6 +193,8 @@
                                                 ♥
                                             </button>
                                         }
+                                        <button type="button" class="pino-btn-acao" aria-label="Adicionar outra cópia de @npc.Nome"
+                                                title="Adicionar outra cópia" @onclick="() => ViewModel.SelecionarPinoParaPosicionar(TiposPinoSessao.Npc, npc.IdNpc, npc.Nome, true)">+</button>
                                         <button type="button"
                                                 class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
                                                 title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
@@ -270,6 +272,8 @@
                                                 ♥
                                             </button>
                                         }
+                                        <button type="button" class="pino-btn-acao" aria-label="Adicionar outra cópia de @monstro.Nome"
+                                                title="Adicionar outra cópia" @onclick="() => ViewModel.SelecionarPinoParaPosicionar(TiposPinoSessao.Monstro, monstro.IdMonstro, monstro.Nome, true)">+</button>
                                         <button type="button"
                                                 class="pino-btn-acao @(pinoAtual.Visivel ? "visivel" : "oculto")"
                                                 title="@(pinoAtual.Visivel ? "Visível para jogadores (clique para ocultar)" : "Oculto dos jogadores (clique para mostrar)")"
@@ -287,6 +291,22 @@
                             </div>
                         }
                     }
+                }
+                @foreach (var copia in ViewModel.PinosVisiveisNoMapa.Where(p => p.Instancia > 1 &&
+                    (AbaDeInstancia(p) == ViewModel.AbaPinosAtiva)))
+                {
+                    <div class="pino-item-card" @key="copia.IdPino">
+                        <button class="pino-item-main" type="button" @onclick="() => ViewModel.AoClicarPinoMapaAsync(copia)">
+                            <span class="pino-mini-avatar"><RetratoComIniciais Nome="@copia.Nome" Imagem="@copia.ImagemUrl" /></span>
+                            <span class="pino-item-info"><strong>@copia.Nome</strong><small>@copia.CoordenadaTexto · PV @copia.PvAtual/@copia.PvMaximo</small></span>
+                        </button>
+                        <div class="pino-item-acoes">
+                            <button class="pino-btn-acao" type="button" aria-label="Alternar visibilidade de @copia.Nome"
+                                    @onclick="() => ViewModel.AlternarVisibilidadePinoAsync(copia.TipoEntidade, copia.IdEntidade, copia.IdPino)">@(copia.Visivel ? "👁" : "⊘")</button>
+                            <button class="pino-btn-acao remover" type="button" aria-label="Remover @copia.Nome"
+                                    @onclick="() => ViewModel.RemoverPinoDoMapaAsync(copia.TipoEntidade, copia.IdEntidade, copia.IdPino)">×</button>
+                        </div>
+                    </div>
                 }
             </div>
         </aside>
@@ -334,7 +354,7 @@
                 </div>
             }
 
-            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "") @(ViewModel.ModoDisparadaAtivo ? "modo-disparada" : "")"
+            <div class="map-art @(ViewModel.PinoParaPosicionar != null ? "modo-posicionar" : "") @(ViewModel.ModoMovimentoAtivo || ViewModel.ModoDisparadaAtivo ? "modo-disparada" : "")"
                  style="width: @(tamanhoPx)px; height: @(tamanhoPx)px;">
                 @if (ViewModel.Estado.MapaAtivo != null && !string.IsNullOrWhiteSpace(ViewModel.Estado.MapaAtivo.ImagemUrl))
                 {
@@ -355,6 +375,10 @@
                 }
 
                 <div class="mapa-grade-20x20" aria-label="Grade tática 20 por 20">
+                    @{
+                        var pinosPorCelula = ViewModel.PinosVisiveisNoMapa.ToLookup(p => (p.Coluna, p.Linha));
+                        int? idPinoSelecionado = ViewModel.PinoAcoesMestre?.IdPino;
+                    }
                     @for (int linha = 0; linha < SessaoViewModel.GradeLinhas; linha++)
                     {
                         int linhaAtual = linha;
@@ -373,9 +397,7 @@
                             bool ehDestinoDisparada = ViewModel.ModoDisparadaAtivo
                                 && ViewModel.DestinoDisparada == (colAtual, linhaAtual);
 
-                            var pinosCelula = ViewModel.PinosVisiveisNoMapa
-                                .Where(p => p.Coluna == colAtual && p.Linha == linhaAtual)
-                                .ToList();
+                            var pinosCelula = pinosPorCelula[(colAtual, linhaAtual)];
 
                             <div class="celula-grade @(ehAlvoDrop ? "celula-drop-alvo" : "") @(ehOrigemDisparada ? "celula-disparada-origem" : "") @(ehAlcanceDisparada ? "celula-disparada-alcance" : "") @(ehDestinoDisparada ? "celula-disparada-destino" : "")"
                                  data-col="@colAtual"
@@ -396,7 +418,7 @@
 
                                     bool estaArrastando = ViewModel.PinoArrastando != null
                                         && ViewModel.PinoArrastando.TipoEntidade == pino.TipoEntidade
-                                        && ViewModel.PinoArrastando.IdEntidade == pino.IdEntidade;
+                                        && ViewModel.PinoArrastando.IdPino == pino.IdPino;
 
                                     bool derrotado = pino.PvMaximo.HasValue
                                         && pino.PvAtual.HasValue
@@ -409,23 +431,27 @@
                                     string infoEstado =
                                         (pino.Escondido ? " · 🥷 Furtivo" : (!pino.Visivel ? " · Oculto" : "")) +
                                         (pino.Esquivando ? " · ◈ Esquivando" : "");
+                                    var ficha2014 = ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(pino.IdPino);
+                                    string? condicoes2014 = ficha2014 is { Efeitos.Count: > 0 }
+                                        ? string.Join(", ", ficha2014.Efeitos.Select(e => e.Condicao).Distinct()) : null;
 
                                     <button type="button"
-                                            @key="@($"{pino.IdMapa}-{pino.TipoEntidade}-{pino.IdEntidade}")"
+                                            @key="pino.IdPino"
                                             draggable="false"
+                                            aria-label="@($"{pino.Nome}, {pino.CoordenadaTexto}{(condicoes2014 is null ? "" : $", {condicoes2014}")}")"
+                                            aria-pressed="@(ViewModel.Estado.EhMestre ? (pino.IdPino == idPinoSelecionado ? "true" : "false") : null)"
                                             class="mapa-pino @classeTipo @(pino.Visivel ? "" : "pino-invisivel") @(pino.Escondido ? "pino-furtivo" : "") @(pino.Esquivando ? "pino-esquivando" : "") @(derrotado ? "pino-derrotado" : "") @(ViewModel.Estado.EhMestre ? "arrastavel" : "") @(estaArrastando ? "arrastando" : "")"
-                                            title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{infoPv}{infoEstado}{(ViewModel.Estado.EhMestre ? " · Segure e arraste para mover ou clique para abrir ficha" : "")}")"
+                                            title="@($"{pino.Nome} ({pino.TipoEntidade}) · {pino.CoordenadaTexto}{infoPv}{infoEstado}{(condicoes2014 is null ? "" : $" · {condicoes2014}")}{(ViewModel.Estado.EhMestre ? " · Clique para selecionar, clique duas vezes para abrir a ficha ou arraste para mover" : "")}")"
                                             @onpointerdown="(e) => AoPressionarPino(e, pino)"
                                             @onpointerdown:stopPropagation="true"
                                             @onclick:stopPropagation="true"
-                                            @onclick="() => AoClicarPinoJogadorAsync(pino)">
-                                        @if (!string.IsNullOrWhiteSpace(pino.ImagemUrl))
+                                            @onclick="e => AoAtivarPinoAsync(e, pino)"
+                                            @ondblclick="() => ViewModel.AbrirFichaPinoAcoesMestreAsync(pino.IdPino)"
+                                            @ondblclick:stopPropagation="true">
+                                        <RetratoComIniciais Nome="@pino.Nome" Imagem="@pino.ImagemUrl" CarregarSobDemanda="false" />
+                                        @if (pino.Instancia > 1)
                                         {
-                                            <img src="@pino.ImagemUrl" alt="@pino.Nome" draggable="false" />
-                                        }
-                                        else
-                                        {
-                                            <span>@ObterIniciais(pino.Nome)</span>
+                                            <em class="pino-badge-instancia" aria-hidden="true">@pino.Instancia</em>
                                         }
                                         @if (derrotado)
                                         {
@@ -442,6 +468,10 @@
                                         @if (!derrotado && pino.Esquivando)
                                         {
                                             <em class="pino-badge-esquiva" aria-label="Esquivando">◈</em>
+                                        }
+                                        @if (condicoes2014 is not null)
+                                        {
+                                            <em class="pino-badge-condicao" aria-hidden="true">@ficha2014!.Efeitos.Select(e => e.Condicao).Distinct().Count()</em>
                                         }
                                     </button>
                                 }
@@ -462,6 +492,7 @@
 </section>
 
 @code {
+    private static string AbaDeInstancia(PinoMapaDto pino) => pino.TipoEntidade == TiposPinoSessao.Monstro ? "monstros" : "npcs";
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
 
@@ -476,13 +507,8 @@
         ViewModel.IniciarArrastePino(pino);
     }
 
-    private async Task AoClicarPinoJogadorAsync(PinoMapaDto pino)
-    {
-        if (ViewModel.Estado.EhMestre)
-            return;
-
-        await ViewModel.AoClicarPinoMapaAsync(pino);
-    }
+    private Task AoAtivarPinoAsync(MouseEventArgs e, PinoMapaDto pino) =>
+        !ViewModel.Estado.EhMestre || e.Detail == 0 ? ViewModel.AoClicarPinoMapaAsync(pino) : Task.CompletedTask;
 
     private void AoRolarMouseMapa(WheelEventArgs e)
     {

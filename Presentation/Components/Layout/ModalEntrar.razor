@@ -2,12 +2,13 @@
 @inject SessaoUsuarioService SessaoUsuario
 
 <section class="modal-fundo" @onclick="FecharModal">
-    <div class="painel-convite-card" @onclick:stopPropagation="true">
+    <div class="painel-convite-card" role="dialog" aria-modal="true" aria-labelledby="titulo-convite"
+         @onclick:stopPropagation="true">
         <!-- Cabeçalho -->
         <header class="modal-cabecalho">
             <div class="modal-titulo-wrapper">
                 <span class="modal-subtitulo">Acesso de Jogador</span>
-                <h2>Entrar em uma Campanha</h2>
+                <h2 id="titulo-convite">Entrar em uma Campanha</h2>
             </div>
             <button type="button" class="btn-fechar" @onclick="FecharModal" aria-label="Fechar">✕</button>
         </header>
@@ -17,8 +18,8 @@
             <p class="modal-instrucao">Peça o código de convite ao Mestre para se juntar à mesa de jogo[cite: 6].</p>
             
             <div class="campo-convite-wrapper" style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #d4af37;">Código de Convite</label>
-                <input type="text"
+                <label for="codigo-convite" style="display: block; margin-bottom: 5px; font-size: 0.9rem; color: #d4af37;">Código de Convite</label>
+                <input type="text" id="codigo-convite" data-dialog-initial
                        @bind="codigoConviteInput"
                        placeholder="Ex.: CMP-9876"
                        class="input-convite"

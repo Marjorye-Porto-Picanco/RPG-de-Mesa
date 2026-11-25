@@ -21,9 +21,7 @@ else if (ViewModel.SessaoEncerradaPeloMestre)
             <button type="button" class="game-finish" @onclick="ViewModel.VoltarParaPreparacaoCampanha">
                 Ver minha ficha na campanha
             </button>
-            <button type="button" class="game-exit" @onclick="ViewModel.SairDaSessaoENavegarAsync">
-                Voltar para campanhas
-            </button>
+            <BotaoAcaoIcone Tipo="sair" Texto="Voltar para campanhas" Class="game-exit" Inline="true" MostrarTexto="true" OnClick="ViewModel.SairDaSessaoENavegarAsync" />
         </div>
     </div>
 }
@@ -36,9 +34,7 @@ else if (!string.IsNullOrWhiteSpace(ViewModel.ErroCarregamento))
     <div class="sala-jogo sala-estado">
         <h2>Não foi possível abrir a sessão</h2>
         <p>@ViewModel.ErroCarregamento</p>
-        <button type="button" class="game-exit" @onclick="ViewModel.SairDaSessaoENavegarAsync">
-            Voltar para campanhas
-        </button>
+        <BotaoAcaoIcone Tipo="sair" Texto="Voltar para campanhas" Class="game-exit" Inline="true" MostrarTexto="true" OnClick="ViewModel.SairDaSessaoENavegarAsync" />
     </div>
 }
 else
@@ -59,39 +55,45 @@ else
                 <h1>@ViewModel.Estado.NomeCampanha</h1>
             </div>
 
-            <div class="game-presence">
+            <div class="game-presence @(ViewModel.Reconectando ? "is-reconnecting" : null)" role="status">
                 <span class="presence-light"></span>
-                Mesa aberta
-                <span class="presence-divider">·</span>
-                @ContarOnline() @(ContarOnline() == 1 ? "conectado" : "conectados")
+                @if (ViewModel.Reconectando)
+                {
+                    <span>Reconectando…</span>
+                }
+                else
+                {
+                    <span>Mesa aberta</span>
+                    <span class="presence-divider">·</span>
+                    @ContarOnline() @(ContarOnline() == 1 ? "conectado" : "conectados")
+                }
             </div>
 
             @if (ViewModel.Estado.EhMestre)
             {
-                <button type="button"
-                        class="game-finish"
-                        disabled="@ViewModel.FinalizandoSessao"
-                        @onclick="ViewModel.FinalizarSessaoAsync">
-                    @(ViewModel.FinalizandoSessao ? "Finalizando..." : "Finalizar sessão")
-                </button>
+                <div class="game-session-actions">
+                    <div class="game-rest-actions" role="group" aria-label="Descansos da mesa">
+                        <button type="button" class="game-rest game-rest-short" @onclick="() => ViewModel.RegistrarDescansoDaMesaAsync(false)">Descanso curto</button>
+                        <button type="button" class="game-rest game-rest-long" @onclick="() => ViewModel.RegistrarDescansoDaMesaAsync(true)">Descanso longo</button>
+                    </div>
+                    <button type="button"
+                            class="game-finish"
+                            disabled="@ViewModel.FinalizandoSessao"
+                            @onclick="ViewModel.FinalizarSessaoAsync">
+                        @(ViewModel.FinalizandoSessao ? "Finalizando..." : "Finalizar sessão")
+                    </button>
+                </div>
             }
 
-            <button type="button" class="game-exit" @onclick="ViewModel.SairDaSessaoENavegarAsync">
-                Sair da mesa
-            </button>
+            @if (!ViewModel.Estado.EhMestre)
+            {
+                <BotaoAcaoIcone Tipo="sair" Texto="Sair da mesa" Class="game-exit" Inline="true" MostrarTexto="true" OnClick="ViewModel.SairDaSessaoENavegarAsync" />
+            }
         </header>
 
         <div class="game-layout">
             <!-- BARRA LATERAL DE FERRAMENTAS -->
             <aside class="game-toolbar" aria-label="Ferramentas da mesa">
-                <button class="toolbar-user @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva != "inventario" ? "selecionada" : "")"
-                        type="button"
-                        title="Visualizar Ficha"
-                        aria-label="Visualizar Ficha"
-                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
-                    <span class="toolbar-avatar">@ObterIniciaisUsuarioLogado()</span>
-                </button>
-
                 <button class="toolbar-dice @(ViewModel.ExibirModalDados ? "selecionada" : "")"
                         type="button"
                         title="Rolar dados"
@@ -99,8 +101,6 @@ else
                         @onclick="ViewModel.AbrirModalDados">
                     <span aria-hidden="true">⚄</span>
                 </button>
-
-                <span class="toolbar-separator" aria-hidden="true"></span>
 
                 @if (ViewModel.Estado.EhMestre)
                 {
@@ -113,10 +113,10 @@ else
                     </button>
                 }
 
-                <button class="toolbar-tool @(ViewModel.ExibirModalAtaque ? "selecionada" : "")"
+                <button class="toolbar-tool @(ViewModel.ExibirModalAtaque || ViewModel.ExibirCombateMestre ? "selecionada" : "")"
                         type="button"
-                        disabled="@(!ViewModel.EhMeuTurno)"
-                        title="@(ViewModel.Estado.EhMestre ? "Ação exclusiva de jogadores no turno" : (ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno"))"
+                        disabled="@(!ViewModel.Estado.EhMestre && !ViewModel.EhMeuTurno)"
+                        title="@(ViewModel.Estado.EhMestre ? "Atacar com monstro ou NPC" : (ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno"))"
                         aria-label="Abrir ataque"
                         @onclick="ViewModel.AbrirModalAtaqueAsync">
                     <span aria-hidden="true">⚔</span>
@@ -140,14 +140,20 @@ else
 
                 <span class="toolbar-spacer"></span>
 
-                <button class="toolbar-tool @(_mostrarCoordenadas ? "selecionada" : "")"
-                        type="button"
-                        title="Alternar coordenadas da grade 20×20"
-                        aria-label="Alternar coordenadas da grade"
-                        aria-pressed="@_mostrarCoordenadas.ToString().ToLowerInvariant()"
-                        @onclick="AlternarCoordenadas">
-                    <span aria-hidden="true">▧</span>
-                </button>
+                <details class="toolbar-settings">
+                    <summary title="Configurações da mesa" aria-label="Configurações da mesa">⚙</summary>
+                    <div class="toolbar-settings-menu">
+                        <label class="toolbar-settings-item toolbar-settings-toggle">
+                            Coordenadas do mapa
+                            <input type="checkbox" role="switch" @bind="_mostrarCoordenadas" />
+                            <span class="toolbar-settings-switch" aria-hidden="true"></span>
+                        </label>
+                        @if (ViewModel.Estado.EhMestre)
+                        {
+                            <a class="toolbar-settings-item" href="@($"/sessao-iniciar/{ViewModel.Estado.IdCampanha}?aba=config")">Configurações</a>
+                        }
+                    </div>
+                </details>
             </aside>
 
             <!-- ÁREA PRINCIPAL: MAPA + CONSOLE -->
@@ -346,6 +352,12 @@ else
                         }
                     </div>
                 </section>
+                @if (_rolagemPendente)
+                {
+                    <button class="dice-roll" type="button" disabled="@_rolandoDados" @onclick="ReenviarRolagemAsync">
+                        Reenviar este resultado
+                    </button>
+                }
             }
 
             <p class="dice-popup-footer">O resultado é enviado automaticamente no Chat da sessão.</p>
@@ -370,6 +382,7 @@ else
     private int _modificadorDado = 0;
     private string _contextoDado = string.Empty;
     private bool _rolandoDados = false;
+    private bool _rolagemPendente;
     private ResultadoRolagemDto? _ultimoResultadoDado;
     private string _descricaoDetalhadaDado = string.Empty;
 
@@ -391,11 +404,6 @@ else
     private void AtualizarUi()
     {
         _ = InvokeAsync(StateHasChanged);
-    }
-
-    private void AlternarCoordenadas()
-    {
-        _mostrarCoordenadas = !_mostrarCoordenadas;
     }
 
     private async Task RolarDadosAsync()
@@ -433,7 +441,23 @@ else
 
             _descricaoDetalhadaDado = $"{expressao} · {string.Join(" + ", rolagens)}{modDetalhe}";
 
-            await ViewModel.RegistrarRolagemAsync(_ultimoResultadoDado);
+            _rolagemPendente = !await ViewModel.RegistrarRolagemAsync(_ultimoResultadoDado);
+        }
+        finally
+        {
+            _rolandoDados = false;
+        }
+    }
+
+    private async Task ReenviarRolagemAsync()
+    {
+        if (_rolandoDados || !_rolagemPendente || _ultimoResultadoDado is null)
+            return;
+
+        _rolandoDados = true;
+        try
+        {
+            _rolagemPendente = !await ViewModel.RegistrarRolagemAsync(_ultimoResultadoDado);
         }
         finally
         {

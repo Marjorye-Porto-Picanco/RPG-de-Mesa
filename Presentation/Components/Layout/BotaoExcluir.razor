@@ -1,11 +1,9 @@
-<button type="button"
-        class="botao-excluir @(Inline ? "botao-excluir-inline" : string.Empty)"
-        title="@Titulo"
-        aria-label="@(Titulo ?? Texto ?? "Excluir")"
-        @onclick="OnClick"
-        @onclick:stopPropagation="true">
-    @(Texto ?? "Excluir")
-</button>
+<BotaoAcaoIcone Tipo="excluir"
+                Texto="@Texto"
+                Titulo="@Titulo"
+                Inline="@Inline"
+                Class="botao-excluir"
+                OnClick="@OnClick" />
 
 @code {
     [Parameter] public string? Titulo { get; set; }

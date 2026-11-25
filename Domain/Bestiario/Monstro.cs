@@ -22,6 +22,7 @@ public class Monstro : IAggregateRoot
     public string? Habilidades { get; set; }
     public string? Descricao { get; set; }
     public string? Imagem { get; set; }
+    public virtual ICollection<MonstroAtaque> Ataques { get; set; } = new List<MonstroAtaque>();
 
     public virtual Usuario? Usuario { get; private set; }
 

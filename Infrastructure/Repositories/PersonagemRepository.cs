@@ -24,6 +24,7 @@ public class PersonagemRepository : IPersonagemRepository
             .Include(p => p.Pericias)
             .Include(p => p.Inventario).ThenInclude(inv => inv!.Itens).ThenInclude(ii => ii.Item)
             .Include(p => p.PersonagemMagias).ThenInclude(pm => pm.Magia)
+            .Include(p => p.CirculosMagicos)
             .FirstOrDefaultAsync(p => p.IdPersonagem == idPersonagem);
 
         if (personagem != null)
@@ -48,6 +49,18 @@ public class PersonagemRepository : IPersonagemRepository
             .Include(p => p.Antecedente)
             .Where(p => p.IdAccount == idAccount && p.IdPersonagemOrigem == null)
             .ToListAsync();
+    }
+
+    public async Task<List<Raca>> ListarRacasAsync()
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Racas.AsNoTracking().OrderBy(r => r.Nome).ToListAsync();
+    }
+
+    public async Task<List<Classe>> ListarClassesAsync()
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        return await contexto.Classes.AsNoTracking().OrderBy(c => c.Nome).ToListAsync();
     }
 
     public async Task AdicionarAsync(Personagem personagem)

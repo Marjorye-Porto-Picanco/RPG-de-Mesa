@@ -64,6 +64,7 @@ public class Personagem : IAggregateRoot
     public virtual ICollection<PersonagemSalvaguarda> Salvaguardas { get; set; } = new List<PersonagemSalvaguarda>();
     public virtual ICollection<PersonagemPericia> Pericias { get; set; } = new List<PersonagemPericia>();
     public virtual ICollection<PersonagemMagia> PersonagemMagias { get; set; } = new List<PersonagemMagia>();
+    public virtual ICollection<PersonagemCirculoMagico> CirculosMagicos { get; set; } = new List<PersonagemCirculoMagico>();
 
     public Personagem() { }
 

@@ -12,7 +12,7 @@
 
 <NavMenu />
 
-<div class="tela-rpg tela-personagens">
+<div class="tela-rpg tela-personagens botoes-personagem">
     <main class="conteudo-rpg">
         <div class="titulo-pagina">
             <div>
@@ -41,14 +41,10 @@
                 <div class="grade-personagens">
                     @foreach (var personagem in personagens)
                     {
-                        string iniciais = ObterIniciais(personagem.Nome);
-                        bool temFoto = !string.IsNullOrWhiteSpace(personagem.Imagem);
                         <div class="cartao-wrap" @key="personagem.IdPersonagem">
                             <a class="cartao-personagem" href="/personagem-editar/@personagem.IdPersonagem" aria-label="Abrir ficha de @personagem.Nome">
-                                <div class="retrato-personagem @(temFoto ? "com-foto" : "padrao")">
-                                    <img src="@(temFoto ? personagem.Imagem : "img/armaduraprata.png")" alt="Retrato de @personagem.Nome" loading="lazy"
-                                         onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
-                                    <span>@iniciais</span>
+                                <div class="retrato-personagem">
+                                    <RetratoComIniciais Nome="@personagem.Nome" Imagem="@personagem.Imagem" />
                                 </div>
                                 <div class="info-personagem">
                                     <!--<span class="status-personagem">Aventureiro</span>-->
@@ -85,13 +81,10 @@
                 <div class="grade-personagens">
                     @foreach (var npc in npcs)
                     {
-                        string iniciais = ObterIniciais(npc.Nome);
                         <div class="cartao-personagem cartao-npc" aria-label="Ficha do NPC @npc.Nome" @key="npc.IdNpc">
                             <BotaoExcluir Titulo="@($"Excluir {npc.Nome}")" OnClick='() => PedirExclusao("npc", npc.IdNpc, npc.Nome)' />
-                            <div class="retrato-personagem com-foto">
-                                <img src="@(string.IsNullOrWhiteSpace(npc.Imagem) ? "img/capacampanha3.png" : npc.Imagem)" alt="Retrato de @npc.Nome" loading="lazy"
-                                     onerror="this.parentElement.classList.add('sem-imagem')" onload="this.parentElement.classList.remove('sem-imagem')" />
-                                <span>@iniciais</span>
+                            <div class="retrato-personagem">
+                                <RetratoComIniciais Nome="@npc.Nome" Imagem="@npc.Imagem" />
                             </div>
                             <div class="info-personagem">
                                 <span class="status-personagem">NPC</span>
@@ -228,17 +221,6 @@
             Personagens = personagens,
             Npcs = npcs
         });
-    }
-
-    private string ObterIniciais(string nome)
-    {
-        if (string.IsNullOrWhiteSpace(nome)) return "HP";
-
-        var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (partes.Length >= 2)
-            return $"{char.ToUpper(partes[0][0])}{char.ToUpper(partes[1][0])}";
-
-        return nome[..Math.Min(2, nome.Length)].ToUpper();
     }
 
     public void Dispose()

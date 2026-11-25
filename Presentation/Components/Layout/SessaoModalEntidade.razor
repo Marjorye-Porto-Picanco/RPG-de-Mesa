@@ -1,10 +1,12 @@
 @using RPGdeMesa.Application.Services
 @using RPGdeMesa.Domain.ValueObjects
+@using RPGdeMesa.Domain.Sessoes
 @using RPGdeMesa.Presentation.ViewModel
 
 @if (ViewModel.MonstroEmVisualizacao != null)
 {
     var m = ViewModel.MonstroEmVisualizacao;
+    var ataquesRolaveis = m.Ataques.Where(a => RegrasCombate2014.DanoValido(a.Dano)).ToList();
     int pvAtualMonstro = ViewModel.PinoMonstroEmVisualizacao?.PvAtual ?? m.PvMaximo;
 
     <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
@@ -12,12 +14,12 @@
     <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-modal" @onclick:stopPropagation="true">
         <header class="em-header">
             <div class="em-identidade">
-                <img class="em-retrato"
-                     src="@(string.IsNullOrWhiteSpace(m.Imagem) ? "img/capacampanha2.png" : m.Imagem)"
-                     alt="@m.Nome" />
+                <div class="em-retrato">
+                    <RetratoComIniciais Nome="@m.Nome" Imagem="@m.Imagem" CarregarSobDemanda="false" />
+                </div>
                 <div>
                     <p class="em-sub">Bestiário da Campanha</p>
-                    <h2 id="titulo-monstro-modal">@m.Nome</h2>
+                    <h2 id="titulo-monstro-modal">@(ViewModel.PinoMonstroEmVisualizacao?.Nome ?? m.Nome)</h2>
                     <small>@(m.TipoMonstro ?? "Criatura") • @(m.Tamanho ?? "Médio") • @(m.Tendencia ?? "Neutra")</small>
                 </div>
             </div>
@@ -72,6 +74,36 @@
                     <h3>Habilidades</h3>
                     <p>@(string.IsNullOrWhiteSpace(m.Habilidades) ? "—" : m.Habilidades)</p>
                 </div>
+                @if (ViewModel.Estado.EhMestre && ataquesRolaveis.Count > 0)
+                {
+                    <div class="em-bloco-pergaminho em-span-2 quick-attack-master">
+                        <h3>Ação rápida do Mestre</h3>
+                        <label>Ataque<select @bind="ViewModel.IdAtaqueMonstroSelecionado">
+                            @foreach (var ataque in ataquesRolaveis) { <option value="@ataque.IdMonstroAtaque">@ataque.Nome · @ataque.Dano</option> }
+                        </select></label>
+                        <label>Alvo<select @bind="ViewModel.AlvoAtaqueMonstroSelecionado">
+                            @foreach (var alvo in ViewModel.AlvosAtaqueMonstro) { <option value="@alvo.IdPino">@alvo.Nome · CA @(alvo.ClasseArmadura ?? 10)</option> }
+                        </select></label>
+                        <button type="button" disabled="@(ViewModel.ExecutandoAtaqueEntidade || string.IsNullOrEmpty(ViewModel.AlvoAtaqueMonstroSelecionado))" @onclick="ViewModel.AtacarComMonstroSelecionadoAsync">@(ViewModel.ExecutandoAtaqueEntidade ? "Resolvendo..." : "Atacar alvo")</button>
+                        @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade)) { <p role="status">@ViewModel.FeedbackAtaqueEntidade</p> }
+                    </div>
+                }
+                <div class="em-bloco-pergaminho em-span-2">
+                    <h3>Ataques</h3>
+                    @if (m.Ataques?.Any() == true)
+                    {
+                        @if (ViewModel.Estado.EhMestre && ataquesRolaveis.Count == 0)
+                        {
+                            <p>Esta ficha não tem um golpe com fórmula de dano válida. Use Ações rápidas → Habilidades para efeitos sem dano.</p>
+                        }
+                        @foreach (var ataque in m.Ataques)
+                        {
+                            <p><b>@ataque.Nome</b> · @(ataque.BonusAtaque.HasValue ? $"+{ataque.BonusAtaque}" : "bônus —") · @(ataque.Dano ?? "dano —") @(ataque.TipoDano ?? "") · @(ataque.Alcance ?? "alcance —")</p>
+                            @if (!string.IsNullOrWhiteSpace(ataque.Descricao)) { <small>@ataque.Descricao</small> }
+                        }
+                    }
+                    else { <p>Nenhum ataque estruturado cadastrado.</p> }
+                </div>
                 <div class="em-bloco-pergaminho em-span-2">
                     <h3>Descrição</h3>
                     <p>@(string.IsNullOrWhiteSpace(m.Descricao) ? "Sem descrição registrada." : m.Descricao)</p>
@@ -84,21 +116,22 @@
 @if (ViewModel.NpcEmVisualizacao != null)
 {
     var n = ViewModel.NpcEmVisualizacao;
+    var armasRolaveis = n.Itens.Where(x => RegrasCombate2014.DanoValido(x.Item?.Dano)).ToList();
     int pvMaxNpc = SessaoService.CalcularPvMaximoNpc(n);
     int pvAtualNpc = ViewModel.PinoNpcEmVisualizacao?.PvAtual ?? pvMaxNpc;
-    int caNpc = SessaoService.CalcularCaBase(n.Destreza);
+    int caNpc = n.ClasseArmadura;
 
     <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
 
     <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
         <header class="em-header">
             <div class="em-identidade">
-                <img class="em-retrato"
-                     src="@(string.IsNullOrWhiteSpace(n.Imagem) ? "img/capacampanha3.png" : n.Imagem)"
-                     alt="@n.Nome" />
+                <div class="em-retrato">
+                    <RetratoComIniciais Nome="@n.Nome" Imagem="@n.Imagem" CarregarSobDemanda="false" />
+                </div>
                 <div>
                     <p class="em-sub">NPC da Campanha</p>
-                    <h2 id="titulo-npc-modal">@n.Nome</h2>
+                    <h2 id="titulo-npc-modal">@(ViewModel.PinoNpcEmVisualizacao?.Nome ?? n.Nome)</h2>
                     <small>@(n.RacaTexto ?? "Raça") • @(n.ClasseTexto ?? "NPC") • Nível @n.Nivel</small>
                 </div>
             </div>
@@ -113,6 +146,52 @@
                 <div class="em-attr-card"><span>INT</span><strong>@n.Inteligencia</strong><small>@FormatarMod(n.Inteligencia)</small></div>
                 <div class="em-attr-card"><span>SAB</span><strong>@n.Sabedoria</strong><small>@FormatarMod(n.Sabedoria)</small></div>
                 <div class="em-attr-card"><span>CAR</span><strong>@n.Carisma</strong><small>@FormatarMod(n.Carisma)</small></div>
+            </div>
+
+            <div class="em-grid-2">
+                <div class="em-bloco-pergaminho em-span-2"><h3>Ataques e itens equipados</h3>
+                    @if (n.Itens?.Any() == true)
+                    {
+                        @foreach (var itemNpc in n.Itens)
+                        {
+                            <p><b>@itemNpc.Item?.Nome</b> × @itemNpc.Quantidade · @(itemNpc.Item?.Dano ?? "sem dano") @(itemNpc.Item?.TipoDano ?? "")</p>
+                        }
+                        @if (ViewModel.Estado.EhMestre && armasRolaveis.Count > 0)
+                        {
+                            <div class="quick-attack-master">
+                                <label>Arma<select @bind="ViewModel.IdItemNpcAtaqueSelecionado">
+                                    @foreach (var itemNpc in armasRolaveis) { <option value="@itemNpc.IdItem">@itemNpc.Item!.Nome · @itemNpc.Item.Dano</option> }
+                                </select></label>
+                                <label>Alvo<select @bind="ViewModel.AlvoAtaqueNpcSelecionado">
+                                    @foreach (var alvo in ViewModel.AlvosNpc) { <option value="@alvo.IdPino">@alvo.Nome · CA @(alvo.ClasseArmadura ?? 10)</option> }
+                                </select></label>
+                                <button type="button" disabled="@(ViewModel.ExecutandoAtaqueEntidade || string.IsNullOrEmpty(ViewModel.AlvoAtaqueNpcSelecionado))" @onclick="ViewModel.AtacarComNpcSelecionadoAsync">Atacar alvo</button>
+                                @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade)) { <p role="status">@ViewModel.FeedbackAtaqueEntidade</p> }
+                            </div>
+                        }
+                    }
+                    else { <p>Nenhum item ou ataque equipado.</p> }
+                </div>
+                <div class="em-bloco-pergaminho em-span-2"><h3>Magias</h3>
+                    @if (n.Magias?.Any() == true)
+                    {
+                        @foreach (var magiaNpc in n.Magias)
+                        { <p><b>@magiaNpc.Magia?.Nome</b> · @NPCirculo(magiaNpc.Magia?.CirculoNivel ?? 0) · @(magiaNpc.Magia?.DanoEfeito ?? "Efeito não informado")</p> }
+                        @if (ViewModel.Estado.EhMestre)
+                        {
+                            <div class="quick-attack-master">
+                                <label>Magia<select @bind="ViewModel.IdMagiaNpcSelecionada">
+                                    @foreach (var magiaNpc in n.Magias) { <option value="@magiaNpc.IdMagia">@magiaNpc.Magia?.Nome · @NPCirculo(magiaNpc.Magia?.CirculoNivel ?? 0)</option> }
+                                </select></label>
+                                <label>Alvo<select @bind="ViewModel.AlvoMagiaNpcSelecionado">
+                                    @foreach (var alvo in ViewModel.AlvosNpc) { <option value="@alvo.IdPino">@alvo.Nome</option> }
+                                </select></label>
+                                <button type="button" disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.ConjurarMagiaNpcSelecionadaAsync">Conjurar magia</button>
+                            </div>
+                        }
+                    }
+                    else { <p>Nenhuma magia cadastrada.</p> }
+                </div>
             </div>
 
             <div class="em-dados-pessoais">
@@ -166,4 +245,6 @@
         int mod = AtributosBase.CalcularModificador(valor);
         return mod >= 0 ? $"+{mod}" : mod.ToString();
     }
+
+    private static string NPCirculo(int nivel) => nivel <= 0 ? "Truque" : $"{nivel}º círculo";
 }

@@ -20,7 +20,7 @@
     border: 2px solid #946c2d;
     border-radius: 10px;
     background-color: #dfc38d;
-    background-image: linear-gradient(rgba(248, 229, 188, 0.92), rgba(226, 198, 143, 0.95)), url("img/papelantigo.png");
+    background-image: linear-gradient(rgba(248, 229, 188, 0.92), rgba(226, 198, 143, 0.95)), var(--rpg-papel);
     background-position: center;
     background-size: cover;
     color: #493519;
@@ -266,3 +266,4 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+.quick-attack-master{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.quick-attack-master label{display:grid;gap:4px;font-size:11px}.quick-attack-master select{min-width:0;max-width:100%;padding:7px;border:1px solid rgba(140,111,60,.55);border-radius:4px;background:#211d17;color:#f3e7d0}.quick-attack-master button{grid-column:1/-1;min-height:36px;border:1px solid #a47c3d;border-radius:4px;background:#765d33;color:#fff1d1;cursor:pointer}.quick-attack-master p{grid-column:1/-1;margin:2px 0;font-size:12px}

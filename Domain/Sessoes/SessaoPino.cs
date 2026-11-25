@@ -17,6 +17,7 @@ public class SessaoPino
     public int? IdMapa { get; private set; }
     public string TipoEntidade { get; private set; } = string.Empty;
     public int IdEntidade { get; private set; }
+    public int Instancia { get; private set; } = 1;
     public int Coluna { get; private set; }
     public int Linha { get; private set; }
     public bool Visivel { get; private set; } = true;
@@ -35,7 +36,8 @@ public class SessaoPino
         int coluna,
         int linha,
         bool visivel = true,
-        int? pvAtual = null)
+        int? pvAtual = null,
+        int instancia = 1)
     {
         if (idSessao <= 0)
             throw new DomainException("Sessão inválida.");
@@ -48,6 +50,7 @@ public class SessaoPino
         IdMapa = idMapa;
         TipoEntidade = tipoEntidade.Trim();
         IdEntidade = idEntidade;
+        Instancia = Math.Max(1, instancia);
         Coluna = Math.Clamp(coluna, 0, 19);
         Linha = Math.Clamp(linha, 0, 19);
         Visivel = visivel;

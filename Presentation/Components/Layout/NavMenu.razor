@@ -25,34 +25,36 @@
         </NavLink>
     </nav>
 
-    <div class="perfil-dropdown-wrap">
+    <div class="perfil-dropdown-wrap" @onkeydown="AoPressionarTeclaPerfilAsync">
         <button type="button"
+                @ref="_botaoPerfil"
                 class="perfil-rpg @(MenuAberto || NavegacaoAberta ? "aberto" : "")"
                 @onclick="AlternarMenu"
-                aria-haspopup="true"
-                aria-expanded="@(NavegacaoAberta || MenuAberto)"
-                aria-controls="menu-mobile"
-                aria-label="@(NavegacaoAberta || MenuAberto ? "Fechar menu de navegação" : "Abrir menu de navegação")">
-            <span class="perfil-iniciais">
-                @if (!string.IsNullOrWhiteSpace(SessaoUsuario.AvatarUrl))
-                {
-                    <img class="perfil-avatar-img" src="@SessaoUsuario.AvatarUrl" alt="Foto de perfil de @NomeUsuarioExibido" />
-                }
-                else
-                {
-                    @IniciaisUsuario
-                }
+                aria-expanded="@(MenuAberto ? "true" : "false")"
+                aria-controls="@(MenuAberto ? "menu-conta menu-mobile" : null)"
+                aria-label="@(MenuAberto ? "Fechar menu da conta" : $"Abrir menu da conta de {NomeUsuarioExibido}")">
+            <span class="perfil-retrato">
+                <RetratoComIniciais Nome="@NomeUsuarioExibido" Imagem="@SessaoUsuario.AvatarUrl"
+                                     AceitarBase64="true" CarregarSobDemanda="false" />
             </span>
             <span class="perfil-nome">@NomeUsuarioExibido</span>
-            <span class="perfil-seta" aria-hidden="true">▾</span>
+            <span class="perfil-seta" aria-hidden="true"></span>
         </button>
 
         @if (MenuAberto)
         {
-            <div class="perfil-backdrop" @onclick="FecharTudo"></div>
-            <div class="perfil-menu" role="menu">
-                <button type="button" class="perfil-menu-item" role="menuitem" @onclick="IrParaPerfil">Perfil</button>
-                <button type="button" class="perfil-menu-item sair" role="menuitem" @onclick="Sair">Sair</button>
+            <div class="perfil-backdrop" aria-hidden="true" @onclick="FecharTudo"></div>
+            <div id="menu-conta" class="perfil-menu" role="group" aria-label="Ações da conta">
+                <button type="button" class="perfil-menu-item" @onclick="IrParaPerfil">
+                    <span class="perfil-menu-icone perfil-icone-pessoa" aria-hidden="true"></span>
+                    <span>Meu perfil</span>
+                </button>
+                <button type="button" class="perfil-menu-item sair" @onclick="Sair">
+                    <span class="perfil-menu-icone perfil-icone-saida" aria-hidden="true">
+                        <img src="@BotaoAcaoIcone.ImagemSair" alt="" width="22" height="22" />
+                    </span>
+                    <span>Sair da conta</span>
+                </button>
             </div>
         }
     </div>
@@ -61,26 +63,17 @@
 @if (NavegacaoAberta)
 {
     <div class="mobile-menu-overlay" role="dialog" aria-modal="true" aria-label="Menu principal">
-        <button type="button" class="mobile-menu-scrim" aria-label="Fechar menu" @onclick="FecharTudo"></button>
+        <button type="button" class="mobile-menu-scrim" tabindex="-1" aria-label="Fechar menu" @onclick="FecharTudo"></button>
         <nav class="mobile-menu-drawer" aria-label="Menu principal" id="menu-mobile">
             <div class="mobile-menu-topo">
                 <div class="mobile-menu-identidade">
-                    <span class="perfil-iniciais">
-                        @if (!string.IsNullOrWhiteSpace(SessaoUsuario.AvatarUrl))
-                        {
-                            <img class="perfil-avatar-img" src="@SessaoUsuario.AvatarUrl" alt="Foto de perfil de @NomeUsuarioExibido" />
-                        }
-                        else
-                        {
-                            @IniciaisUsuario
-                        }
+                    <span class="perfil-retrato">
+                        <RetratoComIniciais Nome="@NomeUsuarioExibido" Imagem="@SessaoUsuario.AvatarUrl"
+                                             AceitarBase64="true" CarregarSobDemanda="false" />
                     </span>
-                    <div class="mobile-menu-identidade-texto">
-                        <strong>@NomeUsuarioExibido</strong>
-                        <small>Sessão ativa</small>
-                    </div>
+                    <strong class="mobile-menu-nome">@NomeUsuarioExibido</strong>
                 </div>
-                <button type="button" class="mobile-menu-fechar" aria-label="Fechar menu" @onclick="FecharTudo">
+                <button type="button" class="mobile-menu-fechar" data-dialog-initial aria-label="Fechar menu" @onclick="FecharTudo">
                     <span aria-hidden="true">×</span>
                 </button>
             </div>
@@ -90,8 +83,8 @@
                         class="mobile-menu-opcao @(PerfilAtivo ? "active" : "")"
                         aria-current="@(PerfilAtivo ? "page" : null)"
                         @onclick="IrParaPerfil">
-                    <span class="mobile-menu-icone" aria-hidden="true">◉</span>
-                    <span class="mobile-menu-label">Perfil</span>
+                    <span class="perfil-menu-icone perfil-icone-pessoa" aria-hidden="true"></span>
+                    <span class="mobile-menu-label">Meu perfil</span>
                     <b aria-hidden="true">›</b>
                 </button>
                 <NavLink class="mobile-menu-opcao" href="/campanhas" @onclick="FecharTudo">
@@ -113,9 +106,10 @@
 
             <div class="mobile-menu-rodape">
                 <button type="button" class="mobile-menu-opcao mobile-menu-sair" @onclick="Sair">
-                    <span class="mobile-menu-icone" aria-hidden="true">↪</span>
-                    <span class="mobile-menu-label">Sair</span>
-                    <b aria-hidden="true">›</b>
+                    <span class="perfil-menu-icone perfil-icone-saida" aria-hidden="true">
+                        <img src="@BotaoAcaoIcone.ImagemSair" alt="" width="22" height="22" />
+                    </span>
+                    <span class="mobile-menu-label">Sair da conta</span>
                 </button>
             </div>
         </nav>
@@ -123,6 +117,7 @@
 }
 
 @code {
+    private ElementReference _botaoPerfil;
     private bool MenuAberto { get; set; }
     private bool NavegacaoAberta { get; set; }
 
@@ -134,17 +129,6 @@
     private bool PerfilAtivo => Navigation.ToBaseRelativePath(Navigation.Uri)
         .TrimEnd('/')
         .Equals("perfil", StringComparison.OrdinalIgnoreCase);
-
-    private string IniciaisUsuario
-    {
-        get
-        {
-            var partes = NomeUsuarioExibido.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (partes.Length == 0) return "MM";
-            if (partes.Length == 1) return partes[0][..Math.Min(2, partes[0].Length)].ToUpperInvariant();
-            return $"{char.ToUpperInvariant(partes[0][0])}{char.ToUpperInvariant(partes[1][0])}";
-        }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,6 +156,15 @@
     }
 
     private void AtualizarUi() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task AoPressionarTeclaPerfilAsync(KeyboardEventArgs evento)
+    {
+        if (evento.Key == "Escape" && MenuAberto)
+        {
+            FecharTudo();
+            await _botaoPerfil.FocusAsync();
+        }
+    }
 
     private void AlternarMenu()
     {

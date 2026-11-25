@@ -335,6 +335,11 @@
     transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
+.mapa-pino ::deep .retrato-rpg {
+    background: transparent;
+    color: inherit;
+}
+
     .mapa-pino:hover {
         transform: scale(1.14);
         z-index: 9;
@@ -783,5 +788,42 @@
     font-style: normal;
     font-size: 9px;
     line-height: 1;
+    pointer-events: none;
+}
+.pino-badge-condicao {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 12px;
+    padding: 0 2px;
+    border-radius: 6px;
+    background: #483424;
+    color: #f7dd9d;
+    font-size: 9px;
+    line-height: 12px;
+    font-style: normal;
+    text-align: center;
+}
+
+.mapa-pino[aria-pressed="true"] {
+    outline: 2px solid #f0d17f;
+    outline-offset: 1px;
+}
+
+.pino-badge-instancia {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    z-index: 4;
+    transform: translateX(-50%);
+    min-width: 11px;
+    padding: 0 2px;
+    border-radius: 4px;
+    background: #241a11;
+    color: #fff3d6;
+    font-size: 9px;
+    font-style: normal;
+    line-height: 11px;
+    text-align: center;
     pointer-events: none;
 }

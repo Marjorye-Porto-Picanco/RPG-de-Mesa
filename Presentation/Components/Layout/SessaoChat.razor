@@ -33,6 +33,53 @@
         </button>
     </div>
 
+    @if (ViewModel.AbaChatAtiva == CanaisSessao.Combate && ViewModel.Estado.EhMestre)
+    {
+        <div class="chat-combat-tools">
+            <button type="button" class="chat-combat-action" @onclick="ViewModel.AbrirCombateMestre">Atacar com monstro ou NPC</button>
+            <button type="button" class="chat-combat-action" @onclick="ViewModel.AbrirPainel2014">Encontro 5e</button>
+        </div>
+    }
+
+    @if (ViewModel.AbaChatAtiva == CanaisSessao.Combate && ViewModel.Estado.Encontro.Rodada > 0)
+    {
+        var encontro = ViewModel.Estado.Encontro;
+        var ativo = ViewModel.PinosVisiveisNoMapa.FirstOrDefault(p => p.IdPino == encontro.IdPinoAtual);
+        <p class="chat-combat-turn">Rodada @encontro.Rodada · @(encontro.IdPinoAtual == Encontro2014.TurnoCovil ? "Ação de covil" : ativo?.Nome ?? "Turno do mestre")</p>
+    }
+
+    @if (!ViewModel.Estado.EhMestre && (ViewModel.Estado.PedidosTeste.Any(p => !p.Total.HasValue) ||
+        ViewModel.Estado.Encontro.Fichas.TryGetValue(ViewModel.Estado.Encontro.IdPinoAtual, out var fichaAtual) &&
+        fichaAtual is { Morto: false, Estavel: false }))
+    {
+        <div class="chat-combat-tools">
+            @foreach (var pedido in ViewModel.Estado.PedidosTeste.Where(p => !p.Total.HasValue).Take(3))
+            {
+                <button type="button" class="chat-combat-action" disabled="@ViewModel.ExecutandoAtaqueEntidade"
+                        @onclick="() => ViewModel.ResponderTeste2014Async(pedido.Id)">@pedido.Nome @(pedido.Cd.HasValue ? $"(CD {pedido.Cd})" : "")</button>
+            }
+            @if (ViewModel.EhMeuTurno && ViewModel.PinosVisiveisNoMapa.FirstOrDefault(p => p.IdPino == ViewModel.Estado.Encontro.IdPinoAtual &&
+                    p.TipoEntidade == TiposPinoSessao.Personagem && p.IdEntidade == ViewModel.Estado.IdPersonagemLogado && p.PvAtual == 0) is { } caido &&
+                ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(caido.IdPino) is { Morto: false, Estavel: false } ficha &&
+                ficha.RodadaUltimoTesteMorte != ViewModel.Estado.Encontro.Rodada)
+            {
+                <button type="button" class="chat-combat-action" disabled="@ViewModel.ExecutandoAtaqueEntidade"
+                        @onclick="() => ViewModel.RolarMorteJogador2014Async(caido.IdPino)">Rolar teste contra a morte</button>
+            }
+        </div>
+    }
+    @if (!ViewModel.Estado.EhMestre && !string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+    {
+        <p class="chat-combat-turn" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+    }
+    @if (!ViewModel.Estado.EhMestre && ViewModel.AbaChatAtiva == CanaisSessao.Combate)
+    {
+        @foreach (var pedido in ViewModel.Estado.PedidosTeste.Where(p => p.Total.HasValue).TakeLast(2))
+        {
+            <p class="chat-combat-turn">@pedido.Nome · resultado @pedido.Total @(pedido.Cd is int cd ? $"contra CD {cd}" : "")</p>
+        }
+    }
+
     <div class="chat-feed" aria-live="polite" @key="ViewModel.AbaChatAtiva">
         <div class="chat-feed-content">
             @if (ViewModel.AbaChatAtiva == CanaisSessao.Npc)
@@ -68,6 +115,7 @@
 
     @if (ViewModel.AbaChatAtiva == CanaisSessao.Chat)
     {
+        <p class="chat-compose-status" role="status">@ViewModel.FeedbackChat</p>
         <form class="chat-compose" @onsubmit="ViewModel.EnviarMensagemChatAsync" @onsubmit:preventDefault="true">
             <input type="text"
                    maxlength="240"

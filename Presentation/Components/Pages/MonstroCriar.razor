@@ -1,4 +1,5 @@
-﻿@page "/monstro-criar"
+@page "/monstro-criar"
+@page "/monstro-editar/{Id:int}"
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
@@ -17,7 +18,7 @@
                 <span aria-hidden="true">←</span> Voltar ao Bestiário
             </button>
             <p class="page-kicker">Bestiário e Criaturas</p>
-            <h1 class="page-title">Criar Monstro / Criatura</h1>
+            <h1 class="page-title">@(ViewModel.ModoEdicao ? "Editar Monstro / Criatura" : "Criar Monstro / Criatura")</h1>
             <p class="page-description">Preencha os atributos e características para registrar uma nova ameaça para suas campanhas.</p>
         </header>
 
@@ -95,17 +96,17 @@
 
                         <label class="campo-ficha">
                             <span>Nível de Desafio (ND)</span>
-                            <input type="number" @bind="ViewModel.MonstroAtual.Nd" min="0" max="30" step="0.125" required />
+                            <input type="number" @bind="ViewModel.MonstroAtual.Nd" @bind:event="oninput" min="0" max="30" step="0.125" required />
                         </label>
 
                         <label class="campo-ficha">
                             <span>Classe de Armadura (CA)</span>
-                            <input type="number" @bind="ViewModel.MonstroAtual.ClasseArmadura" min="1" max="40" required />
+                            <input type="number" @bind="ViewModel.MonstroAtual.ClasseArmadura" @bind:event="oninput" min="1" max="40" required />
                         </label>
 
                         <label class="campo-ficha">
                             <span>Pontos de Vida (PV)</span>
-                            <input type="number" @bind="ViewModel.MonstroAtual.PvMaximo" min="1" max="9999" required />
+                            <input type="number" @bind="ViewModel.MonstroAtual.PvMaximo" @bind:event="oninput" min="1" max="9999" required />
                         </label>
 
                         <label class="campo-ficha">
@@ -130,6 +131,7 @@
                             <span>Sentidos</span>
                             <input type="text"
                                    @bind="ViewModel.MonstroAtual.Sentidos"
+                                   @bind:event="oninput"
                                    placeholder="Ex.: Visão no escuro 18 m, Percepção passiva 13" />
                         </label>
 
@@ -137,6 +139,7 @@
                             <span>Resistências / Imunidades</span>
                             <input type="text"
                                    @bind="ViewModel.MonstroAtual.Resistencias"
+                                   @bind:event="oninput"
                                    placeholder="Ex.: Resistência a dano necrótico, imunidade a veneno" />
                         </label>
 
@@ -144,14 +147,166 @@
                             <label for="monstro-habilidades">Habilidades Especiais</label>
                             <textarea id="monstro-habilidades"
                                       @bind="ViewModel.MonstroAtual.Habilidades"
+                                      @bind:event="oninput"
                                       rows="4"
                                       placeholder="Ataques múltiplos, magias inatas, traços especiais..."></textarea>
+                        </div>
+
+                        <div class="form-divider">Ataques da Criatura</div>
+
+                        <!-- Catálogo + Formulário sob demanda (referência: Grimório de PersonagemCriar) -->
+                        <div class="categoria-itens full-width">
+                            <div class="titulo-categoria">
+                                <h3>⚔ Catálogo de Ataques</h3>
+                                <button type="button"
+                                        class="btn-ataque-manual"
+                                        @onclick="ViewModel.AlternarFormularioNovoAtaque">
+                                    @(ViewModel.ExibirFormularioNovoAtaque ? "Fechar cadastro" : "+ Criar ataque")
+                                </button>
+                            </div>
+
+                            <div class="ataque-filtros">
+                                <input type="search"
+                                       class="ataque-busca-input"
+                                       @bind="ViewModel.BuscaAtaqueCatalogo"
+                                       @bind:event="oninput"
+                                       placeholder="Buscar ataque por nome, monstro ou dano..."
+                                       autocomplete="off" />
+                            </div>
+
+                            <div class="ataque-catalogo-lista">
+                                @if (ViewModel.AtaquesCatalogoFiltrados.Any())
+                                {
+                                    @foreach (var entrada in ViewModel.AtaquesCatalogoFiltrados)
+                                    {
+                                        <div class="ataque-catalogo-linha" @onclick="() => ViewModel.VisualizarAtaqueCatalogo(entrada.Ataque)">
+                                            <div class="ataque-catalogo-info">
+                                                <strong>@entrada.Ataque.Nome</strong>
+                                                <small>
+                                                    @entrada.Monstro.Nome
+                                                    · @(string.IsNullOrWhiteSpace(entrada.Ataque.Dano) ? "Dano não informado" : entrada.Ataque.Dano)
+                                                    · @(string.IsNullOrWhiteSpace(entrada.Ataque.Alcance) ? "Alcance não informado" : entrada.Ataque.Alcance)
+                                                </small>
+                                            </div>
+                                            <button type="button"
+                                                    class="btn-add-item"
+                                                    title="Vincular @entrada.Ataque.Nome"
+                                                    aria-label="Vincular ataque @entrada.Ataque.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.VincularAtaqueDoCatalogo(entrada.Monstro, entrada.Ataque)">
+                                                +
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="ataque-vazio">Nenhum ataque existente encontrado no catálogo.</p>
+                                }
+                            </div>
+
+                            @if (ViewModel.ExibirFormularioNovoAtaque)
+                            {
+                                <div class="ataque-manual-box">
+                                    <div class="form-grid-2">
+                                        <label class="campo-ficha full-width">
+                                            <span>Nome do Ataque*</span>
+                                            <input type="text"
+                                                   @bind="ViewModel.NovoAtaque.Nome"
+                                                   maxlength="80"
+                                                   placeholder="Ex.: Garra Sombria"
+                                                   autocomplete="off" />
+                                        </label>
+
+                                        <label class="campo-ficha">
+                                            <span>Bônus de Ataque</span>
+                                            <input type="number" @bind="ViewModel.NovoAtaque.BonusAtaque" placeholder="Ex.: 5" />
+                                        </label>
+
+                                        <label class="campo-ficha">
+                                            <span>Dano</span>
+                                            <input type="text" @bind="ViewModel.NovoAtaque.Dano" placeholder="Ex.: 1d8+3" />
+                                        </label>
+
+                                        <label class="campo-ficha">
+                                            <span>Tipo de Dano</span>
+                                            <input type="text" @bind="ViewModel.NovoAtaque.TipoDano" placeholder="Ex.: Cortante" />
+                                        </label>
+
+                                        <label class="campo-ficha">
+                                            <span>Alcance</span>
+                                            <input type="text" @bind="ViewModel.NovoAtaque.Alcance" placeholder="Ex.: 1,5 m" />
+                                        </label>
+
+                                        <label class="campo-ficha full-width">
+                                            <span>Descrição</span>
+                                            <textarea @bind="ViewModel.NovoAtaque.Descricao"
+                                                      rows="2"
+                                                      placeholder="Efeitos adicionais, testes de resistência ou condições..."></textarea>
+                                        </label>
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(ViewModel.ErroNovoAtaque))
+                                    {
+                                        <p class="attack-create-error" role="alert">@ViewModel.ErroNovoAtaque</p>
+                                    }
+
+                                    <div class="ataque-manual-acoes">
+                                        <button type="button" class="action-secondary" @onclick="ViewModel.CancelarNovoAtaque">Cancelar</button>
+                                        <button type="button" class="action-primary" @onclick="ViewModel.VincularNovoAtaque">Vincular Ataque</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Lista de Ataques Vinculados -->
+                        <div class="categoria-itens full-width">
+                            <div class="titulo-categoria">
+                                <h3>✦ Ataques Vinculados a @NomePreview (@ViewModel.Ataques.Count)</h3>
+                            </div>
+
+                            @if (ViewModel.Ataques.Any())
+                            {
+                                <div class="cabecalho-linha ataque-vinculado-grid">
+                                    <span>Nome</span>
+                                    <span>Bônus</span>
+                                    <span>Dano</span>
+                                    <span>Alcance</span>
+                                    <span></span>
+                                </div>
+                                <div class="ataque-vinculado-lista">
+                                    @foreach (var ataque in ViewModel.Ataques)
+                                    {
+                                        var selecionado = ViewModel.AtaqueEmVisualizacao == ataque;
+                                        <div class="item-linha ataque-vinculado-grid ataque-vinculado-row @(selecionado ? "selecionada" : "")"
+                                             @onclick="() => ViewModel.SelecionarAtaque(ataque)">
+                                            <strong class="ataque-cell-nome">@Texto(ataque.Nome, "Ataque sem nome")</strong>
+                                            <span>@FormatarBonusCurto(ataque.BonusAtaque)</span>
+                                            <span>@Texto(ataque.Dano, "—")</span>
+                                            <span>@Texto(ataque.Alcance, "—")</span>
+                                            <button type="button"
+                                                    class="remover-item"
+                                                    title="Remover ataque"
+                                                    aria-label="Remover @ataque.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.RemoverAtaque(ataque)">
+                                                ×
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="ataque-vazio">Nenhum ataque vinculado ainda. Clique no <strong>+</strong> no catálogo acima ou em <strong>+ Criar ataque</strong>.</p>
+                            }
                         </div>
 
                         <div class="painel-historia">
                             <label for="monstro-descricao">Descrição da Criatura</label>
                             <textarea id="monstro-descricao"
                                       @bind="ViewModel.MonstroAtual.Descricao"
+                                      @bind:event="oninput"
                                       rows="4"
                                       placeholder="Lore, comportamento ou anotações do Mestre..."></textarea>
                         </div>
@@ -169,12 +324,13 @@
                             Cancelar
                         </button>
                         <button class="action-primary" type="submit" disabled="@ViewModel.IsProcessing">
-                            @(ViewModel.IsProcessing ? "Salvando..." : "✓ Forjar e Salvar Monstro")
+                            @(ViewModel.IsProcessing ? "Salvando..." : ViewModel.ModoEdicao ? "✓ Salvar alterações" : "✓ Forjar e Salvar Monstro")
                         </button>
                     </footer>
                 </div>
             </section>
 
+            <!-- Resumo Lateral Unificado em um Único Card -->
             <aside class="form-aside" aria-label="Resumo do Monstro">
                 <div class="monstro-preview-card">
                     <div class="monstro-avatar-circle">
@@ -187,13 +343,67 @@
                             <text>@Inicial</text>
                         }
                     </div>
+
                     <h3>@NomePreview</h3>
                     <p>@TipoPreview • @Texto(ViewModel.MonstroAtual.Tamanho, "Médio")</p>
                     <p class="preview-extra">@Texto(ViewModel.MonstroAtual.Tendencia, "Sem tendência") • @Texto(ViewModel.MonstroAtual.Deslocamento, "9 m")</p>
+
                     <div class="preview-stats-mini">
                         <div><b>ND</b><span>@ViewModel.MonstroAtual.Nd</span></div>
                         <div><b>CA</b><span>@ViewModel.MonstroAtual.ClasseArmadura</span></div>
                         <div><b>PV</b><span>@ViewModel.MonstroAtual.PvMaximo</span></div>
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Detalhes da ficha</h4>
+                        <dl class="monster-details-list">
+                            <div><dt>Sentidos</dt><dd>@Texto(ViewModel.MonstroAtual.Sentidos, "Não informados")</dd></div>
+                            <div><dt>Resistências e imunidades</dt><dd>@Texto(ViewModel.MonstroAtual.Resistencias, "Não informadas")</dd></div>
+                            <div><dt>Habilidades especiais</dt><dd>@Texto(ViewModel.MonstroAtual.Habilidades, "Não informadas")</dd></div>
+                            <div><dt>Descrição</dt><dd>@Texto(ViewModel.MonstroAtual.Descricao, "Não informada")</dd></div>
+                        </dl>
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Ataques vinculados (@ViewModel.Ataques.Count)</h4>
+                        @if (ViewModel.Ataques.Any())
+                        {
+                            <div class="attack-preview-list">
+                                @foreach (var ataque in ViewModel.Ataques)
+                                {
+                                    <button type="button"
+                                            class="attack-preview-item @(ViewModel.AtaqueEmVisualizacao == ataque ? "selected" : string.Empty)"
+                                            aria-pressed="@(ViewModel.AtaqueEmVisualizacao == ataque)"
+                                            @onclick="() => ViewModel.SelecionarAtaque(ataque)">
+                                        <strong>@Texto(ataque.Nome, "Ataque sem nome")</strong>
+                                        <small>@Texto(ataque.Dano, "Dano não informado") · @Texto(ataque.Alcance, "Alcance não informado")</small>
+                                    </button>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="attack-preview-empty">Crie um ataque ou adicione um do catálogo para vinculá-lo a este monstro.</p>
+                        }
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Prévia do ataque</h4>
+                        @if (ViewModel.AtaqueEmVisualizacao is { } ataquePreview)
+                        {
+                            <strong class="attack-detail-title">@Texto(ataquePreview.Nome, "Ataque sem nome")</strong>
+                            <dl class="monster-details-list">
+                                <div><dt>Bônus de ataque</dt><dd>@FormatarBonus(ataquePreview.BonusAtaque)</dd></div>
+                                <div><dt>Dano</dt><dd>@Texto(ataquePreview.Dano, "Não informado")</dd></div>
+                                <div><dt>Tipo de dano</dt><dd>@Texto(ataquePreview.TipoDano, "Não informado")</dd></div>
+                                <div><dt>Alcance</dt><dd>@Texto(ataquePreview.Alcance, "Não informado")</dd></div>
+                                <div><dt>Descrição</dt><dd>@Texto(ataquePreview.Descricao, "Não informada")</dd></div>
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="attack-preview-empty">Clique em um ataque do catálogo ou da lista para ver seus detalhes aqui.</p>
+                        }
                     </div>
                 </div>
             </aside>
@@ -204,8 +414,9 @@
 @if (ViewModel.ExibirAvisoSaida)
 {
     <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
-        <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
-            <h2>Sair sem salvar?</h2>
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-saida-monstro"
+                 @onclick:stopPropagation="true">
+            <h2 id="titulo-saida-monstro">Sair sem salvar?</h2>
             <p>Tem certeza que deseja cancelar? As alterações feitas no monstro serão perdidas.</p>
             <div class="confirm-actions">
                 <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaCriacao">Sim</button>
@@ -216,6 +427,7 @@
 }
 
 @code {
+    [Parameter] public int? Id { get; set; }
     private string? _imagemPadrao;
     private bool _carregandoFoto;
     private string? ErroImagem { get; set; }
@@ -234,10 +446,22 @@
             ? "Dragão"
             : Texto(ViewModel.MonstroAtual.TipoMonstro, "Outro");
 
-    protected override void OnInitialized()
+    private static string FormatarBonus(int? bonus) =>
+        bonus?.ToString("+0;-0;0", CultureInfo.CurrentCulture) ?? "Não informado";
+
+    private static string FormatarBonusCurto(int? bonus) =>
+        bonus?.ToString("+0;-0;0", CultureInfo.CurrentCulture) ?? "—";
+
+    protected override async Task OnParametersSetAsync()
     {
-        ViewModel.LimparFormulario();
+        if (Id.HasValue)
+            await ViewModel.CarregarMonstroAsync(Id.Value);
+        else
+            ViewModel.LimparFormulario();
+
+        await ViewModel.CarregarCatalogoAtaquesAsync();
         _imagemPadrao = ViewModel.MonstroAtual.Imagem;
+        ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
     }
 

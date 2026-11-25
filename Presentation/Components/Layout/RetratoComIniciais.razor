@@ -1,0 +1,77 @@
+@using System.Globalization
+
+<span class="retrato-rpg" aria-hidden="true">
+    @if (_imagemVisivel is { } imagem && !_falhou)
+    {
+        <img @key="imagem" src="@imagem" alt="" draggable="false" loading="@(CarregarSobDemanda ? "lazy" : "eager")"
+             @onerror="() => RegistrarFalha(imagem)" />
+    }
+    else
+    {
+        <span class="retrato-rpg-iniciais">@ObterIniciais(Nome)</span>
+    }
+</span>
+
+@code {
+    [Parameter] public string? Nome { get; set; }
+    [Parameter] public string? Imagem { get; set; }
+    [Parameter] public bool CarregarSobDemanda { get; set; } = true;
+    [Parameter] public bool AceitarBase64 { get; set; }
+
+    private string? _imagemVisivel;
+    private bool _falhou;
+
+    protected override void OnParametersSet()
+    {
+        var imagem = Imagem?.Trim();
+        if (imagem?.StartsWith("~/", StringComparison.Ordinal) == true)
+            imagem = imagem[2..];
+        if (UsaImagemAntiga(imagem))
+            imagem = null;
+        if (AceitarBase64 && imagem is not null && ObterMimeBase64(imagem) is { } mime)
+            imagem = $"data:{mime};base64,{imagem}";
+
+        if (imagem == _imagemVisivel)
+            return;
+
+        _imagemVisivel = string.IsNullOrEmpty(imagem) ? null : imagem;
+        _falhou = false;
+    }
+
+    private void RegistrarFalha(string imagem)
+    {
+        if (_imagemVisivel == imagem)
+            _falhou = true;
+    }
+
+    private static string? ObterMimeBase64(string imagem)
+    {
+        if (imagem.StartsWith("/9j/", StringComparison.Ordinal))
+            return "image/jpeg";
+        if (imagem.StartsWith("iVBORw0KGgo", StringComparison.Ordinal))
+            return "image/png";
+        if (imagem.StartsWith("R0lGOD", StringComparison.Ordinal))
+            return "image/gif";
+        if (imagem.StartsWith("UklGR", StringComparison.Ordinal))
+            return "image/webp";
+
+        return null;
+    }
+
+    internal static bool UsaImagemAntiga(string? imagem) => imagem?.ToLowerInvariant() is
+        "img/armaduraprata.png" or "img/capacampanha1.png" or
+        "img/capacampanha2.png" or "img/capacampanha3.png";
+
+    internal static string ObterIniciais(string? nome)
+    {
+        var partes = nome?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (partes is not { Length: > 0 })
+            return "?";
+
+        string primeira = StringInfo.GetNextTextElement(partes[0]);
+        string segunda = partes.Length > 1
+            ? StringInfo.GetNextTextElement(partes[^1])
+            : primeira.Length < partes[0].Length ? StringInfo.GetNextTextElement(partes[0], primeira.Length) : "";
+        return (primeira + segunda).ToUpperInvariant();
+    }
+}

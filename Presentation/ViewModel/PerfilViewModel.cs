@@ -70,17 +70,6 @@ namespace RPGdeMesa.Presentation.ViewModel
         public bool TemAvatar =>
             !string.IsNullOrWhiteSpace(AvatarUrl);
 
-        public string Iniciais
-        {
-            get
-            {
-                var partes = NomeExibicao.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (partes.Length == 0) return "MM";
-                if (partes.Length == 1) return partes[0][..Math.Min(2, partes[0].Length)].ToUpperInvariant();
-                return $"{char.ToUpperInvariant(partes[0][0])}{char.ToUpperInvariant(partes[1][0])}";
-            }
-        }
-
         public async Task CarregarPerfilAsync(bool forcarAtualizacao = false)
         {
             if (!_sessaoUsuario.EstaLogado)

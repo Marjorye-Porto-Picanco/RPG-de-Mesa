@@ -34,6 +34,22 @@ public class MonstroService
     public Task<Monstro?> ObterPorIdAsync(int idMonstro) =>
         _monstroRepo.ObterPorIdAsync(idMonstro);
 
+    public async Task<(bool Sucesso, string Mensagem)> AtualizarMonstroAsync(int idAccount, Monstro monstro)
+    {
+        try
+        {
+            var existente = await _monstroRepo.ObterPorIdAsync(monstro.IdMonstro);
+            if (existente is null || existente.IdAccount != idAccount)
+                return (false, "Monstro não encontrado ou sem permissão para editá-lo.");
+            await _monstroRepo.AtualizarAsync(monstro);
+            return (true, "Monstro atualizado com sucesso.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Erro ao atualizar monstro: {ex.InnerException?.Message ?? ex.Message}");
+        }
+    }
+
     public async Task<(bool Sucesso, string Mensagem)> RemoverMonstroAsync(int idAccount, int idMonstro)
     {
         try

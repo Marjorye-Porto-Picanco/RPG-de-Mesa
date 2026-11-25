@@ -10,6 +10,9 @@ public class PersonagemService
 
     public PersonagemService(IPersonagemRepository personagemRepo) => _personagemRepo = personagemRepo;
 
+    public Task<List<Raca>> ListarRacasAsync() => _personagemRepo.ListarRacasAsync();
+    public Task<List<Classe>> ListarClassesAsync() => _personagemRepo.ListarClassesAsync();
+
     public async Task<(bool Sucesso, string Mensagem)> CriarPersonagemAsync(int idAccount, Personagem personagem)
     {
         try

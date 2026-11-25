@@ -14,9 +14,9 @@
     <section class="ficha-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha-modal" @onclick:stopPropagation="true">
         <header class="ficha-modal-header">
             <div class="ficha-modal-identidade">
-                <img class="ficha-modal-retrato"
-                     src="@(string.IsNullOrWhiteSpace(p.Imagem) ? "img/armaduraprata.png" : p.Imagem)"
-                     alt="@p.Nome" />
+                <div class="ficha-modal-retrato">
+                    <RetratoComIniciais Nome="@p.Nome" Imagem="@p.Imagem" CarregarSobDemanda="false" />
+                </div>
                 <div>
                     <p class="ficha-modal-sub">
                         Ficha na Sessão
@@ -71,6 +71,7 @@
         </nav>
 
         <div class="ficha-modal-corpo">
+            <ResumoCirculosMagicos Personagem="p" />
             @if (ViewModel.AbaFichaModalAtiva == "atributos")
             {
                 <div class="fm-grid-atributos">

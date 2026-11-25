@@ -1,11 +1,13 @@
 ﻿using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Usuarios;
+using RPGdeMesa.Domain.Magias;
 
 namespace RPGdeMesa.Domain.Sessoes;
 
 public class SessaoParticipante
 {
+    public const int ToleranciaPresencaSegundos = 15;
     public int IdSessao { get; private set; }
     public int IdAccount { get; private set; }
     public int? IdPersonagem { get; private set; }
@@ -17,9 +19,16 @@ public class SessaoParticipante
     public virtual Personagem? Personagem { get; private set; }
     public bool Esquivando { get; private set; }
     public bool Escondido { get; private set; }
+    public int AcoesRestantes { get; private set; } = 1;
+    public decimal DeslocamentoUsado { get; private set; }
+    public int? IdMagiaConjurando { get; private set; }
+    public int TurnosConjuracaoRestantes { get; private set; }
+    public virtual Magia? MagiaConjurando { get; private set; }
 
     public void DefinirEsquiva(bool esquivando) => Esquivando = esquivando;
     public void DefinirEscondido(bool escondido) => Escondido = escondido;
+    public void DefinirEstadoTurno(int acoes, decimal deslocamento) { AcoesRestantes = Math.Max(0, acoes); DeslocamentoUsado = Math.Max(0, deslocamento); }
+    public void DefinirConjuracao(int? idMagia, int turnos) { IdMagiaConjurando = idMagia; TurnosConjuracaoRestantes = Math.Max(0, turnos); }
 
     protected SessaoParticipante() { }
 
@@ -58,6 +67,6 @@ public class SessaoParticipante
         UltimoHeartbeat = DateTime.UtcNow;
     }
 
-    public bool EstaConectadoAgora(int toleranciaSegundos = 15) =>
+    public bool EstaConectadoAgora(int toleranciaSegundos = ToleranciaPresencaSegundos) =>
         Online && (DateTime.UtcNow - UltimoHeartbeat).TotalSeconds <= toleranciaSegundos;
 }

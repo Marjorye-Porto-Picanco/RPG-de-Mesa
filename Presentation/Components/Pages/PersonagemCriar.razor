@@ -1,5 +1,4 @@
 ﻿@page "/personagem-criar"
-@using System.Globalization
 @using Microsoft.AspNetCore.Components.Routing
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
@@ -24,16 +23,7 @@
 
         <aside class="form-aside" aria-label="Prévia do personagem">
             <div class="aside-portrait">
-                @if (TemFotoPersonagem)
-                {
-                    <img id="preview-img"
-                         src="@ViewModel.PersonagemAtual.Imagem"
-                         alt="Prévia do retrato do personagem" />
-                }
-                else
-                {
-                    <span class="aside-initials" aria-hidden="true">@IniciaisPersonagem</span>
-                }
+                <RetratoComIniciais Nome="@ViewModel.PersonagemAtual.Nome" Imagem="@ViewModel.PersonagemAtual.Imagem" CarregarSobDemanda="false" />
             </div>
             <div class="aside-info">
                 <div class="preview-actions">
@@ -89,6 +79,7 @@
 
         <form id="form-wizard" class="wizard-layout" @onsubmit="ViewModel.SalvarPersonagemAsync" @onsubmit:preventDefault="true">
             <section class="ficha-pergaminho">
+                <ResumoCirculosMagicos Personagem="ViewModel.PersonagemAtual" />
 
                 @if (ViewModel.EtapaAtual == 1)
                 {
@@ -111,17 +102,7 @@
                                 <span>Raça</span>
                                 <select @bind="ViewModel.PersonagemAtual.RacaTexto" required>
                                     <option value="">Escolha uma raça...</option>
-                                    <option value="Humano">Humano</option>
-                                    <option value="Elfo">Elfo</option>
-                                    <option value="Anão">Anão</option>
-                                    <option value="Halfling">Halfling</option>
-                                    <option value="Meio-elfo">Meio-elfo</option>
-                                    <option value="Meio-orc">Meio-orc</option>
-                                    <option value="Tiefling">Tiefling</option>
-                                    <option value="Draconato">Draconato</option>
-                                    <option value="Gnomo">Gnomo</option>
-                                    <option value="Orc">Orc</option>
-                                    <option value="Outra">Outra</option>
+                                    @foreach (var raca in ViewModel.ListaOpcoesRacas) { <option value="@raca">@raca</option> }
                                 </select>
                             </label>
 
@@ -682,37 +663,13 @@
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaId { get; set; }
 
-    private bool TemFotoPersonagem =>
-        !string.IsNullOrWhiteSpace(ViewModel.PersonagemAtual.Imagem) &&
-        !string.Equals(ViewModel.PersonagemAtual.Imagem.Trim(), "img/armaduraprata.png", StringComparison.OrdinalIgnoreCase);
-
-    private string IniciaisPersonagem
-    {
-        get
-        {
-            var nome = ViewModel.PersonagemAtual.Nome?.Trim();
-            if (string.IsNullOrWhiteSpace(nome))
-                return "NP";
-
-            var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (partes.Length >= 2)
-            {
-                var primeira = StringInfo.GetNextTextElement(partes[0]).ToUpperInvariant();
-                var segunda = StringInfo.GetNextTextElement(partes[1]).ToUpperInvariant();
-                return $"{primeira}{segunda}";
-            }
-
-            var letra = StringInfo.GetNextTextElement(partes[0]).ToUpperInvariant();
-            return letra;
-        }
-    }
-
     protected override async Task OnInitializedAsync()
     {
         ViewModel.LimparFormulario();
         ViewModel.IdCampanhaOpcional = CampanhaId;
         ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarOpcoesBancoAsync();
         await ViewModel.CarregarMagiasCatalogoAsync();
     }
 

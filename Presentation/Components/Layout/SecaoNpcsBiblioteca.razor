@@ -9,23 +9,10 @@
     {
         @foreach (var npc in Npcs)
         {
-            var imagemUrl = ObterUrlImagem(npc.Imagem);
-            var inicial = string.IsNullOrWhiteSpace(npc.Nome) ? "NPC" : npc.Nome[..1].ToUpperInvariant();
-
             <div class="npc-card-wrap">
                 <button class="npc-card" type="button" @onclick="() => OnSelecionar.InvokeAsync(npc)">
-                    <span class="npc-avatar" aria-hidden="true">
-                        @if (!string.IsNullOrWhiteSpace(imagemUrl))
-                        {
-                            <img src="@imagemUrl"
-                                 alt=""
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';" />
-                            <span style="display: none;">@inicial</span>
-                        }
-                        else
-                        {
-                            <span>@inicial</span>
-                        }
+                    <span class="npc-avatar">
+                        <RetratoComIniciais Nome="@npc.Nome" Imagem="@npc.Imagem" />
                     </span>
                     <span class="npc-info">
                         <strong>@npc.Nome</strong>
@@ -36,10 +23,9 @@
                 </button>
                 @if (npc.IdAccount == IdUsuarioLogado)
                 {
-                    <button class="library-card-delete" type="button" title="Excluir NPC" aria-label="@($"Excluir {npc.Nome}")"
-                            @onclick="() => OnPedirExclusao.InvokeAsync((npc.IdNpc, npc.Nome))">
-                        Excluir
-                    </button>
+                    <BotaoAcaoIcone Class="library-card-delete"
+                                    Titulo="@($"Excluir {npc.Nome}")"
+                                    OnClick="() => OnPedirExclusao.InvokeAsync((npc.IdNpc, npc.Nome))" />
                 }
             </div>
         }
@@ -52,16 +38,14 @@
 
 @if (ExibirModal && NpcSelecionado is not null)
 {
-    var imagemModalUrl = ObterUrlImagem(NpcSelecionado.Imagem);
-
-    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+    <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-biblioteca" @onclick="OnFecharModal">
         <div class="modal-content-custom" @onclick:stopPropagation="true">
-            <button class="modal-close-btn" type="button" @onclick="OnFecharModal">×</button>
+            <button class="modal-close-btn" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
 
             <div class="page-heading cabecalho-modal">
                 <div>
                     <p class="page-kicker">Ficha de Personagem Não Jogador</p>
-                    <h1 class="page-title titulo-modal">@NpcSelecionado.Nome</h1>
+                    <h2 class="page-title titulo-modal" id="titulo-npc-biblioteca">@NpcSelecionado.Nome</h2>
                     <p class="page-description">@(NpcSelecionado.RacaTexto ?? "Humano") · @(NpcSelecionado.ClasseTexto ?? "Civil") (Nível @NpcSelecionado.Nivel) · @(NpcSelecionado.Tendencia ?? "Neutra")</p>
                 </div>
             </div>
@@ -133,10 +117,7 @@
 
                 <aside class="form-aside">
                     <div class="aside-portrait">
-                        @if (!string.IsNullOrWhiteSpace(imagemModalUrl))
-                        {
-                            <img src="@imagemModalUrl" alt="Retrato de @NpcSelecionado.Nome" />
-                        }
+                        <RetratoComIniciais Nome="@NpcSelecionado.Nome" Imagem="@NpcSelecionado.Imagem" CarregarSobDemanda="false" />
                     </div>
                     <div class="aside-note">
                         <strong>NPC Registrado</strong>
@@ -159,16 +140,4 @@
     [Parameter] public EventCallback OnFecharModal { get; set; }
     [Parameter] public EventCallback<(int Id, string Nome)> OnPedirExclusao { get; set; }
 
-    private static string? ObterUrlImagem(string? caminho)
-    {
-        if (string.IsNullOrWhiteSpace(caminho))
-            return null;
-
-        var limpo = caminho.Trim();
-
-        if (limpo.StartsWith("~/", StringComparison.Ordinal))
-            return limpo[2..];
-
-        return limpo;
-    }
 }

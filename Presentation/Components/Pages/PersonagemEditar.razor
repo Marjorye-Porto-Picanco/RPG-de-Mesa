@@ -15,9 +15,7 @@
             <div class="ficha-cabecalho">
                 <div class="retrato-coluna">
                     <div class="retrato">
-                        <img id="imagem-personagem-atual"
-                             src="@(string.IsNullOrEmpty(ViewModel.PersonagemAtual.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemAtual.Imagem)"
-                             alt="Retrato do personagem" />
+                        <RetratoComIniciais Nome="@ViewModel.PersonagemAtual.Nome" Imagem="@ViewModel.PersonagemAtual.Imagem" CarregarSobDemanda="false" />
                     </div>
                     <button type="button"
                             class="upload-imagem-botao retrato-upload"
@@ -63,6 +61,7 @@
                     Grimório
                 </button>
             </div>
+            <ResumoCirculosMagicos Personagem="ViewModel.PersonagemAtual" />
 
             <!-- ABA 1: ATRIBUTOS, SALVAGUARDAS, PERÍCIAS E DIÁRIO -->
             @if (ViewModel.AbaAtiva == "atributos")
@@ -581,6 +580,7 @@
     {
         ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
+        await ViewModel.CarregarOpcoesBancoAsync();
         await ViewModel.CarregarPersonagemAsync(Id);
     }
 

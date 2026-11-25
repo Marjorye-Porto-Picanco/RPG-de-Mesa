@@ -27,12 +27,12 @@
 
 @if (ExibirModal && MagiaSelecionada is not null)
 {
-    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-magia-biblioteca" @onclick="OnFecharModal">
         <div class="entry-dialog" @onclick:stopPropagation="true">
             <div class="dialog-heading">
                 <div>
                     <p class="page-kicker">@BibliotecaGeralViewModel.ObterRotuloMetaMagia(MagiaSelecionada)</p>
-                    <h2>@MagiaSelecionada.Nome</h2>
+                    <h2 id="titulo-magia-biblioteca">@MagiaSelecionada.Nome</h2>
                 </div>
                 <button class="dialog-close" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
             </div>

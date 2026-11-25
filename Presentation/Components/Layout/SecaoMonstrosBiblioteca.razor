@@ -9,24 +9,19 @@
     {
         @foreach (var monstro in Monstros)
         {
-            <div class="monster-card" @onclick="() => OnSelecionar.InvokeAsync(monstro)">
+            <div class="monster-card">
                 @if (monstro.IdAccount == IdUsuarioLogado)
                 {
-                    <button class="library-card-delete" type="button" title="Excluir monstro" aria-label="@($"Excluir {monstro.Nome}")"
-                            @onclick="() => OnPedirExclusao.InvokeAsync((monstro.IdMonstro, monstro.Nome))"
-                            @onclick:stopPropagation="true">
-                        Excluir
-                    </button>
+                    <BotaoAcaoIcone Class="library-card-delete"
+                                    Titulo="@($"Excluir {monstro.Nome}")"
+                                    OnClick="() => OnPedirExclusao.InvokeAsync((monstro.IdMonstro, monstro.Nome))" />
                 }
                 <div class="monster-art">
-                    @if (!string.IsNullOrWhiteSpace(monstro.Imagem))
-                    {
-                        <img src="@monstro.Imagem" alt="Ilustração do monstro @monstro.Nome" />
-                    }
+                    <RetratoComIniciais Nome="@monstro.Nome" Imagem="@monstro.Imagem" />
                     <span class="monster-cr">ND @(monstro.Nd)</span>
                 </div>
                 <div class="monster-info">
-                    <h2>@monstro.Nome</h2>
+                    <h2><button class="monster-card-open" type="button" @onclick="() => OnSelecionar.InvokeAsync(monstro)">@monstro.Nome</button></h2>
                     <p>@(monstro.Tipo ?? "Criatura") @(monstro.Tamanho?.ToLower() ?? "médio") · @(monstro.Tendencia ?? "Neutro")</p>
                     @if (!string.IsNullOrEmpty(monstro.Habilidades))
                     {
@@ -49,14 +44,14 @@
 
 @if (ExibirModal && MonstroSelecionado is not null)
 {
-    <div class="modal-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+    <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-biblioteca" @onclick="OnFecharModal">
         <div class="modal-content-custom" @onclick:stopPropagation="true">
-            <button class="modal-close-btn" type="button" @onclick="OnFecharModal">×</button>
+            <button class="modal-close-btn" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
 
             <div class="page-heading cabecalho-modal">
                 <div>
                     <p class="page-kicker">Visualizar criatura</p>
-                    <h1 class="page-title titulo-modal">@MonstroSelecionado.Nome</h1>
+                    <h2 class="page-title titulo-modal" id="titulo-monstro-biblioteca">@MonstroSelecionado.Nome</h2>
                     <p class="page-description">ND @MonstroSelecionado.Nd · @(MonstroSelecionado.Tipo ?? "Criatura")</p>
                 </div>
             </div>
@@ -89,6 +84,20 @@
                             <div class="field-value-box">@(MonstroSelecionado.Habilidades ?? "Nenhuma")</div>
                         </div>
                         <div class="form-field full-width">
+                            <span class="field-label-title">Ataques</span>
+                            @if (MonstroSelecionado.Ataques?.Any() == true)
+                            {
+                                <div class="field-value-box">
+                                    @foreach (var ataque in MonstroSelecionado.Ataques)
+                                    {
+                                        <p><b>@ataque.Nome</b> · @(ataque.BonusAtaque.HasValue ? $"+{ataque.BonusAtaque}" : "Bônus não informado") · @(ataque.Dano ?? "Dano não informado") @(ataque.TipoDano ?? "") · @(ataque.Alcance ?? "Alcance não informado")</p>
+                                        @if (!string.IsNullOrWhiteSpace(ataque.Descricao)) { <small>@ataque.Descricao</small> }
+                                    }
+                                </div>
+                            }
+                            else { <div class="field-value-box">Nenhum ataque cadastrado.</div> }
+                        </div>
+                        <div class="form-field full-width">
                             <span class="field-label-title">Descrição</span>
                             <div class="field-value-box caixa-descricao">@(MonstroSelecionado.Descricao ?? "Sem descrição.")</div>
                         </div>
@@ -96,6 +105,7 @@
                     <div class="form-footer rodape-modal">
                         @if (MonstroSelecionado.IdAccount == IdUsuarioLogado)
                         {
+                            <a class="action-secondary" href="@($"/monstro-editar/{MonstroSelecionado.IdMonstro}")">Editar monstro</a>
                             <BotaoExcluir Inline="true" Texto="Excluir monstro" Titulo="Excluir monstro"
                                           OnClick="() => OnPedirExclusao.InvokeAsync((MonstroSelecionado.IdMonstro, MonstroSelecionado.Nome))" />
                         }
@@ -104,10 +114,7 @@
                 </section>
                 <aside class="form-aside">
                     <div class="aside-portrait">
-                        @if (!string.IsNullOrWhiteSpace(MonstroSelecionado.Imagem))
-                        {
-                            <img src="@MonstroSelecionado.Imagem" alt="Ilustração do monstro" />
-                        }
+                        <RetratoComIniciais Nome="@MonstroSelecionado.Nome" Imagem="@MonstroSelecionado.Imagem" CarregarSobDemanda="false" />
                     </div>
                 </aside>
             </div>

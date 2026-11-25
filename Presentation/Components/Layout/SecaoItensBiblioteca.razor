@@ -18,10 +18,9 @@
                 </button>
                 @if (entrada.IdAccount == IdUsuarioLogado)
                 {
-                    <button class="library-card-delete" type="button" title="Excluir item" aria-label="@($"Excluir {entrada.Nome}")"
-                            @onclick="() => OnPedirExclusao.InvokeAsync((entrada.IdItem, entrada.Nome))">
-                        Excluir
-                    </button>
+                    <BotaoAcaoIcone Class="library-card-delete"
+                                    Titulo="@($"Excluir {entrada.Nome}")"
+                                    OnClick="() => OnPedirExclusao.InvokeAsync((entrada.IdItem, entrada.Nome))" />
                 }
             </div>
         }
@@ -34,12 +33,12 @@
 
 @if (ExibirModal && ItemSelecionado is not null)
 {
-    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" @onclick="OnFecharModal">
+    <div class="entry-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="titulo-item-biblioteca" @onclick="OnFecharModal">
         <div class="entry-dialog" @onclick:stopPropagation="true">
             <div class="dialog-heading">
                 <div>
                     <p class="page-kicker">@BibliotecaGeralViewModel.ObterRotuloMeta(ItemSelecionado)</p>
-                    <h2>@ItemSelecionado.Nome</h2>
+                    <h2 id="titulo-item-biblioteca">@ItemSelecionado.Nome</h2>
                 </div>
                 <button class="dialog-close" type="button" aria-label="Fechar" @onclick="OnFecharModal">×</button>
             </div>

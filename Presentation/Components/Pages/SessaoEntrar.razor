@@ -139,7 +139,7 @@
                         <div class="ficha-preview-pergaminho">
                             <div class="ficha-cabecalho-preview">
                                 <div class="retrato-preview">
-                                    <img src="@(string.IsNullOrEmpty(ViewModel.FichaCompletaVinculada.Imagem) ? "img/armaduraprata.png" : ViewModel.FichaCompletaVinculada.Imagem)" alt="Retrato do personagem" />
+                                    <RetratoComIniciais Nome="@ViewModel.FichaCompletaVinculada.Nome" Imagem="@ViewModel.FichaCompletaVinculada.Imagem" />
                                 </div>
                                 <div class="identidade-preview">
                                     <p class="sobretitulo-preview">Ficha Instanciada na Campanha (@ViewModel.StatusFichaAtual)</p>
@@ -366,7 +366,7 @@
                                 {
                                     <div class="ficha-cabecalho-preview">
                                         <div class="retrato-preview">
-                                            <img src="@(string.IsNullOrEmpty(ViewModel.PersonagemEmPreparacao.Imagem) ? "img/armaduraprata.png" : ViewModel.PersonagemEmPreparacao.Imagem)" alt="Retrato do personagem" />
+                                            <RetratoComIniciais Nome="@ViewModel.PersonagemEmPreparacao.Nome" Imagem="@ViewModel.PersonagemEmPreparacao.Imagem" />
                                         </div>
                                         <div class="identidade-preview">
                                             <p class="sobretitulo-preview">Editando Ficha da Campanha (Isolada da Biblioteca)</p>
@@ -374,6 +374,7 @@
                                             <p class="subtitulo-preview">@(ViewModel.PersonagemEmPreparacao.RacaTexto ?? "Raça") • @(ViewModel.PersonagemEmPreparacao.ClasseTexto ?? "Classe") • Nível Total @ViewModel.PersonagemEmPreparacao.Nivel</p>
                                         </div>
                                     </div>
+                                    <ResumoCirculosMagicos Personagem="ViewModel.PersonagemEmPreparacao" />
 
                                     <div class="abas-ficha-preview" role="tablist">
                                         <button type="button" class="aba-btn @(ViewModel.AbaEdicaoRecusada == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.AbaEdicaoRecusada = "atributos"'>1. Atributos &amp; Diário</button>

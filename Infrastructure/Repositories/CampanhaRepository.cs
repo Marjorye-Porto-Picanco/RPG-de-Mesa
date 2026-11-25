@@ -29,8 +29,11 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Pericias)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.Inventario).ThenInclude(inv => inv!.Itens).ThenInclude(ii => ii.Item)
             .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.PersonagemMagias).ThenInclude(pm => pm.Magia)
-            .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro)
+            .Include(c => c.PersonagemCampanhas).ThenInclude(pc => pc.Personagem).ThenInclude(p => p!.CirculosMagicos)
+            .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro).ThenInclude(m => m!.Ataques)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
+            .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Itens).ThenInclude(i => i.Item)
+            .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Magias).ThenInclude(m => m.Magia)
             .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
             .Include(c => c.MapaCampanhas).ThenInclude(mc => mc.Mapa)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);
@@ -124,7 +127,7 @@ public class CampanhaRepository : ICampanhaRepository
     public async Task<List<Monstro>> ListarTodosMonstrosAsync()
     {
         await using var contexto = await _factory.CreateDbContextAsync();
-        return await contexto.Monstros.AsNoTracking().ToListAsync();
+        return await contexto.Monstros.AsNoTracking().Include(m => m.Ataques).ToListAsync();
     }
 
     public async Task<List<Mapa>> ListarTodosMapasAsync()

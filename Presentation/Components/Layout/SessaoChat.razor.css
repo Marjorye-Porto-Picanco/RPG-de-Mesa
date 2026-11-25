@@ -41,6 +41,36 @@
         box-shadow: inset 0 -2px #c6a34f;
     }
 
+.chat-combat-action {
+    align-self: flex-start;
+    min-height: 34px;
+    flex: 0 0 auto;
+    margin: 6px 9px 0;
+    padding: 0 10px;
+    border: 1px solid rgba(212, 179, 100, 0.5);
+    border-radius: 4px;
+    background: #3b2e1e;
+    color: #f4dfab;
+    cursor: pointer;
+}
+
+.chat-combat-action:hover {
+    background: #513b23;
+}
+
+.chat-combat-tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 6px 9px 0;
+}
+
+.chat-combat-tools .chat-combat-action { margin: 0; }
+.chat-combat-turn { margin: 4px 9px 0; color: #e6cf91; }
+.chat-line > span { white-space: pre-line; }
+
+.chat-combat-action:focus-visible,
     .chat-tab:focus-visible,
     .chat-compose button:focus-visible {
         outline: 2px solid #ead18a;
@@ -52,18 +82,22 @@
     min-height: 0;
     flex: 1;
     flex-direction: column-reverse;
-    overflow-y: auto;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     scrollbar-color: #675a41 transparent;
     scrollbar-width: thin;
 }
 
 .chat-feed-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: 8px;
     min-width: 0;
+    flex: 0 0 auto;
     padding: 9px 10px;
-    margin-bottom: auto;
+    margin: 0;
 }
 
 .chat-placeholder {
@@ -125,6 +159,17 @@
     border-top: 1px solid var(--game-line);
 }
 
+.chat-compose-status {
+    margin: 0;
+    padding: 4px 10px;
+    color: #eedbb2;
+    font-size: 0.82rem;
+}
+
+.chat-compose-status:empty {
+    display: none;
+}
+
     .chat-compose input {
         min-width: 0;
         flex: 1;
@@ -159,6 +204,11 @@
         }
 
 @media (max-width: 560px) {
+    .chat-panel,
+    .chat-feed {
+        min-height: 0;
+    }
+
     .chat-tabs {
         min-height: 27px;
     }

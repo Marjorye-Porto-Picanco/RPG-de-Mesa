@@ -13,7 +13,7 @@ body {
 
 .mesa-edicao {
     min-height: 100vh;
-    background: #20150f url("img/fundodemadeira.png.jpg") center / cover fixed;
+    background: #20150f var(--rpg-fundo) center / cover fixed;
 }
 
 .palco {
@@ -35,7 +35,7 @@ body {
     overflow: hidden;
     color: #493519;
     background-color: #dfc38d;
-    background-image: linear-gradient(rgba(248, 229, 188, 0.78), rgba(226, 198, 143, 0.84)), url("img/papelantigo.png");
+    background-image: linear-gradient(rgba(248, 229, 188, 0.78), rgba(226, 198, 143, 0.84)), var(--rpg-papel);
     background-position: center;
     background-size: cover;
     box-shadow: 10px 0 28px rgba(0, 0, 0, 0.34);

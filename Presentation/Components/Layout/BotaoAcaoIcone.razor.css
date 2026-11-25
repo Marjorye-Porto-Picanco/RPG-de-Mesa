@@ -1,0 +1,55 @@
+.botao-acao-icone {
+    position: absolute;
+    z-index: 3;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    flex: 0 0 22px;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    min-width: 22px;
+    max-width: 22px;
+    height: 22px;
+    min-height: 22px;
+    max-height: 22px;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0;
+    line-height: 0;
+    cursor: pointer;
+    transition: transform 150ms ease, filter 150ms ease;
+}
+
+.botao-acao-icone > img {
+    display: block;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: contain;
+}
+
+.botao-acao-icone:hover {
+    transform: scale(1.08);
+    filter: brightness(1.08);
+}
+
+.botao-acao-icone-inline {
+    position: static;
+}
+
+.botao-acao-icone-inline:has(> span) {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    gap: 8px;
+    font-size: inherit;
+    line-height: normal;
+}

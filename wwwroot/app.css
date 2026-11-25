@@ -148,7 +148,7 @@ h1:focus {
     padding: 28px clamp(20px, 6vw, 36px);
     border: 1px solid #9c783d;
     border-radius: 4px;
-    background: linear-gradient(rgba(248, 233, 199, 0.96), rgba(226, 205, 163, 0.98)), url("img/papelantigo.png") center / cover;
+    background: linear-gradient(rgba(248, 233, 199, 0.96), rgba(226, 205, 163, 0.98)), var(--rpg-papel) center / cover;
     color: #493519;
     box-shadow: 0 18px 55px rgba(0, 0, 0, 0.48);
     text-align: center;
@@ -241,6 +241,12 @@ h1:focus {
 }
 
 :root {
+    --rpg-fundo: radial-gradient(ellipse at 75% 0%, #302116, #1b130f 72%);
+    --rpg-papel: linear-gradient(155deg, #f1e5cc, #e3cda5);
+    --rpg-acao: #e8c481;
+    --rpg-acao-borda: #f3d89f;
+    --rpg-acao-texto: #23170d;
+    --rpg-acao-hover: #f9dba1;
     --font-family-base: Cambria, Georgia, "Times New Roman", serif;
     --font-body: 0.95rem;
     --font-control: 0.9rem;
@@ -357,6 +363,132 @@ h1:focus {
         font-size: 1.25rem;
     }
 
+/* Botões da tela de Personagens, reutilizados nos acessos do salão. */
+#app .botoes-personagem :is(.botao-dourado, .botao-secundario-dourado, .action-secondary) {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.55rem 1rem;
+    border: 1px solid rgba(218, 184, 118, 0.45);
+    border-radius: 6px;
+    background: rgba(28, 19, 14, 0.45);
+    color: #f0e2c3;
+    font-size: var(--font-control);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+    text-align: center;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: filter 150ms ease, transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+#app .botoes-personagem .botao-dourado {
+    border-color: #8a6218;
+    background: linear-gradient(180deg, #ecc977 0%, #cba23f 52%, #a87a1f 100%);
+    color: #2a1808;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 244, 210, 0.55);
+    white-space: nowrap;
+}
+
+#app .botoes-personagem .botao-dourado:hover:not(:disabled) {
+    filter: brightness(1.07);
+    transform: translateY(-1px);
+}
+
+#app .botoes-personagem .botao-dourado > [aria-hidden="true"] {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+#app .botoes-personagem :is(.botao-secundario-dourado, .action-secondary):hover:not(:disabled) {
+    border-color: #dfbd6b;
+    background: rgba(45, 30, 20, 0.65);
+}
+
+#app .botoes-personagem .form-panel .action-secondary {
+    border-color: rgba(122, 84, 32, 0.55);
+    background: transparent;
+    color: #5e3d12;
+}
+
+#app .botoes-personagem .form-panel .action-secondary:hover:not(:disabled) {
+    background: rgba(122, 84, 32, 0.12);
+}
+
+#app .botoes-personagem .botao-aba {
+    min-height: 42px;
+    padding: 0.5rem clamp(0.55rem, 1.7vw, 0.875rem);
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #c5b79d;
+    font-size: var(--font-control);
+    line-height: 1.2;
+    cursor: pointer;
+    transition: color 160ms ease, border-color 160ms ease;
+}
+
+#app .botoes-personagem .botao-aba:hover {
+    color: #f0e2c3;
+}
+
+#app .botoes-personagem .botao-aba:is([aria-pressed="true"], [aria-selected="true"]) {
+    border-bottom-color: #d4aa56;
+    color: #d4aa56;
+}
+
+#app .botoes-personagem :is(.cartao-adicionar, .quick-action, .modal-criacao .modal-content) {
+    border: 1px dashed rgba(218, 184, 118, 0.45);
+    border-radius: 4px;
+    background: rgba(28, 19, 14, 0.45);
+    color: #f0e2c3;
+    text-decoration: none;
+    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+#app .botoes-personagem :is(.cartao-adicionar, .quick-action, .modal-criacao .modal-content):hover {
+    border-color: #dfbd6b;
+    background: rgba(45, 30, 20, 0.65);
+    transform: translateY(-2px);
+}
+
+#app .botoes-personagem :is(.mais-adicionar, .quick-action-icon) {
+    border: 1px solid rgba(201, 164, 88, 0.65);
+    border-radius: 50%;
+    color: #dfbd6b;
+}
+
+#app .botoes-personagem :is(.botao-dourado, .botao-secundario-dourado, .action-secondary, .botao-aba, .cartao-adicionar, .quick-action, .modal-criacao .modal-content):focus-visible {
+    outline: 2px solid #f0d17f;
+    outline-offset: 2px;
+}
+
+#app .botoes-personagem .form-panel .action-secondary:focus-visible {
+    outline-color: #80551b;
+}
+
+#app .botoes-personagem .botao-aba:focus-visible {
+    outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app .botoes-personagem :is(.botao-dourado, .botao-secundario-dourado, .action-secondary, .botao-aba, .cartao-adicionar, .mais-adicionar, .quick-action, .modal-criacao .modal-content) {
+        transition: none;
+    }
+
+    #app .botoes-personagem :is(.botao-dourado, .cartao-adicionar, .quick-action, .modal-criacao .modal-content):hover {
+        transform: none;
+    }
+
+    #app .botoes-personagem .cartao-adicionar:hover .mais-adicionar {
+        transform: none;
+    }
+}
+
 /* Barra RPG */
 .barra-rpg {
     position: relative;
@@ -472,4 +604,36 @@ h1:focus {
         .barra-rpg .mesa-atual {
             display: none;
         }
+}
+/* Ações de sair e excluir usam o mesmo controle de ícone em toda a interface. */
+.botao-acao-icone-inline:has(> span, > b) {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    gap: 8px;
+    font-size: inherit;
+    line-height: normal;
+}
+
+.sala-jogo .game-exit.botao-acao-icone {
+    position: static;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    min-height: 32px;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 0 11px;
+    border: 1px solid rgba(217, 190, 137, 0.27);
+    border-radius: 3px;
+    color: #d8c59e;
+    font-size: 10px;
+    line-height: normal;
+}
+
+.sala-jogo .game-exit.botao-acao-icone > img {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
 }

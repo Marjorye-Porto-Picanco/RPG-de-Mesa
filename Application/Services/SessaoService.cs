@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Common;
@@ -11,7 +12,7 @@ using RPGdeMesa.Domain.ValueObjects;
 
 namespace RPGdeMesa.Application.Services;
 
-public class SessaoService
+public partial class SessaoService
 {
     private static readonly TimeSpan ValidadeCacheCampanha = TimeSpan.FromSeconds(60);
 
@@ -32,7 +33,8 @@ public class SessaoService
     public void InvalidarCacheCampanha(int idCampanha) =>
         _cacheCampanhas.TryRemove(idCampanha, out _);
 
-    private async Task<Campanha?> ObterCampanhaComCacheAsync(int idCampanha, bool forcarAtualizacao = false)
+    private async Task<Campanha?> ObterCampanhaComCacheAsync(int idCampanha, bool forcarAtualizacao = false,
+        CancellationToken cancellationToken = default)
     {
         if (!forcarAtualizacao &&
             _cacheCampanhas.TryGetValue(idCampanha, out var entrada) &&
@@ -41,7 +43,7 @@ public class SessaoService
             return entrada.Campanha;
         }
 
-        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha);
+        var campanha = await _sessaoRepo.ObterCampanhaParaSessaoAsync(idCampanha, cancellationToken);
         if (campanha != null)
         {
             _cacheCampanhas[idCampanha] = (campanha, DateTime.UtcNow);
@@ -50,7 +52,8 @@ public class SessaoService
         return campanha;
     }
 
-    private async Task<List<Magia>> ObterMagiasCatalogoComCacheAsync(bool forcarAtualizacao = false)
+    private async Task<List<Magia>> ObterMagiasCatalogoComCacheAsync(bool forcarAtualizacao = false,
+        CancellationToken cancellationToken = default)
     {
         if (!forcarAtualizacao &&
             _cacheMagiasCatalogo != null &&
@@ -59,7 +62,7 @@ public class SessaoService
             return _cacheMagiasCatalogo;
         }
 
-        var magias = await _sessaoRepo.ListarMagiasCatalogoAsync();
+        var magias = await _sessaoRepo.ListarMagiasCatalogoAsync(cancellationToken);
         _cacheMagiasCatalogo = magias;
         _cacheMagiasAtualizadoEmUtc = DateTime.UtcNow;
         return magias;
@@ -160,10 +163,11 @@ public class SessaoService
         }
     }
 
-    public async Task<SessaoEstadoDto?> SincronizarSessaoAsync(int idCampanha, int idSessao, int idAccount)
+    public async Task<SessaoEstadoDto?> SincronizarSessaoAsync(int idCampanha, int idSessao, int idAccount,
+        CancellationToken cancellationToken = default)
     {
-        var tarefaSessao = _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
-        var tarefaCampanha = ObterCampanhaComCacheAsync(idCampanha);
+        var tarefaSessao = _sessaoRepo.ObterSessaoPorIdAsync(idSessao, cancellationToken);
+        var tarefaCampanha = ObterCampanhaComCacheAsync(idCampanha, cancellationToken: cancellationToken);
 
         await Task.WhenAll(tarefaSessao, tarefaCampanha);
 
@@ -172,12 +176,53 @@ public class SessaoService
 
         if (sessaoAtual != null && sessaoAtual.Ativa)
         {
-            await _sessaoRepo.AtualizarHeartbeatAsync(idSessao, idAccount);
+            await _sessaoRepo.AtualizarHeartbeatAsync(idSessao, idAccount, cancellationToken);
         }
 
         if (campanha == null) return null;
 
-        return await MontarEstadoSessaoAsync(campanha, idSessao, idAccount);
+        return await MontarEstadoSessaoAsync(campanha, idSessao, idAccount, cancellationToken);
+    }
+
+    public async Task<(SessaoEstadoDto? Estado, SessaoSinal? Sinal)> SincronizarMudancasAsync(
+        SessaoEstadoDto atual, SessaoSinal? anterior, int idAccount,
+        bool registrarPresenca, bool reconciliar, CancellationToken cancellationToken)
+    {
+        if (registrarPresenca && atual.SessaoAtiva)
+            await _sessaoRepo.AtualizarHeartbeatAsync(atual.IdSessao, idAccount, cancellationToken);
+
+        var sinal = await _sessaoRepo.LerSinalSessaoAsync(atual.IdSessao, cancellationToken);
+        if (sinal is null)
+            return (atual.SessaoAtiva ? atual.ComSessaoEncerrada() : null, null);
+
+        if (!reconciliar && anterior is not null && sinal.TemMesmoTabuleiro(anterior))
+        {
+            if (sinal.UltimaMensagem == anterior.UltimaMensagem)
+                return (null, sinal);
+
+            // Relê uma janela curta para incluir mensagens gravadas fora da ordem de IDs.
+            int desdeId = atual.Mensagens.Select(m => m.IdMensagem).OrderDescending().Take(16)
+                .DefaultIfEmpty(0).Min();
+            var recentes = await _sessaoRepo.ListarMensagensAsync(atual.IdSessao,
+                desdeId: desdeId, cancellationToken: cancellationToken);
+            var idsAtuais = atual.Mensagens.Select(m => m.IdMensagem).ToHashSet();
+            var novas = recentes.Where(m => !idsAtuais.Contains(m.IdMensagem)).Select(ParaMensagemDto).ToList();
+            if (novas.Count == 0)
+                return (null, sinal);
+
+            var mensagens = atual.Mensagens.Concat(novas)
+                .OrderByDescending(m => m.DataEnvioLocal.ToUniversalTime()).ThenByDescending(m => m.IdMensagem)
+                .Take(320).Reverse().ToList();
+            return (atual.ComMensagens(mensagens), sinal);
+        }
+
+        var campanha = await ObterCampanhaComCacheAsync(atual.IdCampanha, cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (campanha is null)
+            return (atual.SessaoAtiva ? atual.ComSessaoEncerrada() : null, null);
+
+        var estado = await MontarEstadoSessaoAsync(campanha, atual.IdSessao, idAccount, cancellationToken);
+        return (estado, sinal);
     }
 
     public async Task SairDaSessaoAsync(int idSessao, int idAccount, string nomeUsuario)
@@ -268,7 +313,8 @@ public class SessaoService
         int idSessao,
         int idAccountSolicitante,
         int? idAccountJogador,
-        string? nomeJogador = null)
+        string? nomeJogador = null,
+        Guid? idOperacao = null)
     {
         try
         {
@@ -277,39 +323,13 @@ public class SessaoService
                 return (false, "Campanha não encontrada.");
 
             bool ehMestre = campanha.IdAccount == idAccountSolicitante;
-            if (!ehMestre)
+            if (!ehMestre && idAccountJogador.HasValue)
             {
-                var sessao = await _sessaoRepo.ObterSessaoPorIdAsync(idSessao);
-                if (sessao == null || !sessao.Ativa)
-                    return (false, "A sessão não está ativa.");
-
-                if (sessao.IdAccountTurno != idAccountSolicitante)
-                    return (false, "Apenas o Mestre ou o jogador no turno atual pode passar ou encerrar o turno.");
-
-                if (idAccountJogador.HasValue)
-                {
-                    bool destinoValido = campanha.UsuarioCampanhas.Any(uc => uc.IdAccount == idAccountJogador.Value)
-                        || campanha.FichasAceitas.Any(pc => pc.Personagem != null && pc.Personagem.IdAccount == idAccountJogador.Value);
-
-                    if (!destinoValido)
-                        return (false, "O próximo jogador informado não participa desta campanha.");
-                }
+                bool destinoValido = campanha.UsuarioCampanhas.Any(uc => uc.IdAccount == idAccountJogador.Value)
+                    || campanha.FichasAceitas.Any(pc => pc.Personagem != null && pc.Personagem.IdAccount == idAccountJogador.Value);
+                if (!destinoValido)
+                    return (false, "O próximo jogador informado não participa desta campanha.");
             }
-
-            if (idAccountJogador.HasValue)
-            {
-                var sessaoComp = await _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
-                var partAlvo = sessaoComp?.Participantes.FirstOrDefault(p => p.IdAccount == idAccountJogador.Value);
-                if (partAlvo != null && partAlvo.Esquivando)
-                {
-                    await _sessaoRepo.AtualizarEstadoCombateParticipanteAsync(
-                        idSessao,
-                        idAccountJogador.Value,
-                        esquivando: false);
-                }
-            }
-
-            await _sessaoRepo.AtualizarTurnoJogadorAsync(idSessao, idAccountJogador);
 
             string nomeExibicao = string.IsNullOrWhiteSpace(nomeJogador)
                 ? $"Jogador #{idAccountJogador}"
@@ -323,9 +343,8 @@ public class SessaoService
                     ? $"⏳ Turno passado automaticamente para {nomeExibicao}."
                     : "🔒 Turno encerrado.");
 
-            await Task.WhenAll(
-                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
-                _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
+            await _sessaoRepo.AtualizarTurnoJogadorAsync(idCampanha, idSessao, idAccountJogador,
+                ehMestre ? null : idAccountSolicitante, idOperacao ?? Guid.NewGuid(), textoSistema);
 
             return (true, string.Empty);
         }
@@ -347,7 +366,9 @@ public class SessaoService
         int idEntidade,
         int coluna,
         int linha,
-        bool visivel)
+        bool visivel,
+        int? idPino = null,
+        bool novaInstancia = false)
     {
         try
         {
@@ -389,7 +410,22 @@ public class SessaoService
                     return (false, "Você só pode mover o pino do seu próprio personagem.");
             }
 
-            await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
+            if (novaInstancia)
+            {
+                bool fichaVinculada = tipoEntidade switch
+                {
+                    TiposPinoSessao.Monstro => campanha.MonstroCampanhas.Any(x => x.IdMonstro == idEntidade),
+                    TiposPinoSessao.Npc => campanha.NpcCampanhas.Any(x => x.IdNpc == idEntidade),
+                    _ => false
+                };
+                if (!ehMestre || !fichaVinculada)
+                    return (false, "Selecione uma criatura vinculada à campanha.");
+
+                await _sessaoRepo.CriarInstanciaPinoAsync(idSessao, idMapa.Value, idAccountSolicitante, tipoEntidade,
+                    idEntidade, coluna, linha, visivel, Guid.NewGuid());
+            }
+            else
+                await _sessaoRepo.SalvarOuMoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel, idPino);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -405,7 +441,8 @@ public class SessaoService
         int idAccountMestre,
         string tipoEntidade,
         int idEntidade,
-        bool visivel)
+        bool visivel,
+        int? idPino = null)
     {
         try
         {
@@ -416,7 +453,7 @@ public class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode alterar a visibilidade dos pinos.");
 
-            await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, visivel);
+            await _sessaoRepo.AlterarVisibilidadePinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, visivel, idPino);
 
             if (visivel && tipoEntidade == TiposPinoSessao.Personagem)
             {
@@ -445,7 +482,8 @@ public class SessaoService
         int? idMapa,
         int idAccountMestre,
         string tipoEntidade,
-        int idEntidade)
+        int idEntidade,
+        int? idPino = null)
     {
         try
         {
@@ -456,7 +494,7 @@ public class SessaoService
             if (campanha.IdAccount != idAccountMestre)
                 return (false, "Apenas o Mestre pode remover pinos do mapa.");
 
-            await _sessaoRepo.RemoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade);
+            await _sessaoRepo.RemoverPinoAsync(idSessao, idMapa, tipoEntidade, idEntidade, idPino);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -474,7 +512,8 @@ public class SessaoService
         int idAccountJogador,
         string nomePersonagem,
         int? idProximoAccountTurno,
-        string? nomeProximoJogador)
+        string? nomeProximoJogador,
+        bool passarTurno = true)
     {
         try
         {
@@ -498,6 +537,7 @@ public class SessaoService
                 _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
                 _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
 
+            if (!passarTurno) return (true, string.Empty);
             return await DefinirTurnoJogadorAsync(
                 idCampanha,
                 idSessao,
@@ -522,7 +562,8 @@ public class SessaoService
         int idPersonagem,
         ResultadoEsconderDto resultado,
         int? idProximoAccountTurno,
-        string? nomeProximoJogador)
+        string? nomeProximoJogador,
+        bool passarTurno = true)
     {
         try
         {
@@ -562,6 +603,7 @@ public class SessaoService
                 _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Chat, textoSistema)),
                 _sessaoRepo.AdicionarMensagemAsync(new SessaoMensagem(idSessao, null, CanaisSessao.Combate, textoSistema)));
 
+            if (!passarTurno) return (true, string.Empty);
             return await DefinirTurnoJogadorAsync(
                 idCampanha,
                 idSessao,
@@ -637,7 +679,8 @@ public class SessaoService
         int idSessao,
         int? idMapa,
         int idAccountJogador,
-        RegistroAtaqueDto ataque)
+        RegistroAtaqueDto ataque,
+        SessaoEstadoDto? estado = null)
     {
         try
         {
@@ -674,6 +717,12 @@ public class SessaoService
                 ? $"2d20 Desvantagem/Esquiva: [{ataque.DadoAtaque1}, {ataque.DadoAtaque2}] → {ataque.DadoAtaque}{modAtk}"
                 : $"d20: {ataque.DadoAtaque}{modAtk}";
 
+            if (estado is not null && estado.IdSessao == idSessao && estado.IdMapaAtivo == idMapa &&
+                ataque.IdPinoAlvo is int idAlvo && (estado.Encontro.Rodada > 0 || estado.Encontro.Fichas.ContainsKey(idAlvo)))
+            {
+                return await RegistrarResultadoJogador2014Async(estado, idAccountJogador, ataque, idAlvo, detalheDado);
+            }
+
             string textoSistema;
 
             if (ataque.Acertou)
@@ -690,7 +739,8 @@ public class SessaoService
                         idMapa,
                         ataque.TipoAlvo,
                         ataque.IdEntidadeAlvo,
-                        ataque.PvNovo);
+                        ataque.PvNovo,
+                        ataque.IdPinoAlvo);
                 }
 
                 string dadosDano = string.Join(" + ", ataque.ResultadosDano);
@@ -754,7 +804,8 @@ public class SessaoService
         int idAccountMestre,
         string tipoEntidade,
         int idEntidade,
-        int pvAtual)
+        int pvAtual,
+        int? idPino = null)
     {
         try
         {
@@ -777,7 +828,7 @@ public class SessaoService
                     idMapa,
                     tipoEntidade,
                     idEntidade,
-                    Math.Max(0, pvAtual));
+                    Math.Max(0, pvAtual), idPino);
             }
 
             return (true, "PV atualizado.");
@@ -791,12 +842,13 @@ public class SessaoService
     public async Task<(bool Sucesso, string Mensagem)> EnviarMensagemChatAsync(
         int idSessao,
         int idAccount,
-        string conteudo)
+        string conteudo,
+        Guid? idOperacao = null)
     {
         try
         {
             var msg = new SessaoMensagem(idSessao, idAccount, CanaisSessao.Chat, conteudo);
-            await _sessaoRepo.AdicionarMensagemAsync(msg);
+            await _sessaoRepo.AdicionarMensagensDaOperacaoAsync(idSessao, idOperacao ?? Guid.NewGuid(), [msg]);
             return (true, string.Empty);
         }
         catch (DomainException dex)
@@ -833,10 +885,7 @@ public class SessaoService
             var msgChat = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Chat, textoSistema);
             var msgRegistro = new SessaoMensagem(idSessao, idAccount: null, CanaisSessao.Registro, textoSistema);
 
-            await Task.WhenAll(
-                _sessaoRepo.AdicionarMensagemAsync(msgChat),
-                _sessaoRepo.AdicionarMensagemAsync(msgRegistro));
-
+            await _sessaoRepo.AdicionarMensagensDaOperacaoAsync(idSessao, rolagem.IdOperacao, [msgChat, msgRegistro]);
             return (true, string.Empty);
         }
         catch (Exception ex)
@@ -847,6 +896,12 @@ public class SessaoService
 
     public Task<Personagem?> ObterFichaCompletaAsync(int idPersonagem) =>
         _sessaoRepo.ObterFichaCompletaAsync(idPersonagem);
+
+    public Task SalvarCirculosMagicosAsync(int idPersonagem, IEnumerable<PersonagemCirculoMagico> circulos) =>
+        _sessaoRepo.SalvarCirculosMagicosAsync(idPersonagem, circulos);
+
+    public Task AplicarDescansoCirculosMagicosAsync(int idPersonagem, bool longo, IEnumerable<int> circulosRecuperados) =>
+        _sessaoRepo.AplicarDescansoCirculosMagicosAsync(idPersonagem, longo, circulosRecuperados);
 
     public async Task<(bool Sucesso, string Mensagem)> SalvarFichaNaSessaoAsync(
         int idCampanha,
@@ -1090,11 +1145,7 @@ public class SessaoService
 
     public static int CalcularPvMaximoNpc(NPC npc)
     {
-        int modCon = AtributosBase.CalcularModificador(npc.Constituicao);
-        int nivel = Math.Max(1, npc.Nivel);
-        int pvNivel1 = Math.Max(1, 8 + modCon);
-        int pvPorNivel = Math.Max(1, 5 + modCon);
-        return pvNivel1 + (nivel - 1) * pvPorNivel;
+        return Math.Max(1, npc.PvMaximo);
     }
 
     public static int CalcularCaBase(int destreza) =>
@@ -1115,12 +1166,13 @@ public class SessaoService
         return $"{minutos} min";
     }
 
-    private async Task<SessaoEstadoDto> MontarEstadoSessaoAsync(Campanha campanha, int idSessao, int idAccountLogado)
+    private async Task<SessaoEstadoDto> MontarEstadoSessaoAsync(Campanha campanha, int idSessao, int idAccountLogado,
+        CancellationToken cancellationToken = default)
     {
-        var tarefaSessao = _sessaoRepo.ObterSessaoCompletaAsync(idSessao);
-        var tarefaMensagens = _sessaoRepo.ListarMensagensAsync(idSessao);
-        var tarefaPinos = _sessaoRepo.ListarPinosSessaoAsync(idSessao);
-        var tarefaMagias = ObterMagiasCatalogoComCacheAsync();
+        var tarefaSessao = _sessaoRepo.ObterSessaoCompletaAsync(idSessao, cancellationToken);
+        var tarefaMensagens = _sessaoRepo.ListarMensagensAsync(idSessao, cancellationToken: cancellationToken);
+        var tarefaPinos = _sessaoRepo.ListarPinosSessaoAsync(idSessao, cancellationToken);
+        var tarefaMagias = ObterMagiasCatalogoComCacheAsync(cancellationToken: cancellationToken);
 
         await Task.WhenAll(tarefaSessao, tarefaMensagens, tarefaPinos, tarefaMagias);
 
@@ -1255,6 +1307,8 @@ public class SessaoService
             int? classeArmadura = null;
             bool esquivando = false;
             bool escondido = false;
+            int[]? atributos = null;
+            decimal deslocamento = 9m;
 
             if (pino.TipoEntidade == TiposPinoSessao.Personagem)
             {
@@ -1269,6 +1323,8 @@ public class SessaoService
                     pvMaximo = fichaJog.PvMaximo;
                     pvAtual = fichaJog.PvAtual;
                     classeArmadura = CalcularCaBase(fichaJog.Destreza);
+                    atributos = [fichaJog.Forca, fichaJog.Destreza, fichaJog.Constituicao, fichaJog.Inteligencia, fichaJog.Sabedoria, fichaJog.Carisma];
+                    deslocamento = fichaJog.Deslocamento ?? 9;
                 }
             }
             else if (pino.TipoEntidade == TiposPinoSessao.Npc)
@@ -1280,7 +1336,9 @@ public class SessaoService
                 {
                     pvMaximo = CalcularPvMaximoNpc(npc);
                     pvAtual = pino.PvAtual ?? pvMaximo;
-                    classeArmadura = CalcularCaBase(npc.Destreza);
+                    classeArmadura = Math.Max(1, npc.ClasseArmadura);
+                    atributos = [npc.Forca, npc.Destreza, npc.Constituicao, npc.Inteligencia, npc.Sabedoria, npc.Carisma];
+                    deslocamento = npc.Deslocamento;
                 }
             }
             else if (pino.TipoEntidade == TiposPinoSessao.Monstro)
@@ -1291,6 +1349,7 @@ public class SessaoService
                 pvMaximo = monstro?.PvMaximo;
                 pvAtual = pino.PvAtual ?? monstro?.PvMaximo;
                 classeArmadura = monstro?.ClasseArmadura;
+                deslocamento = RegrasMagiaCombate.InterpretarAlcance(monstro?.Deslocamento).MetrosMaximos ?? 9m;
             }
 
             pinosDto.Add(new PinoMapaDto
@@ -1299,7 +1358,8 @@ public class SessaoService
                 IdMapa = pino.IdMapa,
                 TipoEntidade = pino.TipoEntidade,
                 IdEntidade = pino.IdEntidade,
-                Nome = nome,
+                Instancia = pino.Instancia,
+                Nome = pino.Instancia > 1 ? $"{nome} {pino.Instancia}" : nome,
                 ImagemUrl = imagem,
                 Coluna = pino.Coluna,
                 Linha = pino.Linha,
@@ -1307,22 +1367,17 @@ public class SessaoService
                 PvAtual = pvAtual,
                 PvMaximo = pvMaximo,
                 ClasseArmadura = classeArmadura,
+                Atributos = atributos,
+                DeslocamentoMetros = deslocamento,
                 Esquivando = esquivando,
                 Escondido = escondido
             });
         }
 
-        var mensagensDto = mensagens.Select(m => new MensagemSessaoDto
-        {
-            IdMensagem = m.IdMensagem,
-            Canal = m.Canal,
-            EhSistema = m.IdAccount == null,
-            Autor = m.IdAccount == null
-                ? "Sistema"
-                : (m.Usuario?.NomeParaExibicao ?? $"Usuário #{m.IdAccount}"),
-            Conteudo = m.Conteudo,
-            DataEnvioLocal = DateTime.SpecifyKind(m.DataEnvio, DateTimeKind.Utc).ToLocalTime()
-        }).ToList();
+        var mensagensDto = mensagens.Select(ParaMensagemDto).ToList();
+        var controleCombate = sessaoCompleta?.Combate2014Json is { Length: > 0 } combateJson
+            ? JsonSerializer.Deserialize<ControleCombate2014>(combateJson) ?? new()
+            : new ControleCombate2014();
 
         return new SessaoEstadoDto
         {
@@ -1344,11 +1399,26 @@ public class SessaoService
             NpcsCampanha = npcsCampanha,
             MonstrosCampanha = monstrosCampanha,
             Pinos = pinosDto,
+            Encontro = idMapaAtivo.HasValue ? controleCombate.ObterMapa(idMapaAtivo.Value) : new(),
+            PedidosTeste = controleCombate.Pedidos.Where(p => campanha.IdAccount == idAccountLogado || p.IdConta == idAccountLogado)
+                .Select(p => campanha.IdAccount != idAccountLogado && p.OcultarCd ? p with { Cd = null } : p).ToList(),
             Mestre = mestreDto,
             Jogadores = jogadoresDto,
             Mensagens = mensagensDto
         };
     }
+
+    private static MensagemSessaoDto ParaMensagemDto(SessaoMensagem mensagem) => new()
+    {
+        IdMensagem = mensagem.IdMensagem,
+        Canal = mensagem.Canal,
+        EhSistema = mensagem.IdAccount == null,
+        Autor = mensagem.IdAccount == null
+            ? "Sistema"
+            : (mensagem.Usuario?.NomeParaExibicao ?? $"Usuário #{mensagem.IdAccount}"),
+        Conteudo = mensagem.Conteudo,
+        DataEnvioLocal = DateTime.SpecifyKind(mensagem.DataEnvio, DateTimeKind.Utc).ToLocalTime()
+    };
 
     private static string FormatarClasseENivel(Personagem personagem)
     {
@@ -1390,11 +1460,28 @@ public class SessaoEstadoDto
     public ParticipanteSessaoDto Mestre { get; set; } = new();
     public List<ParticipanteSessaoDto> Jogadores { get; set; } = new();
     public List<MensagemSessaoDto> Mensagens { get; set; } = new();
+    public Encontro2014 Encontro { get; set; } = new();
+    public List<PedidoTeste2014> PedidosTeste { get; set; } = [];
+
+    internal SessaoEstadoDto ComMensagens(List<MensagemSessaoDto> mensagens)
+    {
+        var estado = (SessaoEstadoDto)MemberwiseClone();
+        estado.Mensagens = mensagens;
+        return estado;
+    }
+
+    internal SessaoEstadoDto ComSessaoEncerrada()
+    {
+        var estado = (SessaoEstadoDto)MemberwiseClone();
+        estado.SessaoAtiva = false;
+        return estado;
+    }
 }
 
 public class PinoMapaDto
 {
     public int IdPino { get; set; }
+    public int Instancia { get; set; } = 1;
     public int? IdMapa { get; set; }
     public string TipoEntidade { get; set; } = string.Empty;
     public int IdEntidade { get; set; }
@@ -1406,6 +1493,10 @@ public class PinoMapaDto
     public int? PvAtual { get; set; }
     public int? PvMaximo { get; set; }
     public int? ClasseArmadura { get; set; }
+    public int[]? Atributos { get; set; }
+    public decimal DeslocamentoMetros { get; set; } = 9m;
+    public int Modificador(Atributo2014 atributo) => Atributos is { Length: 6 }
+        ? AtributosBase.CalcularModificador(Atributos[(int)atributo]) : 0;
     public bool Esquivando { get; set; }
     public bool Escondido { get; set; }
     public string CoordenadaTexto => $"{(char)('A' + Coluna)}{Linha + 1}";
@@ -1430,6 +1521,7 @@ public class RegistroAtaqueDto
     public string? TipoDano { get; set; }
     public string TipoAlvo { get; set; } = TiposPinoSessao.Monstro;
     public int IdEntidadeAlvo { get; set; }
+    public int? IdPinoAlvo { get; set; }
     public string NomeAlvo { get; set; } = string.Empty;
     public int CaAlvo { get; set; }
     public bool AlvoEsquivando { get; set; }
@@ -1522,6 +1614,7 @@ public class MensagemSessaoDto
 
 public class ResultadoRolagemDto
 {
+    public Guid IdOperacao { get; } = Guid.NewGuid();
     public string Contexto { get; set; } = "Rolagem da mesa";
     public int Faces { get; set; } = 20;
     public int Quantidade { get; set; } = 1;

@@ -1,27 +1,19 @@
 ﻿@page "/npc-criar"
-@using System.Globalization
-@using RPGdeMesa.Domain.Npcs
-@using Microsoft.AspNetCore.Components
-@using RPGdeMesa.Application.Services
-@using RPGdeMesa.Presentation.Services
-@inject NpcService NpcService
-@inject SessaoUsuarioService SessaoUsuario
-@inject NavigationManager Navigation
-@inject AppCacheService AppCache
-@inject HomeCacheService HomeCache
-@inject ImagemPickerService ImagemPicker
+@using RPGdeMesa.Presentation.ViewModel
+@inject NpcCriarViewModel ViewModel
+@implements IDisposable
 
 <main class="npc-create-page">
     <div class="app-content">
         <header class="top-bar">
-            <button type="button" class="voltar-link" @onclick="Voltar">
+            <button type="button" class="voltar-link" @onclick="ViewModel.Voltar">
                 <span aria-hidden="true">←</span> Voltar para NPCs
             </button>
             <p class="page-kicker">FICHA DO ELEMENTO</p>
             <h1 class="page-title">Cadastrar NPC</h1>
         </header>
 
-        <form class="form-layout" @onsubmit="SalvarAsync" @onsubmit:preventDefault="true">
+        <form class="form-layout" @onsubmit="ViewModel.SalvarAsync" @onsubmit:preventDefault="true">
             <section class="ficha-pergaminho" aria-label="Ficha do NPC">
                 <div class="ficha-conteudo">
                     <div class="form-grid-2">
@@ -29,29 +21,29 @@
                             <span class="campo-rotulo">Foto do NPC</span>
                             <div class="foto-linha">
                                 <div class="foto-preview" aria-hidden="true">
-                                    @if (TemFoto)
+                                    @if (ViewModel.TemFoto)
                                     {
-                                        <img src="@Npc.Imagem" alt="" />
+                                        <img src="@ViewModel.Npc.Imagem" alt="" />
                                     }
                                     else
                                     {
-                                        <text>@Inicial</text>
+                                        <text>@ViewModel.Inicial</text>
                                     }
                                 </div>
                                 <div class="foto-acoes">
                                     <div class="foto-botoes">
-                                        <button type="button" class="btn-foto" disabled="@_carregandoFoto" @onclick="CarregarFotoAsync">
-                                            ↑ @(_carregandoFoto ? "Carregando..." : (TemFoto ? "Trocar foto" : "Escolher foto"))
+                                        <button type="button" class="btn-foto" disabled="@ViewModel.CarregandoFoto" @onclick="ViewModel.CarregarFotoAsync">
+                                            ↑ @(ViewModel.CarregandoFoto ? "Carregando..." : (ViewModel.TemFoto ? "Trocar foto" : "Escolher foto"))
                                         </button>
-                                        @if (TemFoto)
+                                        @if (ViewModel.TemFoto)
                                         {
-                                            <button type="button" class="btn-foto-sec" disabled="@_carregandoFoto" @onclick="RemoverFoto">Remover</button>
+                                            <button type="button" class="btn-foto-sec" disabled="@ViewModel.CarregandoFoto" @onclick="ViewModel.RemoverFoto">Remover</button>
                                         }
                                     </div>
                                     <p class="foto-ajuda">JPG ou PNG. A imagem é reduzida automaticamente.</p>
-                                    @if (!string.IsNullOrWhiteSpace(ErroImagem))
+                                    @if (!string.IsNullOrWhiteSpace(ViewModel.ErroImagem))
                                     {
-                                        <p class="foto-erro" role="alert">@ErroImagem</p>
+                                        <p class="foto-erro" role="alert">@ViewModel.ErroImagem</p>
                                     }
                                 </div>
                             </div>
@@ -59,46 +51,53 @@
 
                         <label class="campo-ficha full-width">
                             <span>Nome do NPC</span>
-                            <input type="text" @bind="Npc.Nome" @bind:event="oninput" maxlength="100" required autocomplete="off" placeholder="Ex.: Aldeão" />
+                            <input type="text" @bind="ViewModel.Npc.Nome" @bind:event="oninput" maxlength="100" required autocomplete="off" placeholder="Ex.: Aldeão" />
                         </label>
 
                         <label class="campo-ficha">
                             <span>Raça</span>
-                            <select @bind="Npc.RacaTexto">
-                                <option value="Humano">Humano</option>
-                                <option value="Elfo">Elfo</option>
-                                <option value="Anão">Anão</option>
-                                <option value="Halfling">Halfling</option>
-                                <option value="Meio-elfo">Meio-elfo</option>
-                                <option value="Tiefling">Tiefling</option>
-                                <option value="Orc">Orc</option>
-                                <option value="Outra">Outra</option>
+                            <select @bind="ViewModel.Npc.RacaTexto">
+                                @foreach (var raca in ViewModel.Racas)
+                                {
+                                    <option value="@raca">@raca</option>
+                                }
                             </select>
                         </label>
+
                         <label class="campo-ficha">
                             <span>Classe</span>
-                            <select @bind="Npc.ClasseTexto">
-                                <option value="Guerreiro">Guerreiro</option>
-                                <option value="Bárbaro">Bárbaro</option>
-                                <option value="Bardo">Bardo</option>
-                                <option value="Clérigo">Clérigo</option>
-                                <option value="Druida">Druida</option>
-                                <option value="Ladino">Ladino</option>
-                                <option value="Mago">Mago</option>
-                                <option value="Paladino">Paladino</option>
-                                <option value="Patrulheiro">Patrulheiro</option>
-                                <option value="Bruxo">Bruxo</option>
-                                <option value="Civil / Plebeu">Civil / Plebeu</option>
+                            <select @bind="ViewModel.Npc.ClasseTexto">
+                                @foreach (var classe in ViewModel.Classes)
+                                {
+                                    <option value="@classe">@classe</option>
+                                }
                             </select>
                         </label>
+
                         <label class="campo-ficha">
                             <span>Nível</span>
-                            <input type="number" min="1" max="20" inputmode="numeric" value="@Npc.Nivel"
-                                   @oninput="e => AoDigitarNumero(e, 1, 20, v => Npc.Nivel = v)" />
+                            <input type="number" min="1" max="20" inputmode="numeric" value="@ViewModel.Npc.Nivel"
+                                   @oninput="e => ViewModel.AoDigitarNumero(e, 1, 20, v => ViewModel.Npc.Nivel = v)" />
                         </label>
+
+                        <label class="campo-ficha">
+                            <span>Pontos de vida</span>
+                            <input type="number" min="1" max="9999" @bind="ViewModel.Npc.PvMaximo" @bind:event="oninput" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Classe de armadura</span>
+                            <input type="number" min="1" max="40" @bind="ViewModel.Npc.ClasseArmadura" @bind:event="oninput" />
+                        </label>
+
+                        <label class="campo-ficha">
+                            <span>Deslocamento (m)</span>
+                            <input type="number" min="0" max="99" @bind="ViewModel.Npc.Deslocamento" @bind:event="oninput" />
+                        </label>
+
                         <label class="campo-ficha">
                             <span>Tendência</span>
-                            <select @bind="Npc.Tendencia">
+                            <select @bind="ViewModel.Npc.Tendencia">
                                 <option value="Neutra">Neutra</option>
                                 <option value="Leal e boa">Leal e boa</option>
                                 <option value="Neutra e boa">Neutra e boa</option>
@@ -110,20 +109,21 @@
                                 <option value="Caótica e má">Caótica e má</option>
                             </select>
                         </label>
-                        <label class="campo-ficha full-width">
+
+                        <label class="campo-ficha">
                             <span>Antecedente</span>
-                            <input type="text" @bind="Npc.AntecedenteTexto" @bind:event="oninput" maxlength="50" autocomplete="off" placeholder="Ex.: Batedor" />
+                            <input type="text" @bind="ViewModel.Npc.AntecedenteTexto" @bind:event="oninput" maxlength="50" autocomplete="off" placeholder="Ex.: Batedor" />
                         </label>
 
                         <div class="form-divider">Atributos</div>
                         <div class="atributos-cards">
-                            @foreach (var atributo in Atributos)
+                            @foreach (var atributo in ViewModel.Atributos)
                             {
                                 <div class="atributo-box" @key="atributo.Sigla">
                                     <span>@atributo.Sigla</span>
                                     <input type="number" min="1" max="30" inputmode="numeric" value="@atributo.Obter()"
-                                           @oninput="e => AoDigitarNumero(e, 1, 30, atributo.Definir)" aria-label="Atributo @atributo.Sigla" />
-                                    <small class="@ClasseModificador(atributo.Obter())">@FormatarModificador(atributo.Obter())</small>
+                                           @oninput="e => ViewModel.AoDigitarNumero(e, 1, 30, atributo.Definir)" aria-label="Atributo @atributo.Sigla" />
+                                    <small class="@NpcCriarViewModel.ClasseModificador(atributo.Obter())">@NpcCriarViewModel.FormatarModificador(atributo.Obter())</small>
                                 </div>
                             }
                         </div>
@@ -131,16 +131,129 @@
                         <div class="form-divider">História e detalhes</div>
                         <div class="painel-historia">
                             <label for="npc-historia">História e anotações</label>
-                            <textarea id="npc-historia" @bind="Npc.Historia" rows="5" placeholder="Detalhes do NPC..."></textarea>
+                            <textarea id="npc-historia" @bind="ViewModel.Npc.Historia" @bind:event="oninput" rows="5" placeholder="Detalhes do NPC..."></textarea>
+                        </div>
+
+                        <div class="form-divider">Equipamentos e Magias</div>
+
+                        <div class="categoria-itens full-width">
+                            <div class="titulo-categoria">
+                                <h3>⚔ Armas e Itens</h3>
+                                <span class="categoria-contador">@ViewModel.ItensSelecionados.Count vinculado(s)</span>
+                            </div>
+
+                            <input class="recurso-busca-input" type="search" @bind="ViewModel.BuscaItem" @bind:event="oninput" placeholder="Buscar item ou arma por nome, tipo ou dano..." autocomplete="off" />
+
+                            <div class="recurso-catalogo-lista">
+                                @if (ViewModel.ItensFiltrados.Any())
+                                {
+                                    @foreach (var item in ViewModel.ItensFiltrados)
+                                    {
+                                        <div class="recurso-catalogo-linha" @onclick="() => ViewModel.SelecionarItem(item)">
+                                            <div class="recurso-catalogo-info">
+                                                <strong>@item.Nome</strong>
+                                                <small>@(string.IsNullOrWhiteSpace(item.Dano) ? NpcCriarViewModel.Texto(item.Tipo, "Item") : $"{item.Dano} {item.TipoDano}")</small>
+                                            </div>
+                                            <button type="button"
+                                                    class="btn-add-item"
+                                                    aria-label="Adicionar @item.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.AdicionarItem(item.IdItem)">
+                                                +
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="recurso-vazio">Nenhum item disponível com esse filtro.</p>
+                                }
+                            </div>
+
+                            @if (ViewModel.ItensVinculados.Any())
+                            {
+                                <div class="recursos-vinculados-tags">
+                                    @foreach (var item in ViewModel.ItensVinculados)
+                                    {
+                                        <span class="recurso-tag @(ViewModel.ItemEmVisualizacao?.IdItem == item.IdItem ? "selecionada" : string.Empty)"
+                                              @onclick="() => ViewModel.SelecionarItem(item)">
+                                            @item.Nome
+                                            <button type="button"
+                                                    aria-label="Remover @item.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.RemoverItem(item.IdItem)">
+                                                ×
+                                            </button>
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <div class="categoria-itens full-width">
+                            <div class="titulo-categoria">
+                                <h3>✦ Magias</h3>
+                                <span class="categoria-contador">@ViewModel.MagiasSelecionadas.Count vinculada(s)</span>
+                            </div>
+
+                            <input class="recurso-busca-input" type="search" @bind="ViewModel.BuscaMagia" @bind:event="oninput" placeholder="Buscar magia por nome ou escola..." autocomplete="off" />
+
+                            <div class="recurso-catalogo-lista">
+                                @if (ViewModel.MagiasFiltradas.Any())
+                                {
+                                    @foreach (var magia in ViewModel.MagiasFiltradas)
+                                    {
+                                        <div class="recurso-catalogo-linha" @onclick="() => ViewModel.SelecionarMagia(magia)">
+                                            <div class="recurso-catalogo-info">
+                                                <strong>@magia.Nome</strong>
+                                                <small>@NpcCriarViewModel.FormatarCirculo(magia.CirculoNivel) · @NpcCriarViewModel.Texto(magia.Escola, "Sem escola")</small>
+                                            </div>
+                                            <button type="button"
+                                                    class="btn-add-item"
+                                                    aria-label="Adicionar @magia.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.AdicionarMagia(magia.IdMagia)">
+                                                +
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="recurso-vazio">Nenhuma magia disponível com esse filtro.</p>
+                                }
+                            </div>
+
+                            @if (ViewModel.MagiasVinculadas.Any())
+                            {
+                                <div class="recursos-vinculados-tags">
+                                    @foreach (var magia in ViewModel.MagiasVinculadas)
+                                    {
+                                        <span class="recurso-tag @(ViewModel.MagiaEmVisualizacao?.IdMagia == magia.IdMagia ? "selecionada" : string.Empty)"
+                                              @onclick="() => ViewModel.SelecionarMagia(magia)">
+                                            @magia.Nome
+                                            <button type="button"
+                                                    aria-label="Remover @magia.Nome"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => ViewModel.RemoverMagia(magia.IdMagia)">
+                                                ×
+                                            </button>
+                                        </span>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
 
-                    @if (!string.IsNullOrWhiteSpace(Mensagem))
+                    @if (!string.IsNullOrWhiteSpace(ViewModel.Mensagem))
                     {
-                        <p class="feedback @(Sucesso ? "ok" : "erro")" role="status">@Mensagem</p>
+                        <p class="feedback @(ViewModel.Sucesso ? "ok" : "erro")" role="status">@ViewModel.Mensagem</p>
                     }
+
                     <footer class="form-footer">
-                        <button type="submit" class="action-primary" disabled="@Processando">@(Processando ? "Salvando..." : "Cadastrar NPC")</button>
+                        <button type="submit" class="action-primary" disabled="@ViewModel.Processando">
+                            @(ViewModel.Processando ? "Salvando..." : "Cadastrar NPC")
+                        </button>
                     </footer>
                 </div>
             </section>
@@ -148,22 +261,119 @@
             <aside class="form-aside" aria-label="Resumo do NPC">
                 <div class="npc-preview-card">
                     <div class="npc-avatar-circle">
-                        @if (TemFoto)
+                        @if (ViewModel.TemFoto)
                         {
-                            <img src="@Npc.Imagem" alt="Foto de @NomePreview" />
+                            <img src="@ViewModel.Npc.Imagem" alt="Foto de @ViewModel.NomePreview" />
                         }
                         else
                         {
-                            <text>@Inicial</text>
+                            <text>@ViewModel.Inicial</text>
                         }
                     </div>
-                    <h3>@NomePreview</h3>
-                    <p>@Texto(Npc.RacaTexto, "Humano") • @Texto(Npc.ClasseTexto, "Guerreiro") (Nível @Npc.Nivel)</p>
-                    <p class="preview-extra">@Texto(Npc.AntecedenteTexto, "Batedor") • @Texto(Npc.Tendencia, "Neutra")</p>
+
+                    <h3>@ViewModel.NomePreview</h3>
+                    <p>@NpcCriarViewModel.Texto(ViewModel.Npc.RacaTexto, "Humano") • @NpcCriarViewModel.Texto(ViewModel.Npc.ClasseTexto, "Guerreiro") (Nível @ViewModel.Npc.Nivel)</p>
+                    <p class="preview-extra">@NpcCriarViewModel.Texto(ViewModel.Npc.AntecedenteTexto, "Sem antecedente") • @NpcCriarViewModel.Texto(ViewModel.Npc.Tendencia, "Neutra")</p>
+
                     <div class="preview-stats-mini">
-                        @foreach (var atributo in Atributos)
+                        <div><b>PV</b><span>@ViewModel.Npc.PvMaximo</span></div>
+                        <div><b>CA</b><span>@ViewModel.Npc.ClasseArmadura</span></div>
+                        <div><b>DESL.</b><span>@ViewModel.Npc.Deslocamento m</span></div>
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Atributos</h4>
+                        <div class="preview-atributos-grid">
+                            @foreach (var atributo in ViewModel.Atributos)
+                            {
+                                <div>
+                                    <b>@atributo.Sigla</b>
+                                    <span>@atributo.Obter()</span>
+                                    <small>@NpcCriarViewModel.FormatarModificador(atributo.Obter())</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Detalhes da ficha</h4>
+                        <dl class="npc-details-list">
+                            <div><dt>Raça e classe</dt><dd>@NpcCriarViewModel.Texto(ViewModel.Npc.RacaTexto, "Humano") · @NpcCriarViewModel.Texto(ViewModel.Npc.ClasseTexto, "Guerreiro") (Nível @ViewModel.Npc.Nivel)</dd></div>
+                            <div><dt>Antecedente</dt><dd>@NpcCriarViewModel.Texto(ViewModel.Npc.AntecedenteTexto, "Não informado")</dd></div>
+                            <div><dt>Tendência</dt><dd>@NpcCriarViewModel.Texto(ViewModel.Npc.Tendencia, "Neutra")</dd></div>
+                            <div><dt>História e anotações</dt><dd>@NpcCriarViewModel.Texto(ViewModel.Npc.Historia, "Não informada")</dd></div>
+                        </dl>
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Armas e itens (@ViewModel.ItensSelecionados.Count)</h4>
+                        @if (ViewModel.ItensVinculados.Any())
                         {
-                            <div><b>@atributo.Sigla</b><span>@atributo.Obter()</span></div>
+                            <div class="recurso-preview-list">
+                                @foreach (var item in ViewModel.ItensVinculados)
+                                {
+                                    <button type="button"
+                                            class="recurso-preview-item @(ViewModel.ItemEmVisualizacao?.IdItem == item.IdItem ? "selected" : string.Empty)"
+                                            @onclick="() => ViewModel.SelecionarItem(item)">
+                                        <strong>@item.Nome</strong>
+                                        <small>@(string.IsNullOrWhiteSpace(item.Dano) ? NpcCriarViewModel.Texto(item.Tipo, "Item") : $"{item.Dano} {item.TipoDano}")</small>
+                                    </button>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="recurso-preview-empty">Nenhum item ou arma vinculado a este NPC.</p>
+                        }
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Magias (@ViewModel.MagiasSelecionadas.Count)</h4>
+                        @if (ViewModel.MagiasVinculadas.Any())
+                        {
+                            <div class="recurso-preview-list">
+                                @foreach (var magia in ViewModel.MagiasVinculadas)
+                                {
+                                    <button type="button"
+                                            class="recurso-preview-item @(ViewModel.MagiaEmVisualizacao?.IdMagia == magia.IdMagia ? "selected" : string.Empty)"
+                                            @onclick="() => ViewModel.SelecionarMagia(magia)">
+                                        <strong>@magia.Nome</strong>
+                                        <small>@NpcCriarViewModel.FormatarCirculo(magia.CirculoNivel) · @NpcCriarViewModel.Texto(magia.Escola, "Sem escola")</small>
+                                    </button>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="recurso-preview-empty">Nenhuma magia vinculada a este NPC.</p>
+                        }
+                    </div>
+
+                    <div class="preview-section">
+                        <h4>Prévia do recurso</h4>
+                        @if (ViewModel.ItemEmVisualizacao is { } itemPreview)
+                        {
+                            <strong class="recurso-detail-title">@itemPreview.Nome</strong>
+                            <dl class="npc-details-list">
+                                <div><dt>Categoria</dt><dd>Arma / Item</dd></div>
+                                <div><dt>Tipo</dt><dd>@NpcCriarViewModel.Texto(itemPreview.Tipo, "Não informado")</dd></div>
+                                <div><dt>Dano</dt><dd>@NpcCriarViewModel.Texto(itemPreview.Dano, "Não informado")</dd></div>
+                                <div><dt>Tipo de dano</dt><dd>@NpcCriarViewModel.Texto(itemPreview.TipoDano, "Não informado")</dd></div>
+                            </dl>
+                        }
+                        else if (ViewModel.MagiaEmVisualizacao is { } magiaPreview)
+                        {
+                            <strong class="recurso-detail-title">@magiaPreview.Nome</strong>
+                            <dl class="npc-details-list">
+                                <div><dt>Categoria</dt><dd>Magia</dd></div>
+                                <div><dt>Círculo</dt><dd>@NpcCriarViewModel.FormatarCirculo(magiaPreview.CirculoNivel)</dd></div>
+                                <div><dt>Escola</dt><dd>@NpcCriarViewModel.Texto(magiaPreview.Escola, "Não informada")</dd></div>
+                                <div><dt>Tempo de conjuração</dt><dd>@NpcCriarViewModel.Texto(magiaPreview.TempoConjuracao, "Não informado")</dd></div>
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="recurso-preview-empty">Clique em um item ou magia do catálogo ou da lista para ver os detalhes aqui.</p>
                         }
                     </div>
                 </div>
@@ -173,162 +383,18 @@
 </main>
 
 @code {
-    private const string RotaBibliotecaNpcs = "/BibliotecaGeral?categoria=npcs";
-    private sealed record AtributoCampo(string Sigla, Func<int> Obter, Action<int> Definir);
-
-    private NPC Npc { get; set; } = CriarNpcPadrao();
-
-    private AtributoCampo[]? _atributos;
-    private AtributoCampo[] Atributos => _atributos ??= new[]
-    {
-        new AtributoCampo("FOR", () => Npc.Forca, v => Npc.Forca = v),
-        new AtributoCampo("DES", () => Npc.Destreza, v => Npc.Destreza = v),
-        new AtributoCampo("CON", () => Npc.Constituicao, v => Npc.Constituicao = v),
-        new AtributoCampo("INT", () => Npc.Inteligencia, v => Npc.Inteligencia = v),
-        new AtributoCampo("SAB", () => Npc.Sabedoria, v => Npc.Sabedoria = v),
-        new AtributoCampo("CAR", () => Npc.Carisma, v => Npc.Carisma = v)
-    };
-
-    private static readonly string? ImagemPadrao = new NPC().Imagem;
-
-    private bool _carregandoFoto;
-    private string? ErroImagem { get; set; }
-    private bool TemFoto => Npc.Imagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
-
-    private bool Processando { get; set; }
-    private bool Sucesso { get; set; }
-    private string Mensagem { get; set; } = "";
-
     [SupplyParameterFromQuery(Name = "idCampanha")]
     public int? IdCampanha { get; set; }
 
-    private string NomePreview => string.IsNullOrWhiteSpace(Npc.Nome) ? "Aldeão" : Npc.Nome.Trim();
-    private string Inicial => StringInfo.GetNextTextElement(NomePreview).ToUpperInvariant();
-
-    private static NPC CriarNpcPadrao() => new()
+    protected override async Task OnInitializedAsync()
     {
-        Nome = "",
-        RacaTexto = "Humano",
-        ClasseTexto = "Guerreiro",
-        Nivel = 1,
-        AntecedenteTexto = "",
-        Tendencia = "Neutra",
-        Forca = 10,
-        Destreza = 10,
-        Constituicao = 10,
-        Inteligencia = 10,
-        Sabedoria = 10,
-        Carisma = 10,
-        Historia = ""
-    };
-
-    private void LimparFormulario()
-    {
-        Npc = CriarNpcPadrao();
-        _atributos = null;
-        ErroImagem = null;
+        ViewModel.OnChange -= StateHasChanged;
+        ViewModel.OnChange += StateHasChanged;
+        await ViewModel.InicializarAsync(IdCampanha);
     }
 
-    private void Voltar() => Navigation.NavigateTo(RotaBibliotecaNpcs);
-
-    private async Task CarregarFotoAsync()
+    public void Dispose()
     {
-        if (_carregandoFoto) return;
-        _carregandoFoto = true;
-        ErroImagem = null;
-        StateHasChanged();
-
-        try
-        {
-            var res = await ImagemPicker.SelecionarUmaAsync(ladoMaximo: 512);
-            if (res.Erro is not null)
-                ErroImagem = res.Erro;
-            else if (res.Imagem is not null)
-                Npc.Imagem = res.Imagem.DataUrl;
-        }
-        finally
-        {
-            _carregandoFoto = false;
-            StateHasChanged();
-        }
-    }
-
-    private void RemoverFoto()
-    {
-        Npc.Imagem = ImagemPadrao;
-        ErroImagem = null;
-    }
-
-    private static string Texto(string? valor, string padrao) =>
-        string.IsNullOrWhiteSpace(valor) ? padrao : valor.Trim();
-
-    private static void AoDigitarNumero(ChangeEventArgs e, int min, int max, Action<int> definir)
-    {
-        if (int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var valor))
-            definir(Math.Clamp(valor, min, max));
-    }
-
-    private static int Modificador(int valor) => (int)Math.Floor((valor - 10) / 2.0);
-
-    private static string FormatarModificador(int valor)
-    {
-        var modificador = Modificador(valor);
-        return modificador >= 0 ? $"+{modificador}" : modificador.ToString();
-    }
-
-    private static string ClasseModificador(int valor) => Modificador(valor) switch
-    {
-        > 0 => "mod-pos",
-        < 0 => "mod-neg",
-        _ => ""
-    };
-
-    private async Task SalvarAsync()
-    {
-        if (Processando) return;
-        var idUsuario = SessaoUsuario.IdUsuarioLogado;
-        if (idUsuario <= 0)
-        {
-            Sucesso = false;
-            Mensagem = "Usuário não identificado. Faça login novamente.";
-            return;
-        }
-
-        Processando = true;
-        Mensagem = "";
-        try
-        {
-            var resultado = await NpcService.CriarNpcAsync(idUsuario, Npc);
-            Sucesso = resultado.Sucesso;
-            Mensagem = resultado.Mensagem;
-
-            if (resultado.Sucesso)
-            {
-                AppCache.InvalidarBiblioteca();
-                AppCache.InvalidarPersonagensLib();
-                HomeCache.Limpar();
-            }
-
-            if (Sucesso && IdCampanha is > 0)
-            {
-                var vinculo = await NpcService.VincularNpcACampanhaAsync(Npc.IdNpc, IdCampanha.Value);
-                Sucesso = vinculo.Sucesso;
-                Mensagem = vinculo.Sucesso
-                    ? "NPC cadastrado e vinculado à campanha com sucesso!"
-                    : $"NPC salvo, mas não foi possível vincular à campanha: {vinculo.Mensagem}";
-            }
-
-            if (Sucesso)
-            {
-                LimparFormulario();
-                StateHasChanged();
-                await Task.Delay(500);
-                Navigation.NavigateTo(RotaBibliotecaNpcs);
-            }
-        }
-        finally
-        {
-            Processando = false;
-        }
+        ViewModel.OnChange -= StateHasChanged;
     }
 }

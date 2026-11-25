@@ -206,8 +206,9 @@
 @if (ViewModel.ExibirAvisoSaida)
 {
     <div class="confirm-overlay" role="presentation" @onclick="ViewModel.FecharAvisoSaida">
-        <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
-            <h2>Sair sem salvar?</h2>
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="titulo-saida-item"
+                 @onclick:stopPropagation="true">
+            <h2 id="titulo-saida-item">Sair sem salvar?</h2>
             <p>Tem certeza que deseja cancelar? As alterações feitas no item serão perdidas.</p>
             <div class="confirm-actions">
                 <button class="confirm-exit" type="button" @onclick="ViewModel.SairDaCriacao">Sim</button>

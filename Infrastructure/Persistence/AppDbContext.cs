@@ -22,6 +22,10 @@ public class AppDbContext : DbContext
     public DbSet<Classe> Classes { get; set; }
     public DbSet<NPC> Npcs { get; set; }
     public DbSet<Monstro> Monstros { get; set; }
+    public DbSet<MonstroAtaque> MonstroAtaques { get; set; }
+    public DbSet<PersonagemCirculoMagico> PersonagemCirculosMagicos { get; set; }
+    public DbSet<NpcMagia> NpcMagias { get; set; }
+    public DbSet<NpcItem> NpcItens { get; set; }
     public DbSet<Item> Itens { get; set; }
     public DbSet<Magia> Magias { get; set; }
     public DbSet<Inventario> Inventarios { get; set; }
@@ -260,6 +264,20 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<PersonagemCirculoMagico>(e =>
+        {
+            e.ToTable("Personagem_Circulo_Magico");
+            e.HasKey(s => new { s.IdPersonagem, s.CirculoNivel });
+            e.Property(s => s.IdPersonagem).HasColumnName("id_personagem");
+            e.Property(s => s.CirculoNivel).HasColumnName("circulo_nivel");
+            e.Property(s => s.TotalSlots).HasColumnName("total_slots");
+            e.Property(s => s.SlotsUsados).HasColumnName("slots_usados");
+            e.Property(s => s.TotalSlotsPendente).HasColumnName("total_slots_pendente");
+            e.Ignore(s => s.SlotsRestantes);
+            e.HasOne(s => s.Personagem).WithMany(p => p.CirculosMagicos)
+                .HasForeignKey(s => s.IdPersonagem).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<PersonagemSalvaguarda>(e =>
         {
             e.ToTable("Personagem_Salvaguarda");
@@ -390,6 +408,21 @@ public class AppDbContext : DbContext
             e.Ignore(m => m.Nd);
         });
 
+        modelBuilder.Entity<MonstroAtaque>(e =>
+        {
+            e.ToTable("Monstro_Ataque");
+            e.HasKey(a => a.IdMonstroAtaque);
+            e.Property(a => a.IdMonstroAtaque).HasColumnName("id_monstro_ataque");
+            e.Property(a => a.IdMonstro).HasColumnName("id_monstro");
+            e.Property(a => a.Nome).HasColumnName("nome").HasMaxLength(100).IsRequired();
+            e.Property(a => a.BonusAtaque).HasColumnName("bonus_ataque");
+            e.Property(a => a.Dano).HasColumnName("dano").HasMaxLength(30);
+            e.Property(a => a.TipoDano).HasColumnName("tipo_dano").HasMaxLength(30);
+            e.Property(a => a.Alcance).HasColumnName("alcance").HasMaxLength(50);
+            e.Property(a => a.Descricao).HasColumnName("descricao").HasColumnType("varchar(max)");
+            e.HasOne(a => a.Monstro).WithMany(m => m.Ataques).HasForeignKey(a => a.IdMonstro).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<NPC>(e =>
         {
             e.ToTable("NPC");
@@ -400,6 +433,9 @@ public class AppDbContext : DbContext
             e.Property(n => n.RacaTexto).HasColumnName("raca_texto").HasMaxLength(50);
             e.Property(n => n.ClasseTexto).HasColumnName("classe").HasMaxLength(50);
             e.Property(n => n.Nivel).HasColumnName("nivel");
+            e.Property(n => n.PvMaximo).HasColumnName("pv_maximo");
+            e.Property(n => n.ClasseArmadura).HasColumnName("classe_armadura");
+            e.Property(n => n.Deslocamento).HasColumnName("deslocamento");
             e.Property(n => n.AntecedenteTexto).HasColumnName("antecedente_texto").HasMaxLength(50);
             e.Property(n => n.Tendencia).HasColumnName("tendencia").HasMaxLength(50);
             e.Property(n => n.Forca).HasColumnName("forca");
@@ -420,6 +456,27 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(n => n.IdAccount)
              .IsRequired(false);
+        });
+
+        modelBuilder.Entity<NpcMagia>(e =>
+        {
+            e.ToTable("NPC_Magia");
+            e.HasKey(x => new { x.IdNpc, x.IdMagia });
+            e.Property(x => x.IdNpc).HasColumnName("id_npc");
+            e.Property(x => x.IdMagia).HasColumnName("id_magia");
+            e.HasOne(x => x.Npc).WithMany(n => n.Magias).HasForeignKey(x => x.IdNpc).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Magia).WithMany().HasForeignKey(x => x.IdMagia).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NpcItem>(e =>
+        {
+            e.ToTable("NPC_Item");
+            e.HasKey(x => new { x.IdNpc, x.IdItem });
+            e.Property(x => x.IdNpc).HasColumnName("id_npc");
+            e.Property(x => x.IdItem).HasColumnName("id_item");
+            e.Property(x => x.Quantidade).HasColumnName("quantidade");
+            e.HasOne(x => x.Npc).WithMany(n => n.Itens).HasForeignKey(x => x.IdNpc).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Item).WithMany().HasForeignKey(x => x.IdItem).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Item>(e =>
@@ -554,11 +611,15 @@ public class AppDbContext : DbContext
             e.Property(s => s.DataInicio).HasColumnName("data_inicio");
             e.Property(s => s.DataFim).HasColumnName("data_fim");
             e.Property(s => s.DataAtualizacao).HasColumnName("data_atualizacao");
+            e.Property(s => s.Combate2014Json).HasColumnName("combate_2014_json");
             e.Property(s => s.Resumo).HasColumnName("resumo");
             e.Property(s => s.XpTotalDistribuido).HasColumnName("xp_total_distribuido");
             e.Property(s => s.IdAccountTurno).HasColumnName("id_account_turno");
 
             e.HasIndex(s => new { s.IdCampanha, s.Ativa });
+            e.HasIndex(s => s.IdCampanha, "UX_Sessao_Mesa_Campanha_Ativa")
+             .IsUnique()
+             .HasFilter("[ativa] = 1");
 
             e.HasOne(s => s.Campanha)
              .WithMany()
@@ -582,6 +643,10 @@ public class AppDbContext : DbContext
             e.Property(sp => sp.UltimoHeartbeat).HasColumnName("ultimo_heartbeat");
             e.Property(sp => sp.Esquivando).HasColumnName("esquivando");
             e.Property(sp => sp.Escondido).HasColumnName("escondido");
+            e.Property(sp => sp.AcoesRestantes).HasColumnName("acoes_restantes");
+            e.Property(sp => sp.DeslocamentoUsado).HasColumnName("deslocamento_usado").HasColumnType("decimal(5,2)");
+            e.Property(sp => sp.IdMagiaConjurando).HasColumnName("id_magia_conjurando");
+            e.Property(sp => sp.TurnosConjuracaoRestantes).HasColumnName("turnos_conjuracao_restantes");
 
             e.HasOne(sp => sp.Sessao)
              .WithMany(s => s.Participantes)
@@ -596,6 +661,8 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(sp => sp.IdPersonagem)
              .IsRequired(false);
+
+            e.HasOne(sp => sp.MagiaConjurando).WithMany().HasForeignKey(sp => sp.IdMagiaConjurando).IsRequired(false);
         });
 
         modelBuilder.Entity<SessaoMensagem>(e =>
@@ -620,6 +687,15 @@ public class AppDbContext : DbContext
              .IsRequired(false);
         });
 
+        modelBuilder.Entity<SessaoOperacao>(e =>
+        {
+            e.ToTable("Sessao_Operacao");
+            e.HasKey(x => new { x.IdSessao, x.IdOperacao });
+            e.Property(x => x.IdSessao).HasColumnName("id_sessao");
+            e.Property(x => x.IdOperacao).HasColumnName("id_operacao");
+            e.HasOne<SessaoMesa>().WithMany().HasForeignKey(x => x.IdSessao).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<SessaoPino>(e =>
         {
             e.ToTable("Sessao_Pino");
@@ -629,12 +705,14 @@ public class AppDbContext : DbContext
             e.Property(p => p.IdMapa).HasColumnName("id_mapa");
             e.Property(p => p.TipoEntidade).HasColumnName("tipo_entidade").HasMaxLength(20).IsRequired();
             e.Property(p => p.IdEntidade).HasColumnName("id_entidade");
+            e.Property(p => p.Instancia).HasColumnName("instancia").HasDefaultValue(1);
             e.Property(p => p.Coluna).HasColumnName("coluna");
             e.Property(p => p.Linha).HasColumnName("linha");
             e.Property(p => p.Visivel).HasColumnName("visivel");
             e.Property(p => p.PvAtual).HasColumnName("pv_atual");        
 
-            e.HasIndex(p => new { p.IdSessao, p.IdMapa, p.TipoEntidade, p.IdEntidade })
+            e.HasIndex(p => new { p.IdSessao, p.IdMapa, p.TipoEntidade, p.IdEntidade, p.Instancia })
+             .HasDatabaseName("IX_SessaoPino_Sessao_Mapa_Instancia")
              .IsUnique();
 
             e.HasOne(p => p.Sessao)

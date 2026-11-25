@@ -16,6 +16,8 @@ public class NpcRepository : INpcRepository
         return await contexto.Npcs
             .AsNoTracking()
             .Include(n => n.NpcCampanhas)
+            .Include(n => n.Magias).ThenInclude(m => m.Magia)
+            .Include(n => n.Itens).ThenInclude(i => i.Item)
             .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
     }
 
@@ -25,6 +27,8 @@ public class NpcRepository : INpcRepository
         return await contexto.Npcs
             .AsNoTracking()
             .Include(n => n.NpcCampanhas)
+            .Include(n => n.Magias).ThenInclude(m => m.Magia)
+            .Include(n => n.Itens).ThenInclude(i => i.Item)
             .Where(n => n.IdAccount == idAccount)
             .ToListAsync();
     }
@@ -35,6 +39,8 @@ public class NpcRepository : INpcRepository
         return await contexto.Npcs
             .AsNoTracking()
             .Include(n => n.NpcCampanhas)
+            .Include(n => n.Magias).ThenInclude(m => m.Magia)
+            .Include(n => n.Itens).ThenInclude(i => i.Item)
             .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
             .ToListAsync();
     }

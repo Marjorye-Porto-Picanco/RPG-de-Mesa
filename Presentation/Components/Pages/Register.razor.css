@@ -14,7 +14,7 @@
     background: radial-gradient(circle at 30% 35%, rgba(140,58,43,0.55), transparent 55%), linear-gradient(180deg, #1a1310 0%, #241914 45%, #3a2117 100%);
     overflow: auto;
     padding: 28px 16px;
-    background: linear-gradient(rgba(16, 11, 8, 0.78), rgba(16, 11, 8, 0.86)), url("img/fundodemadeira.png.jpg") center / cover fixed;
+    background: linear-gradient(rgba(16, 11, 8, 0.78), rgba(16, 11, 8, 0.86)), var(--rpg-fundo) center / cover fixed;
     color: #382718;
     font-family: Cambria, Georgia, "Times New Roman", serif;
 }
@@ -40,7 +40,7 @@
     border: 1px solid rgba(151, 113, 52, 0.82);
     border-radius: 4px;
     background-color: #ead8b3;
-    background-image: linear-gradient(rgba(248, 233, 199, 0.92), rgba(226, 205, 163, 0.95)), url("img/papelantigo.png");
+    background-image: linear-gradient(rgba(248, 233, 199, 0.92), rgba(226, 205, 163, 0.95)), var(--rpg-papel);
     color: #493519;
     animation: auth-arrive 360ms ease-out both;
 }

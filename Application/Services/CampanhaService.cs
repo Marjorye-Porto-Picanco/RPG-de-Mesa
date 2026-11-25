@@ -358,6 +358,17 @@ public class CampanhaService
             if (campanha == null) return (false, "Campanha não encontrada.");
 
             mapa.IdAccount ??= campanha.IdAccount;
+            if (!string.IsNullOrWhiteSpace(mapa.ImagemUrl))
+            {
+                var existente = (await ObterMapasDoUsuarioAsync(mapa.IdAccount.Value))
+                    .FirstOrDefault(m => string.Equals(m.ImagemUrl, mapa.ImagemUrl, StringComparison.Ordinal));
+                if (existente is not null)
+                {
+                    await _campanhaRepo.AdicionarMapaCampanhaAsync(idCampanha, existente.IdMapa);
+                    return (true, "Mapa existente vinculado à campanha.");
+                }
+            }
+
             await _campanhaRepo.AdicionarMapaAsync(mapa);
             await _campanhaRepo.AdicionarMapaCampanhaAsync(idCampanha, mapa.IdMapa);
 

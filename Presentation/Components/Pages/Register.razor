@@ -1,12 +1,12 @@
 ﻿@page "/cadastro"
 @layout Layout.EmptyLayout
 @inject RegisterViewModel viewModel
-@inject NavigationManager Navigation
+@implements IDisposable
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
 <section class="login">
-    <div class="formes auth-card">
+    <form class="formes auth-card" @onsubmit="viewModel.RealizarCadastroAsync" @onsubmit:preventDefault>
         <div class="auth-emblem" aria-hidden="true"><i class="bi bi-dice-5"></i></div>
         <p class="auth-eyebrow">A sua mesa de aventuras</p>
         <h1>Cadastro</h1>
@@ -44,7 +44,7 @@
             <span>Concordar com os <a href="#" @onclick="viewModel.AbrirModal" @onclick:preventDefault>termos de uso</a></span>
         </label>
 
-        <button class="auth-submit" type="button" @onclick="viewModel.RealizarCadastroAsync" disabled="@viewModel.IsProcessing">
+        <button class="auth-submit" type="submit" disabled="@viewModel.IsProcessing">
             @(viewModel.IsProcessing ? "Cadastrando..." : "Cadastrar")
         </button>
 
@@ -54,18 +54,19 @@
         </div>-->
 
         <p class="auth-account-prompt">Já possui conta? <a href="/login" class="auth-create-link">Voltar para o login</a></p>
-    </div>
+    </form>
 </section>
 
 <!-- SEU POP-UP (Intacto) -->
 @if (viewModel.ExibirModal)
 {
-    <section class="pop-up-backdrop" @onclick="viewModel.FecharModal">
+    <section class="pop-up-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-termos-cadastro"
+             @onclick="viewModel.FecharModal">
         <div class="modal-rpg" @onclick:stopPropagation>
             <button type="button" class="fechar-popup" @onclick="viewModel.FecharModal" aria-label="Fechar">&times;</button>
 
             <header class="modal-cabecalho">
-                <h3>Termos da Sessão</h3>
+                <h3 id="titulo-termos-cadastro">Termos da Sessão</h3>
                 <div class="linha-dourada"></div>
             </header>
 

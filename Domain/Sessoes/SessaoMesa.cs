@@ -17,6 +17,7 @@ public class SessaoMesa : IAggregateRoot
     public DateTime DataAtualizacao { get; private set; }
     public string? Resumo { get; private set; }
     public int XpTotalDistribuido { get; private set; }
+    public string? Combate2014Json { get; private set; }
 
     public virtual Campanha Campanha { get; private set; } = null!;
     public virtual Mapa? MapaAtivo { get; private set; }
@@ -85,6 +86,12 @@ public class SessaoMesa : IAggregateRoot
     public void DefinirTurnoJogador(int? idAccount)
     {
         IdAccountTurno = idAccount;
+        DataAtualizacao = DateTime.UtcNow;
+    }
+
+    public void SalvarCombate2014(string json)
+    {
+        Combate2014Json = json;
         DataAtualizacao = DateTime.UtcNow;
     }
 

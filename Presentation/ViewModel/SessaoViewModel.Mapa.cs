@@ -7,6 +7,8 @@ namespace RPGdeMesa.Presentation.ViewModel;
 public partial class SessaoViewModel
 {
     private bool _moveuDuranteArraste;
+    private bool _gravandoMovimentoPino;
+    private int? _idPinoAcoesMestre;
 
     public double NivelZoom { get; private set; } = 1.0;
     public const double ZoomMinimo = 0.6;
@@ -21,6 +23,11 @@ public partial class SessaoViewModel
     public PinoMapaDto? PinoArrastando { get; private set; }
     public (int Coluna, int Linha)? CelulaDestinoArraste { get; private set; }
     public bool NovoPinoVisivel { get; set; } = true;
+
+    public PinoMapaDto? PinoAcoesMestre => Estado.EhMestre && Estado.SessaoAtiva &&
+        Estado.IdMapaAtivo is int idMapa && _idPinoAcoesMestre is int idPino
+        ? Estado.Pinos.Find(p => p.IdPino == idPino && p.IdMapa == idMapa)
+        : null;
 
     public IEnumerable<PinoMapaDto> PinosVisiveisNoMapa
     {
@@ -58,10 +65,10 @@ public partial class SessaoViewModel
 
     public PinoMapaDto? ObterPinoNoMapa(string tipoEntidade, int idEntidade) =>
         Estado.IdMapaAtivo.HasValue
-            ? Estado.Pinos.FirstOrDefault(p =>
+            ? Estado.Pinos.Where(p =>
                 p.IdMapa == Estado.IdMapaAtivo &&
                 p.TipoEntidade == tipoEntidade &&
-                p.IdEntidade == idEntidade)
+                p.IdEntidade == idEntidade).OrderBy(p => p.Instancia).FirstOrDefault()
             : null;
 
     public string? ObterResumoOutroMapaDoPino(string tipoEntidade, int idEntidade)
@@ -85,7 +92,7 @@ public partial class SessaoViewModel
         return $"Salvo em: {string.Join(", ", nomes)}";
     }
 
-    public void SelecionarPinoParaPosicionar(string tipoEntidade, int idEntidade, string nome)
+    public void SelecionarPinoParaPosicionar(string tipoEntidade, int idEntidade, string nome, bool novaInstancia = false)
     {
         if (!Estado.EhMestre) return;
 
@@ -98,14 +105,14 @@ public partial class SessaoViewModel
 
         if (PinoParaPosicionar is not null &&
             PinoParaPosicionar.TipoEntidade == tipoEntidade &&
-            PinoParaPosicionar.IdEntidade == idEntidade)
+            PinoParaPosicionar.IdEntidade == idEntidade && PinoParaPosicionar.NovaInstancia == novaInstancia)
         {
             PinoParaPosicionar = null;
             FeedbackAcao = null;
         }
         else
         {
-            PinoParaPosicionar = new PinoSelecionadoParaColocar(tipoEntidade, idEntidade, nome);
+            PinoParaPosicionar = new PinoSelecionadoParaColocar(tipoEntidade, idEntidade, nome, novaInstancia);
             FeedbackAcao = $"Clique em uma casa de \"{Estado.MapaAtivo?.NomeRegiao}\" para posicionar \"{nome}\".";
         }
         Notificar();
@@ -120,7 +127,7 @@ public partial class SessaoViewModel
 
     public void IniciarArrastePino(PinoMapaDto pino)
     {
-        if (!Estado.EhMestre) return;
+        if (!Estado.EhMestre || _gravandoMovimentoPino) return;
         PinoParaPosicionar = null;
         PinoArrastando = pino;
         CelulaDestinoArraste = (pino.Coluna, pino.Linha);
@@ -136,8 +143,6 @@ public partial class SessaoViewModel
         CelulaDestinoArraste = (coluna, linha);
         if (coluna != PinoArrastando.Coluna || linha != PinoArrastando.Linha)
             _moveuDuranteArraste = true;
-
-        Notificar();
     }
 
     public void FinalizarArrastePino()
@@ -170,11 +175,20 @@ public partial class SessaoViewModel
 
         if (!realmenteMoveu)
         {
-            Notificar();
             await AoClicarPinoMapaAsync(pino);
             return;
         }
 
+        if (Estado.Encontro.Rodada > 0 && Estado.Encontro.IdPinoAtual == pino.IdPino)
+        {
+            await UsarControle2014Async((s, e, conta) => s.MoverComReacoes2014Async(e, conta, pino.IdPino, colClamped, linClamped, false));
+            FeedbackAcao = FeedbackAtaqueEntidade;
+            Notificar();
+            return;
+        }
+
+        var posicaoAnterior = (pino.Coluna, pino.Linha);
+        _gravandoMovimentoPino = true;
         pino.Coluna = colClamped;
         pino.Linha = linClamped;
         FeedbackAcao = null;
@@ -192,24 +206,20 @@ public partial class SessaoViewModel
                 pino.IdEntidade,
                 colClamped,
                 linClamped,
-                pino.Visivel);
+                pino.Visivel,
+                idPino: pino.IdPino);
 
             if (!sucesso)
+            {
+                (pino.Coluna, pino.Linha) = posicaoAnterior;
                 FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
-
-            Notificar();
+            }
         }
         finally
         {
+            _gravandoMovimentoPino = false;
             _dbLock.Release();
+            Notificar();
         }
     }
 
@@ -233,7 +243,7 @@ public partial class SessaoViewModel
 
         var alvo = PinoParaPosicionar;
         var existente = ObterPinoNoMapa(alvo.TipoEntidade, alvo.IdEntidade);
-        bool visivel = existente?.Visivel ?? NovoPinoVisivel;
+        bool visivel = alvo.NovaInstancia ? NovoPinoVisivel : existente?.Visivel ?? NovoPinoVisivel;
 
         await _dbLock.WaitAsync();
         try
@@ -247,7 +257,8 @@ public partial class SessaoViewModel
                 alvo.IdEntidade,
                 coluna,
                 linha,
-                visivel);
+                visivel,
+                novaInstancia: alvo.NovaInstancia);
 
             if (!sucesso)
             {
@@ -275,11 +286,11 @@ public partial class SessaoViewModel
         }
     }
 
-    public async Task AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade)
+    public async Task AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade, int? idPino = null)
     {
         if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
 
-        var pino = ObterPinoNoMapa(tipoEntidade, idEntidade);
+        var pino = idPino.HasValue ? PinosVisiveisNoMapa.FirstOrDefault(p => p.IdPino == idPino) : ObterPinoNoMapa(tipoEntidade, idEntidade);
         if (pino == null) return;
 
         await _dbLock.WaitAsync();
@@ -292,7 +303,8 @@ public partial class SessaoViewModel
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
                 idEntidade,
-                !pino.Visivel);
+                !pino.Visivel,
+                pino.IdPino);
 
             if (!sucesso)
                 FeedbackAcao = erro;
@@ -313,7 +325,7 @@ public partial class SessaoViewModel
         }
     }
 
-    public async Task RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade)
+    public async Task RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade, int? idPino = null)
     {
         if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
 
@@ -326,7 +338,8 @@ public partial class SessaoViewModel
                 Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
-                idEntidade);
+                idEntidade,
+                idPino);
 
             if (!sucesso)
                 FeedbackAcao = erro;
@@ -355,10 +368,34 @@ public partial class SessaoViewModel
             return;
         }
 
+        if (Estado.EhMestre)
+        {
+            if (Estado.SessaoAtiva && pino.IdMapa == Estado.IdMapaAtivo && _idPinoAcoesMestre != pino.IdPino)
+            {
+                _idPinoAcoesMestre = pino.IdPino;
+                FeedbackAtaqueEntidade = null;
+            }
+            Notificar();
+            return;
+        }
+
+        await AbrirFichaPinoMapaAsync(pino);
+    }
+
+    public Task AbrirFichaPinoAcoesMestreAsync(int idPino) => PinoAcoesMestre is { } pino && pino.IdPino == idPino
+        ? AbrirFichaPinoMapaAsync(pino)
+        : Task.CompletedTask;
+
+    private async Task AbrirFichaPinoMapaAsync(PinoMapaDto pino)
+    {
         if (pino.TipoEntidade == TiposPinoSessao.Monstro)
         {
             MonstroEmVisualizacao = Estado.MonstrosCampanha.FirstOrDefault(m => m.IdMonstro == pino.IdEntidade);
             PinoMonstroEmVisualizacao = pino;
+            IdAtaqueMonstroSelecionado = MonstroEmVisualizacao?.Ataques.FirstOrDefault(a => RegrasCombate2014.DanoValido(a.Dano))?.IdMonstroAtaque ?? 0;
+            AlvoAtaqueMonstroSelecionado = AlvosAtaqueMonstro.FirstOrDefault() is { } primeiroAlvo
+                ? primeiroAlvo.IdPino.ToString() : string.Empty;
+            FeedbackAtaqueEntidade = null;
             PvAtualMonstroEdicao = pino.PvAtual ?? MonstroEmVisualizacao?.PvMaximo ?? 0;
             NpcEmVisualizacao = null;
             PinoNpcEmVisualizacao = null;
@@ -376,6 +413,11 @@ public partial class SessaoViewModel
         {
             NpcEmVisualizacao = Estado.NpcsCampanha.FirstOrDefault(n => n.IdNpc == pino.IdEntidade);
             PinoNpcEmVisualizacao = pino;
+            IdItemNpcAtaqueSelecionado = NpcEmVisualizacao?.Itens.FirstOrDefault(x => RegrasCombate2014.DanoValido(x.Item?.Dano))?.IdItem ?? 0;
+            IdMagiaNpcSelecionada = NpcEmVisualizacao?.Magias.FirstOrDefault()?.IdMagia ?? 0;
+            AlvoAtaqueNpcSelecionado = ObterAlvosDaEntidade(pino.IdPino).FirstOrDefault()?.IdPino.ToString() ?? string.Empty;
+            AlvoMagiaNpcSelecionado = AlvoAtaqueNpcSelecionado;
+            FeedbackAtaqueEntidade = null;
             PvAtualNpcEdicao = pino.PvAtual ?? (NpcEmVisualizacao != null ? SessaoService.CalcularPvMaximoNpc(NpcEmVisualizacao) : 0);
             MonstroEmVisualizacao = null;
             PinoMonstroEmVisualizacao = null;
@@ -411,6 +453,7 @@ public partial class SessaoViewModel
         PinoArrastando = null;
         CelulaDestinoArraste = null;
         _moveuDuranteArraste = false;
+        _idPinoAcoesMestre = null;
 
         Estado.IdMapaAtivo = idMapaSelecionado;
         Estado.MapaAtivo = Estado.MapasDisponiveis.FirstOrDefault(m => m.IdMapa == idMapaSelecionado);

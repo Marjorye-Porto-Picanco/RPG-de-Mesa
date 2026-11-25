@@ -1,0 +1,133 @@
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Domain.Magias
+@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Presentation.ViewModel
+
+<div class="combate2014-campos">
+    @if (Magias.Any())
+    {
+        <label>Magia da ficha<select @bind="_idMagia" @bind:after="SelecionarMagia"><option value="0">Preencher manualmente</option>
+            @foreach (var magia in Magias) { <option value="@magia.IdMagia">@magia.Nome</option> }
+        </select></label>
+    }
+    <label>Nome da habilidade<input maxlength="120" @bind="_nome" /></label>
+    <label>Resolução<select @bind="_resolucao">
+        <option value="Salvaguarda">Salvaguarda</option><option value="AtaqueMagico">Ataque mágico</option>
+        <option value="Dano">Dano direto</option><option value="Cura">Cura</option><option value="Efeito">Apenas efeito</option>
+    </select></label>
+    @if (_resolucao != ResolucaoHabilidade2014.Efeito)
+    {
+        <label>@(_resolucao == ResolucaoHabilidade2014.Cura ? "Fórmula de cura" : "Fórmula de dano")<input maxlength="160" placeholder="2d6+5" @bind="_dano" /></label>
+        @if (_resolucao != ResolucaoHabilidade2014.Cura) { <label>Tipo de dano<input maxlength="30" @bind="_tipoDano" /></label> }
+    }
+    @if (_resolucao == ResolucaoHabilidade2014.Salvaguarda)
+    {
+        <label>Atributo<select @bind="_atributo">@foreach (var atributo in Enum.GetValues<Atributo2014>()) { <option value="@atributo">@atributo</option> }</select></label>
+        <label>CD<input type="number" min="1" max="40" @bind="_cd" /></label>
+        <label>Bônus de salvaguarda adicional<input type="number" min="-20" max="30" @bind="_bonusSalvaguarda" /></label>
+        <label class="combate2014-check"><input type="checkbox" @bind="_meioDano" /> Metade no sucesso</label>
+        <label class="combate2014-check"><input type="checkbox" @bind="_permitirLendaria" /> Permitir resistência lendária</label>
+    }
+    @if (_resolucao == ResolucaoHabilidade2014.AtaqueMagico)
+    {
+        <label>Bônus de ataque mágico<input type="number" min="-20" max="30" @bind="_bonusAtaque" /></label>
+        <label>Rolagem<select @bind="_rolagem">@foreach (var item in Enum.GetValues<Rolagem2014>()) { <option value="@item">@item</option> }</select></label>
+    }
+    <label>Área<select @bind="_area">
+        <option value="AlvosMarcados">Alvos marcados</option><option value="Raio">Raio</option>
+        @if (IdOrigem > 0) { <option value="Linha">Linha</option><option value="Cone">Cone</option> }
+    </select></label>
+    @if (_area != SistemaArea2014.AlvosMarcados)
+    {
+        <label>Tamanho (m)<input type="number" min="1.5" max="90" step="1.5" @bind="_tamanho" /></label>
+        <label>@(_area == SistemaArea2014.Raio ? "Centro" : "Direção")<input maxlength="3" placeholder="E4" @bind="_coordenada" /></label>
+    }
+    @if (_resolucao is ResolucaoHabilidade2014.Salvaguarda or ResolucaoHabilidade2014.AtaqueMagico)
+    {
+        <label>Cobertura<select @bind="_cobertura"><option value="Nenhuma">Nenhuma</option><option value="Meia">Meia</option><option value="TresQuartos">Três quartos</option><option value="Total">Total</option></select></label>
+    }
+    <label>Condição<select @bind="_condicao"><option value="">Nenhuma</option>@foreach (var item in Enum.GetValues<Condicao2014>()) { <option value="@item">@item</option> }</select></label>
+    @if (_condicao.HasValue) { <label>Duração da condição<input type="number" min="1" max="100" placeholder="Manual" @bind="_rodadasCondicao" /></label> }
+    @if (IdOrigem > 0)
+    {
+        <label>Tipo de ação<select @bind="_acao"><option value="Acao">Ação</option><option value="Bonus">Ação bônus</option><option value="Reacao">Reação</option><option value="Lendaria">Lendária</option><option value="Covil">Covil</option></select></label>
+        @if (_acao == TipoAcao2014.Lendaria) { <label>Custo lendário<input type="number" min="1" max="10" @bind="_custo" /></label> }
+        @if (ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(IdOrigem) is { Recursos.Count: > 0 } ficha)
+        {
+            <label>Recurso ou espaço<select @bind="_recurso"><option value="">Nenhum</option>
+                @foreach (var (nome, recurso) in ficha.Recursos) { <option value="@nome" disabled="@(recurso.Restantes == 0)">@nome (@recurso.Restantes/@recurso.Maximo)</option> }
+            </select></label>
+        }
+        <label class="combate2014-check"><input type="checkbox" @bind="_concentracao" /> Exige concentração</label>
+        @if (_concentracao) { <label>Duração da concentração (rodadas)<input type="number" min="1" max="1000" placeholder="Manual" @bind="_rodadasConcentracao" /></label> }
+    }
+</div>
+<fieldset class="combate2014-alvos">
+    <legend>@(_area == SistemaArea2014.AlvosMarcados ? "Alvos" : "Restringir a área aos pinos marcados")</legend>
+    @foreach (var pino in Pinos)
+    {
+        <label class="combate2014-check" @key="pino.IdPino"><input type="checkbox" checked="@_alvos.Contains(pino.IdPino)"
+                @onchange="e => MarcarAlvo(pino.IdPino, e.Value is true)" /> @pino.Nome · @pino.CoordenadaTexto</label>
+    }
+</fieldset>
+<button type="button" @onclick="ExecutarAsync">Resolver habilidade</button>
+@if (_erro is not null) { <p role="status">@_erro</p> }
+
+@code {
+    [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
+    [Parameter, EditorRequired] public int IdOrigem { get; set; }
+    private readonly HashSet<int> _alvos = [];
+    private int _idMagia, _bonusAtaque, _bonusSalvaguarda;
+    private int _cd = 15, _custo = 1;
+    private int? _rodadasConcentracao, _rodadasCondicao;
+    private bool _meioDano, _concentracao, _permitirLendaria;
+    private decimal _tamanho = 4.5m;
+    private decimal? _alcance;
+    private string _nome = "", _dano = "", _tipoDano = "", _recurso = "", _coordenada = "";
+    private string? _erro;
+    private SistemaArea2014 _area;
+    private ResolucaoHabilidade2014 _resolucao;
+    private Atributo2014 _atributo = Atributo2014.Destreza;
+    private TipoAcao2014 _acao;
+    private Condicao2014? _condicao;
+    private Rolagem2014 _rolagem;
+    private Cobertura2014 _cobertura;
+    private IEnumerable<PinoMapaDto> Pinos => ViewModel.PinosVisiveisNoMapa.OrderBy(p => p.Nome);
+    private IEnumerable<Magia> Magias => Pinos.FirstOrDefault(p => p.IdPino == IdOrigem && p.TipoEntidade == TiposPinoSessao.Npc) is { } pin
+        ? ViewModel.Estado.NpcsCampanha.Find(n => n.IdNpc == pin.IdEntidade)?.Magias.Select(x => x.Magia).OfType<Magia>() ?? [] : [];
+
+    private void SelecionarMagia()
+    {
+        _alcance = null;
+        if (Magias.FirstOrDefault(m => m.IdMagia == _idMagia) is not { } magia) return;
+        _nome = magia.Nome;
+        _dano = RegrasMagiaCombate.ExtrairPrimeiraExpressaoDado(magia.DanoEfeito);
+        var duracao = RegrasMagiaCombate.InterpretarDuracao(magia.Duracao);
+        _concentracao = duracao.SugereConcentracao;
+        _rodadasConcentracao = duracao.Tipo == TipoDuracaoMagia.PorRodadas ? duracao.Rodadas : null;
+        _alcance = RegrasMagiaCombate.InterpretarAlcance(magia.Alcance).MetrosMaximos;
+    }
+
+    private void MarcarAlvo(int id, bool selecionado)
+    {
+        if (selecionado) _alvos.Add(id); else _alvos.Remove(id);
+    }
+
+    private async Task ExecutarAsync()
+    {
+        _erro = null;
+        string casa = _coordenada.Trim().ToUpperInvariant();
+        int coluna = casa.Length > 0 ? casa[0] - 'A' : -1;
+        int linha = casa.Length > 1 && int.TryParse(casa[1..], out int numero) ? numero - 1 : -1;
+        if (_area != SistemaArea2014.AlvosMarcados && (coluna is < 0 or > 19 || linha is < 0 or > 19))
+        {
+            _erro = "Informe uma casa de A1 até T20.";
+            return;
+        }
+        var efeito = _condicao is { } condicao ? new EfeitoCombate2014 { Condicao = condicao, Rodadas = _rodadasCondicao, Momento = Momento2014.FimTurno } : null;
+        var comando = new HabilidadeMestre2014(_nome, IdOrigem, _alvos.ToList(), new(_acao, _recurso, _custo), _resolucao,
+            _dano, _tipoDano, _atributo, _cd, _meioDano, _area, _tamanho, coluna, linha, efeito, _concentracao,
+            _rodadasConcentracao, _permitirLendaria, _bonusAtaque, _bonusSalvaguarda, _rolagem, _cobertura, _alcance);
+        await ViewModel.UsarControle2014Async((s, e, conta) => s.UsarHabilidade2014Async(e, conta, comando));
+    }
+}

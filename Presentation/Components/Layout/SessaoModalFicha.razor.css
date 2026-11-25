@@ -20,7 +20,7 @@
     border: 2px solid #946c2d;
     border-radius: 10px;
     background-color: #dfc38d;
-    background-image: linear-gradient(rgba(248, 229, 188, 0.9), rgba(226, 198, 143, 0.94)), url("img/papelantigo.png");
+    background-image: linear-gradient(rgba(248, 229, 188, 0.9), rgba(226, 198, 143, 0.94)), var(--rpg-papel);
     background-position: center;
     background-size: cover;
     color: #493519;

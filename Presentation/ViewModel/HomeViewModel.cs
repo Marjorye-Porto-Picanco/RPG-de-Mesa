@@ -27,8 +27,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
     public class HomeViewModel
     {
-        private const string BannerPadrao = "img/maprpg.png";
-        private const string CapaPadrao = "img/capacampanha1.png";
+        internal const string CapaPadrao = "img/home-campanhas.webp";
         private static readonly TimeSpan ValidadeCache = TimeSpan.FromMinutes(2);
 
         private readonly SemaphoreSlim _semaforoCarga = new(1, 1);
@@ -76,6 +75,11 @@ namespace RPGdeMesa.Presentation.ViewModel
         public Campanha? CampanhaEmDestaque { get; private set; }
         public HomeCampanhaResumo? DestaqueResumo { get; private set; }
         public List<HomeCampanhaResumo> CampanhasResumo { get; private set; } = new();
+        public int IndiceCampanhaCarrossel { get; private set; }
+        public IReadOnlyList<HomeCampanhaResumo?> CampanhasCarrossel =>
+            CampanhasResumo.Count == 0 ? new[] { DestaqueResumo } : CampanhasResumo;
+        public HomeCampanhaResumo? CampanhaCarrosselAtual =>
+            CampanhasResumo.Count == 0 ? DestaqueResumo : CampanhasResumo[IndiceCampanhaCarrossel];
         public List<AtividadeRecenteItem> AtividadesRecentes { get; private set; } = new();
 
         public event Action? OnChange;
@@ -100,20 +104,6 @@ namespace RPGdeMesa.Presentation.ViewModel
             _totalJogadorPreview > 0 && _totalMestrePreview == 0;
 
         public bool ExibirResumoMesa => DestaqueResumo is not null;
-
-        public string NomeCampanhaDestaque =>
-            DestaqueResumo?.Nome ?? "Sua próxima aventura";
-
-        public string DescricaoCampanhaDestaque =>
-            string.IsNullOrWhiteSpace(DestaqueResumo?.Descricao)
-                ? "O grupo está reunido. As trilhas antigas aguardam a próxima sessão."
-                : DestaqueResumo.Descricao;
-
-        public string CapaCampanhaDestaque =>
-            string.IsNullOrWhiteSpace(DestaqueResumo?.Capa) ? BannerPadrao : DestaqueResumo.Capa;
-
-        public string RotaCampanhaDestaque =>
-            ObterRotaCampanha(DestaqueResumo);
 
         public int TotalPersonagensDestaque => _totalPersonagensDestaque;
 
@@ -149,13 +139,11 @@ namespace RPGdeMesa.Presentation.ViewModel
                 : $"/sessao-entrar/{campanha.IdCampanha}";
         }
 
-        public string TextoBotaoPrincipalHero
+        public string ObterTextoBotaoHero(HomeCampanhaResumo? campanha)
         {
-            get
-            {
-                if (DestaqueResumo is null) return "Criar campanha";
-                return EhMestreDaCampanha(DestaqueResumo) ? "Iniciar sessão" : "Entrar como jogador";
-            }
+            if (campanha is null) return "Criar campanha";
+
+            return EhMestreDaCampanha(campanha) ? "Iniciar sessão" : "Entrar na sessão";
         }
 
         public string RotaBotaoSecundarioHero =>
@@ -163,6 +151,26 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public string TextoBotaoSecundarioHero =>
             EhApenasJogador ? "Ver campanhas" : "Entrar na sala";
+
+        public void CampanhaAnterior() => MoverCampanhaCarrossel(-1);
+
+        public void ProximaCampanha() => MoverCampanhaCarrossel(1);
+
+        public void SelecionarCampanhaCarrossel(int indice)
+        {
+            if (indice < 0 || indice >= CampanhasResumo.Count || indice == IndiceCampanhaCarrossel)
+                return;
+
+            IndiceCampanhaCarrossel = indice;
+            NotifyStateChanged();
+        }
+
+        private void MoverCampanhaCarrossel(int direcao)
+        {
+            int total = CampanhasResumo.Count;
+            if (total > 1)
+                SelecionarCampanhaCarrossel((IndiceCampanhaCarrossel + direcao + total) % total);
+        }
 
         /// <summary>
         /// Hidrata a Home de forma síncrona (RAM primeiro, depois JSON em disco)
@@ -370,7 +378,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             DestaqueResumo = d.CampanhaDestaque;
             _totalPersonagensDestaque = d.TotalPersonagensDestaque;
             _totalElementosMesaDestaque = d.TotalElementosMesaDestaque;
-            CampanhasResumo = d.CampanhasResumo;
+            AtualizarCampanhasResumo(d.CampanhasResumo);
             AtividadesRecentes = d.AtividadesRecentes;
         }
 
@@ -383,7 +391,14 @@ namespace RPGdeMesa.Presentation.ViewModel
             _totalElementosMesaDestaque =
                 (CampanhaEmDestaque?.MonstroCampanhas.Count ?? 0) +
                 (CampanhaEmDestaque?.NpcCampanhas.Count ?? 0);
-            CampanhasResumo = Campanhas.Take(3).Select(ParaResumo).ToList();
+            AtualizarCampanhasResumo(Campanhas.Take(3).Select(ParaResumo).ToList());
+        }
+
+        private void AtualizarCampanhasResumo(List<HomeCampanhaResumo> campanhas)
+        {
+            var idSelecionado = CampanhaCarrosselAtual?.IdCampanha;
+            CampanhasResumo = campanhas;
+            IndiceCampanhaCarrossel = Math.Max(0, campanhas.FindIndex(c => c.IdCampanha == idSelecionado));
         }
 
         private static HomeCampanhaResumo ParaResumo(Campanha c) => new()

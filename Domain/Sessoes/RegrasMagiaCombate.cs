@@ -50,7 +50,8 @@ public sealed record AlcanceMagiaInfo(
 public sealed record TempoConjuracaoInfo(
     CategoriaTempoConjuracao Categoria,
     bool PermitidaEmCombate,
-    string RotuloPtBr);
+    string RotuloPtBr,
+    int TurnosCarregamento = 0);
 
 public sealed record DuracaoMagiaInfo(
     TipoDuracaoMagia Tipo,
@@ -85,6 +86,7 @@ public sealed class ResultadoConjuracaoDto
     public bool Concentracao { get; set; }
     public string? TipoAlvo { get; set; }
     public int IdEntidadeAlvo { get; set; }
+    public int? IdPinoAlvo { get; set; }
     public string NomeAlvo { get; set; } = string.Empty;
     public int CaAlvo { get; set; }
     public bool AlvoEsquivando { get; set; }
@@ -275,6 +277,16 @@ public static class RegrasMagiaCombate
 
         if (txt.Contains("action") || txt.Contains("ação"))
             return new(CategoriaTempoConjuracao.Acao, true, "1 Ação");
+
+        if (txt.Contains("minute") || txt.Contains("minuto"))
+        {
+            var match = Regex.Match(txt, @"(\d+)");
+            int minutos = match.Success ? Math.Max(1, int.Parse(match.Value)) : 1;
+            return new(CategoriaTempoConjuracao.LongoForaDeCombate, false, tempoRaw.Trim(), minutos * 10);
+        }
+
+        if (txt.Contains("hour") || txt.Contains("hora"))
+            return new(CategoriaTempoConjuracao.LongoForaDeCombate, false, tempoRaw.Trim(), 600);
 
         return new(CategoriaTempoConjuracao.LongoForaDeCombate, false, tempoRaw.Trim());
     }

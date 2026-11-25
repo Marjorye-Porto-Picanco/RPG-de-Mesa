@@ -137,11 +137,16 @@ namespace RPGdeMesa.Presentation.ViewModel
             "Grimório & Magias"
         ];
 
-        public IReadOnlyList<string> ListaOpcoesClasses { get; } =
-        [
-            "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
-            "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
-        ];
+        public IReadOnlyList<string> ListaOpcoesClasses { get; private set; } = Array.Empty<string>();
+        public IReadOnlyList<string> ListaOpcoesRacas { get; private set; } = Array.Empty<string>();
+
+        public async Task CarregarOpcoesBancoAsync()
+        {
+            var classes = await _personagemService.ListarClassesAsync();
+            var racas = await _personagemService.ListarRacasAsync();
+            ListaOpcoesClasses = classes.Select(c => c.Nome).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            ListaOpcoesRacas = racas.Select(r => r.Nome).Where(n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
 
         public IReadOnlyList<string> ListaSalvaguardas { get; } =
         [

@@ -1,0 +1,34 @@
+@using RPGdeMesa.Domain.Personagens
+@using RPGdeMesa.Domain.Sessoes
+
+@if (Personagem is not null && Slots.Count > 0)
+{
+    <section class="spell-slots-summary" aria-label="Círculos mágicos disponíveis">
+        <h3>Círculos mágicos</h3>
+        <div class="spell-slots-list">
+            @foreach (var slot in Slots)
+            {
+                <div class="spell-slot-row"><span>@(slot.Key)º círculo</span><strong>@slot.Value.Item1 − @slot.Value.Item2</strong><small>@(slot.Value.Item3.HasValue ? $"Após descanso: {slot.Value.Item3.Value}" : $"{Math.Max(0, slot.Value.Item1 - slot.Value.Item2)} disponível(is)")</small></div>
+            }
+        </div>
+        <small>Os espaços usados são recuperados conforme as regras de descanso.</small>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public Personagem Personagem { get; set; } = default!;
+    private Dictionary<int, (int, int, int?)> Slots
+    {
+        get
+        {
+            var tipo = RegrasMagiaCombate.IdentificarTipoConjuracao(Personagem.ClasseTexto ?? "");
+            var totais = RegrasMagiaCombate.ObterEspacosPorCirculo(tipo, Personagem.Nivel);
+            var persistidos = Personagem.CirculosMagicos?.ToDictionary(x => x.CirculoNivel) ?? new();
+            return totais.Where(x => x.Value > 0).ToDictionary(x => x.Key, x =>
+            {
+                if (persistidos.TryGetValue(x.Key, out var salvo)) return (salvo.TotalSlots, salvo.SlotsUsados, salvo.TotalSlotsPendente);
+                return (x.Value, 0, (int?)null);
+            });
+        }
+    }
+}

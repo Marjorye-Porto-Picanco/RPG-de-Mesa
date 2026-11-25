@@ -5,7 +5,7 @@
 
 <NavMenu />
 
-<div class="app-shell">
+<div class="app-shell botoes-personagem">
     <main class="app-content library-content">
         <header class="page-heading">
             <div>
@@ -14,9 +14,9 @@
                 <p class="page-description">Consulte itens, armas, magias e criaturas para suas campanhas.</p>
             </div>
 
-            <a class="action-primary" @onclick="VM.AbrirModalCriacao">
+            <button class="botao-dourado" type="button" @onclick="VM.AbrirModalCriacao">
                 <span aria-hidden="true">+</span> Criar conteúdo
-            </a>
+            </button>
         </header>
 
         <p class="library-scope">Exibindo registros cadastrados para a sua conta.</p>
@@ -25,10 +25,10 @@
         <div class="library-tabs" role="tablist" aria-label="Categorias da biblioteca">
             @foreach (var categoria in VM.Categorias)
             {
-                <button class="library-tab @(VM.CategoriaAtual == categoria.Chave ? "active" : "")"
+                <button class="botao-aba library-tab @(VM.CategoriaAtual == categoria.Chave ? "active" : "")"
                         type="button"
                         role="tab"
-                        aria-selected="@(VM.CategoriaAtual == categoria.Chave)"
+                        aria-selected="@(VM.CategoriaAtual == categoria.Chave ? "true" : "false")"
                         @onclick="() => VM.TrocarCategoria(categoria.Chave)">
                     @categoria.Nome
                 </button>

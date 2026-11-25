@@ -1,6 +1,8 @@
 ﻿@page "/sessao-iniciar/{idCampanha:int}"
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
+@using RPGdeMesa.Domain.Itens
+@using RPGdeMesa.Domain.Magias
 @inject SessaoIniciarViewModel ViewModel
 @implements IDisposable
 
@@ -247,31 +249,14 @@
                                             <label class="form-field">
                                                 Raça
                                                 <select @bind="ViewModel.NpcRaca">
-                                                    <option value="Humano">Humano</option>
-                                                    <option value="Elfo">Elfo</option>
-                                                    <option value="Anão">Anão</option>
-                                                    <option value="Halfling">Halfling</option>
-                                                    <option value="Meio-elfo">Meio-elfo</option>
-                                                    <option value="Tiefling">Tiefling</option>
-                                                    <option value="Orc">Orc</option>
-                                                    <option value="Outra">Outra</option>
+                                                    @foreach (var raca in ViewModel.OpcoesRacaNpc) { <option value="@raca">@raca</option> }
                                                 </select>
                                             </label>
 
                                             <label class="form-field">
                                                 Classe
                                                 <select @bind="ViewModel.NpcClasse">
-                                                    <option value="Guerreiro">Guerreiro</option>
-                                                    <option value="Bárbaro">Bárbaro</option>
-                                                    <option value="Bardo">Bardo</option>
-                                                    <option value="Clérigo">Clérigo</option>
-                                                    <option value="Druida">Druida</option>
-                                                    <option value="Ladino">Ladino</option>
-                                                    <option value="Mago">Mago</option>
-                                                    <option value="Paladino">Paladino</option>
-                                                    <option value="Patrulheiro">Patrulheiro</option>
-                                                    <option value="Bruxo">Bruxo</option>
-                                                    <option value="Civil / Plebeu">Civil / Plebeu</option>
+                                                    @foreach (var classe in ViewModel.OpcoesClasseNpc) { <option value="@classe">@classe</option> }
                                                 </select>
                                             </label>
                                         </div>
@@ -341,6 +326,44 @@
                                             História e anotações
                                             <textarea @bind="ViewModel.NpcHistoria" rows="4" placeholder="Detalhes do NPC..."></textarea>
                                         </label>
+                                        <section class="npc-resource-picker">
+                                            <h4>Itens e armas</h4>
+                                            <input class="npc-recurso-busca" type="search" @bind="ViewModel.BuscaItemNpc" @bind:event="oninput" placeholder="Buscar item ou arma..." />
+                                            <div class="npc-recurso-catalogo">
+                                            @if (ViewModel.ItensNpcCatalogoFiltrados.Any())
+                                            {
+                                                @foreach (var itemNpc in ViewModel.ItensNpcCatalogoFiltrados)
+                                                {
+                                                    <div class="npc-recurso-linha"><span><strong>@itemNpc.Nome</strong><small>@(string.IsNullOrWhiteSpace(itemNpc.Dano) ? itemNpc.Tipo : $"{itemNpc.Dano} {itemNpc.TipoDano}")</small></span><button type="button" class="npc-recurso-add" aria-label="Adicionar @itemNpc.Nome" @onclick="() => ViewModel.AlterarItemNpc(itemNpc.IdItem, true)">+</button></div>
+                                                }
+                                            }
+                                            else { <p>Todos os itens já foram adicionados ou não correspondem à busca.</p> }
+                                            </div>
+                                            <div class="npc-recursos-selecionados"><strong>Adicionados (@ViewModel.NpcItensSelecionados.Count)</strong>
+                                                @foreach (var itemNpc in ViewModel.ItensNpcDisponiveis.Where(i => ViewModel.NpcItensSelecionados.Contains(i.IdItem)))
+                                                { <span>@itemNpc.Nome <button type="button" aria-label="Remover @itemNpc.Nome" @onclick="() => ViewModel.AlterarItemNpc(itemNpc.IdItem, false)">×</button></span> }
+                                            </div>
+                                        </section>
+                                        <section class="npc-resource-picker">
+                                            <h4>Magias</h4>
+                                            <input class="npc-recurso-busca" type="search" @bind="ViewModel.BuscaMagiaNpc" @bind:event="oninput" placeholder="Buscar magia..." />
+                                            <div class="npc-recurso-catalogo">
+                                            @if (ViewModel.MagiasNpcCatalogoFiltradas.Any())
+                                            {
+                                                @foreach (var magiaNpc in ViewModel.MagiasNpcCatalogoFiltradas)
+                                                {
+                                                    <div class="npc-recurso-linha"><span><strong>@magiaNpc.Nome</strong><small>@(magiaNpc.CirculoNivel == 0 ? "Truque" : $"Círculo {magiaNpc.CirculoNivel}") · @(magiaNpc.Escola ?? "Sem escola")</small></span><button type="button" class="npc-recurso-add" aria-label="Adicionar @magiaNpc.Nome" @onclick="() => ViewModel.AlterarMagiaNpc(magiaNpc.IdMagia, true)">+</button></div>
+                                                }
+                                            }
+                                            else { <p>Todas as magias já foram adicionadas ou não correspondem à busca.</p> }
+                                            </div>
+                                            <div class="npc-recursos-selecionados"><strong>Adicionadas (@ViewModel.NpcMagiasSelecionadas.Count)</strong>
+                                                @foreach (var magiaNpc in ViewModel.MagiasCatalogo.Where(m => ViewModel.NpcMagiasSelecionadas.Contains(m.IdMagia)))
+                                                {
+                                                    <span>@magiaNpc.Nome <button type="button" aria-label="Remover @magiaNpc.Nome" @onclick="() => ViewModel.AlterarMagiaNpc(magiaNpc.IdMagia, false)">×</button></span>
+                                                }
+                                            </div>
+                                        </section>
                                     }
                                     else if (ViewModel.CategoriaSelecionada == "monstro")
                                     {
@@ -413,6 +436,40 @@
                                         <label class="form-field full-width">Resistências e imunidades<input @bind="ViewModel.MonstroResistencias" maxlength="120" placeholder="Ex.: frio, veneno" /></label>
                                         <label class="form-field full-width">Habilidades especiais<input @bind="ViewModel.MonstroHabilidades" maxlength="160" placeholder="Ex.: Ataque múltiplo" /></label>
                                         <label class="form-field full-width">Descrição<textarea @bind="ViewModel.MonstroDescricao" rows="3" placeholder="Táticas e anotações..."></textarea></label>
+                                        <section class="npc-resource-picker monster-attacks-picker">
+                                            <header><h4>Ataques</h4><button type="button" class="editor-add-button" @onclick="ViewModel.AdicionarAtaqueMonstro">+ Adicionar ataque</button></header>
+                                            <label class="attack-catalogue-search">Buscar ataque já cadastrado
+                                                <input type="search" @bind="ViewModel.BuscaAtaqueMonstro" @bind:event="oninput" placeholder="Nome, monstro ou dano..." />
+                                            </label>
+                                            <div class="attack-catalogue-list">
+                                                @if (ViewModel.AtaquesMonstroCatalogoFiltrados.Any())
+                                                {
+                                                @foreach (var entrada in ViewModel.AtaquesMonstroCatalogoFiltrados)
+                                                {
+                                                    <div class="attack-catalogue-item">
+                                                        <span><strong>@entrada.Ataque.Nome</strong><small>@entrada.Monstro.Nome · @(entrada.Ataque.Dano ?? "Dano não informado")</small></span>
+                                                        <button type="button" class="attack-catalogue-add" aria-label="Vincular ataque @entrada.Ataque.Nome" @onclick="() => ViewModel.VincularAtaqueCatalogoMonstro(entrada.Ataque)">+</button>
+                                                    </div>
+                                                }
+                                                }
+                                                else
+                                                {
+                                                    <p class="attack-catalogue-empty">Nenhum ataque existente encontrado.</p>
+                                                }
+                                            </div>
+                                            @foreach (var ataque in ViewModel.AtaquesMonstro)
+                                            {
+                                                <div class="monster-attack-fields">
+                                                    <label class="form-field">Nome<input @bind="ataque.Nome" maxlength="100" placeholder="Mordida" /></label>
+                                                    <label class="form-field">Bônus<input @bind="ataque.BonusAtaque" type="number" /></label>
+                                                    <label class="form-field">Dano<input @bind="ataque.Dano" maxlength="30" placeholder="1d8+3" /></label>
+                                                    <label class="form-field">Tipo de dano<input @bind="ataque.TipoDano" maxlength="30" placeholder="Cortante" /></label>
+                                                    <label class="form-field">Alcance<input @bind="ataque.Alcance" maxlength="50" placeholder="1,5 m" /></label>
+                                                    <label class="form-field full-width">Descrição<textarea @bind="ataque.Descricao" rows="2"></textarea></label>
+                                                    <button type="button" class="editor-remove-button" @onclick="() => ViewModel.RemoverAtaqueMonstro(ataque)">Remover</button>
+                                                </div>
+                                            }
+                                        </section>
                                     }
                                     else
                                     {
@@ -763,10 +820,12 @@
                         @if (ViewModel.IdPersonagemParaRecusar > 0)
                         {
                             <div class="confirm-overlay" role="presentation" @onclick="() => ViewModel.IdPersonagemParaRecusar = 0">
-                                <section class="confirm-dialog" role="alertdialog" aria-modal="true" @onclick:stopPropagation="true">
-                                    <h2>Motivo da Recusa</h2>
+                                <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="titulo-motivo-recusa"
+                                         @onclick:stopPropagation="true">
+                                    <h2 id="titulo-motivo-recusa">Motivo da Recusa</h2>
                                     <p>Escreva o motivo pelo qual esta ficha/inventário está sendo recusada. O jogador visualizará essa mensagem na tela dele.</p>
-                                    <textarea @bind="ViewModel.TextoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..."></textarea>
+                                    <textarea aria-label="Explique o motivo da recusa" data-dialog-initial
+                                              @bind="ViewModel.TextoMotivoRecusa" rows="3" placeholder="Ex.: Ajuste os itens iniciais ou o valor de HP..."></textarea>
                                     <div class="confirm-actions">
                                         <button class="confirm-exit" type="button" @onclick="ViewModel.ConfirmarRecusaComMotivoAsync">Confirmar Recusa</button>
                                         <button class="confirm-cancel" type="button" @onclick="() => ViewModel.IdPersonagemParaRecusar = 0">Cancelar</button>
@@ -794,7 +853,7 @@
 
                                 <div class="ficha-cabecalho-inspecao">
                                     <div class="retrato-inspecao">
-                                        <img src="@(string.IsNullOrEmpty(fichaInspecionada.Imagem) ? "img/armaduraprata.png" : fichaInspecionada.Imagem)" alt="Retrato do personagem" />
+                                        <RetratoComIniciais Nome="@fichaInspecionada.Nome" Imagem="@fichaInspecionada.Imagem" />
                                     </div>
                                     <div class="identidade-inspecao">
                                         <p class="sobretitulo-inspecao">Ficha de Personagem (@ViewModel.StatusDaFichaInspecionada)</p>
@@ -1209,12 +1268,15 @@
 
 @code {
     [Parameter] public int IdCampanha { get; set; }
+    [SupplyParameterFromQuery(Name = "aba")] public string? AbaInicial { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
         await ViewModel.CarregarDadosCampanhaAsync(IdCampanha);
+        if (string.Equals(AbaInicial, "config", StringComparison.OrdinalIgnoreCase))
+            ViewModel.AbrirConfig();
     }
 
     public void Dispose()

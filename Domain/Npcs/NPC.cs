@@ -13,6 +13,9 @@ public class NPC : IAggregateRoot
     public string? RacaTexto { get; set; }
     public string? ClasseTexto { get; set; }
     public int Nivel { get; set; } = 1;
+    public int PvMaximo { get; set; } = 10;
+    public int ClasseArmadura { get; set; } = 10;
+    public int Deslocamento { get; set; } = 9;
     public string? AntecedenteTexto { get; set; }
     public string? Tendencia { get; set; } = "Neutra";
 
@@ -32,6 +35,8 @@ public class NPC : IAggregateRoot
     public string? Descricao { get; private set; }
 
     public virtual Usuario? Usuario { get; private set; }
+    public virtual ICollection<NpcMagia> Magias { get; set; } = new List<NpcMagia>();
+    public virtual ICollection<NpcItem> Itens { get; set; } = new List<NpcItem>();
 
     private readonly List<NpcCampanha> _npcCampanhas = new();
     public virtual IReadOnlyCollection<NpcCampanha> NpcCampanhas => _npcCampanhas.AsReadOnly();

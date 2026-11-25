@@ -44,7 +44,8 @@ public partial class SessaoViewModel
 
     public bool ModoDisparadaAtivo { get; private set; }
     public bool ModoDesengajarAtivo { get; private set; }
-    public bool ModoMovimentoAtivo => ModoDisparadaAtivo || ModoDesengajarAtivo;
+    public bool ModoMovimentoLivreAtivo { get; private set; }
+    public bool ModoMovimentoAtivo => ModoDisparadaAtivo || ModoDesengajarAtivo || ModoMovimentoLivreAtivo;
     public bool ExibirModalConfirmarDisparada { get; private set; }
     public bool ExecutandoDisparada { get; private set; }
     public string? ErroDisparada { get; private set; }
@@ -54,7 +55,7 @@ public partial class SessaoViewModel
     public string NomePersonagemDisparada { get; private set; } = string.Empty;
     public decimal DeslocamentoNormalMetros { get; private set; } = 9m;
     public decimal DeslocamentoDisparadaMetros => DeslocamentoNormalMetros * 2m;
-    public decimal AlcanceMovimentoAtualMetros => ModoDesengajarAtivo ? DeslocamentoNormalMetros : DeslocamentoDisparadaMetros;
+    public decimal AlcanceMovimentoAtualMetros => Math.Max(0m, DeslocamentoNormalMetros * ((ModoDisparadaAtivo || _disparadaUsadaNoTurno) ? 2m : 1m) - _distanciaMovidaNoTurno);
 
     public (int Coluna, int Linha)? DestinoDisparada { get; private set; }
     public decimal DistanciaDestinoMetros { get; private set; }
@@ -103,7 +104,7 @@ public partial class SessaoViewModel
     public PinoMapaDto? AlvoSelecionado =>
         AlvosNoMapa.FirstOrDefault(a =>
             a.TipoEntidade == TipoAlvoSelecionado &&
-            a.IdEntidade == IdAlvoSelecionado);
+            a.IdPino == IdAlvoSelecionado);
 
     public bool AlvoSelecionadoVivo =>
         AlvoSelecionado != null &&
@@ -201,6 +202,7 @@ public partial class SessaoViewModel
     public async Task ConfirmarEsquivarAsync()
     {
         if (ExecutandoEsquivar || !EhMeuTurno || Estado.IdSessao <= 0) return;
+        if (!ConsumirAcaoDoTurno()) { ErroEsquivar = FeedbackAcao; return; }
 
         ExecutandoEsquivar = true;
         ErroEsquivar = null;
@@ -220,7 +222,8 @@ public partial class SessaoViewModel
                 _sessaoUsuario.IdUsuarioLogado,
                 meuNome,
                 proximo?.IdAccount,
-                nomeProximo);
+                nomeProximo,
+                passarTurno: false);
 
             if (!ok)
             {
@@ -321,6 +324,7 @@ public partial class SessaoViewModel
     public async Task RolarTesteEsconderAsync()
     {
         if (ExecutandoEsconder || !EhMeuTurno || !Estado.IdPersonagemLogado.HasValue) return;
+        if (!ConsumirAcaoDoTurno()) { ErroEsconder = FeedbackAcao; return; }
 
         ExecutandoEsconder = true;
         ErroEsconder = null;
@@ -359,7 +363,8 @@ public partial class SessaoViewModel
                 Estado.IdPersonagemLogado.Value,
                 ResultadoEsconderAtual,
                 proximo?.IdAccount,
-                nomeProximo);
+                nomeProximo,
+                passarTurno: false);
 
             if (!ok)
                 ErroEsconder = erro;
@@ -403,17 +408,20 @@ public partial class SessaoViewModel
     public Task AlternarModoDesengajarAsync() =>
         IniciarModoMovimentoAsync(desengajar: true);
 
-    private async Task IniciarModoMovimentoAsync(bool desengajar)
+    public Task AlternarModoMovimentoLivreAsync() =>
+        IniciarModoMovimentoAsync(desengajar: false, disparada: false);
+
+    private async Task IniciarModoMovimentoAsync(bool desengajar, bool disparada = true)
     {
         if (ExecutandoDisparada) return;
 
-        if ((desengajar && ModoDesengajarAtivo) || (!desengajar && ModoDisparadaAtivo))
+        if ((desengajar && ModoDesengajarAtivo) || (disparada && !desengajar && ModoDisparadaAtivo) || (!disparada && ModoMovimentoLivreAtivo))
         {
             CancelarDisparada();
             return;
         }
 
-        string nomeAcao = desengajar ? "Desengajar" : "Disparada";
+        string nomeAcao = desengajar ? "Desengajar" : disparada ? "Disparada" : "Movimentação";
 
         if (Estado.EhMestre)
         {
@@ -464,8 +472,9 @@ public partial class SessaoViewModel
         DistanciaDestinoMetros = 0m;
         ErroDisparada = null;
         ExibirModalConfirmarDisparada = false;
-        ModoDisparadaAtivo = !desengajar;
+        ModoDisparadaAtivo = !desengajar && disparada;
         ModoDesengajarAtivo = desengajar;
+        ModoMovimentoLivreAtivo = !desengajar && !disparada;
         AtualizarMonstrosAmeacandoOrigem();
 
         if (desengajar)
@@ -477,9 +486,13 @@ public partial class SessaoViewModel
             string nomes = string.Join(", ", MonstrosAmeacandoOrigem.Select(m => m.Nome));
             FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}). ⚠️ Sair do raio 1×1 de {nomes} sem Desengajar provocará Ataque de Oportunidade (d20 vs CA).";
         }
-        else
+        else if (disparada)
         {
             FeedbackAcao = $"◷ Disparada ativa ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}): clique em uma casa destacada no mapa para se mover.";
+        }
+        else
+        {
+            FeedbackAcao = $"Movimento disponível até {DeslocamentoNormalTexto}; escolha uma casa destacada. A movimentação não consome sua ação.";
         }
 
         Notificar();
@@ -497,6 +510,7 @@ public partial class SessaoViewModel
     {
         ModoDisparadaAtivo = false;
         ModoDesengajarAtivo = false;
+        ModoMovimentoLivreAtivo = false;
         ExibirModalConfirmarDisparada = false;
         PinoJogadorDisparada = null;
         PersonagemMovimentoAtual = null;
@@ -543,7 +557,7 @@ public partial class SessaoViewModel
             return false;
 
         decimal dist = CalcularDistanciaMetros(PinoJogadorDisparada.Coluna, PinoJogadorDisparada.Linha, coluna, linha);
-        return dist > 0m && dist <= AlcanceMovimentoAtualMetros;
+        return dist > 0m && _distanciaMovidaNoTurno + dist <= DeslocamentoNormalMetros * ((ModoDisparadaAtivo || _disparadaUsadaNoTurno) ? 2m : 1m);
     }
 
     public bool CelulaProvocaAtaqueOportunidade(int coluna, int linha)
@@ -579,7 +593,9 @@ public partial class SessaoViewModel
             return $"{coordTexto} · {FormatarMetros(dist)} · ⚠️ Provoca Ataque de Oportunidade de {nomes}";
         }
 
-        return $"{coordTexto} · {FormatarMetros(dist)} (clique para Disparada)";
+        return ModoMovimentoLivreAtivo
+            ? $"{coordTexto} · {FormatarMetros(dist)} (movimento livre)"
+            : $"{coordTexto} · {FormatarMetros(dist)} (clique para Disparada)";
     }
 
     private async Task ProcessarCliqueCelulaDisparadaAsync(int coluna, int linha)
@@ -605,6 +621,13 @@ public partial class SessaoViewModel
         if (distancia <= 0m)
         {
             FeedbackAcao = "Escolha uma casa diferente da sua posição atual.";
+            Notificar();
+            return;
+        }
+
+        if (_distanciaMovidaNoTurno + distancia > DeslocamentoNormalMetros * ((ModoDisparadaAtivo || _disparadaUsadaNoTurno) ? 2m : 1m))
+        {
+            FeedbackAcao = $"Movimento acima do deslocamento restante ({AlcanceMovimentoAtualTexto}).";
             Notificar();
             return;
         }
@@ -644,6 +667,17 @@ public partial class SessaoViewModel
     {
         if (ExecutandoDisparada || !EhMeuTurno || PinoJogadorDisparada is null || DestinoDisparada is null || !Estado.IdMapaAtivo.HasValue)
             return;
+        if (Estado.Encontro.MovimentoPendente is not null)
+        {
+            ErroDisparada = "Aguarde a decisão da reação pendente.";
+            return;
+        }
+
+        if (!ModoMovimentoLivreAtivo && !ConsumirAcaoDoTurno())
+        {
+            ErroDisparada = FeedbackAcao;
+            return;
+        }
 
         ExecutandoDisparada = true;
         ErroDisparada = null;
@@ -651,12 +685,10 @@ public partial class SessaoViewModel
 
         var destino = DestinoDisparada.Value;
         bool ehDesengajar = ModoDesengajarAtivo;
+        bool ehDisparada = ModoDisparadaAtivo;
+        decimal distanciaMovimento = DistanciaDestinoMetros;
         string origemTexto = PinoJogadorDisparada.CoordenadaTexto;
         string destinoTexto = DestinoDisparadaTexto;
-        var proximoJogador = ObterProximoJogadorTurno();
-        string nomeProximo = proximoJogador is not null
-            ? (proximoJogador.NomePersonagem ?? proximoJogador.Username)
-            : string.Empty;
 
         var monstrosAtacantes = ehDesengajar
             ? new List<PinoMapaDto>()
@@ -665,6 +697,28 @@ public partial class SessaoViewModel
         await _dbLock.WaitAsync();
         try
         {
+            if (Estado.Encontro.Rodada > 0)
+            {
+                var (sucesso, aviso) = await _sessaoService.MoverComReacoes2014Async(Estado, _sessaoUsuario.IdUsuarioLogado,
+                    PinoJogadorDisparada.IdPino, destino.Coluna, destino.Linha, ehDesengajar, ehDisparada);
+                if (!sucesso)
+                {
+                    if (!ModoMovimentoLivreAtivo) _acoesUsadasNoTurno = Math.Max(0, _acoesUsadasNoTurno - 1);
+                    ErroDisparada = aviso;
+                    return;
+                }
+                _deslocamentoPendente2014 = (PinoJogadorDisparada.IdPino, destino.Coluna, destino.Linha, distanciaMovimento, ehDisparada);
+                var sincronizado = await _sessaoService.SincronizarSessaoAsync(Estado.IdCampanha, Estado.IdSessao, _sessaoUsuario.IdUsuarioLogado);
+                LimparEstadoDisparadaInterno();
+                if (sincronizado is not null)
+                {
+                    Estado = sincronizado;
+                    ConcluirDeslocamento2014();
+                }
+                if (_deslocamentoPendente2014.HasValue) FeedbackAcao = aviso;
+                return;
+            }
+
             bool caiuInconsciente = false;
             int danoTotalOportunidade = 0;
             var errosOportunidade = new List<string>();
@@ -775,32 +829,19 @@ public partial class SessaoViewModel
                     return;
                 }
 
-                string textoTurno = proximoJogador is not null
-                    ? $" Turno passado para {nomeProximo}."
-                    : " Turno encerrado.";
+                _distanciaMovidaNoTurno += distanciaMovimento;
+                if (ehDisparada) _disparadaUsadaNoTurno = true;
 
                 string mensagem = ehDesengajar
-                    ? $"↺ {NomePersonagemDisparada} usou Desengajar e recuou com segurança de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}), evitando Ataques de Oportunidade.{textoTurno}"
-                    : $"◷ {NomePersonagemDisparada} usou Disparada ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}) e moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}).{textoTurno}";
+                    ? $"↺ {NomePersonagemDisparada} usou Desengajar e recuou com segurança de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}), evitando Ataques de Oportunidade."
+                    : ModoMovimentoLivreAtivo
+                        ? $"{NomePersonagemDisparada} moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto})."
+                        : $"◷ {NomePersonagemDisparada} usou Disparada ({DeslocamentoNormalTexto} → {DeslocamentoDisparadaTexto}) e moveu-se de {origemTexto} para {destinoTexto} ({DistanciaDestinoTexto}).";
 
                 await _sessaoService.EnviarMensagemChatAsync(
                     Estado.IdSessao,
                     _sessaoUsuario.IdUsuarioLogado,
                     mensagem);
-            }
-
-            var (okTurno, erroTurno) = await _sessaoService.DefinirTurnoJogadorAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado,
-                proximoJogador?.IdAccount,
-                proximoJogador is not null ? nomeProximo : null);
-
-            if (!okTurno)
-            {
-                DestinoDisparada = null;
-                FeedbackAcao = erroTurno ?? "Ação concluída, mas não foi possível passar o turno.";
-                return;
             }
 
             var atualizado = await _sessaoService.SincronizarSessaoAsync(
@@ -875,7 +916,7 @@ public partial class SessaoViewModel
         Math.Max(Math.Abs(colDestino - colOrigem), Math.Abs(linDestino - linOrigem));
 
     private static decimal CalcularDistanciaMetros(int colOrigem, int linOrigem, int colDestino, int linDestino) =>
-        CalcularDistanciaQuadrados(colOrigem, linOrigem, colDestino, linDestino) * 1.5m;
+        RegrasCombate2014.DistanciaMetros(colOrigem, linOrigem, colDestino, linDestino);
 
     private static string ExtrairExpressaoDanoMonstro(Monstro? monstro)
     {
@@ -926,8 +967,7 @@ public partial class SessaoViewModel
     {
         if (Estado.EhMestre)
         {
-            FeedbackAcao = "A ação de ataque usa as armas do inventário do jogador.";
-            Notificar();
+            AbrirCombateMestre();
             return;
         }
 
@@ -964,6 +1004,8 @@ public partial class SessaoViewModel
                 ErroModalAtaque = "Não foi possível carregar sua ficha.";
                 return;
             }
+
+            _acoesExtrasNoTurno = Math.Max(_acoesExtrasNoTurno, CalcularAtaquesExtrasPorClasse(PersonagemAtacante));
 
             var itensInventario = PersonagemAtacante.Inventario?.Itens?
                 .Where(ii => ii.Quantidade > 0)
@@ -1003,7 +1045,19 @@ public partial class SessaoViewModel
             (a.PvAtual ?? a.PvMaximo ?? 0) > 0 && AlvoDentroAlcanceArma(a));
 
         TipoAlvoSelecionado = primeiroValido?.TipoEntidade;
-        IdAlvoSelecionado = primeiroValido?.IdEntidade ?? 0;
+        IdAlvoSelecionado = primeiroValido?.IdPino ?? 0;
+    }
+
+    private static int CalcularAtaquesExtrasPorClasse(Personagem personagem)
+    {
+        string classes = personagem.ClasseTexto ?? string.Empty;
+        int nivel = Math.Clamp(personagem.Nivel, 1, 20);
+        bool temAtaqueExtra = new[] { "guerreiro", "lutador", "bárbaro", "barbaro", "paladino", "patrulheiro", "ranger", "monge" }
+            .Any(nome => classes.Contains(nome, StringComparison.OrdinalIgnoreCase));
+        if (!temAtaqueExtra || nivel < 5) return 0;
+        return classes.Contains("guerreiro", StringComparison.OrdinalIgnoreCase) || classes.Contains("lutador", StringComparison.OrdinalIgnoreCase)
+            ? nivel >= 20 ? 3 : nivel >= 11 ? 2 : 1
+            : 1;
     }
 
     public void SelecionarArmaAtaque(int idItem)
@@ -1015,17 +1069,17 @@ public partial class SessaoViewModel
         Notificar();
     }
 
-    public void SelecionarAlvoAtaque(string tipoEntidade, int idEntidade)
+    public void SelecionarAlvoAtaque(string tipoEntidade, int idPino)
     {
         var alvo = AlvosNoMapa.FirstOrDefault(a =>
             a.TipoEntidade == tipoEntidade &&
-            a.IdEntidade == idEntidade);
+            a.IdPino == idPino);
 
         if (alvo == null || (alvo.PvAtual ?? alvo.PvMaximo ?? 0) <= 0 || !AlvoDentroAlcanceArma(alvo))
             return;
 
         TipoAlvoSelecionado = tipoEntidade;
-        IdAlvoSelecionado = idEntidade;
+        IdAlvoSelecionado = idPino;
         ErroModalAtaque = null;
         Notificar();
     }
@@ -1102,6 +1156,12 @@ public partial class SessaoViewModel
             return;
         }
 
+        if (!ConsumirAcaoDoTurno())
+        {
+            ErroModalAtaque = FeedbackAcao;
+            return;
+        }
+
         ErroModalAtaque = null;
         bool alvoEsquivando = alvo.Esquivando;
         int dado1 = Random.Shared.Next(1, 21);
@@ -1124,6 +1184,7 @@ public partial class SessaoViewModel
             TipoDano = arma.TipoDano,
             TipoAlvo = alvo.TipoEntidade,
             IdEntidadeAlvo = alvo.IdEntidade,
+            IdPinoAlvo = alvo.IdPino,
             NomeAlvo = alvo.Nome,
             CaAlvo = caAlvo,
             AlvoEsquivando = alvoEsquivando,
@@ -1156,7 +1217,7 @@ public partial class SessaoViewModel
                 Estado.IdSessao,
                 Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
-                ResultadoAtaqueAtual);
+                ResultadoAtaqueAtual, Estado);
 
             if (!sucesso)
                 ErroModalAtaque = erro;
@@ -1213,7 +1274,7 @@ public partial class SessaoViewModel
                 Estado.IdSessao,
                 Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
-                ResultadoAtaqueAtual);
+                ResultadoAtaqueAtual, Estado);
 
             if (!sucesso)
                 ErroModalAtaque = erro;

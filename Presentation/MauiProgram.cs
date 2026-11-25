@@ -81,6 +81,7 @@ namespace RPGdeMesa
             builder.Services.AddTransient<PerfilViewModel>();
             builder.Services.AddScoped<SessaoViewModel>();
             builder.Services.AddTransient<SessaoEntrarCodeViewModel>();
+            builder.Services.AddScoped<NpcCriarViewModel>();
 
             return builder.Build();
         }

@@ -8,9 +8,11 @@ public partial class SessaoViewModel
     public string AbaChatAtiva { get; private set; } = CanaisSessao.Chat;
     public string TextoMensagem { get; set; } = string.Empty;
     public bool EnviandoMensagem { get; private set; }
+    public string? FeedbackChat { get; private set; }
+    private (string Texto, Guid Id)? _mensagemPendente;
 
     public IEnumerable<MensagemSessaoDto> MensagensAbaAtiva =>
-        Estado.Mensagens.Where(m => string.Equals(m.Canal, AbaChatAtiva, StringComparison.OrdinalIgnoreCase));
+        Estado.Mensagens.Where(m => string.Equals(m.Canal, AbaChatAtiva, StringComparison.OrdinalIgnoreCase)).Reverse();
 
     public void MudarAbaChat(string canal)
     {
@@ -24,28 +26,30 @@ public partial class SessaoViewModel
             return;
 
         string mensagemParaEnviar = TextoMensagem.Trim();
+        if (_mensagemPendente is not { } pendente || pendente.Texto != mensagemParaEnviar)
+            _mensagemPendente = (mensagemParaEnviar, Guid.NewGuid());
+        var idOperacao = _mensagemPendente.Value.Id;
         TextoMensagem = string.Empty;
         EnviandoMensagem = true;
+        FeedbackChat = "Enviando…";
         Notificar();
 
+        bool enviada = false;
         await _dbLock.WaitAsync();
         try
         {
             var (sucesso, erro) = await _sessaoService.EnviarMensagemChatAsync(
                 Estado.IdSessao,
                 _sessaoUsuario.IdUsuarioLogado,
-                mensagemParaEnviar);
+                mensagemParaEnviar,
+                idOperacao);
 
-            if (!sucesso)
-                FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
+            enviada = sucesso;
+            FeedbackChat = sucesso ? "Mensagem enviada." : erro;
+            if (sucesso)
+                _mensagemPendente = null;
+            else
+                TextoMensagem = mensagemParaEnviar;
         }
         finally
         {
@@ -53,11 +57,14 @@ public partial class SessaoViewModel
             _dbLock.Release();
             Notificar();
         }
+
+        if (enviada)
+            await SincronizarAgoraAsync();
     }
 
-    public async Task RegistrarRolagemAsync(ResultadoRolagemDto rolagem)
+    public async Task<bool> RegistrarRolagemAsync(ResultadoRolagemDto rolagem)
     {
-        if (Estado.IdSessao <= 0) return;
+        if (Estado.IdSessao <= 0) return false;
 
         string nomeExibicao = string.IsNullOrWhiteSpace(_sessaoUsuario.NomeUsuario)
             ? $"Usuário #{_sessaoUsuario.IdUsuarioLogado}"
@@ -76,20 +83,14 @@ public partial class SessaoViewModel
             }
         }
 
+        bool registrada;
         await _dbLock.WaitAsync();
         try
         {
             var (sucesso, erro) = await _sessaoService.RegistrarRolagemDadosAsync(Estado.IdSessao, nomeExibicao, rolagem);
-            if (!sucesso)
+            registrada = sucesso;
+            if (!registrada)
                 FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
 
             AbaChatAtiva = CanaisSessao.Chat;
             Notificar();
@@ -98,5 +99,8 @@ public partial class SessaoViewModel
         {
             _dbLock.Release();
         }
+        if (registrada)
+            await SincronizarAgoraAsync();
+        return registrada;
     }
 }

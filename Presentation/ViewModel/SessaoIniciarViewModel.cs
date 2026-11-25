@@ -8,6 +8,7 @@ using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
+using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Presentation.Services;
@@ -58,7 +59,23 @@ namespace RPGdeMesa.Presentation.ViewModel
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
         public List<NPC> NpcsDisponiveis { get; private set; } = new();
         public List<Item> ItensDisponiveis { get; private set; } = new();
+        public List<Magia> MagiasCatalogo { get; private set; } = new();
+        public HashSet<int> NpcItensSelecionados { get; } = new();
+        public HashSet<int> NpcMagiasSelecionadas { get; } = new();
+        public string BuscaItemNpc { get; set; } = string.Empty;
+        public string BuscaMagiaNpc { get; set; } = string.Empty;
+        public IEnumerable<Item> ItensNpcDisponiveis => (CampanhaAtual?.Itens.AsEnumerable() ?? Enumerable.Empty<Item>())
+            .Concat(ItensDisponiveis).GroupBy(i => i.IdItem).Select(g => g.First()).OrderBy(i => i.Nome);
+        public IEnumerable<Item> ItensNpcCatalogoFiltrados => ItensNpcDisponiveis
+            .Where(i => !NpcItensSelecionados.Contains(i.IdItem))
+            .Where(i => string.IsNullOrWhiteSpace(BuscaItemNpc) || i.Nome.Contains(BuscaItemNpc, StringComparison.OrdinalIgnoreCase) || (i.Tipo?.Contains(BuscaItemNpc, StringComparison.OrdinalIgnoreCase) ?? false));
+        public IEnumerable<Magia> MagiasNpcCatalogoFiltradas => MagiasCatalogo
+            .Where(m => !NpcMagiasSelecionadas.Contains(m.IdMagia))
+            .Where(m => string.IsNullOrWhiteSpace(BuscaMagiaNpc) || m.Nome.Contains(BuscaMagiaNpc, StringComparison.OrdinalIgnoreCase) || (m.Escola?.Contains(BuscaMagiaNpc, StringComparison.OrdinalIgnoreCase) ?? false))
+            .OrderBy(m => m.CirculoNivel).ThenBy(m => m.Nome);
         public List<Mapa> MapasDisponiveis { get; private set; } = new();
+        public List<string> OpcoesRacaNpc { get; private set; } = new();
+        public List<string> OpcoesClasseNpc { get; private set; } = new();
         public string TermoBusca { get; set; } = string.Empty;
 
         public string AbaMenu { get; set; } = "iniciar";
@@ -134,6 +151,14 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string? MonstroImagem { get; set; } = ImagemPadraoMonstro;
         public string? ErroImagemMonstro { get; private set; }
         public bool TemFotoMonstro => MonstroImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
+        public List<MonstroAtaque> AtaquesMonstro { get; } = new();
+        public List<Monstro> CatalogoMonstrosAtaques { get; private set; } = new();
+        public HashSet<int> AtaquesMonstroCatalogoAdicionados { get; } = new();
+        public string BuscaAtaqueMonstro { get; set; } = string.Empty;
+        public IEnumerable<(Monstro Monstro, MonstroAtaque Ataque)> AtaquesMonstroCatalogoFiltrados => CatalogoMonstrosAtaques
+            .SelectMany(m => m.Ataques.Select(a => (Monstro: m, Ataque: a)))
+            .Where(x => !AtaquesMonstroCatalogoAdicionados.Contains(x.Ataque.IdMonstroAtaque))
+            .Where(x => string.IsNullOrWhiteSpace(BuscaAtaqueMonstro) || x.Ataque.Nome.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) || x.Monstro.Nome.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) || (x.Ataque.Dano?.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) ?? false));
 
         // Form Fields - Item
         public string ItemNome { get; set; } = string.Empty;
@@ -225,6 +250,13 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public async Task CarregarDadosCampanhaAsync(int idCampanha)
         {
+            if (!OpcoesRacaNpc.Any() || !OpcoesClasseNpc.Any())
+            {
+                var racasNpc = await _personagemService.ListarRacasAsync();
+                var classesNpc = await _personagemService.ListarClassesAsync();
+                OpcoesRacaNpc = racasNpc.Select(r => r.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                OpcoesClasseNpc = classesNpc.Select(c => c.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            }
             IdCampanha = idCampanha;
             if (IdCampanha > 0)
             {
@@ -240,8 +272,11 @@ namespace RPGdeMesa.Presentation.ViewModel
                     var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(CampanhaAtual.IdAccount);
                     var tarefaItens = _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
                     var tarefaMapas = _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
+                    var tarefaMagias = _campanhaService.ObterTodasMagiasAsync();
 
-                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas);
+                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas, tarefaMagias);
+                    MagiasCatalogo = tarefaMagias.Result;
+                    CatalogoMonstrosAtaques = tarefaMonstros.Result;
 
                     var idsMonstrosVinculados = CampanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
                     MonstrosDisponiveis = tarefaMonstros.Result.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
@@ -406,6 +441,10 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         private void LimparFormularioNpc()
         {
+            NpcItensSelecionados.Clear();
+            NpcMagiasSelecionadas.Clear();
+            BuscaItemNpc = string.Empty;
+            BuscaMagiaNpc = string.Empty;
             NpcNome = string.Empty;
             NpcRaca = "Humano";
             NpcClasse = "Guerreiro";
@@ -421,6 +460,18 @@ namespace RPGdeMesa.Presentation.ViewModel
             NpcHistoria = string.Empty;
             NpcImagem = ImagemPadraoNpc;
             ErroImagemNpc = null;
+        }
+
+        public void AlterarItemNpc(int idItem, bool selecionado)
+        {
+            if (selecionado) NpcItensSelecionados.Add(idItem); else NpcItensSelecionados.Remove(idItem);
+            NotifyStateChanged();
+        }
+
+        public void AlterarMagiaNpc(int idMagia, bool selecionado)
+        {
+            if (selecionado) NpcMagiasSelecionadas.Add(idMagia); else NpcMagiasSelecionadas.Remove(idMagia);
+            NotifyStateChanged();
         }
 
         // --- FOTO DO MONSTRO ---
@@ -455,6 +506,9 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         private void LimparFormularioMonstro()
         {
+            AtaquesMonstro.Clear();
+            AtaquesMonstroCatalogoAdicionados.Clear();
+            BuscaAtaqueMonstro = string.Empty;
             MonstroNome = string.Empty;
             MonstroTipo = "Outro";
             MonstroTamanho = "Médio";
@@ -469,6 +523,33 @@ namespace RPGdeMesa.Presentation.ViewModel
             MonstroDescricao = string.Empty;
             MonstroImagem = ImagemPadraoMonstro;
             ErroImagemMonstro = null;
+        }
+
+        public void AdicionarAtaqueMonstro()
+        {
+            AtaquesMonstro.Add(new MonstroAtaque { Nome = "Ataque" });
+            NotifyStateChanged();
+        }
+
+        public void RemoverAtaqueMonstro(MonstroAtaque ataque)
+        {
+            AtaquesMonstro.Remove(ataque);
+            NotifyStateChanged();
+        }
+
+        public void VincularAtaqueCatalogoMonstro(MonstroAtaque ataque)
+        {
+            AtaquesMonstro.Add(new MonstroAtaque
+            {
+                Nome = ataque.Nome,
+                BonusAtaque = ataque.BonusAtaque,
+                Dano = ataque.Dano,
+                TipoDano = ataque.TipoDano,
+                Alcance = ataque.Alcance,
+                Descricao = ataque.Descricao
+            });
+            AtaquesMonstroCatalogoAdicionados.Add(ataque.IdMonstroAtaque);
+            NotifyStateChanged();
         }
 
         // --- MÉTODOS DE MAPAS ---
@@ -656,6 +737,8 @@ namespace RPGdeMesa.Presentation.ViewModel
                         imagem: NpcImagem,
                         idCampanha: IdCampanha
                     );
+                    novoNpc.Itens = NpcItensSelecionados.Select(id => new NpcItem { IdItem = id, Quantidade = 1, Npc = novoNpc }).ToList();
+                    novoNpc.Magias = NpcMagiasSelecionadas.Select(id => new NpcMagia { IdMagia = id, Npc = novoNpc }).ToList();
 
                     var resultado = await _npcService.CriarNpcAsync(idUsuario, novoNpc, IdCampanha);
                     MensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
@@ -692,7 +775,8 @@ namespace RPGdeMesa.Presentation.ViewModel
                         Resistencias = MonstroResistencias,
                         Habilidades = MonstroHabilidades,
                         Descricao = MonstroDescricao,
-                        Imagem = MonstroImagem
+                        Imagem = MonstroImagem,
+                        Ataques = AtaquesMonstro.Where(a => !string.IsNullOrWhiteSpace(a.Nome)).ToList()
                     };
 
                     var resultado = await _campanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);

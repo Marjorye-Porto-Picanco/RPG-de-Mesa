@@ -89,11 +89,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string AbaFichaPreview { get; set; } = "atributos";
         public string AbaEdicaoRecusada { get; set; } = "atributos";
 
-        public IReadOnlyList<string> ListaOpcoesClasses { get; } =
-        [
-            "Bárbaro", "Bardo", "Bruxo", "Clérigo", "Druida", "Feiticeiro",
-            "Guerreiro", "Ladino", "Mago", "Monge", "Paladino", "Patrulheiro", "Outra"
-        ];
+        public IReadOnlyList<string> ListaOpcoesClasses { get; private set; } = Array.Empty<string>();
 
         public IReadOnlyList<string> ListaSalvaguardas { get; } =
         [
@@ -169,6 +165,10 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 int idUsuario = _sessaoUsuario.IdUsuarioLogado;
+                var classesCatalogo = await _personagemService.ListarClassesAsync();
+                ListaOpcoesClasses = classesCatalogo.Select(c => c.Nome)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 PersonagensDisponiveis = await _personagemService.ObterPersonagensPorUsuarioAsync(idUsuario);
 
                 int idAlvo = idCampanhaParam > 0 ? idCampanhaParam : (campanhaIdQuery ?? 0);

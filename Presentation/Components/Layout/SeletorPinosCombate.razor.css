@@ -1,0 +1,119 @@
+.combat-pin-picker {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.combat-pin-picker legend {
+    float: none;
+    width: auto;
+    margin: 0 0 6px;
+    color: #c2b492;
+    font-size: 14px;
+}
+
+.combat-pin-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    max-height: 128px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #675a41 transparent;
+}
+
+.combat-pin-option {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 49px;
+    grid-template-columns: 32px minmax(0, 1fr) 12px;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 7px;
+    border: 1px solid rgba(205, 174, 101, 0.27);
+    border-radius: 5px;
+    background: #171612;
+    cursor: pointer;
+}
+
+.combat-pin-option:hover,
+.combat-pin-option:has(input:checked) {
+    border-color: #c6a554;
+    background: #372a1b;
+}
+
+.combat-pin-option:has(input:focus-visible) {
+    outline: 2px solid #ead18a;
+    outline-offset: -3px;
+}
+
+.combat-pin-option:has(input:disabled) {
+    cursor: default;
+}
+
+.combat-pin-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+}
+
+#app .combat-pin-portrait {
+    display: block;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #80643a;
+    border-radius: 50%;
+    font-size: 12px;
+}
+
+.combat-pin-text {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+    line-height: 1.1;
+}
+
+#app .combat-pin-name,
+#app .combat-pin-details {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app .combat-pin-name {
+    color: #f3e7d0;
+    font-size: 13px;
+}
+
+#app .combat-pin-details {
+    color: #c2b492;
+    font-size: 11px;
+}
+
+.combat-pin-mark {
+    width: 11px;
+    height: 11px;
+    border: 1px solid #947d50;
+    border-radius: 50%;
+}
+
+.combat-pin-option:has(input:checked) .combat-pin-mark {
+    border-color: #e3c779;
+    background: radial-gradient(circle, #e3c779 43%, transparent 47%);
+}
+
+.combat-pin-empty {
+    margin: 0;
+    color: #c2b492;
+}
+
+@media (max-width: 380px) {
+    .combat-pin-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

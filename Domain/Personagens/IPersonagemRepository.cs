@@ -6,6 +6,8 @@ public interface IPersonagemRepository
 {
     Task<Personagem?> ObterPorIdAsync(int idPersonagem);
     Task<List<Personagem>> ListarPorUsuarioAsync(int idAccount);
+    Task<List<Raca>> ListarRacasAsync();
+    Task<List<Classe>> ListarClassesAsync();
     Task AdicionarAsync(Personagem personagem);
     Task AtualizarAsync(Personagem personagem);
     Task SalvarFichaCompleta3FNAsync(

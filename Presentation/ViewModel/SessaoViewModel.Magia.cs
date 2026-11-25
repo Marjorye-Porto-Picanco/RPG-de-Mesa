@@ -1,4 +1,4 @@
-﻿using RPGdeMesa.Application.Services;
+using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 using System.Collections;
@@ -9,12 +9,17 @@ namespace RPGdeMesa.Presentation.ViewModel;
 public partial class SessaoViewModel
 {
     private static readonly Dictionary<(int IdSessao, int IdPersonagem), Dictionary<int, int>> EspacosUsadosPorSessao = new();
+    private static readonly Dictionary<(int IdSessao, int IdPersonagem), TipoConjuracaoClasse> TipoConjuracaoPorPersonagem = new();
 
     public bool ExibirModalMagia { get; private set; }
     public bool CarregandoMagia { get; private set; }
     public bool ExecutandoMagia { get; private set; }
     public string? ErroModalMagia { get; private set; }
     public int EtapaMagia { get; private set; } = 1;
+    public int TurnosRestantesConjuracao { get; private set; }
+    public bool ConjuracaoEmCarregamento { get; private set; }
+    private int _idMagiaEmCarregamento;
+    private int _circuloEmCarregamento;
 
     public Personagem? PersonagemConjurador { get; private set; }
     public TipoConjuracaoClasse TipoConjuracaoAtual { get; private set; } = TipoConjuracaoClasse.Nenhum;
@@ -38,6 +43,9 @@ public partial class SessaoViewModel
 
     public MagiaSessaoItemDto? MagiaSelecionada =>
         MagiasDisponiveisSessao.FirstOrDefault(m => m.IdMagia == IdMagiaSelecionada);
+
+    public bool ConjuracaoPronta => ConjuracaoEmCarregamento && TurnosRestantesConjuracao <= 0;
+    public bool BloquearAtaquePorConjuracao => ConjuracaoEmCarregamento && !ConjuracaoPronta;
 
     public List<int> CirculosDisponiveisParaMagiaSelecionada
     {
@@ -79,7 +87,7 @@ public partial class SessaoViewModel
     public PinoMapaDto? AlvoMagiaSelecionado =>
         AlvosParaMagia.FirstOrDefault(a =>
             a.TipoEntidade == TipoAlvoMagiaSelecionado &&
-            a.IdEntidade == IdAlvoMagiaSelecionado);
+            a.IdPino == IdAlvoMagiaSelecionado);
 
     public bool PodeExecutarMagia
     {
@@ -88,7 +96,8 @@ public partial class SessaoViewModel
             if (ExecutandoMagia || MagiaSelecionada is null)
                 return false;
 
-            if (MagiaSelecionada.CirculoNivel > 0 && ObterEspacosRestantesCirculo(CirculoConjuracaoSelecionado) <= 0)
+            if (MagiaSelecionada.CirculoNivel > 0 && ObterEspacosRestantesCirculo(CirculoConjuracaoSelecionado) <= 0 &&
+                !(ConjuracaoPronta && MagiaSelecionada.IdMagia == _idMagiaEmCarregamento))
                 return false;
 
             if (MagiaSelecionada.AlcanceInfo.Categoria == CategoriaAlcanceMagia.Pessoal)
@@ -131,20 +140,128 @@ public partial class SessaoViewModel
         return mapa;
     }
 
-    private void ConsumirEspacoMagia(int circulo)
+    private async Task ConsumirEspacoMagiaAsync(int circulo)
     {
         if (circulo <= 0 || !Estado.IdPersonagemLogado.HasValue) return;
         var usados = ObterMapaEspacosUsados(Estado.IdSessao, Estado.IdPersonagemLogado.Value);
         usados[circulo] = usados.TryGetValue(circulo, out int atual) ? atual + 1 : 1;
+        if (PersonagemConjurador is not null)
+        {
+            var linha = PersonagemConjurador.CirculosMagicos.FirstOrDefault(s => s.CirculoNivel == circulo);
+            if (linha is not null) linha.SlotsUsados = usados[circulo];
+            await _sessaoService.SalvarCirculosMagicosAsync(PersonagemConjurador.IdPersonagem, PersonagemConjurador.CirculosMagicos);
+        }
     }
 
-    public void RestaurarEspacosMagiaSessao()
+    private async Task SincronizarSlotsPersonagemAsync(Personagem personagem)
     {
-        if (!Estado.IdPersonagemLogado.HasValue) return;
-        var usados = ObterMapaEspacosUsados(Estado.IdSessao, Estado.IdPersonagemLogado.Value);
-        usados.Clear();
-        AtualizarCirculoPadraoMagia();
+        var gastos = ObterMapaEspacosUsados(Estado.IdSessao, personagem.IdPersonagem);
+        bool jaPossuiaSlotsPersistidos = personagem.CirculosMagicos.Count > 0;
+        foreach (var (circulo, totalCalculado) in EspacosMaximosPorCirculo.ToList())
+        {
+            var salvo = personagem.CirculosMagicos.FirstOrDefault(s => s.CirculoNivel == circulo);
+            if (salvo is null)
+            {
+                salvo = new PersonagemCirculoMagico
+                {
+                    IdPersonagem = personagem.IdPersonagem,
+                    CirculoNivel = circulo,
+                    TotalSlots = jaPossuiaSlotsPersistidos ? 0 : totalCalculado,
+                    TotalSlotsPendente = jaPossuiaSlotsPersistidos ? totalCalculado : null
+                };
+                personagem.CirculosMagicos.Add(salvo);
+            }
+            else if (salvo.TotalSlots != totalCalculado)
+                salvo.TotalSlotsPendente = totalCalculado;
+
+            gastos[circulo] = salvo.SlotsUsados;
+            EspacosMaximosPorCirculo[circulo] = salvo.TotalSlots;
+        }
+        await _sessaoService.SalvarCirculosMagicosAsync(personagem.IdPersonagem, personagem.CirculosMagicos);
+    }
+
+    public void CancelarConjuracaoAtual()
+    {
+        if (!ConjuracaoEmCarregamento) return;
+        string nome = MagiasDisponiveisSessao.FirstOrDefault(m => m.IdMagia == _idMagiaEmCarregamento)?.Nome ?? "Magia";
+        ConjuracaoEmCarregamento = false;
+        TurnosRestantesConjuracao = 0;
+        _idMagiaEmCarregamento = 0;
+        _circuloEmCarregamento = 0;
+        FeedbackAcao = $"Conjuração de {nome} cancelada.";
+        ErroModalMagia = FeedbackAcao;
         Notificar();
+    }
+
+    private void AvancarTurnoConjuracao()
+    {
+        if (!ConjuracaoEmCarregamento || TurnosRestantesConjuracao <= 0) return;
+        TurnosRestantesConjuracao--;
+        FeedbackAcao = TurnosRestantesConjuracao == 0
+            ? "A magia terminou de carregar. Abra Conjurar Magia para concluir a resolução."
+            : $"Conjuração em andamento: faltam {TurnosRestantesConjuracao} turno(s).";
+    }
+
+    public async Task RegistrarDescansoDaMesaAsync(bool longo)
+    {
+        if (!Estado.EhMestre || Estado.IdSessao <= 0) return;
+        string textoDescanso = longo
+            ? "🛏️ O Mestre iniciou um descanso longo da mesa."
+            : "⛺ O Mestre iniciou um descanso curto da mesa.";
+        var (sucesso, erro) = await _sessaoService.EnviarMensagemChatAsync(
+            Estado.IdSessao, _sessaoUsuario.IdUsuarioLogado, textoDescanso);
+        if (!sucesso)
+        {
+            FeedbackAcao = erro;
+            Notificar();
+            return;
+        }
+        await AplicarDescansoRecebido(longo);
+        if (Estado.IdMapaAtivo.HasValue)
+            await _sessaoService.RecuperarRecursos2014Async(Estado, _sessaoUsuario.IdUsuarioLogado, longo);
+        FeedbackAcao = longo
+            ? "Descanso longo concluído. Os espaços de magia foram restaurados para a mesa."
+            : "Descanso curto concluído. Espaços de magia de Pacto restaurados.";
+        Notificar();
+        await SincronizarAgoraAsync();
+    }
+
+    public async Task AplicarDescansoRecebido(bool longo)
+    {
+        if (longo)
+        {
+            foreach (var chave in EspacosUsadosPorSessao.Keys.Where(k => k.IdSessao == Estado.IdSessao).ToList())
+                EspacosUsadosPorSessao.Remove(chave);
+            foreach (var jogador in Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
+                await _sessaoService.AplicarDescansoCirculosMagicosAsync(jogador.IdPersonagem!.Value, true, Array.Empty<int>());
+            if (PersonagemConjurador is not null)
+            {
+                foreach (var slot in PersonagemConjurador.CirculosMagicos) slot.AplicarDescanso();
+                foreach (var slot in PersonagemConjurador.CirculosMagicos) EspacosMaximosPorCirculo[slot.CirculoNivel] = slot.TotalSlots;
+                if (Estado.IdPersonagemLogado.HasValue) ObterMapaEspacosUsados(Estado.IdSessao, Estado.IdPersonagemLogado.Value).Clear();
+            }
+            return;
+        }
+
+        var pactuadores = TipoConjuracaoPorPersonagem
+            .Where(kv => kv.Key.IdSessao == Estado.IdSessao && kv.Value == TipoConjuracaoClasse.Pacto)
+            .Select(kv => kv.Key)
+            .ToList();
+        foreach (var chave in pactuadores)
+            if (EspacosUsadosPorSessao.TryGetValue(chave, out var usados)) usados.Clear();
+
+        foreach (var jogador in Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
+        {
+            var ficha = await _sessaoService.ObterFichaCompletaAsync(jogador.IdPersonagem!.Value);
+            if (ficha is null || RegrasMagiaCombate.IdentificarTipoConjuracao(ObterNomeClassePersonagem(ficha)) != TipoConjuracaoClasse.Pacto) continue;
+            var circulosPacto = RegrasMagiaCombate.ObterEspacosPorCirculo(TipoConjuracaoClasse.Pacto, ficha.Nivel).Keys;
+            await _sessaoService.AplicarDescansoCirculosMagicosAsync(ficha.IdPersonagem, false, circulosPacto);
+        }
+        if (PersonagemConjurador is not null && TipoConjuracaoAtual == TipoConjuracaoClasse.Pacto)
+        {
+            foreach (var slot in PersonagemConjurador.CirculosMagicos) slot.SlotsUsados = 0;
+            if (Estado.IdPersonagemLogado.HasValue) ObterMapaEspacosUsados(Estado.IdSessao, Estado.IdPersonagemLogado.Value).Clear();
+        }
     }
 
     public bool AlvoDentroAlcanceMagia(PinoMapaDto alvo)
@@ -188,6 +305,13 @@ public partial class SessaoViewModel
             return;
         }
 
+        if (ConjuracaoEmCarregamento && !ConjuracaoPronta)
+        {
+            FeedbackAcao = $"Você está carregando uma magia. Restam {TurnosRestantesConjuracao} turno(s).";
+            Notificar();
+            return;
+        }
+
         FecharOutrosModaisCombate();
 
         ExibirModalMagia = true;
@@ -211,7 +335,9 @@ public partial class SessaoViewModel
 
             string nomeClasse = ObterNomeClassePersonagem(PersonagemConjurador);
             TipoConjuracaoAtual = RegrasMagiaCombate.IdentificarTipoConjuracao(nomeClasse);
+            TipoConjuracaoPorPersonagem[(Estado.IdSessao, PersonagemConjurador.IdPersonagem)] = TipoConjuracaoAtual;
             EspacosMaximosPorCirculo = RegrasMagiaCombate.ObterEspacosPorCirculo(TipoConjuracaoAtual, PersonagemConjurador.Nivel);
+            await SincronizarSlotsPersonagemAsync(PersonagemConjurador);
 
             var (bonusAtk, cd, attr) = RegrasMagiaCombate.CalcularParametrosConjuracao(
                 nomeClasse,
@@ -228,7 +354,12 @@ public partial class SessaoViewModel
 
             if (MagiasDisponiveisSessao.Count > 0)
             {
-                SelecionarMagiaInterno(MagiasDisponiveisSessao[0].IdMagia);
+                int idInicial = ConjuracaoEmCarregamento ? _idMagiaEmCarregamento : MagiasDisponiveisSessao[0].IdMagia;
+                SelecionarMagiaInterno(idInicial);
+                if (ConjuracaoEmCarregamento)
+                {
+                    CirculoConjuracaoSelecionado = _circuloEmCarregamento;
+                }
             }
         }
         catch (Exception ex)
@@ -367,6 +498,12 @@ public partial class SessaoViewModel
 
     public void SelecionarMagiaSessao(int idMagia)
     {
+        if (ConjuracaoEmCarregamento && idMagia != _idMagiaEmCarregamento)
+        {
+            ErroModalMagia = "Cancele a conjuração atual antes de selecionar outra magia.";
+            Notificar();
+            return;
+        }
         SelecionarMagiaInterno(idMagia);
         Notificar();
     }
@@ -409,6 +546,7 @@ public partial class SessaoViewModel
 
     public void SelecionarCirculoConjuracao(int circulo)
     {
+        if (ConjuracaoEmCarregamento) return;
         if (ObterEspacosRestantesCirculo(circulo) <= 0) return;
         CirculoConjuracaoSelecionado = circulo;
         ErroModalMagia = null;
@@ -424,11 +562,11 @@ public partial class SessaoViewModel
         Notificar();
     }
 
-    public void SelecionarAlvoMagia(string tipoEntidade, int idEntidade)
+    public void SelecionarAlvoMagia(string tipoEntidade, int idPino)
     {
         var alvo = AlvosParaMagia.FirstOrDefault(a =>
             a.TipoEntidade == tipoEntidade &&
-            a.IdEntidade == idEntidade);
+            a.IdPino == idPino);
 
         if (alvo is null || !AlvoDentroAlcanceMagia(alvo))
             return;
@@ -438,7 +576,7 @@ public partial class SessaoViewModel
             return;
 
         TipoAlvoMagiaSelecionado = tipoEntidade;
-        IdAlvoMagiaSelecionado = idEntidade;
+        IdAlvoMagiaSelecionado = idPino;
         ErroModalMagia = null;
         Notificar();
     }
@@ -451,7 +589,7 @@ public partial class SessaoViewModel
              (a.PvAtual ?? a.PvMaximo ?? 0) > 0));
 
         TipoAlvoMagiaSelecionado = candidato?.TipoEntidade;
-        IdAlvoMagiaSelecionado = candidato?.IdEntidade ?? 0;
+        IdAlvoMagiaSelecionado = candidato?.IdPino ?? 0;
     }
 
     public async Task ExecutarEtapa1MagiaAsync()
@@ -468,13 +606,53 @@ public partial class SessaoViewModel
 
         var magia = MagiaSelecionada;
         var alvo = AlvoMagiaSelecionado;
+        bool concluindoCarregamento = ConjuracaoPronta && magia.IdMagia == _idMagiaEmCarregamento;
+        if (ConjuracaoEmCarregamento && !concluindoCarregamento)
+        {
+            ErroModalMagia = $"A magia ainda está carregando ({TurnosRestantesConjuracao} turno(s)).";
+            Notificar();
+            return;
+        }
+
         int circuloUsado = magia.CirculoNivel > 0 ? CirculoConjuracaoSelecionado : 0;
 
-        if (circuloUsado > 0 && ObterEspacosRestantesCirculo(circuloUsado) <= 0)
+        if (!concluindoCarregamento && circuloUsado > 0 && ObterEspacosRestantesCirculo(circuloUsado) <= 0)
         {
             ErroModalMagia = $"Sem espaços disponíveis no {circuloUsado}º círculo.";
             Notificar();
             return;
+        }
+
+        if (!concluindoCarregamento && magia.TempoInfo.TurnosCarregamento > 0)
+        {
+            if (!ConsumirAcaoDoTurno())
+            {
+                ErroModalMagia = FeedbackAcao;
+                return;
+            }
+
+            await ConsumirEspacoMagiaAsync(circuloUsado);
+            _idMagiaEmCarregamento = magia.IdMagia;
+            _circuloEmCarregamento = circuloUsado;
+            TurnosRestantesConjuracao = magia.TempoInfo.TurnosCarregamento;
+            ConjuracaoEmCarregamento = true;
+            FeedbackAcao = $"Conjuração de {magia.Nome} iniciada; faltam {TurnosRestantesConjuracao} turno(s).";
+            Notificar();
+            return;
+        }
+
+        if (!concluindoCarregamento && !ConsumirAcaoDoTurno())
+        {
+            ErroModalMagia = FeedbackAcao;
+            return;
+        }
+
+        if (concluindoCarregamento)
+        {
+            ConjuracaoEmCarregamento = false;
+            TurnosRestantesConjuracao = 0;
+            _idMagiaEmCarregamento = 0;
+            _circuloEmCarregamento = 0;
         }
 
         ErroModalMagia = null;
@@ -503,7 +681,7 @@ public partial class SessaoViewModel
             bool critico = d20 == 20;
             bool acertou = !falhaCritica && (critico || totalAtk >= caAlvo);
 
-            ConsumirEspacoMagia(circuloUsado);
+            await ConsumirEspacoMagiaAsync(circuloUsado);
 
             ResultadoMagiaAtual = new ResultadoConjuracaoDto
             {
@@ -516,6 +694,7 @@ public partial class SessaoViewModel
                 Concentracao = magia.DuracaoInfo.SugereConcentracao,
                 TipoAlvo = alvo.TipoEntidade,
                 IdEntidadeAlvo = alvo.IdEntidade,
+                IdPinoAlvo = alvo.IdPino,
                 NomeAlvo = alvo.Nome,
                 CaAlvo = caAlvo,
                 AlvoEsquivando = esquivando,
@@ -549,7 +728,7 @@ public partial class SessaoViewModel
 
         try
         {
-            ConsumirEspacoMagia(circuloUsado);
+            await ConsumirEspacoMagiaAsync(circuloUsado);
 
             string nomeConjurador = PersonagemConjurador?.Nome ?? _sessaoUsuario.NomeUsuario;
             string nomeAlvo = alvo?.Nome ?? (magia.AlcanceInfo.Categoria == CategoriaAlcanceMagia.Pessoal ? nomeConjurador : "Área");
@@ -589,6 +768,7 @@ public partial class SessaoViewModel
                     Concentracao = magia.DuracaoInfo.SugereConcentracao,
                     TipoAlvo = alvo?.TipoEntidade,
                     IdEntidadeAlvo = alvo?.IdEntidade ?? 0,
+                    IdPinoAlvo = alvo?.IdPino,
                     NomeAlvo = nomeAlvo,
                     DadoD20 = dadoAlvo,
                     ModificadorRolagem = modSaveAlvo,
@@ -620,6 +800,7 @@ public partial class SessaoViewModel
                             TipoDano = "Mágico",
                             TipoAlvo = alvo.TipoEntidade,
                             IdEntidadeAlvo = alvo.IdEntidade,
+                            IdPinoAlvo = alvo.IdPino,
                             NomeAlvo = alvo.Nome,
                             CaAlvo = CdResistenciaMagia,
                             DadoAtaque1 = dadoAlvo,
@@ -640,7 +821,7 @@ public partial class SessaoViewModel
                             Estado.IdSessao,
                             Estado.IdMapaAtivo,
                             _sessaoUsuario.IdUsuarioLogado,
-                            dtoAtaque);
+                            dtoAtaque, Estado);
 
                         if (!ok) ErroModalMagia = erro;
                     }
@@ -822,6 +1003,7 @@ public partial class SessaoViewModel
             TipoDano = "Mágico",
             TipoAlvo = r.TipoAlvo ?? TiposPinoSessao.Monstro,
             IdEntidadeAlvo = r.IdEntidadeAlvo,
+            IdPinoAlvo = r.IdPinoAlvo,
             NomeAlvo = r.NomeAlvo,
             CaAlvo = r.CaAlvo,
             AlvoEsquivando = r.AlvoEsquivando,
@@ -847,7 +1029,7 @@ public partial class SessaoViewModel
                 Estado.IdSessao,
                 Estado.IdMapaAtivo,
                 _sessaoUsuario.IdUsuarioLogado,
-                dtoAtaque);
+                dtoAtaque, Estado);
 
             if (!sucesso)
                 ErroModalMagia = erro;

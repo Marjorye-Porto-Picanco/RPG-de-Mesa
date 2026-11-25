@@ -19,11 +19,8 @@
         <div class="profile-layout">
             <aside class="profile-summary" aria-label="Resumo do perfil">
                 <div class="profile-avatar" aria-hidden="true">
-                    <span>@ViewModel.Iniciais</span>
-                    @if (ViewModel.TemAvatar)
-                    {
-                        <img class="profile-photo-preview" src="@ViewModel.AvatarUrl" alt="Foto de perfil" />
-                    }
+                    <RetratoComIniciais Nome="@ViewModel.NomeExibicao" Imagem="@ViewModel.AvatarUrl"
+                                         AceitarBase64="true" CarregarSobDemanda="false" />
                 </div>
 
                 <div>

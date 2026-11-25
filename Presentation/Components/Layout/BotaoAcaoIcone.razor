@@ -1,0 +1,35 @@
+<button type="button"
+        class="botao-acao-icone @(Inline ? "botao-acao-icone-inline" : string.Empty) @Class"
+        title="@(Titulo ?? Texto ?? RotuloPadrao)"
+        aria-label="@(Titulo ?? Texto ?? RotuloPadrao)"
+        @onclick="OnClick"
+        @onclick:stopPropagation="StopPropagation">
+    <img src="@CaminhoImagem" alt="" aria-hidden="true" width="22" height="22" />
+    @if (MostrarTexto && !string.IsNullOrWhiteSpace(Texto))
+    {
+        <span>@Texto</span>
+    }
+    @if (MostrarSeta)
+    {
+        <b aria-hidden="true">›</b>
+    }
+</button>
+
+@code {
+    internal const string ImagemSair = "/img/botao-sair-campanha.jpeg";
+    private const string ImagemExcluir = "/img/botao-excluir-campanha.jpeg";
+
+    [Parameter] public string Tipo { get; set; } = "excluir";
+    [Parameter] public string? Texto { get; set; }
+    [Parameter] public string? Titulo { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public bool Inline { get; set; }
+    [Parameter] public bool MostrarTexto { get; set; }
+    [Parameter] public bool MostrarSeta { get; set; }
+    [Parameter] public bool StopPropagation { get; set; } = true;
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private bool EhSair => string.Equals(Tipo, "sair", StringComparison.OrdinalIgnoreCase);
+    private string RotuloPadrao => EhSair ? "Sair" : "Excluir";
+    private string CaminhoImagem => EhSair ? ImagemSair : ImagemExcluir;
+}

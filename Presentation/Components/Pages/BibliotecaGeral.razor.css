@@ -29,7 +29,7 @@
     --border-gold: rgba(216, 181, 112, 0.35);
     min-height: 100vh;
     background-color: var(--wood);
-    background-image: linear-gradient(rgba(25, 17, 13, 0.88), rgba(25, 17, 13, 0.92)), url("img/fundodemadeira.png.jpg");
+    background-image: linear-gradient(rgba(25, 17, 13, 0.88), rgba(25, 17, 13, 0.92)), var(--rpg-fundo);
     background-position: center;
     background-size: cover;
     background-attachment: fixed;
@@ -50,7 +50,7 @@
         .app-shell ::deep .library-tab:focus-visible,
         .app-shell ::deep .library-entry:focus-visible,
         .app-shell ::deep .dialog-close:focus-visible,
-        .app-shell ::deep .action-primary:focus-visible,
+        .app-shell ::deep .botao-dourado:focus-visible,
         .app-shell ::deep .action-secondary:focus-visible,
         .app-shell ::deep .action-quiet:focus-visible,
         .app-shell ::deep a:focus-visible,
@@ -118,62 +118,6 @@
     line-height: 1.6;
 }
 
-/* Botões e Ações */
-.app-shell ::deep .action-primary,
-.app-shell ::deep .action-secondary,
-.app-shell ::deep .action-quiet {
-    display: inline-flex;
-    min-height: 42px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 16px;
-    border: 1px solid #d4b364;
-    border-radius: 4px;
-    color: #fff2d4;
-    font-size: 12px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background 150ms ease, border-color 150ms ease;
-}
-
-.app-shell ::deep .action-primary {
-    border: 1px solid #8a6218;
-    border-radius: 6px;
-    background: linear-gradient(180deg, #ecc977 0%, #cba23f 52%, #a87a1f 100%);
-    color: #2a1808;
-    font-size: 11px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 244, 210, 0.55);
-    transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-    .app-shell ::deep .action-primary:hover {
-        filter: brightness(1.07);
-        transform: translateY(-1px);
-    }
-
-.app-shell ::deep .action-secondary {
-    border-color: rgba(217, 184, 120, 0.48);
-    background: rgba(33, 23, 17, 0.48);
-    color: #e5d1aa;
-}
-
-    .app-shell ::deep .action-secondary:hover,
-    .app-shell ::deep .action-quiet:hover {
-        background: rgba(192, 150, 70, 0.2);
-    }
-
-.app-shell ::deep .action-quiet {
-    min-height: 34px;
-    padding: 0 10px;
-    border-color: transparent;
-    background: transparent;
-    color: #ccb98f;
-}
-
 /* Abas (Tabs) */
 .library-tabs {
     display: flex;
@@ -189,22 +133,7 @@
 
 .library-tab {
     min-width: 92px;
-    min-height: 44px;
-    padding: 0 18px;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: transparent;
-    color: #bcae91;
-    font-size: 12px;
-    cursor: pointer;
 }
-
-    .library-tab:hover,
-    .library-tab[aria-selected="true"],
-    .library-tab.active {
-        border-bottom-color: #d3ac60;
-        color: #f5e4bf;
-    }
 
 /* Barra de Filtros e Busca */
 .library-panel {
@@ -364,6 +293,7 @@
 .app-shell ::deep .library-entry {
     position: relative;
     display: flex;
+    height: 88px;
     min-width: 0;
     min-height: 88px;
     flex-direction: column;
@@ -386,16 +316,30 @@
     }
 
     .app-shell ::deep .library-entry strong {
-        max-width: 100%;
-        overflow-wrap: anywhere;
+        display: block;
+        width: 100%;
+        min-width: 0;
+        height: 18px;
+        overflow: hidden;
         font-size: 13px;
         font-weight: 500;
-        line-height: 1.35;
+        line-height: 18px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow-wrap: normal;
     }
 
 .app-shell ::deep .entry-meta {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 14px;
+    overflow: hidden;
     color: #c2a969;
     font-size: 10px;
+    line-height: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .app-shell ::deep .entry-arrow {
@@ -434,6 +378,7 @@
     }
 
 .app-shell ::deep .monster-art {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
     position: relative;
     height: 154px;
     overflow: hidden;
@@ -530,7 +475,7 @@
     border: 1px solid rgba(205, 167, 95, 0.6);
     border-radius: 4px;
     background-color: var(--paper);
-    background-image: linear-gradient(rgba(246, 232, 199, 0.95), rgba(226, 205, 163, 0.97)), url("img/papelantigo.png");
+    background-image: linear-gradient(rgba(246, 232, 199, 0.95), rgba(226, 205, 163, 0.97)), var(--rpg-papel);
     color: #44331f;
 }
 
@@ -577,7 +522,25 @@
     gap: 15px;
 }
 
+.app-shell ::deep .monster-card-open {
+    display: inline;
+    padding: 0 !important;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.app-shell ::deep .monster-card-open::after {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    content: "";
+}
+
 .app-shell ::deep .aside-portrait {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
     position: relative;
     min-height: 245px;
     display: grid;
@@ -641,7 +604,7 @@
     width: min(1050px, 100%);
     max-height: 92vh;
     overflow-y: auto;
-    background: #20150f url("img/fundodemadeira.png.jpg") center / cover fixed;
+    background: #20150f var(--rpg-fundo) center / cover fixed;
     border: 1px solid rgba(217, 184, 120, 0.4);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     padding: 30px;
@@ -897,7 +860,7 @@
     }
 
     .app-shell ::deep .npc-card-wrap .npc-card {
-        padding-right: 82px;
+        padding-right: 58px;
     }
 
     .app-shell ::deep .library-entry-wrap .library-entry {
@@ -909,14 +872,24 @@
     z-index: 2;
     top: 9px;
     right: 9px;
-    padding: 5px 8px;
-    border: 1px solid rgba(226, 148, 127, 0.65);
-    border-radius: 3px;
-    background: rgba(57, 25, 20, 0.94);
+    width: 22px;
+    min-width: 22px;
+    max-width: 22px;
+    height: 22px;
+    min-height: 22px;
+    max-height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
     color: #ffe4dc;
-    font-size: 10px;
+    font-size: 0;
+    line-height: 0;
     cursor: pointer;
-    transition: background 150ms ease, border-color 150ms ease;
+    transition: transform 150ms ease, filter 150ms ease;
 }
 
 .app-shell ::deep .monster-card > .library-card-delete {
@@ -925,8 +898,8 @@
 }
 
 .app-shell ::deep .library-card-delete:hover {
-    border-color: #f0a08a;
-    background: #7a3028;
+    transform: scale(1.08);
+    filter: brightness(1.08);
 }
 
 @media (max-width: 920px) {
@@ -962,6 +935,24 @@
     }
 }
 
+@media (max-width: 700px) {
+    .app-shell ::deep .page-heading,
+    .app-shell ::deep .page-heading > div {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .app-shell ::deep .page-title,
+    .app-shell ::deep .page-description,
+    .library-scope {
+        overflow-wrap: anywhere;
+    }
+
+    .app-shell ::deep .page-heading .botao-dourado {
+        width: 100%;
+    }
+}
+
 @media (max-width: 560px) {
     .library-toolbar {
         align-items: stretch;
@@ -974,7 +965,6 @@
 
     .library-tab {
         flex: 1 0 auto;
-        padding: 0 12px;
     }
 
     .app-shell ::deep .dialog-heading,
