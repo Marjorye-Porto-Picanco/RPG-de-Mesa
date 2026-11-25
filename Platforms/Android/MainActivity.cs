@@ -1,4 +1,5 @@
 ﻿using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using AndroidX.Core.View;
@@ -12,6 +13,9 @@ namespace RPGdeMesa
                                ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
     public class MainActivity : MauiAppCompatActivity
     {
+        private const int PedidoSalvarRelatorio = 5102;
+        private TaskCompletionSource<Android.Net.Uri?>? _destinoRelatorio;
+
         protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -35,6 +39,41 @@ namespace RPGdeMesa
             {
                 ViewCompat.SetOnApplyWindowInsetsListener(contentView, new SafeAreaInsetsListener());
             }
+        }
+
+        internal async Task<Android.Net.Uri?> EscolherDestinoRelatorioAsync(string nome)
+        {
+            if (_destinoRelatorio is not null)
+                return null;
+
+            var pedido = new TaskCompletionSource<Android.Net.Uri?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _destinoRelatorio = pedido;
+            try
+            {
+                using var seletor = new Intent(Intent.ActionCreateDocument);
+                seletor.AddCategory(Intent.CategoryOpenable);
+                seletor.SetType("text/plain");
+                seletor.PutExtra(Intent.ExtraTitle, nome);
+                StartActivityForResult(seletor, PedidoSalvarRelatorio);
+                return await pedido.Task;
+            }
+            finally
+            {
+                _destinoRelatorio = null;
+            }
+        }
+
+        protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+        {
+            base.OnActivityResult(requestCode, resultCode, data);
+            if (requestCode == PedidoSalvarRelatorio)
+                _destinoRelatorio?.TrySetResult(resultCode == Result.Ok ? data?.Data : null);
+        }
+
+        protected override void OnDestroy()
+        {
+            _destinoRelatorio?.TrySetResult(null);
+            base.OnDestroy();
         }
 
         private sealed class SafeAreaInsetsListener : Java.Lang.Object, IOnApplyWindowInsetsListener

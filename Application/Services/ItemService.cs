@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
 
 namespace RPGdeMesa.Application.Services;
@@ -8,10 +10,12 @@ namespace RPGdeMesa.Application.Services;
 public class ItemService
 {
     private readonly IItemRepository _itemRepository;
+    private readonly ILogger<ItemService> _logger;
 
-    public ItemService(IItemRepository itemRepository)
+    public ItemService(IItemRepository itemRepository, ILogger<ItemService> logger)
     {
         _itemRepository = itemRepository;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<Item>> ObterItensPorUsuarioAsync(int idAccount)
@@ -26,9 +30,17 @@ public class ItemService
             int idGerado = await _itemRepository.AdicionarAsync(item);
             return new ItemResult(true, "Item cadastrado com sucesso!", idGerado);
         }
+        catch (DomainException ex)
+        {
+            if (ex.InnerException is not null)
+                _logger.LogWarning(ex, "Cadastro de item recusado para a conta {IdAccount}", idAccount);
+
+            return new ItemResult(false, ex.Message, 0);
+        }
         catch (Exception ex)
         {
-            return new ItemResult(false, $"Erro ao cadastrar item: {ex.Message}", 0);
+            _logger.LogError(ex, "Falha ao cadastrar item para a conta {IdAccount}", idAccount);
+            return new ItemResult(false, "Não foi possível cadastrar o item agora. Tente novamente em instantes.", 0);
         }
     }
 

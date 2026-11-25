@@ -1,0 +1,38 @@
+@using System.Globalization
+
+@{
+    int maximo = Math.Max(0, Maximo);
+    int atual = Math.Clamp(Atual, 0, maximo);
+    string largura = maximo > 0 ? (100d * atual / maximo).ToString("0.##", CultureInfo.InvariantCulture) : "0";
+}
+
+<div class="barra-recurso @(Magia ? "barra-magia" : "") @(MostrarValor ? "barra-com-valor" : "") @(Legenda is not null ? "barra-rotulada" : "")"
+     role="@(maximo > 0 ? "meter" : null)"
+     aria-label="@(maximo > 0 ? Rotulo : null)"
+     aria-valuemin="@(maximo > 0 ? "0" : null)"
+     aria-valuemax="@(maximo > 0 ? maximo.ToString() : null)"
+     aria-valuenow="@(maximo > 0 ? atual.ToString() : null)"
+     aria-valuetext="@(maximo > 0 ? $"{atual} de {maximo}" : null)">
+    @if (MostrarValor)
+    {
+        <div class="barra-recurso-leitura" aria-hidden="@(maximo > 0 ? "true" : null)">
+            @if (Legenda is not null)
+            {
+                <span class="barra-recurso-legenda">@Legenda</span>
+            }
+            <strong class="barra-recurso-valor">@atual / @maximo</strong>
+        </div>
+    }
+    <div class="barra-recurso-trilho">
+        <div class="barra-recurso-preenchimento" style="width: @(largura)%"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Atual { get; set; }
+    [Parameter, EditorRequired] public int Maximo { get; set; }
+    [Parameter, EditorRequired] public string Rotulo { get; set; } = string.Empty;
+    [Parameter] public bool Magia { get; set; }
+    [Parameter] public bool MostrarValor { get; set; }
+    [Parameter] public string? Legenda { get; set; }
+}

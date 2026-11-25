@@ -1,6 +1,5 @@
 ﻿using Microsoft.UI.Xaml;
-// Remova o using RPGdeMesa.Presentation se não for estritamente necessário aqui, 
-// pois o MauiProgram já é chamado diretamente abaixo.
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa.WinUI;
 
@@ -15,6 +14,10 @@ public partial class App : MauiWinUIApplication
     /// </summary>
     public App()
     {
+        UnhandledException += (_, evento) =>
+        {
+            evento.Handled = FalhasApp.Tratar(evento.Exception, "Interface Windows");
+        };
         this.InitializeComponent();
     }
 

@@ -1,0 +1,102 @@
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Presentation.ViewModel
+
+@if (Pino is { } pino)
+{
+    <section class="acoes-pino" aria-label="Pino no mapa">
+        <div class="pino-status">
+            <strong>Pino no mapa</strong>
+            <span class="@(pino.Visivel ? "pino-visivel" : "pino-oculto")">@(pino.Visivel ? "Visível para os jogadores" : "Oculto para os jogadores")</span>
+        </div>
+
+        @if (_confirmandoRemocao)
+        {
+            <p>Remover o pino de @pino.Nome deste mapa?</p>
+            <div class="pino-botoes">
+                <button type="button" disabled="@_processando" @onclick="CancelarRemocao">Cancelar</button>
+                <button type="button" class="pino-remover" disabled="@_processando" @onclick="() => RemoverAsync(pino)">Confirmar remoção</button>
+            </div>
+        }
+        else
+        {
+            <div class="pino-botoes">
+                <button type="button" disabled="@_processando" @onclick="() => AlterarVisibilidadeAsync(pino)">
+                    @(pino.Visivel ? "Ocultar pino" : "Mostrar pino")
+                </button>
+                <button type="button" class="pino-remover" disabled="@_processando" @onclick="PedirRemocao">Remover do mapa</button>
+            </div>
+        }
+
+        @if (_erro is not null)
+        {
+            <p class="pino-erro" role="alert">@_erro</p>
+        }
+    </section>
+}
+else if (_removido)
+{
+    <p class="acoes-pino" role="status">Pino removido do mapa.</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
+    [Parameter, EditorRequired] public int IdPino { get; set; }
+
+    private bool _processando;
+    private bool _confirmandoRemocao;
+    private bool _removido;
+    private string? _erro;
+
+    private PinoMapaDto? Pino => ViewModel.Estado.EhMestre && ViewModel.Estado.SessaoAtiva &&
+        ViewModel.Estado.IdMapaAtivo is int idMapa
+        ? ViewModel.Estado.Pinos.Find(pino => pino.IdPino == IdPino && pino.IdMapa == idMapa)
+        : null;
+
+    private void PedirRemocao()
+    {
+        _erro = null;
+        _confirmandoRemocao = true;
+    }
+
+    private void CancelarRemocao()
+    {
+        _confirmandoRemocao = false;
+        _erro = null;
+    }
+
+    private async Task AlterarVisibilidadeAsync(PinoMapaDto pino)
+    {
+        if (_processando || Pino?.IdPino != pino.IdPino) return;
+
+        _processando = true;
+        _erro = null;
+        try
+        {
+            if (!await ViewModel.AlternarVisibilidadePinoAsync(pino.TipoEntidade, pino.IdEntidade, pino.IdPino, visivel: !pino.Visivel))
+                _erro = "Não foi possível alterar a visibilidade do pino.";
+        }
+        finally
+        {
+            _processando = false;
+        }
+    }
+
+    private async Task RemoverAsync(PinoMapaDto pino)
+    {
+        if (_processando || !_confirmandoRemocao || Pino?.IdPino != pino.IdPino) return;
+
+        _processando = true;
+        _erro = null;
+        try
+        {
+            _removido = await ViewModel.RemoverPinoDoMapaAsync(pino.TipoEntidade, pino.IdEntidade, pino.IdPino);
+            if (!_removido)
+                _erro = "Não foi possível remover o pino do mapa.";
+        }
+        finally
+        {
+            _processando = false;
+            _confirmandoRemocao = false;
+        }
+    }
+}

@@ -7,6 +7,7 @@ namespace RPGdeMesa.Presentation.ViewModel;
 public partial class SessaoViewModel
 {
     public bool ExibirPainel2014 { get; private set; }
+    public bool FeedbackCombateEhErro { get; private set; }
     private bool _ataqueOportunidade2014;
     public bool AtaqueOportunidade2014 => _ataqueOportunidade2014;
     private (int IdPino, int Coluna, int Linha, decimal Distancia, bool Disparada)? _deslocamentoPendente2014;
@@ -35,6 +36,13 @@ public partial class SessaoViewModel
     public Task<bool> UsarControle2014Async(Func<SessaoService, SessaoEstadoDto, int, Task<(bool Sucesso, string Mensagem)>> comando) =>
         ExecutarComandoCombateUiAsync((estado, conta) => comando(_sessaoService, estado, conta));
 
+    internal void InformarErroControle2014(string mensagem)
+    {
+        FeedbackAtaqueEntidade = mensagem;
+        FeedbackCombateEhErro = true;
+        Notificar();
+    }
+
     public Task AvancarEncontro2014Async() =>
         UsarControle2014Async((servico, estado, conta) => servico.AvancarIniciativaAsync(estado, conta));
 
@@ -46,10 +54,14 @@ public partial class SessaoViewModel
 
     public void AbrirAtaqueOportunidade2014(int id)
     {
-        if (!Estado.EhMestre ||
-            Estado.Encontro.MovimentoPendente is not { } movimento ||
+        if (!Estado.EhMestre) return;
+
+        if (Estado.Encontro.MovimentoPendente is not { } movimento ||
             !movimento.ReacoesPendentes.Contains(id))
+        {
+            InformarErroControle2014("Essa reação já foi resolvida. Confira o turno atual.");
             return;
+        }
 
         ExibirPainel2014 = false;
         ExibirModalDados = false;

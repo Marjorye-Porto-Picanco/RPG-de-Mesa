@@ -1,0 +1,31 @@
+<header class="ficha-cabecalho">
+    <div class="ficha-identidade">
+        <div class="ficha-retrato">
+            <RetratoComIniciais Nome="@Titulo" Imagem="@Imagem" CarregarSobDemanda="false" />
+        </div>
+        <div class="ficha-identidade-texto">
+            @if (!string.IsNullOrWhiteSpace(Subtitulo))
+            {
+                <p class="ficha-origem">@Subtitulo</p>
+            }
+            <h2 id="@IdTitulo">@Titulo</h2>
+            <p>@Descricao</p>
+        </div>
+    </div>
+
+    <div class="ficha-recursos">
+        @ChildContent
+    </div>
+
+    <button type="button" class="ficha-fechar" aria-label="Fechar ficha" data-dialog-close @onclick="OnFechar">×</button>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public string IdTitulo { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Titulo { get; set; } = string.Empty;
+    [Parameter] public string? Imagem { get; set; }
+    [Parameter] public string? Subtitulo { get; set; }
+    [Parameter] public string? Descricao { get; set; }
+    [Parameter, EditorRequired] public RenderFragment ChildContent { get; set; } = default!;
+    [Parameter] public EventCallback OnFechar { get; set; }
+}

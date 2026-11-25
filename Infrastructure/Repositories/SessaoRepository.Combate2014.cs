@@ -11,7 +11,7 @@ public partial class SessaoRepository
 {
     public Task AlterarCombate2014Async(int idSessao, int idMapa, int idConta, bool participantePermitido, Guid operacao,
         Func<ControleCombate2014, IReadOnlyList<SessaoPino>, ResultadoComandoCombate2014> alterar) =>
-        ExecutarOperacaoAsync(idSessao, operacao, $"RPGdeMesa:combate:{idSessao}", async contexto =>
+        ExecutarOperacaoCondicionalAsync(idSessao, operacao, $"RPGdeMesa:combate:{idSessao}", async contexto =>
         {
             var sessao = await contexto.SessoesMesa.Include(s => s.Campanha)
                 .FirstOrDefaultAsync(s => s.IdSessao == idSessao && s.Ativa && s.IdMapaAtivo == idMapa);
@@ -28,6 +28,9 @@ public partial class SessaoRepository
                 .Where(p => p.IdSessao == idSessao && p.IdMapa == idMapa).ToListAsync();
             var controle = LerControleCombate2014(sessao);
             var resultado = alterar(controle, pinos);
+            if (resultado.Erro is not null)
+                return false;
+
             foreach (var pv in resultado.AlteracoesPv ?? [])
             {
                 var alvo = pinos.Find(p => p.IdPino == pv.IdPino);
@@ -70,6 +73,8 @@ public partial class SessaoRepository
             sessao.SalvarCombate2014(JsonSerializer.Serialize(controle));
             if (!string.IsNullOrWhiteSpace(resultado.Mensagem))
                 AdicionarRegistroCombate(contexto, idSessao, resultado.Mensagem);
+
+            return true;
         });
 
     private static ControleCombate2014 LerControleCombate2014(SessaoMesa sessao) =>

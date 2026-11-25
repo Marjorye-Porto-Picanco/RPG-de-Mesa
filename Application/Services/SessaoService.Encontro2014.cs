@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Sessoes;
@@ -11,13 +12,19 @@ public partial class SessaoService
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
         {
             if (entradas is null || entradas.Count == 0 || entradas.DistinctBy(x => x.IdPino).Count() != entradas.Count)
-                throw new DomainException("Selecione combatentes distintos para a iniciativa.");
+                return new() { Erro = "Selecione pelo menos um combatente, sem repetir pinos na iniciativa." };
+
+            if (entradas.Any(entrada => entrada.Desempate < 0))
+                return new() { Erro = "O desempate da iniciativa precisa ser zero ou maior." };
 
             foreach (var entrada in entradas)
                 ExigirPino(estado, pinos, entrada.IdPino);
 
-            encontro.Covil = covil;
             var aptos = CombatentesNoEncontro(estado, encontro, pinos);
+            if (encontro.Rodada == 0 && !entradas.Any(entrada => aptos.Contains(entrada.IdPino)))
+                return new() { Erro = "Marque pelo menos um combatente que possa participar do encontro." };
+
+            encontro.Covil = covil;
 
             if (encontro.Rodada == 0)
             {
@@ -39,10 +46,10 @@ public partial class SessaoService
             if (encontro.Rodada == 0 || encontro.IdPinoAtual != estado.Encontro.IdPinoAtual ||
                 encontro.Rodada != estado.Encontro.Rodada ||
                 (!estado.EhMestre && estado.IdAccountTurno != conta))
-                throw new DomainException("O turno atual mudou.");
+                return new() { Erro = "O turno atual mudou. Confira a rodada antes de avançar." };
 
             if (encontro.MovimentoPendente is not null)
-                throw new DomainException("Resolva ou dispense as reações antes de avançar.");
+                return new() { Erro = "Resolva ou dispense as reações antes de avançar." };
 
             var aptos = CombatentesNoEncontro(estado, encontro, pinos);
             bool janelaLendaria = encontro.Ordem.Any(e =>
@@ -59,6 +66,9 @@ public partial class SessaoService
     public Task<(bool Sucesso, string Mensagem)> EncerrarIniciativaAsync(SessaoEstadoDto estado, int conta) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, _) =>
         {
+            if (encontro.Rodada == 0)
+                return new() { Erro = "O combate já foi encerrado." };
+
             encontro.Encerrar();
             return new("A iniciativa foi encerrada.", SincronizarTurno: true);
         });
@@ -67,6 +77,9 @@ public partial class SessaoService
         EfeitoCombate2014 efeito, bool remover) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
         {
+            if (!remover && CondicaoInvalida(efeito))
+                return new() { Erro = "Confira a duração e a salvaguarda da condição." };
+
             var pino = ExigirPino(estado, pinos, id);
             var ficha = encontro.Ficha(id);
             ficha.Efeitos.RemoveAll(e => e.Condicao == efeito.Condicao && (remover || e.IdOrigem == efeito.IdOrigem));
@@ -82,7 +95,7 @@ public partial class SessaoService
             var pino = ExigirPino(estado, pinos, id);
             var chave = RegrasCombate2014.NormalizarTipoDano(tipo);
             if (chave.Length is < 1 or > 30)
-                throw new DomainException("Informe um tipo de dano.");
+                return new() { Erro = "Informe um tipo de dano com até 30 caracteres." };
 
             var afinidades = encontro.Ficha(id).Afinidades;
             if (afinidade == AfinidadeDano2014.Normal)
@@ -185,12 +198,13 @@ public partial class SessaoService
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
         {
             var pino = ExigirPino(estado, pinos, ator);
-            var ficha = encontro.Ficha(ator);
-            if (!string.IsNullOrWhiteSpace(nome))
-            {
-                if (nome.Length > 120 || maximo is < 1 or > 99 || recarga is 1 or < 0 or > 6)
-                    throw new DomainException("Confira os usos e a recarga.");
+            bool temNome = !string.IsNullOrWhiteSpace(nome);
+            if (temNome && (nome.Length > 120 || maximo is < 1 or > 99 || recarga is 1 or < 0 or > 6))
+                return new() { Erro = "Informe um nome com até 120 caracteres, de 1 a 99 usos e uma recarga de 0 ou de 2 a 6." };
 
+            var ficha = encontro.Ficha(ator);
+            if (temNome)
+            {
                 ficha.Recursos[nome.Trim()] = new RecursoCombate2014
                 {
                     Maximo = maximo,
@@ -233,7 +247,7 @@ public partial class SessaoService
             int pv = PvAtual(pino);
             int maximo = pino.PvMaximo ?? pv;
             if (ficha.Morto)
-                throw new DomainException("A criatura está morta.");
+                return new() { Erro = "A criatura está morta." };
 
             switch (acao)
             {
@@ -243,7 +257,7 @@ public partial class SessaoService
 
                 case "curar" when cura > 0:
                     LimparInconsciencia(ficha);
-                    int novoPvCura = Math.Min(Math.Max(1, maximo), pv + cura);
+                    int novoPvCura = (int)Math.Min(Math.Max(1, maximo), (long)pv + cura);
                     return new($"{pino.Nome} recuperou {novoPvCura - pv} PV ({novoPvCura}/{Math.Max(1, maximo)}).",
                         [new(id, pv, Math.Max(1, maximo), novoPvCura)]);
 
@@ -255,7 +269,7 @@ public partial class SessaoService
                 case "rolar" when pv == 0 && !ficha.Estavel &&
                     (pino.TipoEntidade == TiposPinoSessao.Personagem || ficha.UsaTestesMorte):
                     if (encontro.Rodada > 0 && (encontro.IdPinoAtual != id || ficha.RodadaUltimoTesteMorte == encontro.Rodada))
-                        throw new DomainException("O teste está disponível uma vez por rodada no turno do combatente.");
+                        return new() { Erro = "O teste está disponível uma vez por rodada no turno do combatente." };
 
                     ficha.RodadaUltimoTesteMorte = encontro.Rodada;
                     int dado = Random.Shared.Next(1, 21);
@@ -274,7 +288,7 @@ public partial class SessaoService
                         novoPv > 0 ? [new(id, pv, Math.Max(1, maximo), novoPv)] : null);
 
                 default:
-                    throw new DomainException("Selecione uma operação válida para os PV atuais.");
+                    return new() { Erro = "Esta ação não está disponível para os PV atuais do combatente." };
             }
         }, incluirJogador: acao == "rolar");
 
@@ -283,7 +297,7 @@ public partial class SessaoService
         RegistrarComandoCombateAsync(estado, conta, (controle, _, _) =>
         {
             if (string.IsNullOrWhiteSpace(nome) || nome.Length > 100 || cd is < 1 or > 40 || modificador is < -20 or > 30)
-                throw new DomainException("Confira o nome, a CD e o modificador.");
+                return new() { Erro = "Informe o nome do teste, uma CD de 1 a 40 e um modificador de −20 a 30." };
 
             var contas = estado.Jogadores
                 .Where(j => contaAlvo == 0 || j.IdAccount == contaAlvo)
@@ -292,13 +306,13 @@ public partial class SessaoService
                 .ToList();
 
             if (contas.Count == 0)
-                throw new DomainException("Nenhum jogador selecionado.");
+                return new() { Erro = "Não há jogador disponível para receber este teste." };
 
             if (controle.Pedidos.Count > 80)
                 controle.Pedidos.RemoveAll(p => p.Total.HasValue);
 
             if (controle.Pedidos.Count + contas.Count > 120)
-                throw new DomainException("Há muitos pedidos de teste pendentes.");
+                return new() { Erro = "Há muitos pedidos pendentes. Aguarde as respostas antes de enviar outro teste." };
 
             foreach (int destinatario in contas)
                 controle.Pedidos.Add(new(Guid.NewGuid(), destinatario, nome.Trim(), cd, modificador, modo, ocultarCd));
@@ -346,6 +360,7 @@ public partial class SessaoService
             return (false, "Abra um mapa ativo para usar os controles de combate.");
 
         string? mensagem = null;
+        string? erroComando = null;
         bool mudouJogador = false;
         try
         {
@@ -353,12 +368,19 @@ public partial class SessaoService
             {
                 var encontro = controle.ObterMapa(mapa);
                 var resultado = executar(controle, encontro, pinos);
+                erroComando = resultado.Erro;
+                if (erroComando is not null)
+                    return resultado;
+
                 encontro.RemoverEfeitosSemConcentracao();
                 mensagem = resultado.Mensagem;
                 mudouJogador = resultado.AlteracoesPv?.Any(a =>
                     pinos.Any(p => p.IdPino == a.IdPino && p.TipoEntidade == TiposPinoSessao.Personagem)) == true;
                 return resultado;
             });
+
+            if (erroComando is not null)
+                return (false, erroComando);
 
             if (mudouJogador)
                 InvalidarCacheCampanha(estado.IdCampanha);
@@ -371,7 +393,8 @@ public partial class SessaoService
         }
         catch (Exception ex)
         {
-            return (false, $"Erro ao registrar ação de combate: {ex.InnerException?.Message ?? ex.Message}");
+            _logger?.LogWarning(ex, "Falha ao registrar ação de combate na sessão {SessaoId}, mapa {MapaId}", estado.IdSessao, mapa);
+            return (false, "A mesa não confirmou a ação. Confira o registro de Combate antes de tentar novamente.");
         }
     }
 
@@ -441,13 +464,17 @@ public partial class SessaoService
 
     private static void AplicarCondicao(EstadoCombatente2014 ficha, EfeitoCombate2014 efeito)
     {
-        if (efeito.Rodadas is < 1 or > 100 || efeito.Cd is < 1 or > 40 || (efeito.Cd.HasValue && !efeito.Atributo.HasValue))
+        if (CondicaoInvalida(efeito))
             throw new DomainException("Confira a duração e a salvaguarda da condição.");
 
         ficha.Efeitos.Add(efeito);
         if (RegrasCombate2014.Incapacitado(ficha))
             ficha.EncerrarConcentracao();
     }
+
+    private static bool CondicaoInvalida(EfeitoCombate2014 efeito) =>
+        efeito.Rodadas is < 1 or > 100 || efeito.Cd is < 1 or > 40 ||
+        (efeito.Cd.HasValue && !efeito.Atributo.HasValue);
 
     private static void LimparInconsciencia(EstadoCombatente2014 ficha)
     {

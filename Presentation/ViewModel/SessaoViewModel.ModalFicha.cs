@@ -3,6 +3,7 @@ using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;
+using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa.Presentation.ViewModel;
 
@@ -15,6 +16,7 @@ public partial class SessaoViewModel
     ];
 
     public Personagem? FichaEmVisualizacao { get; private set; }
+    public int? IdPinoFichaModal { get; private set; }
     public bool ExibirModalFicha { get; private set; }
     public string AbaFichaModalAtiva { get; private set; } = "atributos";
     public bool CarregandoFichaModal { get; private set; }
@@ -137,8 +139,9 @@ public partial class SessaoViewModel
         await AbrirFichaPorIdAsync(participante.IdPersonagem.Value, abaInicial);
     }
 
-    private async Task AbrirFichaPorIdAsync(int idPersonagem, string abaInicial)
+    private async Task AbrirFichaPorIdAsync(int idPersonagem, string abaInicial, int? idPino = null)
     {
+        IdPinoFichaModal = null;
         FeedbackAcao = null;
         FeedbackFichaModal = null;
         ExibirModalDados = false;
@@ -169,6 +172,7 @@ public partial class SessaoViewModel
             CarregarClassesModal(FichaEmVisualizacao);
             CarregarInventarioModal(FichaEmVisualizacao);
             CarregarMagiasModal(FichaEmVisualizacao);
+            IdPinoFichaModal = idPino;
             ExibirModalFicha = true;
         }
         catch (Exception ex)
@@ -444,8 +448,23 @@ public partial class SessaoViewModel
     public void FecharModalFicha()
     {
         ExibirModalFicha = false;
+        IdPinoFichaModal = null;
         FeedbackFichaModal = null;
         Notificar();
+    }
+
+    private void AtualizarPvFichaNoMapa(SessaoEstadoDto estadoAnterior)
+    {
+        if (!ExibirModalFicha || FichaEmVisualizacao is not { } ficha) return;
+
+        var anterior = estadoAnterior.Pinos.Find(p => p.TipoEntidade == TiposPinoSessao.Personagem && p.IdEntidade == ficha.IdPersonagem);
+        var atualizado = Estado.Pinos.Find(p => p.TipoEntidade == TiposPinoSessao.Personagem && p.IdEntidade == ficha.IdPersonagem);
+        if (anterior is null || atualizado is null) return;
+
+        if (ficha.PvAtual == anterior.PvAtual && atualizado.PvAtual is int pvAtual)
+            ficha.PvAtual = pvAtual;
+        if (ficha.PvMaximo == anterior.PvMaximo && atualizado.PvMaximo is int pvMaximo)
+            ficha.PvMaximo = pvMaximo;
     }
 
     private static List<ClasseSlotSessaoDto> ExtrairClassesDePersonagem(Personagem p)

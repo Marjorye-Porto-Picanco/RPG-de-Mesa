@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Sessoes;
@@ -287,77 +288,91 @@ public partial class SessaoViewModel
         }
     }
 
-    public async Task AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade, int? idPino = null)
+    public async Task<bool> AlternarVisibilidadePinoAsync(string tipoEntidade, int idEntidade, int? idPino = null, bool? visivel = null)
     {
-        if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
-
-        var pino = idPino.HasValue ? PinosVisiveisNoMapa.FirstOrDefault(p => p.IdPino == idPino) : ObterPinoNoMapa(tipoEntidade, idEntidade);
-        if (pino == null) return;
+        if (!Estado.EhMestre || Estado.IdSessao <= 0 || Estado.IdMapaAtivo is not int idMapa) return false;
+        int idSessao = Estado.IdSessao;
 
         await _dbLock.WaitAsync();
         try
         {
+            if (!Estado.EhMestre || Estado.IdSessao != idSessao || Estado.IdMapaAtivo != idMapa) return false;
+            var pino = ObterPinoParaAcao(tipoEntidade, idEntidade, idPino, idMapa);
+            if (pino is null) return false;
+
+            bool novaVisibilidade = visivel ?? !pino.Visivel;
             var (sucesso, erro) = await _sessaoService.AlterarVisibilidadePinoAsync(
                 Estado.IdCampanha,
-                Estado.IdSessao,
-                Estado.IdMapaAtivo,
+                idSessao,
+                idMapa,
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
                 idEntidade,
-                !pino.Visivel,
+                novaVisibilidade,
                 pino.IdPino);
 
-            if (!sucesso)
-                FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
-
-            Notificar();
+            FeedbackAcao = sucesso ? null : erro;
+            if (sucesso) pino.Visivel = novaVisibilidade;
+            await SincronizarAposAcaoPinoAsync();
+            return sucesso;
         }
         finally
         {
             _dbLock.Release();
+            Notificar();
         }
     }
 
-    public async Task RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade, int? idPino = null)
+    public async Task<bool> RemoverPinoDoMapaAsync(string tipoEntidade, int idEntidade, int? idPino = null)
     {
-        if (!Estado.EhMestre || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue) return;
+        if (!Estado.EhMestre || Estado.IdSessao <= 0 || Estado.IdMapaAtivo is not int idMapa) return false;
+        int idSessao = Estado.IdSessao;
 
         await _dbLock.WaitAsync();
         try
         {
+            if (!Estado.EhMestre || Estado.IdSessao != idSessao || Estado.IdMapaAtivo != idMapa) return false;
+            var pino = ObterPinoParaAcao(tipoEntidade, idEntidade, idPino, idMapa);
+            if (idPino.HasValue && pino is null) return false;
+
             var (sucesso, erro) = await _sessaoService.RemoverPinoAsync(
                 Estado.IdCampanha,
-                Estado.IdSessao,
-                Estado.IdMapaAtivo,
+                idSessao,
+                idMapa,
                 _sessaoUsuario.IdUsuarioLogado,
                 tipoEntidade,
                 idEntidade,
                 idPino);
 
-            if (!sucesso)
-                FeedbackAcao = erro;
-
-            var atualizado = await _sessaoService.SincronizarSessaoAsync(
-                Estado.IdCampanha,
-                Estado.IdSessao,
-                _sessaoUsuario.IdUsuarioLogado);
-
-            if (atualizado != null)
-                Estado = atualizado;
-
-            Notificar();
+            FeedbackAcao = sucesso ? null : erro;
+            if (sucesso && pino is not null) Estado.Pinos.Remove(pino);
+            await SincronizarAposAcaoPinoAsync();
+            return sucesso;
         }
         finally
         {
             _dbLock.Release();
+            Notificar();
+        }
+    }
+
+    private PinoMapaDto? ObterPinoParaAcao(string tipoEntidade, int idEntidade, int? idPino, int idMapa) =>
+        idPino.HasValue
+            ? Estado.Pinos.Find(p => p.IdPino == idPino && p.IdMapa == idMapa && p.TipoEntidade == tipoEntidade && p.IdEntidade == idEntidade)
+            : ObterPinoNoMapa(tipoEntidade, idEntidade);
+
+    private async Task SincronizarAposAcaoPinoAsync()
+    {
+        try
+        {
+            var atualizado = await _sessaoService.SincronizarSessaoAsync(
+                Estado.IdCampanha, Estado.IdSessao, _sessaoUsuario.IdUsuarioLogado);
+            if (atualizado is not null)
+                Estado = atualizado;
+        }
+        catch (Exception erro)
+        {
+            _logger.LogWarning(erro, "Falha ao sincronizar o mapa da sessão {IdSessao}", Estado.IdSessao);
         }
     }
 
@@ -437,7 +452,10 @@ public partial class SessaoViewModel
             var jogador = Estado.Jogadores.FirstOrDefault(j => j.IdPersonagem == pino.IdEntidade);
             if (jogador != null)
             {
-                await AbrirFichaParticipanteAsync(jogador);
+                if (Estado.EhMestre)
+                    await AbrirFichaPorIdAsync(pino.IdEntidade, "atributos", pino.IdPino);
+                else
+                    await AbrirFichaParticipanteAsync(jogador);
             }
         }
     }

@@ -240,33 +240,57 @@ public partial class SessaoViewModel
 
     private async Task<bool> ExecutarComandoCombateUiAsync(Func<SessaoEstadoDto, int, Task<(bool Sucesso, string Mensagem)>> executar)
     {
-        if (ExecutandoAtaqueEntidade || Estado.IdSessao <= 0 || !Estado.SessaoAtiva)
+        if (ExecutandoAtaqueEntidade)
             return false;
 
+        if (Estado.IdSessao <= 0 || !Estado.SessaoAtiva)
+        {
+            InformarErroControle2014("A sessão não está ativa. Volte à tela da campanha para entrar novamente.");
+            return false;
+        }
+
+        int idSessao = Estado.IdSessao;
+        int? idMapa = Estado.IdMapaAtivo;
         ExecutandoAtaqueEntidade = true;
         FeedbackAtaqueEntidade = null;
+        FeedbackCombateEhErro = false;
         Notificar();
 
         await _dbLock.WaitAsync();
         bool sucesso = false;
         try
         {
-            int idSessao = Estado.IdSessao;
+            if (Estado.IdSessao != idSessao || Estado.IdMapaAtivo != idMapa || !Estado.SessaoAtiva)
+            {
+                FeedbackAtaqueEntidade = "A sessão ou o mapa mudou. Confira a tela antes de repetir a ação.";
+                FeedbackCombateEhErro = true;
+                return false;
+            }
+
             int idCampanha = Estado.IdCampanha;
             int idAccount = _sessaoUsuario.IdUsuarioLogado;
 
             var resultado = await executar(Estado, idAccount);
             sucesso = resultado.Sucesso;
             FeedbackAtaqueEntidade = resultado.Mensagem;
+            FeedbackCombateEhErro = !sucesso;
 
             var atualizado = await _sessaoService.SincronizarSessaoAsync(idCampanha, idSessao, idAccount);
             if (atualizado is not null && Estado.IdSessao == idSessao)
                 Estado = atualizado;
+            else if (sucesso && Estado.IdSessao == idSessao)
+                AvisarFalhaAtualizacaoCombate();
         }
         catch (Exception erro)
         {
             _logger.LogWarning(erro, "Falha ao resolver ou sincronizar uma ação de combate");
-            FeedbackAtaqueEntidade ??= "A mesa não confirmou a ação. Confira o registro de Combate.";
+            if (sucesso)
+                AvisarFalhaAtualizacaoCombate();
+            else if (FeedbackAtaqueEntidade is null)
+            {
+                FeedbackAtaqueEntidade = "A mesa não confirmou a ação. Confira o registro de Combate antes de tentar novamente.";
+                FeedbackCombateEhErro = true;
+            }
         }
         finally
         {
@@ -276,5 +300,11 @@ public partial class SessaoViewModel
         }
 
         return sucesso;
+    }
+
+    private void AvisarFalhaAtualizacaoCombate()
+    {
+        FeedbackAtaqueEntidade = "A ação foi registrada, mas a tela não atualizou. Aguarde a sincronização e confira o registro de Combate.";
+        FeedbackCombateEhErro = true;
     }
 }

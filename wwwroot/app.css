@@ -348,6 +348,94 @@ h1:focus {
         font-size: 1.25rem;
     }
 
+/* Moldura compartilhada pelas fichas da sala de sessão. */
+.sessao-ficha-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(18, 12, 8, 0.78);
+    backdrop-filter: blur(4px);
+}
+
+.sessao-ficha-popup {
+    --ficha-recuo: 24px;
+    --ficha-tinta: #352519;
+    --ficha-texto-auxiliar: #664a32;
+    --ficha-linha: #cbb38c;
+    --ficha-papel-claro: #fff7e7;
+    --ficha-campo: #fffaf1;
+    position: fixed;
+    inset: 50% auto auto 50%;
+    z-index: 2001;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    width: min(var(--ficha-largura, 760px), calc(100% - 32px));
+    max-height: min(var(--ficha-altura, 760px), calc(100dvh - 32px));
+    overflow: hidden;
+    border: 1px solid #a67b45;
+    border-radius: 14px;
+    background: radial-gradient(ellipse at top left, rgba(255, 248, 231, 0.94), transparent 76%), var(--rpg-papel);
+    color: var(--ficha-tinta);
+    color-scheme: light;
+    box-shadow: 0 22px 65px rgba(18, 9, 4, 0.65);
+}
+
+.sessao-ficha-corpo {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px var(--ficha-recuo) 20px;
+    scrollbar-color: #977445 transparent;
+    scrollbar-width: thin;
+    overflow-wrap: anywhere;
+}
+
+.sessao-ficha-corpo > * {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.sessao-ficha-popup :is(button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid #6a431e;
+    outline-offset: 2px;
+}
+
+.sessao-ficha-popup :is(button, select) {
+    touch-action: manipulation;
+}
+
+@media (max-width: 560px) {
+    .sessao-ficha-popup {
+        --ficha-recuo: 14px;
+        width: calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
+        max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        inset: calc(50% + (env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 2) auto auto
+            calc(50% + (env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+        border-radius: 11px;
+    }
+
+    .sessao-ficha-corpo {
+        padding-block: 12px 16px;
+    }
+}
+
+@media (max-height: 500px) {
+    .sessao-ficha-popup {
+        display: block;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .sessao-ficha-popup .sessao-ficha-corpo {
+        overflow: visible;
+    }
+}
+
 /* Botões da tela de Personagens, reutilizados nos acessos do salão. */
 #app .botoes-personagem :is(.botao-dourado, .botao-secundario-dourado, .action-secondary) {
     display: inline-flex;

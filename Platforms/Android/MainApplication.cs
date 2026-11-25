@@ -1,6 +1,6 @@
 ﻿using Android.App;
 using Android.Runtime;
-using RPGdeMesa.Presentation;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa
 {
@@ -10,6 +10,10 @@ namespace RPGdeMesa
         public MainApplication(IntPtr handle, JniHandleOwnership ownership)
             : base(handle, ownership)
         {
+            AndroidEnvironment.UnhandledExceptionRaiser += (_, evento) =>
+            {
+                evento.Handled = FalhasApp.Tratar(evento.Exception, "Interface Android");
+            };
         }
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

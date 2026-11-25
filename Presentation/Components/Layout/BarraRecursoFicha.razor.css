@@ -1,0 +1,114 @@
+.barra-recurso {
+    --barra-cor-clara: #76bd64;
+    --barra-cor-escura: #276135;
+    width: 100%;
+    min-width: 0;
+    position: relative;
+}
+
+.barra-recurso-trilho {
+    position: relative;
+    height: 11px;
+    overflow: hidden;
+    border: 1px solid #927044;
+    border-radius: 2px;
+    background: #26201b;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.barra-magia {
+    --barra-cor-clara: #be9fea;
+    --barra-cor-escura: #694d91;
+}
+
+.barra-recurso-preenchimento {
+    position: absolute;
+    inset: 0 auto 0 0;
+    height: 100%;
+    background: linear-gradient(var(--barra-cor-clara), var(--barra-cor-escura));
+    transition: width 220ms ease-out;
+}
+
+.barra-com-valor .barra-recurso-trilho {
+    height: 24px;
+    border-color: #6c5135;
+    background: #191410;
+}
+
+.barra-com-valor .barra-recurso-preenchimento {
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.26), inset 0 -3px rgba(0, 0, 0, 0.22);
+}
+
+.barra-recurso-leitura {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    padding-inline: 6px;
+    color: #fff6e4;
+    line-height: 1;
+}
+
+.barra-recurso-legenda,
+.barra-recurso-valor {
+    padding: 2px 4px;
+    background: rgba(19, 15, 12, 0.78);
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+.barra-rotulada {
+    display: grid;
+    gap: 4px;
+}
+
+.barra-rotulada .barra-recurso-leitura {
+    position: static;
+    justify-content: space-between;
+    padding: 0;
+    color: #f8e7ce;
+    line-height: 1.15;
+}
+
+#app .barra-rotulada :is(.barra-recurso-legenda, .barra-recurso-valor) {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-size: 0.82rem;
+}
+
+#app .barra-rotulada .barra-recurso-legenda {
+    color: #ead3b0;
+}
+
+.barra-rotulada .barra-recurso-trilho {
+    height: 10px;
+    border-color: #a38463;
+    border-radius: 3px;
+    background: #211711;
+}
+
+.barra-rotulada .barra-recurso-preenchimento {
+    --barra-cor-clara: #9bc776;
+    --barra-cor-escura: #568644;
+    border-radius: 1px;
+}
+
+.barra-rotulada.barra-magia .barra-recurso-preenchimento {
+    --barra-cor-clara: #c0a4eb;
+    --barra-cor-escura: #8967b7;
+}
+
+.barra-recurso-valor {
+    margin-inline: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .barra-recurso-preenchimento {
+        transition: none;
+    }
+}

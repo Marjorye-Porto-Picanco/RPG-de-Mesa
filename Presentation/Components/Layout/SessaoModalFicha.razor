@@ -9,68 +9,59 @@
     decimal pesoModal = ViewModel.CalcularPesoModal();
     decimal capModal = Math.Round(Math.Max(1, p.Forca) * 7.5m, 1);
 
-    <div class="ficha-modal-backdrop" @onclick="ViewModel.FecharModalFicha"></div>
+    <div class="sessao-ficha-backdrop" @onclick="ViewModel.FecharModalFicha"></div>
 
-    <section class="ficha-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha-modal" @onclick:stopPropagation="true">
-        <header class="ficha-modal-header">
-            <div class="ficha-modal-identidade">
-                <div class="ficha-modal-retrato">
-                    <RetratoComIniciais Nome="@p.Nome" Imagem="@p.Imagem" CarregarSobDemanda="false" />
-                </div>
-                <div>
-                    <p class="ficha-modal-sub">
-                        Ficha na Sessão
-                        @if (!string.IsNullOrWhiteSpace(p.Usuario?.UsarName))
-                        {
-                            <text> · Jogador: @p.Usuario.UsarName</text>
-                        }
-                    </p>
-                    <h2 id="titulo-ficha-modal">@p.Nome</h2>
-                    <small>@(p.RacaTexto ?? "Raça") • @ViewModel.ObterResumoClassesModal() • Nível @p.Nivel • @p.ExperienciaXp.ToString("N0") XP</small>
-                </div>
-            </div>
+    <section class="sessao-ficha-popup ficha-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-ficha-modal" @onclick:stopPropagation="true">
+        <SessaoCabecalhoFicha IdTitulo="titulo-ficha-modal" Titulo="@p.Nome" Imagem="@p.Imagem"
+                              Subtitulo="@(p.Usuario?.UsarName is { Length: > 0 } jogador ? $"Jogador: {jogador}" : null)"
+                              Descricao="@($"Nível {p.Nivel} · {ViewModel.ObterResumoClassesModal()} · {p.RacaTexto ?? "Raça"} · {p.ExperienciaXp:N0} XP")"
+                              OnFechar="ViewModel.FecharModalFicha">
+            <BarraRecursoFicha Atual="p.PvAtual" Maximo="p.PvMaximo" Rotulo="Pontos de vida"
+                               MostrarValor="true" Legenda="Vida" />
+            <ResumoCirculosMagicos Personagem="p" Compacto="true" />
+        </SessaoCabecalhoFicha>
 
-            <div class="ficha-modal-header-acoes">
-                @if (ViewModel.Estado.EhMestre && ViewModel.Estado.Jogadores.Count(j => j.IdPersonagem.HasValue) > 1)
-                {
-                    <select class="fm-trocar-jogador"
-                            aria-label="Trocar ficha do jogador"
-                            value="@p.IdPersonagem"
-                            @onchange="AoTrocarJogadorModalAsync">
-                        @foreach (var jog in ViewModel.Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
-                        {
-                            <option value="@jog.IdPersonagem">@jog.Username (@jog.NomePersonagem)</option>
-                        }
-                    </select>
-                }
-
-                <div class="ficha-modal-pv">
-                    <span>PV</span>
-                    @if (ViewModel.PodeEditarFichaModal)
-                    {
-                        <div class="fm-pv-inputs">
-                            <input type="number" min="0" max="9999" @bind="p.PvAtual" aria-label="PV atual" />
-                            <span>/</span>
-                            <input type="number" min="1" max="9999" @bind="p.PvMaximo" aria-label="PV máximo" />
-                        </div>
-                    }
-                    else
-                    {
-                        <strong>@p.PvAtual / @p.PvMaximo</strong>
-                    }
-                </div>
-                <button class="ficha-modal-close" type="button" aria-label="Fechar ficha" @onclick="ViewModel.FecharModalFicha">×</button>
-            </div>
-        </header>
-
-        <nav class="ficha-modal-abas" role="tablist">
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "atributos" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("atributos")'>Atributos & Perícias</button>
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "personagem" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem & Classes</button>
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "inventario" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("inventario")'>Inventário (@ViewModel.ItensModalEdicao.Count)</button>
-            <button type="button" class="ficha-modal-aba @(ViewModel.AbaFichaModalAtiva == "grimorio" ? "ativa" : "")" @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@ViewModel.MagiasModalEdicao.Count)</button>
+        <nav class="ficha-modal-abas" aria-label="Seções da ficha">
+            <button type="button" class="ficha-modal-aba" aria-pressed='@((ViewModel.AbaFichaModalAtiva == "atributos").ToString().ToLowerInvariant())' @onclick='() => ViewModel.MudarAbaFichaModal("atributos")'>Atributos & Perícias</button>
+            <button type="button" class="ficha-modal-aba" aria-pressed='@((ViewModel.AbaFichaModalAtiva == "personagem").ToString().ToLowerInvariant())' @onclick='() => ViewModel.MudarAbaFichaModal("personagem")'>Personagem & Classes</button>
+            <button type="button" class="ficha-modal-aba" aria-pressed='@((ViewModel.AbaFichaModalAtiva == "inventario").ToString().ToLowerInvariant())' @onclick='() => ViewModel.MudarAbaFichaModal("inventario")'>Inventário (@ViewModel.ItensModalEdicao.Count)</button>
+            <button type="button" class="ficha-modal-aba" aria-pressed='@((ViewModel.AbaFichaModalAtiva == "grimorio").ToString().ToLowerInvariant())' @onclick='() => ViewModel.MudarAbaFichaModal("grimorio")'>Grimório (@ViewModel.MagiasModalEdicao.Count)</button>
         </nav>
 
-        <div class="ficha-modal-corpo">
+        <div class="sessao-ficha-corpo">
+            @{
+                bool podeTrocarFicha = ViewModel.Estado.EhMestre && ViewModel.Estado.Jogadores.Count(j => j.IdPersonagem.HasValue) > 1;
+            }
+            @if (ViewModel.PodeEditarFichaModal || podeTrocarFicha)
+            {
+                <div class="ficha-hud-controles">
+                    @if (ViewModel.PodeEditarFichaModal)
+                    {
+                        <div class="fm-pv-inputs" role="group" aria-label="Editar pontos de vida">
+                            <span>Editar PV</span>
+                            <input type="number" min="0" max="9999" @bind="p.PvAtual" @bind:event="oninput" aria-label="PV atual" />
+                            <span aria-hidden="true">/</span>
+                            <input type="number" min="1" max="9999" @bind="p.PvMaximo" @bind:event="oninput" aria-label="PV máximo" />
+                        </div>
+                    }
+                    @if (podeTrocarFicha)
+                    {
+                        <label class="fm-trocar-ficha">
+                            Trocar ficha
+                            <select class="fm-trocar-jogador" value="@p.IdPersonagem" @onchange="AoTrocarJogadorModalAsync">
+                                @foreach (var jog in ViewModel.Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
+                                {
+                                    <option value="@jog.IdPersonagem">@jog.Username (@jog.NomePersonagem)</option>
+                                }
+                            </select>
+                        </label>
+                    }
+                </div>
+            }
+            @if (ViewModel.IdPinoFichaModal is int idPino)
+            {
+                <SessaoAcoesPinoFicha @key="idPino" ViewModel="ViewModel" IdPino="idPino" />
+            }
             <ResumoCirculosMagicos Personagem="p" />
             @if (ViewModel.AbaFichaModalAtiva == "atributos")
             {
@@ -531,9 +522,9 @@
         @if (ViewModel.PodeEditarFichaModal)
         {
             <footer class="ficha-modal-footer">
-                <span class="fm-feedback">@ViewModel.FeedbackFichaModal</span>
+                <span class="fm-feedback" role="status">@ViewModel.FeedbackFichaModal</span>
                 <button type="button" class="fm-btn-salvar" disabled="@ViewModel.SalvandoFichaModal" @onclick="ViewModel.SalvarFichaEmVisualizacaoAsync">
-                    @(ViewModel.SalvandoFichaModal ? "Salvando..." : "Salvar Alterações na Ficha")
+                    @(ViewModel.SalvandoFichaModal ? "Salvando…" : "Salvar alterações na ficha")
                 </button>
             </footer>
         }

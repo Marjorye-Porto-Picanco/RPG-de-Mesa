@@ -11,29 +11,27 @@ public partial class SessaoService
         {
             if (string.IsNullOrWhiteSpace(uso.Nome) || uso.Nome.Length > 120 ||
                 uso.Cd is < 1 or > 40 || uso.RodadasConcentracao is < 1 or > 1000)
-                throw new DomainException("Confira o nome, a CD e a duração da habilidade.");
+                return new() { Erro = "Confira o nome, a CD e a duração da habilidade." };
 
-            if (uso.Efeito is { } efeitoValidacao &&
-                (efeitoValidacao.Rodadas is < 1 or > 100 || efeitoValidacao.Cd is < 1 or > 40 ||
-                 (efeitoValidacao.Cd.HasValue && !efeitoValidacao.Atributo.HasValue)))
-                throw new DomainException("Confira a duração e a salvaguarda da condição.");
+            if (uso.Efeito is { } efeitoValidacao && CondicaoInvalida(efeitoValidacao))
+                return new() { Erro = "Confira a duração e a salvaguarda da condição." };
 
             PinoMapaDto? origem = uso.IdOrigem > 0 ? ExigirPino(estado, pinos, uso.IdOrigem) : null;
             if (origem is null && (uso.Concentracao || uso.Acao.Acao != TipoAcao2014.Acao || !string.IsNullOrWhiteSpace(uso.Acao.Recurso)))
-                throw new DomainException("Selecione quem está usando a habilidade.");
+                return new() { Erro = "Selecione quem está usando a habilidade." };
 
             var alvos = SelecionarAlvosHabilidade(estado, pinos, origem, uso);
             if (uso.Cobertura == Cobertura2014.Total && uso.Area == SistemaArea2014.AlvosMarcados)
-                throw new DomainException("O alvo tem cobertura total.");
+                return new() { Erro = "O alvo tem cobertura total. Escolha outro alvo ou confira a cobertura." };
 
             if (origem is not null && uso.Alcance is decimal alcance &&
                 (uso.Area == SistemaArea2014.Raio
                     ? RegrasCombate2014.DistanciaMetros(origem.Coluna, origem.Linha, uso.Coluna, uso.Linha) > alcance
                     : uso.Area == SistemaArea2014.AlvosMarcados && alvos.Any(alvo => DistanciaPinos(origem, alvo) > alcance)))
-                throw new DomainException("A habilidade está fora do alcance.");
+                return new() { Erro = "A habilidade está fora do alcance." };
 
             if (alvos.Count == 0)
-                throw new DomainException("Selecione ao menos um alvo na área.");
+                return new() { Erro = "Selecione ao menos um alvo na área." };
 
             var parcelas = new Dictionary<string, int>();
             if (uso.Resolucao is ResolucaoHabilidade2014.Dano or ResolucaoHabilidade2014.Salvaguarda or ResolucaoHabilidade2014.Cura or ResolucaoHabilidade2014.AtaqueMagico)
@@ -45,7 +43,7 @@ public partial class SessaoService
                 if (!permiteSemDano)
                 {
                     if (!RegrasCombate2014.TentarRolarDano(uso.Dano, false, 0, out int valor))
-                        throw new DomainException("Confira a fórmula da habilidade.");
+                        return new() { Erro = "Informe uma fórmula válida para a habilidade, como 2d6+5, ou um valor fixo." };
 
                     parcelas[RegrasCombate2014.NormalizarTipoDano(uso.TipoDano)] = valor;
                 }
@@ -154,7 +152,7 @@ public partial class SessaoService
             }
 
             if (mensagens.Count == 0)
-                throw new DomainException("Nenhum alvo válido para a habilidade.");
+                return new() { Erro = "Nenhum alvo válido para a habilidade." };
 
             return new($"{origem?.Nome ?? "Ambiente"} usou {uso.Nome.Trim()}.\n{string.Join("\n", mensagens)}", alteracoes);
         });
@@ -166,7 +164,7 @@ public partial class SessaoService
             var ficha = encontro.Ficha(id);
             var efeito = ficha.Efeitos.FirstOrDefault(e => e.Condicao == condicao && e.Cd.HasValue && e.Atributo.HasValue);
             if (efeito?.Cd is not int cd || efeito.Atributo is not { } atributo)
-                throw new DomainException("A condição não tem teste configurado.");
+                return new() { Erro = "A condição selecionada não tem uma CD e um atributo para o teste." };
 
             int total = Random.Shared.Next(1, 21) + pino.Modificador(atributo) + Math.Clamp(bonus, -20, 30);
             if (total >= cd)

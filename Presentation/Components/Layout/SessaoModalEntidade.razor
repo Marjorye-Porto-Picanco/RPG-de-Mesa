@@ -8,59 +8,62 @@
     var m = ViewModel.MonstroEmVisualizacao;
     var ataquesRolaveis = m.Ataques.Where(a => RegrasCombate2014.DanoValido(a.Dano)).ToList();
     int pvAtualMonstro = ViewModel.PinoMonstroEmVisualizacao?.PvAtual ?? m.PvMaximo;
+    var (magiaRestante, magiaMaxima) = ObterEspacosDoPino(ViewModel.PinoMonstroEmVisualizacao?.IdPino);
 
-    <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+    <div class="sessao-ficha-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
 
-    <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-modal" @onclick:stopPropagation="true">
-        <header class="em-header">
-            <div class="em-identidade">
-                <div class="em-retrato">
-                    <RetratoComIniciais Nome="@m.Nome" Imagem="@m.Imagem" CarregarSobDemanda="false" />
+    <section class="sessao-ficha-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-monstro-modal" @onclick:stopPropagation="true">
+        <SessaoCabecalhoFicha IdTitulo="titulo-monstro-modal" Titulo="@(ViewModel.PinoMonstroEmVisualizacao?.Nome ?? m.Nome)"
+                              Imagem="@m.Imagem" Subtitulo="Bestiário da Campanha"
+                              Descricao="@($"{m.TipoMonstro ?? "Criatura"} · {m.Tamanho ?? "Médio"} · {m.Tendencia ?? "Neutra"}")"
+                              OnFechar="ViewModel.FecharModalEntidade">
+            <BarraRecursoFicha Atual="pvAtualMonstro" Maximo="m.PvMaximo" Rotulo="Pontos de vida" MostrarValor="true" Legenda="Vida" />
+            @if (magiaMaxima > 0)
+            {
+                <BarraRecursoFicha Atual="magiaRestante" Maximo="magiaMaxima" Magia="true" MostrarValor="true"
+                                   Legenda="Magia" Rotulo="Espaços de magia restantes" />
+            }
+        </SessaoCabecalhoFicha>
+
+        <div class="sessao-ficha-corpo">
+            <dl class="em-dados-pessoais em-dados-monstro">
+                <div><dt><abbr title="Classe de armadura">CA</abbr></dt><dd>@m.ClasseArmadura</dd></div>
+                <div><dt><abbr title="Nível de desafio">ND</abbr></dt><dd>@(m.NivelDesafio?.ToString("0.##") ?? "—")</dd></div>
+                <div><dt>Deslocamento</dt><dd>@(string.IsNullOrWhiteSpace(m.Deslocamento) ? "—" : m.Deslocamento)</dd></div>
+            </dl>
+            @if (ViewModel.PinoMonstroEmVisualizacao?.IdPino is int idPino)
+            {
+                <SessaoAcoesPinoFicha @key="idPino" ViewModel="ViewModel" IdPino="idPino" />
+            }
+            @if (ViewModel.Estado.EhMestre)
+            {
+                <div class="em-pv-edit" role="group" aria-label="Editar vida do monstro">
+                    <label>Editar PV <input type="number" min="0" max="@m.PvMaximo" @bind="ViewModel.PvAtualMonstroEdicao" /></label>
+                    <button type="button" disabled="@ViewModel.SalvandoPvEntidade"
+                            @onclick="ViewModel.SalvarPvAtualMonstroAsync">Salvar PV</button>
+                    <button type="button" class="em-btn-pv-max" disabled="@ViewModel.SalvandoPvEntidade"
+                            @onclick="ViewModel.RestaurarPvMaximoMonstroAsync">Restaurar PV</button>
                 </div>
-                <div>
-                    <p class="em-sub">Bestiário da Campanha</p>
-                    <h2 id="titulo-monstro-modal">@(ViewModel.PinoMonstroEmVisualizacao?.Nome ?? m.Nome)</h2>
-                    <small>@(m.TipoMonstro ?? "Criatura") • @(m.Tamanho ?? "Médio") • @(m.Tendencia ?? "Neutra")</small>
+            }
+            @if (ViewModel.Estado.EhMestre && ataquesRolaveis.Count > 0)
+            {
+                var alvos = ViewModel.AlvosAtaqueMonstro.ToList();
+                <div class="quick-attack-master">
+                    <h3>Ação rápida do Mestre</h3>
+                    <label>Ataque<select @bind="ViewModel.IdAtaqueMonstroSelecionado">
+                        @foreach (var ataque in ataquesRolaveis) { <option value="@ataque.IdMonstroAtaque">@ataque.Nome · @ataque.Dano</option> }
+                    </select></label>
+                    <label>Alvo<select disabled="@(alvos.Count == 0)" @bind="ViewModel.AlvoAtaqueMonstroSelecionado">
+                        @if (alvos.Count == 0)
+                        {
+                            <option value="">Sem alvos</option>
+                        }
+                        @foreach (var alvo in alvos) { <option value="@alvo.IdPino">@alvo.Nome · CA @(alvo.ClasseArmadura ?? 10)</option> }
+                    </select></label>
+                    <button type="button" disabled="@(ViewModel.ExecutandoAtaqueEntidade || string.IsNullOrEmpty(ViewModel.AlvoAtaqueMonstroSelecionado))" @onclick="ViewModel.AtacarComMonstroSelecionadoAsync">@(ViewModel.ExecutandoAtaqueEntidade ? "Resolvendo…" : "Atacar alvo")</button>
+                    @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade)) { <p role="status">@ViewModel.FeedbackAtaqueEntidade</p> }
                 </div>
-            </div>
-            <button class="em-close" type="button" aria-label="Fechar ficha do monstro" @onclick="ViewModel.FecharModalEntidade">×</button>
-        </header>
-
-        <div class="em-corpo">
-            <div class="em-dados-pessoais">
-                <div>
-                    <span>PV Atual / Máximo</span>
-                    @if (ViewModel.Estado.EhMestre)
-                    {
-                        <div class="em-pv-edit">
-                            <input type="number" min="0" max="@m.PvMaximo" @bind="ViewModel.PvAtualMonstroEdicao" />
-                            <span>/ @m.PvMaximo</span>
-                            <button type="button"
-                                    class="em-btn-pv-ok"
-                                    title="Salvar PV atual"
-                                    disabled="@ViewModel.SalvandoPvEntidade"
-                                    @onclick="ViewModel.SalvarPvAtualMonstroAsync">
-                                ✓
-                            </button>
-                            <button type="button"
-                                    class="em-btn-pv-max"
-                                    title="Restaurar PV máximo (@m.PvMaximo)"
-                                    disabled="@ViewModel.SalvandoPvEntidade"
-                                    @onclick="ViewModel.RestaurarPvMaximoMonstroAsync">
-                                ↻ Máx
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <strong>@pvAtualMonstro / @m.PvMaximo</strong>
-                    }
-                </div>
-                <div><span>CA</span><strong>@m.ClasseArmadura</strong></div>
-                <div><span>ND</span><strong>@(m.NivelDesafio?.ToString("0.##") ?? "—")</strong></div>
-                <div><span>Deslocamento</span><strong>@(string.IsNullOrWhiteSpace(m.Deslocamento) ? "—" : m.Deslocamento)</strong></div>
-            </div>
-
+            }
             <div class="em-grid-2">
                 <div class="em-bloco-pergaminho">
                     <h3>Sentidos</h3>
@@ -70,24 +73,10 @@
                     <h3>Resistências</h3>
                     <p>@(string.IsNullOrWhiteSpace(m.Resistencias) ? "—" : m.Resistencias)</p>
                 </div>
-                <div class="em-box-escuro em-span-2">
+                <div class="em-bloco-pergaminho em-span-2">
                     <h3>Habilidades</h3>
                     <p>@(string.IsNullOrWhiteSpace(m.Habilidades) ? "—" : m.Habilidades)</p>
                 </div>
-                @if (ViewModel.Estado.EhMestre && ataquesRolaveis.Count > 0)
-                {
-                    <div class="em-bloco-pergaminho em-span-2 quick-attack-master">
-                        <h3>Ação rápida do Mestre</h3>
-                        <label>Ataque<select @bind="ViewModel.IdAtaqueMonstroSelecionado">
-                            @foreach (var ataque in ataquesRolaveis) { <option value="@ataque.IdMonstroAtaque">@ataque.Nome · @ataque.Dano</option> }
-                        </select></label>
-                        <label>Alvo<select @bind="ViewModel.AlvoAtaqueMonstroSelecionado">
-                            @foreach (var alvo in ViewModel.AlvosAtaqueMonstro) { <option value="@alvo.IdPino">@alvo.Nome · CA @(alvo.ClasseArmadura ?? 10)</option> }
-                        </select></label>
-                        <button type="button" disabled="@(ViewModel.ExecutandoAtaqueEntidade || string.IsNullOrEmpty(ViewModel.AlvoAtaqueMonstroSelecionado))" @onclick="ViewModel.AtacarComMonstroSelecionadoAsync">@(ViewModel.ExecutandoAtaqueEntidade ? "Resolvendo..." : "Atacar alvo")</button>
-                        @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade)) { <p role="status">@ViewModel.FeedbackAtaqueEntidade</p> }
-                    </div>
-                }
                 <div class="em-bloco-pergaminho em-span-2">
                     <h3>Ataques</h3>
                     @if (m.Ataques?.Any() == true)
@@ -120,25 +109,43 @@
     int pvMaxNpc = SessaoService.CalcularPvMaximoNpc(n);
     int pvAtualNpc = ViewModel.PinoNpcEmVisualizacao?.PvAtual ?? pvMaxNpc;
     int caNpc = n.ClasseArmadura;
+    var (magiaRestante, magiaMaxima) = ObterEspacosDoPino(ViewModel.PinoNpcEmVisualizacao?.IdPino);
 
-    <div class="entidade-modal-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
+    <div class="sessao-ficha-backdrop" @onclick="ViewModel.FecharModalEntidade"></div>
 
-    <section class="entidade-modal-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
-        <header class="em-header">
-            <div class="em-identidade">
-                <div class="em-retrato">
-                    <RetratoComIniciais Nome="@n.Nome" Imagem="@n.Imagem" CarregarSobDemanda="false" />
+    <section class="sessao-ficha-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-npc-modal" @onclick:stopPropagation="true">
+        <SessaoCabecalhoFicha IdTitulo="titulo-npc-modal" Titulo="@(ViewModel.PinoNpcEmVisualizacao?.Nome ?? n.Nome)"
+                              Imagem="@n.Imagem" Subtitulo="NPC da Campanha"
+                              Descricao="@($"{n.RacaTexto ?? "Raça"} · {n.ClasseTexto ?? "NPC"} · Nível {n.Nivel}")"
+                              OnFechar="ViewModel.FecharModalEntidade">
+            <BarraRecursoFicha Atual="pvAtualNpc" Maximo="pvMaxNpc" Rotulo="Pontos de vida" MostrarValor="true" Legenda="Vida" />
+            @if (magiaMaxima > 0)
+            {
+                <BarraRecursoFicha Atual="magiaRestante" Maximo="magiaMaxima" Magia="true" MostrarValor="true"
+                                   Legenda="Magia" Rotulo="Espaços de magia restantes" />
+            }
+        </SessaoCabecalhoFicha>
+
+        <div class="sessao-ficha-corpo">
+            <dl class="em-dados-pessoais">
+                <div><dt><abbr title="Classe de armadura">CA</abbr></dt><dd>@caNpc</dd></div>
+                <div><dt>Tendência</dt><dd>@(string.IsNullOrWhiteSpace(n.Tendencia) ? "Neutra" : n.Tendencia)</dd></div>
+                <div><dt>Antecedente</dt><dd>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</dd></div>
+            </dl>
+            @if (ViewModel.PinoNpcEmVisualizacao?.IdPino is int idPino)
+            {
+                <SessaoAcoesPinoFicha @key="idPino" ViewModel="ViewModel" IdPino="idPino" />
+            }
+            @if (ViewModel.Estado.EhMestre)
+            {
+                <div class="em-pv-edit" role="group" aria-label="Editar vida do NPC">
+                    <label>Editar PV <input type="number" min="0" max="@pvMaxNpc" @bind="ViewModel.PvAtualNpcEdicao" /></label>
+                    <button type="button" disabled="@ViewModel.SalvandoPvEntidade"
+                            @onclick="ViewModel.SalvarPvAtualNpcAsync">Salvar PV</button>
+                    <button type="button" class="em-btn-pv-max" disabled="@ViewModel.SalvandoPvEntidade"
+                            @onclick="ViewModel.RestaurarPvMaximoNpcAsync">Restaurar PV</button>
                 </div>
-                <div>
-                    <p class="em-sub">NPC da Campanha</p>
-                    <h2 id="titulo-npc-modal">@(ViewModel.PinoNpcEmVisualizacao?.Nome ?? n.Nome)</h2>
-                    <small>@(n.RacaTexto ?? "Raça") • @(n.ClasseTexto ?? "NPC") • Nível @n.Nivel</small>
-                </div>
-            </div>
-            <button class="em-close" type="button" aria-label="Fechar ficha do NPC" @onclick="ViewModel.FecharModalEntidade">×</button>
-        </header>
-
-        <div class="em-corpo">
+            }
             <div class="em-grid-atributos">
                 <div class="em-attr-card"><span>FOR</span><strong>@n.Forca</strong><small>@FormatarMod(n.Forca)</small></div>
                 <div class="em-attr-card"><span>DES</span><strong>@n.Destreza</strong><small>@FormatarMod(n.Destreza)</small></div>
@@ -194,40 +201,6 @@
                 </div>
             </div>
 
-            <div class="em-dados-pessoais">
-                <div>
-                    <span>PV Atual / Máximo</span>
-                    @if (ViewModel.Estado.EhMestre)
-                    {
-                        <div class="em-pv-edit">
-                            <input type="number" min="0" max="@pvMaxNpc" @bind="ViewModel.PvAtualNpcEdicao" />
-                            <span>/ @pvMaxNpc</span>
-                            <button type="button"
-                                    class="em-btn-pv-ok"
-                                    title="Salvar PV atual"
-                                    disabled="@ViewModel.SalvandoPvEntidade"
-                                    @onclick="ViewModel.SalvarPvAtualNpcAsync">
-                                ✓
-                            </button>
-                            <button type="button"
-                                    class="em-btn-pv-max"
-                                    title="Restaurar PV máximo (@pvMaxNpc)"
-                                    disabled="@ViewModel.SalvandoPvEntidade"
-                                    @onclick="ViewModel.RestaurarPvMaximoNpcAsync">
-                                ↻ Máx
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <strong>@pvAtualNpc / @pvMaxNpc</strong>
-                    }
-                </div>
-                <div><span>CA</span><strong>@caNpc</strong></div>
-                <div><span>Tendência</span><strong>@(string.IsNullOrWhiteSpace(n.Tendencia) ? "Neutra" : n.Tendencia)</strong></div>
-                <div><span>Antecedente</span><strong>@(string.IsNullOrWhiteSpace(n.AntecedenteTexto) ? "—" : n.AntecedenteTexto)</strong></div>
-            </div>
-
             <div class="em-bloco-pergaminho">
                 <h3>História & Notas</h3>
                 <p>@(string.IsNullOrWhiteSpace(n.Historia) ? "Sem história registrada." : n.Historia)</p>
@@ -239,6 +212,24 @@
 @code {
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
+
+    private (int Restantes, int Total) ObterEspacosDoPino(int? idPino)
+    {
+        if (idPino is not int id || !ViewModel.Estado.Encontro.Fichas.TryGetValue(id, out var ficha))
+            return (0, 0);
+
+        int restantes = 0;
+        int total = 0;
+        for (int circulo = 1; circulo <= 9; circulo++)
+        {
+            if (ficha.Recursos.TryGetValue($"Círculo {circulo}", out var recurso) && recurso.Maximo > 0)
+            {
+                total += recurso.Maximo;
+                restantes += Math.Clamp(recurso.Restantes, 0, recurso.Maximo);
+            }
+        }
+        return (restantes, total);
+    }
 
     private static string FormatarMod(int valor)
     {

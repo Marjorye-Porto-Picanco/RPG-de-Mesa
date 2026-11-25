@@ -20,6 +20,7 @@ namespace RPGdeMesa
     {
         public static MauiApp CreateMauiApp()
         {
+            FalhasApp.Inicializar();
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()

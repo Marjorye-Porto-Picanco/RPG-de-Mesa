@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Combate;
@@ -18,6 +19,7 @@ public partial class SessaoService
 
     private readonly ISessaoRepository _sessaoRepo;
     private readonly IPersonagemRepository _personagemRepo;
+    private readonly ILogger<SessaoService>? _logger;
     private readonly ConcurrentDictionary<int, (Campanha Campanha, DateTime AtualizadoEmUtc)> _cacheCampanhas = new();
     private List<Magia>? _cacheMagiasCatalogo;
     private DateTime _cacheMagiasAtualizadoEmUtc = DateTime.MinValue;
@@ -26,10 +28,12 @@ public partial class SessaoService
 
     public SessaoService(
         ISessaoRepository sessaoRepo,
-        IPersonagemRepository personagemRepo)
+        IPersonagemRepository personagemRepo,
+        ILogger<SessaoService>? logger = null)
     {
         _sessaoRepo = sessaoRepo;
         _personagemRepo = personagemRepo;
+        _logger = logger;
     }
 
     public void InvalidarCacheCampanha(int idCampanha) =>

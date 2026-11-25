@@ -129,16 +129,6 @@ else
                     </button>
                 }
 
-                <button class="toolbar-tool @(ViewModel.ExibirModalAtaque || ViewModel.ExibirCombateMestre ? "selecionada" : "")"
-                        type="button"
-                        disabled="@(!ViewModel.Estado.EhMestre && !ViewModel.EhMeuTurno)"
-                        title="@(ViewModel.Estado.EhMestre ? "Atacar com monstro ou NPC" : (ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno"))"
-                        aria-label="Abrir ataque"
-                        @onclick="ViewModel.AbrirModalAtaqueAsync">
-                    <span class="toolbar-icon" aria-hidden="true">⚔</span>
-                    <span class="toolbar-label" aria-hidden="true">Ataque</span>
-                </button>
-
                 @if (ViewModel.Estado.EhMestre)
                 {
                     <button class="toolbar-tool @(ViewModel.ExibirPainel2014 ? "selecionada" : "")"
@@ -146,9 +136,22 @@ else
                             title="Encontro 5e 2014"
                             aria-label="Abrir Encontro 5e 2014"
                             aria-haspopup="dialog"
+                            aria-expanded="@(ViewModel.ExibirPainel2014 ? "true" : "false")"
                             @onclick="ViewModel.AbrirPainel2014">
-                        <span class="toolbar-icon" aria-hidden="true">5e</span>
+                        <span class="toolbar-icon" aria-hidden="true">⚔</span>
                         <span class="toolbar-label" aria-hidden="true">Encontro</span>
+                    </button>
+                }
+                else
+                {
+                    <button class="toolbar-tool @(ViewModel.ExibirModalAtaque ? "selecionada" : "")"
+                            type="button"
+                            disabled="@(!ViewModel.EhMeuTurno)"
+                            title="@(ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno")"
+                            aria-label="Abrir ataque"
+                            @onclick="ViewModel.AbrirModalAtaqueAsync">
+                        <span class="toolbar-icon" aria-hidden="true">⚔</span>
+                        <span class="toolbar-label" aria-hidden="true">Ataque</span>
                     </button>
                 }
 

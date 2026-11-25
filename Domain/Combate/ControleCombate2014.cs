@@ -73,7 +73,10 @@ public sealed record ResultadoComandoCombate2014(
     IReadOnlyList<AlteracaoPvCombate2014>? AlteracoesPv = null,
     bool SincronizarTurno = false,
     MovimentoPendente2014? MovimentoConfirmado = null,
-    int? IdPinoParaOcultar = null);
+    int? IdPinoParaOcultar = null)
+{
+    public string? Erro { get; init; }
+}
 
 public sealed record MovimentoPendente2014(
     int IdMovendo,

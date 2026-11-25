@@ -31,12 +31,14 @@
 .turno-bloqueado-txt {
     color: #b59a7a !important;
 }
+
 .turn-action-status {
     margin-bottom: 6px;
     color: #f3d379;
     font-size: 11px;
     font-weight: 700;
 }
+
 .action-slots {
     display: grid;
     min-height: 0;
@@ -120,10 +122,10 @@
     margin-bottom: 6px;
 }
 
-.action-reactions .action-slot {
-    min-height: 26px;
-    padding: 0 8px;
-}
+    .action-reactions .action-slot {
+        min-height: 26px;
+        padding: 0 8px;
+    }
 
 .quick-action-form {
     display: grid;
@@ -367,10 +369,10 @@
         font-size: 13px;
     }
 
-.attack-field select:focus-visible {
-    outline: 2px solid #d1af5d;
-    outline-offset: 2px;
-}
+        .attack-field select:focus-visible {
+            outline: 2px solid #d1af5d;
+            outline-offset: 2px;
+        }
 
 .attack-master-feedback {
     margin: 0;
@@ -381,10 +383,22 @@
     white-space: pre-line;
 }
 
-.encounter-popup { width: min(690px, calc(100vw - 24px)); }
-.attack-master-options { border: 1px solid var(--game-line); border-radius: 4px; padding: 7px; }
-.attack-master-options summary { cursor: pointer; color: #e8cf92; }
-.attack-master-distance, .attack-master-queue { margin: 0; color: #ddcaa1; }
+.attack-master-options {
+    border: 1px solid var(--game-line);
+    border-radius: 4px;
+    padding: 7px;
+}
+
+    .attack-master-options summary {
+        cursor: pointer;
+        color: #e8cf92;
+    }
+
+.attack-master-distance, .attack-master-queue {
+    margin: 0;
+    color: #ddcaa1;
+}
+
 .attack-master-queue {
     display: grid;
     gap: 5px;
@@ -404,6 +418,7 @@
     min-height: 22px;
     padding: 0 7px;
 }
+
 .attack-popup ::deep .combate2014-campos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
@@ -412,22 +427,107 @@
     padding: 0;
     border: 0;
 }
-.attack-popup ::deep :is(.combate2014-form, .combate2014-iniciativas, .combate2014-selecao) { display: grid; min-width: 0; gap: 8px; margin: 0; padding: 0; border: 0; }
-.attack-popup ::deep .combate2014-iniciativa { display: grid; grid-template-columns: minmax(100px, 2fr) repeat(3, minmax(45px, 1fr)) auto; align-items: end; gap: 7px; padding: 5px; border-radius: 4px; }
-.attack-popup ::deep .combate2014-iniciativa.atual { background: #493a22; }
-.attack-popup ::deep .combate2014-opcoes { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; }
-.attack-popup ::deep :is(.combate2014-campos, .combate2014-iniciativa, .combate2014-opcoes) label { display: grid; min-width: 0; gap: 3px; color: #d6c6a3; }
-.attack-popup ::deep label.combate2014-check { display: inline-flex; align-items: center; gap: 6px; }
-.attack-popup ::deep :is(.combate2014-form, .combate2014-campos) :is(input:not([type="checkbox"]), select) { width: 100%; min-height: 34px; padding: 4px 7px; border: 1px solid var(--game-line); border-radius: 4px; background: #171612; color: #f2e3c5; }
-.attack-popup ::deep :is(.combate2014-opcoes, .combate2014-form) button { min-height: 34px; padding: 4px 8px; border: 1px solid #7c6237; border-radius: 4px; background: #35291c; color: #f2dfad; cursor: pointer; }
-.attack-popup ::deep .combate2014-opcoes button[aria-pressed="true"] { background: #72592d; border-color: #c6a65a; }
-.attack-popup ::deep :is(.combate2014-resumo, .combate2014-form p) { margin: 0; color: #ddcaa1; }
-.attack-popup ::deep .combate2014-alvos { display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 6px; border: 1px solid var(--game-line); }
-.attack-popup ::deep .combate2014-alvos legend { float: none; width: auto; margin: 0; color: #ddcaa1; font-size: 14px; }
-.attack-popup ::deep .combate2014-registros { margin: 0; }
+
+.attack-popup ::deep :is(.combate2014-form, .combate2014-iniciativas, .combate2014-selecao) {
+    display: grid;
+    min-width: 0;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.attack-popup ::deep .combate2014-iniciativa {
+    display: grid;
+    grid-template-columns: minmax(100px, 2fr) repeat(3, minmax(45px, 1fr)) auto;
+    align-items: end;
+    gap: 7px;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+    .attack-popup ::deep .combate2014-iniciativa.atual {
+        background: #493a22;
+    }
+
+.attack-popup ::deep .combate2014-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.attack-popup ::deep :is(.combate2014-campos, .combate2014-iniciativa, .combate2014-opcoes) label {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+    color: #d6c6a3;
+}
+
+.attack-popup ::deep label.combate2014-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.attack-popup ::deep :is(.combate2014-form, .combate2014-campos) :is(input:not([type="checkbox"]), select) {
+    width: 100%;
+    min-height: 34px;
+    padding: 4px 7px;
+    border: 1px solid var(--game-line);
+    border-radius: 4px;
+    background: #171612;
+    color: #f2e3c5;
+}
+
+.attack-popup ::deep :is(.combate2014-opcoes, .combate2014-form) button {
+    min-height: 34px;
+    padding: 4px 8px;
+    border: 1px solid #7c6237;
+    border-radius: 4px;
+    background: #35291c;
+    color: #f2dfad;
+    cursor: pointer;
+}
+
+.attack-popup ::deep .combate2014-opcoes button[aria-pressed="true"] {
+    background: #72592d;
+    border-color: #c6a65a;
+}
+
+.attack-popup ::deep :is(.combate2014-resumo, .combate2014-form p) {
+    margin: 0;
+    color: #ddcaa1;
+}
+
+.attack-popup ::deep .combate2014-alvos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+    padding: 6px;
+    border: 1px solid var(--game-line);
+}
+
+    .attack-popup ::deep .combate2014-alvos legend {
+        float: none;
+        width: auto;
+        margin: 0;
+        color: #ddcaa1;
+        font-size: 14px;
+    }
+
+.attack-popup ::deep .combate2014-registros {
+    margin: 0;
+}
+
 @media (max-width: 480px) {
-    .attack-popup ::deep .combate2014-iniciativa { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .attack-popup ::deep .combate2014-iniciativa label:first-child { grid-column: 1 / -1; }
+    .attack-popup ::deep .combate2014-iniciativa {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+        .attack-popup ::deep .combate2014-iniciativa label:first-child {
+            grid-column: 1 / -1;
+        }
 }
 
 .attack-roll {
@@ -730,11 +830,11 @@
         overflow-y: auto;
     }
 
-    .action-slots .action-slot {
-        gap: 1px;
-        padding: 0 3px;
-        line-height: 1.1;
-    }
+        .action-slots .action-slot {
+            gap: 1px;
+            padding: 0 3px;
+            line-height: 1.1;
+        }
 
     .slot-icon-image {
         width: 20px;
@@ -753,9 +853,9 @@
         font-size: 8px;
     }
 
-    .action-slot small {
-        font-size: 7px;
-    }
+        .action-slot small {
+            font-size: 7px;
+        }
 
     .turn-action-status {
         min-height: 16px;
@@ -815,9 +915,9 @@
         overflow-wrap: anywhere;
     }
 
-    .action-slot:not(:disabled, .ativa) {
-        border-color: #8d7954;
-    }
+        .action-slot:not(:disabled, .ativa) {
+            border-color: #8d7954;
+        }
 
     #app .action-slot .slot-icon {
         font-size: 1rem;
@@ -835,9 +935,9 @@
         color: #b8aa91;
     }
 
-    .action-slot:disabled .slot-icon {
-        color: #a18d64;
-    }
+        .action-slot:disabled .slot-icon {
+            color: #a18d64;
+        }
 
     #app .action-slot:disabled small {
         color: #a99a7f;

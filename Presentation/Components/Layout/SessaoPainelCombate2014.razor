@@ -3,16 +3,31 @@
 @using RPGdeMesa.Domain.Sessoes
 @using RPGdeMesa.Presentation.ViewModel
 
-@if (ViewModel.Estado.IdMapaAtivo is null)
-{
-    <p>Selecione um mapa para organizar o encontro.</p>
-}
-else
-{
-    <nav class="combate2014-opcoes" aria-label="Controles do encontro">
+<div class="encounter-backdrop" aria-hidden="true" @onclick="ViewModel.FecharPainel2014"></div>
+<section class="encounter-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-encontro2014" @onclick:stopPropagation="true">
+    <div class="encounter-top">
+        <header class="encounter-header">
+            <h2 id="titulo-encontro2014">Encontro 5e · 2014</h2>
+            <button class="encounter-close" type="button" aria-label="Fechar encontro" data-dialog-close
+                    disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.FecharPainel2014">×</button>
+        </header>
+        @if (ViewModel.FeedbackCombateEhErro && ViewModel.FeedbackAtaqueEntidade is { Length: > 0 } erro)
+        {
+            <p class="encounter-error" role="alert">@erro</p>
+        }
+    </div>
+
+    @if (ViewModel.Estado.IdMapaAtivo is null)
+    {
+        <p class="encounter-empty">Selecione um mapa para organizar o encontro.</p>
+    }
+    else
+    {
+    <nav class="encounter-tabs" aria-label="Seções do encontro">
         @foreach (string item in Abas)
         {
-            <button type="button" aria-pressed="@(_aba == item)" @onclick="() => _aba = item">@item</button>
+            <button type="button" aria-pressed="@(_aba == item ? "true" : "false")"
+                    disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="() => SelecionarAba(item)">@item</button>
         }
     </nav>
 
@@ -31,27 +46,36 @@ else
         }
         @if (_aba == "Iniciativa")
         {
-            <div class="combate2014-opcoes">
+            <div class="combate2014-opcoes encounter-initiative-actions">
                 @if (Encontro.Rodada > 0)
                 {
-                    <strong>Rodada @Encontro.Rodada · @(Encontro.JanelaLendaria ? "Ações lendárias" : NomePino(Encontro.IdPinoAtual))</strong>
-                    <button type="button" @onclick="ViewModel.AvancarEncontro2014Async">Próximo turno</button>
+                    <strong class="encounter-round">Rodada @Encontro.Rodada · @(Encontro.JanelaLendaria ? "Ações lendárias" : NomePino(Encontro.IdPinoAtual))</strong>
+                    <button type="button" class="encounter-primary" @onclick="ViewModel.AvancarEncontro2014Async">Próximo turno</button>
                     <button type="button" @onclick="EncerrarAsync">Encerrar combate</button>
                 }
                 <button type="button" @onclick="RolarIniciativas">Rolar iniciativas</button>
-                <button type="button" @onclick="SalvarIniciativasAsync">@(Encontro.Rodada > 0 ? "Atualizar ordem" : "Iniciar combate")</button>
+                <button type="button" class="@(Encontro.Rodada == 0 ? "encounter-primary" : null)"
+                        @onclick="SalvarIniciativasAsync">@(Encontro.Rodada > 0 ? "Atualizar ordem" : "Iniciar combate")</button>
             </div>
-            <label class="combate2014-check"><input type="checkbox" @bind="_covil" /> Ações de covil na iniciativa 20</label>
+            <label class="combate2014-check encounter-lair"><input type="checkbox" @bind="_covil" /> Ações de covil na iniciativa 20</label>
+            @if (!Pinos.Any())
+            {
+                <p>Coloque ao menos um combatente no mapa para organizar a iniciativa.</p>
+            }
             <div class="combate2014-iniciativas">
                 @foreach (var pino in Pinos.OrderByDescending(p => Linha(p).Iniciativa).ThenBy(p => Linha(p).Desempate))
                 {
                     var linha = Linha(pino);
                     <div class="combate2014-iniciativa @(pino.IdPino == Encontro.IdPinoAtual ? "atual" : "")" @key="pino.IdPino">
-                        <label class="combate2014-check"><input type="checkbox" @bind="linha.Incluir" /> @pino.Nome</label>
-                        <label>Total<input type="number" @bind="linha.Iniciativa" /></label>
-                        <label>Bônus<input type="number" @bind="linha.Bonus" /></label>
-                        <label>Desempate<input type="number" min="0" @bind="linha.Desempate" /></label>
-                        <label class="combate2014-check"><input type="checkbox" @bind="linha.Surpreso" /> Surpreso</label>
+                        <label class="combate2014-check encounter-combatant">
+                            <input type="checkbox" aria-label="@($"Incluir {pino.Nome} na iniciativa")" @bind="linha.Incluir" /> @pino.Nome
+                        </label>
+                        <label>Total<input type="number" aria-label="@($"Total de iniciativa de {pino.Nome}")" @bind="linha.Iniciativa" /></label>
+                        <label>Bônus<input type="number" aria-label="@($"Bônus de iniciativa de {pino.Nome}")" @bind="linha.Bonus" /></label>
+                        <label>Desempate<input type="number" min="0" aria-label="@($"Desempate de {pino.Nome}")" @bind="linha.Desempate" /></label>
+                        <label class="combate2014-check encounter-surprise">
+                            <input type="checkbox" aria-label="@($"{pino.Nome} surpreso")" @bind="linha.Surpreso" /> Surpreso
+                        </label>
                     </div>
                 }
             </div>
@@ -158,13 +182,19 @@ else
         {
             <button type="button" @onclick='() => MorteAsync("acompanhar")'>Acompanhar testes de morte</button>
         }
-        @if (combatente.PvAtual == 0 && ficha?.Morto != true)
+        @if (combatente.PvAtual == 0 && ficha?.Morto != true && ficha?.Estavel != true)
         {
-            <button type="button" @onclick='() => MorteAsync("rolar")'>Teste contra a morte</button>
+            @if (combatente.TipoEntidade == TiposPinoSessao.Personagem || ficha?.UsaTestesMorte == true)
+            {
+                <button type="button" @onclick='() => MorteAsync("rolar")'>Teste contra a morte</button>
+            }
             <button type="button" @onclick='() => MorteAsync("estabilizar")'>Estabilizar</button>
         }
-        <label>Cura<input type="number" min="1" @bind="_cura" /></label>
-        <button type="button" @onclick='() => MorteAsync("curar")'>Curar</button>
+        @if (ficha?.Morto != true)
+        {
+            <label>Cura<input type="number" min="1" @bind="_cura" /></label>
+            <button type="button" @onclick='() => MorteAsync("curar")'>Curar</button>
+        }
     </div>
     @if (ficha is not null && combatente.PvAtual == 0)
     {
@@ -193,8 +223,14 @@ else
                 }
             }
         }
-</fieldset>
-}
+        </fieldset>
+    }
+
+    @if (!ViewModel.FeedbackCombateEhErro && !string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
+    {
+        <p class="encounter-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+    }
+</section>
 
 @code {
     [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
@@ -202,8 +238,9 @@ else
     private static readonly string[] Abas = ["Iniciativa", "Condições", "Ambiente", "Recursos", "Testes"];
     private readonly Dictionary<int, LinhaIniciativa> _linhas = [];
     private string _aba = "Iniciativa";
-    private int _pino, _contaTeste, _modTeste, _recarga, _lendarias, _resistencias;
-    private int _cdTeste = 15, _usos = 1, _cura = 1;
+    private int _pino, _contaTeste;
+    private int? _modTeste = 0, _recarga = 0, _lendarias = 0, _resistencias = 0;
+    private int? _cdTeste = 15, _usos = 1, _cura = 1;
     private int? _duracao, _cdCondicao;
     private bool _covil, _ocultarCd, _descansoCurto;
     private Condicao2014 _condicao;
@@ -217,6 +254,12 @@ else
     private IEnumerable<PinoMapaDto> Pinos => ViewModel.PinosVisiveisNoMapa.OrderBy(p => p.Nome);
 
     protected override void OnInitialized() => _covil = Encontro.Covil;
+
+    private void SelecionarAba(string aba)
+    {
+        _aba = aba;
+        ViewModel.LimparFeedbackCombateMestre();
+    }
 
     private LinhaIniciativa Linha(PinoMapaDto pino)
     {
@@ -237,12 +280,25 @@ else
 
     private void RolarIniciativas()
     {
-        var grupos = Pinos.Where(p => Linha(p).Incluir).GroupBy(p => (p.TipoEntidade, p.IdEntidade));
-        foreach (var grupo in grupos)
+        var selecionados = Pinos.Where(p => Linha(p).Incluir).ToList();
+        if (selecionados.Count == 0)
+        {
+            ViewModel.InformarErroControle2014("Marque pelo menos um combatente para rolar a iniciativa.");
+            return;
+        }
+
+        if (selecionados.Any(p => Linha(p).Bonus is null or > int.MaxValue - 20))
+        {
+            ViewModel.InformarErroControle2014("Confira o bônus de iniciativa dos combatentes marcados.");
+            return;
+        }
+
+        ViewModel.LimparFeedbackCombateMestre();
+        foreach (var grupo in selecionados.GroupBy(p => (p.TipoEntidade, p.IdEntidade)))
         {
             int dado = Random.Shared.Next(1, 21);
             foreach (var pino in grupo)
-                Linha(pino).Iniciativa = dado + Linha(pino).Bonus;
+                Linha(pino).Iniciativa = dado + Linha(pino).Bonus.GetValueOrDefault();
         }
     }
 
@@ -250,41 +306,97 @@ else
         ? "Ação de covil"
         : Pinos.FirstOrDefault(p => p.IdPino == id)?.Nome ?? "Pino removido";
 
-    private Task SalvarIniciativasAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarIniciativaAsync(e, conta,
-        Pinos.Where(p => Linha(p).Incluir).Select(p => new EntradaIniciativa2014(p.IdPino, Linha(p).Iniciativa, Linha(p).Desempate, Linha(p).Surpreso)).ToList(), _covil));
+    private Task SalvarIniciativasAsync()
+    {
+        var selecionados = Pinos.Select(p => (p.IdPino, Linha: Linha(p))).Where(p => p.Linha.Incluir).ToList();
+        if (selecionados.Count == 0)
+            return RejeitarAsync("Marque pelo menos um combatente para salvar a iniciativa.");
+        if (selecionados.Any(p => p.Linha.Iniciativa is null || p.Linha.Desempate is null or < 0))
+            return RejeitarAsync("Preencha o total e informe um desempate igual ou maior que zero para os combatentes marcados.");
+
+        var entradas = selecionados.Select(p => new EntradaIniciativa2014(
+            p.IdPino, p.Linha.Iniciativa.GetValueOrDefault(), p.Linha.Desempate.GetValueOrDefault(), p.Linha.Surpreso)).ToList();
+        return ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarIniciativaAsync(e, conta, entradas, _covil));
+    }
 
     private Task EncerrarAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.EncerrarIniciativaAsync(e, conta));
 
-    private Task CondicaoAsync(bool remover) => ViewModel.UsarControle2014Async((s, e, conta) => s.AlterarCondicaoAsync(e, conta, _pino,
-        new EfeitoCombate2014
-        {
-            Condicao = _condicao,
-            Rodadas = _momento == Momento2014.Manual ? null : _duracao,
-            Momento = _momento,
-            Cd = _cdCondicao,
-            Atributo = _cdCondicao.HasValue ? _atributo : null
-        }, remover));
+    private Task CondicaoAsync(bool remover)
+    {
+        int? duracao = _momento == Momento2014.Manual ? null : _duracao;
+        if (!remover && (duracao is < 1 or > 100 || _cdCondicao is < 1 or > 40))
+            return RejeitarAsync("Informe uma duração de 1 a 100 rodadas e uma CD de 1 a 40, ou deixe os campos opcionais em branco.");
+
+        return ViewModel.UsarControle2014Async((s, e, conta) => s.AlterarCondicaoAsync(e, conta, _pino,
+            new EfeitoCombate2014
+            {
+                Condicao = _condicao,
+                Rodadas = duracao,
+                Momento = _momento,
+                Cd = _cdCondicao,
+                Atributo = _cdCondicao.HasValue ? _atributo : null
+            }, remover));
+    }
 
     private Task TestarCondicaoAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.TestarCondicao2014Async(e, conta, _pino, _condicao, 0));
-    private Task SalvarAfinidadeAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarAfinidadeAsync(e, conta, _pino, _tipoDano, _afinidade));
-    private Task MorteAsync(string acao) => ViewModel.UsarControle2014Async((s, e, conta) => s.ResolverMorte2014Async(e, conta, _pino, acao, _cura));
+    private Task SalvarAfinidadeAsync() => string.IsNullOrWhiteSpace(_tipoDano)
+        ? RejeitarAsync("Informe o tipo de dano antes de salvar a afinidade.")
+        : ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarAfinidadeAsync(e, conta, _pino, _tipoDano, _afinidade));
+
+    private Task MorteAsync(string acao) => acao == "curar" && (_cura is null or <= 0)
+        ? RejeitarAsync("Informe pelo menos 1 PV para curar.")
+        : ViewModel.UsarControle2014Async((s, e, conta) => s.ResolverMorte2014Async(e, conta, _pino, acao, _cura.GetValueOrDefault()));
+
     private Task EncerrarConcentracaoAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.EncerrarConcentracao2014Async(e, conta, _pino));
-    private Task SalvarRecursosAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarRecurso2014Async(e, conta, _pino, _recurso, _usos, _recarga, _descansoCurto, _lendarias, _resistencias));
-    private Task SolicitarTesteAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.SolicitarTeste2014Async(e, conta, _contaTeste, _nomeTeste, _cdTeste, _modTeste, _modoTeste, _ocultarCd));
+    private Task SalvarRecursosAsync()
+    {
+        if (_lendarias is null or < 0 or > 10 || _resistencias is null or < 0 or > 10)
+            return RejeitarAsync("Informe de 0 a 10 ações e resistências lendárias.");
+        if (string.IsNullOrWhiteSpace(_recurso) && (_usos != 1 || _recarga != 0 || _descansoCurto))
+            return RejeitarAsync("Informe o nome do recurso para configurar usos ou recarga.");
+        if (_usos is null or < 1 or > 99 || _recarga is null or 1 or < 0 or > 6)
+            return RejeitarAsync("Informe de 1 a 99 usos. Para recarga, use 0 (sem recarga) ou um valor de 2 a 6.");
+
+        return ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarRecurso2014Async(e, conta, _pino, _recurso,
+            _usos.GetValueOrDefault(), _recarga.GetValueOrDefault(), _descansoCurto, _lendarias.GetValueOrDefault(), _resistencias.GetValueOrDefault()));
+    }
+
+    private Task SolicitarTesteAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nomeTeste))
+            return RejeitarAsync("Informe o nome do teste.");
+        if (_cdTeste is null or < 1 or > 40 || _modTeste is null or < -20 or > 30)
+            return RejeitarAsync("Informe uma CD de 1 a 40 e um modificador de −20 a 30.");
+        if (!ViewModel.Estado.Jogadores.Any(j => _contaTeste == 0 || j.IdAccount == _contaTeste))
+            return RejeitarAsync("Não há jogador disponível para receber este teste.");
+
+        return ViewModel.UsarControle2014Async((s, e, conta) => s.SolicitarTeste2014Async(e, conta, _contaTeste,
+            _nomeTeste, _cdTeste.GetValueOrDefault(), _modTeste.GetValueOrDefault(), _modoTeste, _ocultarCd));
+    }
+
+    private Task RejeitarAsync(string mensagem)
+    {
+        ViewModel.InformarErroControle2014(mensagem);
+        return Task.CompletedTask;
+    }
 
     private void TrocarCombatente()
     {
+        ViewModel.LimparFeedbackCombateMestre();
         var ficha = Encontro.Fichas.GetValueOrDefault(_pino);
         _lendarias = ficha?.UsosLendariosMaximos ?? 0;
         _resistencias = ficha?.ResistenciasLendariasMaximas ?? 0;
         _recurso = "";
+        _usos = 1;
+        _recarga = 0;
+        _descansoCurto = false;
     }
 
     private sealed class LinhaIniciativa
     {
-        public int Iniciativa { get; set; }
-        public int Bonus { get; set; }
-        public int Desempate { get; set; }
+        public int? Iniciativa { get; set; }
+        public int? Bonus { get; set; }
+        public int? Desempate { get; set; }
         public bool Incluir { get; set; }
         public bool Surpreso { get; set; }
     }

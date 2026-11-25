@@ -281,6 +281,7 @@ public partial class SessaoViewModel : IAsyncDisposable
                         CancelarConjuracaoAtual();
                 }
                 Estado = novoEstado;
+                AtualizarPvFichaNoMapa(estadoAnterior);
                 ConcluirDeslocamento2014();
                 if (turnoMudou)
                 {

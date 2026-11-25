@@ -123,24 +123,19 @@
     }
 </fieldset>
 <button type="button" @onclick="ExecutarAsync">Resolver habilidade</button>
-@if (_erro is not null)
-{
-    <p role="status">@_erro</p>
-}
 
 @code {
     [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
     [Parameter, EditorRequired] public int IdOrigem { get; set; }
 
     private readonly HashSet<int> _alvos = [];
-    private int _idMagia, _bonusAtaque, _bonusSalvaguarda;
-    private int _cd = 15, _custo = 1;
+    private int _idMagia;
+    private int? _bonusAtaque = 0, _bonusSalvaguarda = 0, _cd = 15, _custo = 1;
     private int? _rodadasConcentracao, _rodadasCondicao;
     private bool _meioDano, _concentracao, _permitirLendaria;
-    private decimal _tamanho = 4.5m;
+    private decimal? _tamanho = 4.5m;
     private decimal? _alcance;
     private string _nome = "", _dano = "", _tipoDano = "", _recurso = "", _coordenada = "";
-    private string? _erro;
     private SistemaArea2014 _area;
     private ResolucaoHabilidade2014 _resolucao;
     private Atributo2014 _atributo = Atributo2014.Destreza;
@@ -175,21 +170,19 @@
 
     private async Task ExecutarAsync()
     {
-        _erro = null;
-        if (string.IsNullOrWhiteSpace(_nome))
+        string? erro = ValidarHabilidade();
+        if (erro is not null)
         {
-            _erro = "Informe o nome da habilidade.";
+            ViewModel.InformarErroControle2014(erro);
             return;
         }
 
         string casa = _coordenada.Trim().ToUpperInvariant();
         int coluna = casa.Length > 0 ? casa[0] - 'A' : -1;
         int linha = casa.Length > 1 && int.TryParse(casa[1..], out int numero) ? numero - 1 : -1;
-        if (_area != SistemaArea2014.AlvosMarcados && (coluna is < 0 or > 19 || linha is < 0 or > 19))
-        {
-            _erro = "Informe uma casa de A1 até T20.";
-            return;
-        }
+        bool salvaguarda = _resolucao == ResolucaoHabilidade2014.Salvaguarda;
+        bool ataqueMagico = _resolucao == ResolucaoHabilidade2014.AtaqueMagico;
+        bool concentracao = IdOrigem > 0 && _concentracao;
 
         var efeito = _condicao is { } condicao
             ? new EfeitoCombate2014 { Condicao = condicao, Rodadas = _rodadasCondicao, Momento = Momento2014.FimTurno }
@@ -199,27 +192,68 @@
             _nome,
             IdOrigem,
             _alvos.ToList(),
-            new UsoAcao2014(_acao, string.IsNullOrWhiteSpace(_recurso) ? null : _recurso, _custo),
+            new UsoAcao2014(_acao, string.IsNullOrWhiteSpace(_recurso) ? null : _recurso,
+                _acao == TipoAcao2014.Lendaria ? _custo.GetValueOrDefault() : 1),
             _resolucao,
             _dano,
             _tipoDano,
             _atributo,
-            _cd,
+            salvaguarda ? _cd.GetValueOrDefault() : 15,
             _meioDano,
             _area,
-            _tamanho,
+            _tamanho.GetValueOrDefault(),
             coluna,
             linha,
             efeito,
-            _concentracao,
-            _rodadasConcentracao,
+            concentracao,
+            concentracao ? _rodadasConcentracao : null,
             _permitirLendaria,
-            _bonusAtaque,
-            _bonusSalvaguarda,
+            ataqueMagico ? _bonusAtaque.GetValueOrDefault() : 0,
+            salvaguarda ? _bonusSalvaguarda.GetValueOrDefault() : 0,
             _rolagem,
             _cobertura,
             _alcance);
 
         await ViewModel.UsarControle2014Async((s, e, conta) => s.UsarHabilidade2014Async(e, conta, comando));
+    }
+
+    private string? ValidarHabilidade()
+    {
+        if (string.IsNullOrWhiteSpace(_nome) || _nome.Length > 120)
+            return "Informe o nome da habilidade com até 120 caracteres.";
+        if (_resolucao == ResolucaoHabilidade2014.Salvaguarda &&
+            (_cd is null or < 1 or > 40 || _bonusSalvaguarda is null or < -20 or > 30))
+            return "Informe a CD de 1 a 40 e o bônus de salvaguarda de −20 a 30.";
+        if (_resolucao == ResolucaoHabilidade2014.AtaqueMagico && (_bonusAtaque is null or < -20 or > 30))
+            return "Informe um bônus de ataque mágico de −20 a 30.";
+
+        bool condicaoSemDano = _resolucao == ResolucaoHabilidade2014.Salvaguarda && _condicao.HasValue
+            && string.IsNullOrWhiteSpace(_dano);
+        if (_resolucao != ResolucaoHabilidade2014.Efeito && !condicaoSemDano && !RegrasCombate2014.DanoValido(_dano))
+            return "Informe uma fórmula válida como 2d6+5 ou um número fixo.";
+        if (_condicao.HasValue && _rodadasCondicao is < 1 or > 100)
+            return "Informe de 1 a 100 rodadas para a condição, ou deixe a duração em branco.";
+        if (IdOrigem > 0 && _concentracao && (_rodadasConcentracao is < 1 or > 1000))
+            return "Informe de 1 a 1000 rodadas para a concentração, ou deixe a duração em branco.";
+        if (IdOrigem > 0 && _acao == TipoAcao2014.Lendaria && (_custo is null or < 1 or > 10))
+            return "Informe um custo lendário de 1 a 10.";
+
+        if (_area == SistemaArea2014.AlvosMarcados && _alvos.Count == 0)
+            return "Marque pelo menos um alvo para resolver a habilidade.";
+        var idsNoMapa = Pinos.Select(pino => pino.IdPino).ToHashSet();
+        if (!_alvos.IsSubsetOf(idsNoMapa))
+        {
+            _alvos.IntersectWith(idsNoMapa);
+            return "Alguns alvos saíram do mapa. Confira os alvos restantes antes de enviar.";
+        }
+
+        if (_area == SistemaArea2014.AlvosMarcados)
+            return null;
+        if (_tamanho is null or <= 0 or > 90)
+            return "Informe o tamanho da área em metros, até 90 m.";
+        string casa = _coordenada.Trim().ToUpperInvariant();
+        if (casa.Length < 2 || casa[0] is < 'A' or > 'T' || !int.TryParse(casa[1..], out int linha) || linha is < 1 or > 20)
+            return "Informe uma casa de A1 até T20.";
+        return null;
     }
 }

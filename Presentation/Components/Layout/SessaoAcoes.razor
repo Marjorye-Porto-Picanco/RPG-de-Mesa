@@ -106,10 +106,12 @@
                 <img class="slot-icon-image" src="/img/acoes/mover.png" width="24" height="24" alt="" />
                 <span>@(ViewModel.ModoMovimentoLivreAtivo ? "Cancelar movimento" : "Mover")</span><small>Deslocamento</small>
             </button>
-            <button class="action-slot @(ViewModel.ExibirModalAtaque ? "ativa" : "")"
+            <button class="action-slot @(ViewModel.ExibirModalAtaque || ViewModel.ExibirCombateMestre ? "ativa" : "")"
                     type="button"
-                    disabled="@(!ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
-                    title="@(ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
+                    disabled="@(ViewModel.Estado.EhMestre
+                        ? ViewModel.ExecutandoAtaqueEntidade
+                        : !ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
+                    title="@(ViewModel.Estado.EhMestre ? "Atacar com monstro ou NPC" : ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalAtaqueAsync">
                 <img class="slot-icon-image" src="@IconeAtaque" width="24" height="24" alt="" />
                 <span>Ataque</span><small>Ação</small>
@@ -261,14 +263,15 @@
             </fieldset>
             @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
             {
-                <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+                <p class="attack-master-feedback @(ViewModel.FeedbackCombateEhErro ? "attack-error" : null)"
+                   role="@(ViewModel.FeedbackCombateEhErro ? "alert" : "status")">@ViewModel.FeedbackAtaqueEntidade</p>
             }
         </section>
     }
     else if (_exibirHabilidadeMestre)
     {
         <div class="attack-backdrop" @onclick="FecharAcaoPinoMestre"></div>
-        <section class="attack-popup encounter-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-habilidade-pino" @onclick:stopPropagation="true">
+        <section class="attack-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-habilidade-pino" @onclick:stopPropagation="true">
             <header class="attack-header">
                 <div>
                     <p>@pinoEmAcao.Nome · @pinoEmAcao.CoordenadaTexto</p>
@@ -284,7 +287,8 @@
             </fieldset>
             @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
             {
-                <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
+                <p class="attack-master-feedback @(ViewModel.FeedbackCombateEhErro ? "attack-error" : null)"
+                   role="@(ViewModel.FeedbackCombateEhErro ? "alert" : "status")">@ViewModel.FeedbackAtaqueEntidade</p>
             }
         </section>
     }
@@ -474,21 +478,7 @@
 
 @if (ViewModel.ExibirPainel2014)
 {
-    <div class="attack-backdrop" @onclick="ViewModel.FecharPainel2014"></div>
-    <section class="attack-popup encounter-popup" role="dialog" aria-modal="true" aria-labelledby="titulo-encontro2014" @onclick:stopPropagation="true">
-        <header class="attack-header">
-            <h2 id="titulo-encontro2014">Encontro 5e · 2014</h2>
-            <button class="attack-close" type="button" aria-label="Fechar encontro" data-dialog-close
-                    disabled="@ViewModel.ExecutandoAtaqueEntidade" @onclick="ViewModel.FecharPainel2014">
-                ×
-            </button>
-        </header>
-        <SessaoPainelCombate2014 ViewModel="ViewModel" />
-        @if (!string.IsNullOrWhiteSpace(ViewModel.FeedbackAtaqueEntidade))
-        {
-            <p class="attack-master-feedback" role="status">@ViewModel.FeedbackAtaqueEntidade</p>
-        }
-    </section>
+    <SessaoPainelCombate2014 ViewModel="ViewModel" />
 }
 
 @if (ViewModel.ExibirCombateMestre)
@@ -864,7 +854,7 @@
 
         @if (ViewModel.PersonagemConjurador is not null)
         {
-            <ResumoCirculosMagicos Personagem="ViewModel.PersonagemConjurador" />
+            <ResumoCirculosMagicos Personagem="ViewModel.PersonagemConjurador" MostrarBarras="true" />
         }
 
         @if (ViewModel.CarregandoMagia)

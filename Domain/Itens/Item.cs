@@ -28,9 +28,21 @@ public class Item : IAggregateRoot
             throw new DomainException("O peso do item não pode ser negativo.");
         if (preco is < 0)
             throw new DomainException("O preço do item não pode ser negativo.");
+        if (peso is > 999.99m)
+            throw new DomainException("O peso do item deve ser de até 999,99 kg.");
+        if (preco is > 99_999_999.99m)
+            throw new DomainException("O preço do item deve ser de até 99.999.999,99 PO.");
+
+        nome = nome.Trim();
+        ValidarTamanho(nome, 100, "Nome");
+        ValidarTamanho(tipo, 50, "Tipo");
+        ValidarTamanho(dano, 20, "Dano");
+        ValidarTamanho(tipoDano, 30, "Tipo de dano");
+        ValidarTamanho(raridade, 50, "Raridade");
+        ValidarTamanho(sintonizacao, 50, "Sintonização");
 
         IdAccount = idAccount;
-        Nome = nome.Trim();
+        Nome = nome;
         Tipo = tipo;
         Peso = peso;
         Preco = preco;
@@ -41,5 +53,11 @@ public class Item : IAggregateRoot
         Descricao = descricao;
         Raridade = raridade;
         Sintonizacao = sintonizacao;
+    }
+
+    private static void ValidarTamanho(string? valor, int limite, string campo)
+    {
+        if (valor?.Length > limite)
+            throw new DomainException($"O campo {campo} deve ter até {limite} caracteres.");
     }
 }

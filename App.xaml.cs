@@ -1,10 +1,12 @@
 ﻿using Microsoft.Maui.Controls;
-using RPGdeMesa.Presentation;
+using RPGdeMesa.Presentation.Services;
 
 namespace RPGdeMesa;
 
 public partial class App : Microsoft.Maui.Controls.Application
 {
+    private Window? _janela;
+
     public App()
     {
         InitializeComponent();
@@ -12,7 +14,24 @@ public partial class App : Microsoft.Maui.Controls.Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        var window = new Window(new MainPage()) { Title = "RPGdeMesa" };
+        var relatorio = FalhasApp.LerPendente();
+        Page pagina;
+        try
+        {
+            pagina = relatorio is null ? new MainPage() : new TelaErroPage(relatorio);
+        }
+        catch (Exception erro) when (relatorio is null)
+        {
+            pagina = new TelaErroPage(FalhasApp.Registrar(erro, "Abertura da janela"));
+        }
+
+        var window = new Window(pagina) { Title = "RPGdeMesa" };
+        _janela = window;
+        window.Destroying += (_, _) =>
+        {
+            if (ReferenceEquals(_janela, window))
+                _janela = null;
+        };
 
 #if WINDOWS
         window.Created += (s, e) =>
@@ -32,5 +51,24 @@ public partial class App : Microsoft.Maui.Controls.Application
 #endif
 
         return window;
+    }
+
+    internal bool MostrarFalha(RelatorioFalha relatorio)
+    {
+        if (_janela is not { } janela)
+            return false;
+
+        return janela.Dispatcher.Dispatch(() =>
+        {
+            try
+            {
+                if (janela.Page is not TelaErroPage)
+                    janela.Page = new TelaErroPage(relatorio);
+            }
+            catch
+            {
+                // O TXT já foi registrado antes de agendar a troca de página.
+            }
+        });
     }
 }

@@ -1,23 +1,57 @@
 @using RPGdeMesa.Domain.Personagens
 @using RPGdeMesa.Domain.Sessoes
 
-@if (Personagem is not null && Slots.Count > 0)
+@if (Personagem is not null && Slots is { Count: > 0 } slots)
 {
-    <section class="spell-slots-summary" aria-label="Círculos mágicos disponíveis">
-        <h3>Círculos mágicos</h3>
-        <div class="spell-slots-list">
-            @foreach (var slot in Slots)
-            {
-                <div class="spell-slot-row"><span>@(slot.Key)º círculo</span><strong>@slot.Value.Item1 − @slot.Value.Item2</strong><small>@(slot.Value.Item3.HasValue ? $"Após descanso: {slot.Value.Item3.Value}" : $"{Math.Max(0, slot.Value.Item1 - slot.Value.Item2)} disponível(is)")</small></div>
-            }
-        </div>
-        <small>Os espaços usados são recuperados conforme as regras de descanso.</small>
-    </section>
+    @if (Compacto)
+    {
+        int total = slots.Values.Sum(slot => Math.Max(0, slot.Total));
+        int restantes = slots.Values.Sum(slot => ObterRestantes(slot.Total, slot.Usados));
+        <BarraRecursoFicha Atual="restantes" Maximo="total" Magia="true" MostrarValor="true"
+                           Legenda="Magia" Rotulo="Espaços de magia restantes, somados todos os círculos" />
+    }
+    else
+    {
+        <section class="spell-slots-summary" aria-label="Círculos mágicos disponíveis">
+            <h3>Círculos mágicos</h3>
+            <div class="spell-slots-list">
+                @foreach (var (circulo, (total, usados, pendente)) in slots)
+                {
+                    int restantes = ObterRestantes(total, usados);
+                    <div class="spell-slot-row @(MostrarBarras ? "spell-slot-row-meter" : "")">
+                        <span>@(circulo)º círculo</span>
+                        @if (MostrarBarras)
+                        {
+                            <div class="spell-slot-meter">
+                                <BarraRecursoFicha Atual="restantes" Maximo="total" Magia="true" MostrarValor="true"
+                                                   Rotulo="@($"Espaços de magia do {circulo}º círculo")" />
+                            </div>
+                            @if (pendente is int aposDescanso)
+                            {
+                                <small>Após descanso: @aposDescanso</small>
+                            }
+                        }
+                        else
+                        {
+                            <strong>@total − @usados</strong>
+                            <small>@(pendente.HasValue ? $"Após descanso: {pendente.Value}" : restantes == 1 ? "1 disponível" : $"{restantes} disponíveis")</small>
+                        }
+                    </div>
+                }
+            </div>
+            <small>Os espaços usados são recuperados conforme as regras de descanso.</small>
+        </section>
+    }
 }
 
 @code {
     [Parameter, EditorRequired] public Personagem Personagem { get; set; } = default!;
-    private Dictionary<int, (int, int, int?)> Slots
+    [Parameter] public bool MostrarBarras { get; set; }
+    [Parameter] public bool Compacto { get; set; }
+
+    private static int ObterRestantes(int total, int usados) => Math.Max(0, total - Math.Max(0, usados));
+
+    private Dictionary<int, (int Total, int Usados, int? Pendente)> Slots
     {
         get
         {

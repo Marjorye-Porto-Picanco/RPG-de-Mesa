@@ -2,7 +2,9 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.Extensions.Logging;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Presentation.Services;
 
@@ -15,19 +17,22 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly NavigationManager _navigation;
         private readonly AppCacheService _appCache;
         private readonly HomeCacheService _homeCache;
+        private readonly ILogger<ItemCriarViewModel> _logger;
 
         public ItemCriarViewModel(
             ItemService itemService,
             SessaoUsuarioService sessaoUsuario,
             NavigationManager navigation,
             AppCacheService appCache,
-            HomeCacheService homeCache)
+            HomeCacheService homeCache,
+            ILogger<ItemCriarViewModel> logger)
         {
             _itemService = itemService;
             _sessaoUsuario = sessaoUsuario;
             _navigation = navigation;
             _appCache = appCache;
             _homeCache = homeCache;
+            _logger = logger;
             LimparFormulario();
         }
 
@@ -130,6 +135,7 @@ namespace RPGdeMesa.Presentation.ViewModel
             try
             {
                 IsProcessing = true;
+                Sucesso = false;
                 MensagemFeedback = "Forjando item...";
                 NotifyStateChanged();
 
@@ -189,11 +195,18 @@ namespace RPGdeMesa.Presentation.ViewModel
                     NotifyStateChanged();
                 }
             }
+            catch (DomainException ex)
+            {
+                Sucesso = false;
+                MensagemFeedback = ex.Message;
+                NotifyStateChanged();
+            }
             catch (Exception ex)
             {
-                var erroDetalhado = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                Sucesso = false;
-                MensagemFeedback = $"Erro ao salvar: {erroDetalhado}";
+                _logger.LogError(ex, "Falha no fluxo de cadastro de item para a conta {IdAccount}", idUsuario);
+                MensagemFeedback = Sucesso
+                    ? "O item foi cadastrado. Volte à biblioteca para consultá-lo."
+                    : "Não foi possível salvar o item agora. Tente novamente em instantes.";
                 NotifyStateChanged();
             }
             finally

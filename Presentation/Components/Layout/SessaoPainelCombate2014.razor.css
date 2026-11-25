@@ -1,0 +1,370 @@
+.encounter-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(18, 12, 8, 0.78);
+    backdrop-filter: blur(4px);
+}
+
+.encounter-popup {
+    --encounter-paper: #fffaf0;
+    --encounter-ink: #3a2815;
+    --encounter-leather: #4d3421;
+    --encounter-leather-deep: #382415;
+    --encounter-light-ink: #f8ecd0;
+    --encounter-line: #cbb38c;
+    --encounter-inset: 22px;
+    position: fixed;
+    inset: 50% auto auto 50%;
+    z-index: 2001;
+    transform: translate(-50%, -50%);
+    display: grid;
+    gap: 14px;
+    width: min(740px, calc(100% - 32px));
+    max-height: min(760px, calc(100dvh - 32px));
+    padding: 0 var(--encounter-inset) var(--encounter-inset);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block-start: 80px;
+    scrollbar-color: #977445 transparent;
+    scrollbar-width: thin;
+    border: 1px solid #a67b45;
+    border-radius: 12px;
+    background: linear-gradient(155deg, rgba(255, 250, 240, 0.97), rgba(255, 250, 240, 0.75)), var(--rpg-papel);
+    color: var(--encounter-ink);
+    color-scheme: light;
+    box-shadow: 0 22px 65px rgba(18, 9, 4, 0.65);
+    overflow-wrap: anywhere;
+}
+
+.encounter-top {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-inline: calc(-1 * var(--encounter-inset));
+    background: #fbf2df;
+}
+
+.encounter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px var(--encounter-inset);
+    border-bottom: 1px solid var(--encounter-line);
+}
+
+#app .encounter-error {
+    max-height: min(110px, 28dvh);
+    overflow: auto;
+    margin: 8px var(--encounter-inset) 0;
+    padding: 8px 10px;
+    border: 1px solid #a45c45;
+    border-inline-start-width: 4px;
+    border-radius: 6px;
+    background: #fff0e8;
+    color: #702e20;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.encounter-popup:has(.encounter-error) {
+    scroll-padding-block-start: min(190px, 56dvh);
+}
+
+#app .encounter-header h2 {
+    margin: 0;
+    color: var(--encounter-ink);
+    font-size: clamp(1.35rem, 1.16rem + 0.8vw, 1.8rem);
+    font-weight: 700;
+}
+
+.encounter-popup ::deep button {
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid #a48357;
+    border-radius: 6px;
+    background: #f4e7ce;
+    color: var(--encounter-ink);
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#app .encounter-popup ::deep :is(button, input, select, textarea) {
+    font-size: 1rem;
+}
+
+.encounter-popup ::deep button:hover:not(:disabled) {
+    background: #ead9b9;
+}
+
+.encounter-popup ::deep button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+#app .encounter-header .encounter-close {
+    display: grid;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    place-items: center;
+    background: var(--encounter-paper);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+#app .encounter-header .encounter-close:hover:not(:disabled) {
+    background: #ead9b9;
+}
+
+.encounter-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    min-width: 0;
+}
+
+.encounter-tabs button {
+    min-width: 0;
+    padding-inline: 4px;
+    background: var(--encounter-paper);
+}
+
+.encounter-tabs button[aria-pressed="true"] {
+    border-color: var(--encounter-leather-deep);
+    background: var(--encounter-leather);
+    color: var(--encounter-light-ink);
+}
+
+.encounter-tabs button[aria-pressed="true"]:hover {
+    background: var(--encounter-leather-deep);
+}
+
+.encounter-popup .encounter-primary {
+    border-color: #a48357;
+    background: var(--rpg-acao);
+    color: var(--rpg-acao-texto);
+}
+
+.encounter-popup .encounter-primary:hover:not(:disabled) {
+    background: var(--rpg-acao-hover);
+}
+
+.combate2014-form {
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.combate2014-form ::deep > button {
+    justify-self: start;
+    max-width: 100%;
+}
+
+.combate2014-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 7px;
+}
+
+#app .encounter-round {
+    flex-basis: 100%;
+    padding: 7px 10px;
+    border-inline-start: 3px solid #987445;
+    background: #f2e3c8;
+    font-size: 1rem;
+}
+
+.encounter-popup ::deep .combate2014-campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 158px), 1fr));
+    gap: 8px 10px;
+    min-width: 0;
+}
+
+#app .encounter-popup ::deep label {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 600;
+}
+
+#app .encounter-popup ::deep .combate2014-check {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 8px;
+    min-height: 44px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.encounter-lair {
+    justify-self: start;
+}
+
+.encounter-popup ::deep input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--encounter-leather);
+}
+
+#app .encounter-popup ::deep :is(input:not([type="checkbox"]), textarea, select) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 6px 8px;
+    border: 1px solid var(--encounter-leather-deep);
+    border-radius: 6px;
+    background: linear-gradient(var(--encounter-leather), var(--encounter-leather-deep));
+    color: var(--encounter-light-ink);
+    color-scheme: dark;
+    caret-color: var(--encounter-light-ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.encounter-popup ::deep select option {
+    background: var(--encounter-leather-deep);
+    color: var(--encounter-light-ink);
+}
+
+.encounter-popup ::deep :is(input, textarea)::placeholder {
+    color: #e4cea9;
+    opacity: 1;
+}
+
+.encounter-popup ::deep :is(button, input, textarea, select):focus-visible {
+    outline: 2px solid #714919;
+    outline-offset: 2px;
+}
+
+.combate2014-iniciativas {
+    display: grid;
+    gap: 8px;
+}
+
+.combate2014-iniciativa {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 6px 10px;
+    padding: 10px;
+    border: 1px solid var(--encounter-line);
+    border-radius: 8px;
+    background: var(--encounter-paper);
+}
+
+.combate2014-iniciativa.atual {
+    border-color: #987445;
+    background: #f2e3c8;
+}
+
+#app .combate2014-iniciativa .encounter-combatant {
+    font-weight: 700;
+}
+
+.combate2014-selecao {
+    max-width: 360px;
+}
+
+.encounter-popup ::deep :is(.combate2014-registros, .combate2014-form p) {
+    margin: 0;
+}
+
+.combate2014-resumo,
+.encounter-feedback {
+    margin: 0;
+    padding: 8px 10px;
+    border-inline-start: 3px solid #987445;
+    background: #f2e3c8;
+    white-space: pre-line;
+}
+
+.encounter-empty {
+    margin: 0;
+}
+
+.encounter-popup ::deep .combate2014-alvos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    min-width: 0;
+    padding: 4px 10px;
+    border: 1px solid var(--encounter-line);
+    border-radius: 8px;
+    background: var(--encounter-paper);
+}
+
+.encounter-popup ::deep .combate2014-alvos legend {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding-inline: 4px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+@media (max-width: 600px) {
+    .encounter-popup {
+        --encounter-inset: 13px;
+        inset: calc(50% + (env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 2) auto auto
+            calc(50% + (env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+        width: calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
+        max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        gap: 10px;
+    }
+
+    .encounter-tabs {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .encounter-tabs button {
+        grid-column: span 2;
+    }
+
+    .encounter-tabs button:nth-last-child(-n + 2) {
+        grid-column: span 3;
+    }
+
+    .encounter-initiative-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .encounter-initiative-actions .encounter-round {
+        grid-column: 1 / -1;
+    }
+
+    .encounter-initiative-actions button {
+        padding-inline: 5px;
+    }
+
+    .combate2014-iniciativa {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px 7px;
+    }
+
+    .encounter-combatant,
+    .encounter-surprise {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}

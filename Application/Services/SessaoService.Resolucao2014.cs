@@ -102,7 +102,7 @@ public partial class SessaoService
                 decimal distancia = DistanciaPinos(atacante, alvo);
                 decimal? alcance = golpe.Alcance ?? RegrasMagiaCombate.InterpretarAlcance(ataque.Alcance).MetrosMaximos;
                 if (alcance is decimal max && distancia > max)
-                    throw new DomainException($"{alvo.Nome} está a {distancia:0.#} m, fora do alcance de {max:0.#} m.");
+                    return new() { Erro = $"{alvo.Nome} está a {distancia:0.#} m, fora do alcance de {max:0.#} m." };
                 if (golpe.Cobertura == Cobertura2014.Total)
                     throw new DomainException($"{alvo.Nome} tem cobertura total.");
 

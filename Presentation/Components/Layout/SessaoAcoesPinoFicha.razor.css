@@ -1,0 +1,90 @@
+.acoes-pino {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--ficha-linha);
+    border-radius: 8px;
+    background: rgba(255, 249, 234, 0.6);
+}
+
+.acoes-pino p {
+    flex-basis: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.pino-status {
+    display: grid;
+    gap: 2px;
+}
+
+#app .pino-status strong {
+    font-size: 0.97rem;
+}
+
+.pino-status span::before {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-inline-end: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+}
+
+.pino-visivel {
+    color: #385333;
+}
+
+.pino-oculto {
+    color: var(--ficha-texto-auxiliar);
+}
+
+.pino-botoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+#app .pino-botoes button {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #ad8b60;
+    border-radius: 6px;
+    background: var(--ficha-papel-claro);
+    color: var(--ficha-tinta);
+    cursor: pointer;
+}
+
+#app .pino-botoes .pino-remover {
+    border-color: #9a5441;
+    color: #722b1e;
+}
+
+#app .pino-botoes button:hover:not(:disabled) {
+    background: #fff0cb;
+}
+
+.pino-botoes button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.pino-erro {
+    color: #722b1e;
+}
+
+@media (max-width: 390px) {
+    .pino-botoes {
+        width: 100%;
+    }
+
+    .pino-botoes button {
+        flex: 1 1 min-content;
+    }
+}

@@ -289,7 +289,14 @@ public partial class SessaoRepository : ISessaoRepository
             return Task.CompletedTask;
         });
 
-    private async Task ExecutarOperacaoAsync(int idSessao, Guid operacao, string recurso, Func<AppDbContext, Task> executar)
+    private Task ExecutarOperacaoAsync(int idSessao, Guid operacao, string recurso, Func<AppDbContext, Task> executar) =>
+        ExecutarOperacaoCondicionalAsync(idSessao, operacao, recurso, async contexto =>
+        {
+            await executar(contexto);
+            return true;
+        });
+
+    private async Task ExecutarOperacaoCondicionalAsync(int idSessao, Guid operacao, string recurso, Func<AppDbContext, Task<bool>> executar)
     {
         await using var contextoEstrategia = await _factory.CreateDbContextAsync();
         await contextoEstrategia.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
@@ -301,7 +308,9 @@ public partial class SessaoRepository : ISessaoRepository
             var operacoes = contexto.Set<SessaoOperacao>();
             if (!await operacoes.AnyAsync(o => o.IdSessao == idSessao && o.IdOperacao == operacao))
             {
-                await executar(contexto);
+                if (!await executar(contexto))
+                    return;
+
                 operacoes.Add(new SessaoOperacao { IdSessao = idSessao, IdOperacao = operacao });
                 await contexto.SaveChangesAsync();
             }

@@ -235,6 +235,10 @@ public partial class SessaoViewModel
                 EspacosUsadosPorSessao.Remove(chave);
             foreach (var jogador in Estado.Jogadores.Where(j => j.IdPersonagem.HasValue))
                 await _sessaoService.AplicarDescansoCirculosMagicosAsync(jogador.IdPersonagem!.Value, true, Array.Empty<int>());
+            if (FichaEmVisualizacao is { } fichaModal)
+            {
+                foreach (var slot in fichaModal.CirculosMagicos) slot.AplicarDescanso();
+            }
             if (PersonagemConjurador is not null)
             {
                 foreach (var slot in PersonagemConjurador.CirculosMagicos) slot.AplicarDescanso();
@@ -257,6 +261,11 @@ public partial class SessaoViewModel
             if (ficha is null || RegrasMagiaCombate.IdentificarTipoConjuracao(ObterNomeClassePersonagem(ficha)) != TipoConjuracaoClasse.Pacto) continue;
             var circulosPacto = RegrasMagiaCombate.ObterEspacosPorCirculo(TipoConjuracaoClasse.Pacto, ficha.Nivel).Keys;
             await _sessaoService.AplicarDescansoCirculosMagicosAsync(ficha.IdPersonagem, false, circulosPacto);
+            if (FichaEmVisualizacao is { } fichaModal && fichaModal.IdPersonagem == ficha.IdPersonagem)
+            {
+                foreach (var slot in fichaModal.CirculosMagicos.Where(s => circulosPacto.Contains(s.CirculoNivel)))
+                    slot.SlotsUsados = 0;
+            }
         }
         if (PersonagemConjurador is not null && TipoConjuracaoAtual == TipoConjuracaoClasse.Pacto)
         {
