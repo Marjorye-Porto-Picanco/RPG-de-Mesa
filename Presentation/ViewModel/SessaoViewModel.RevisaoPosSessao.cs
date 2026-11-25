@@ -15,6 +15,7 @@ public partial class SessaoViewModel
     public FichaRevisaoItemVm? FichaRevisaoSelecionada { get; private set; }
     public List<Item> ItensCampanhaRevisao { get; private set; } = new();
     public List<Magia> MagiasCatalogoRevisao { get; private set; } = new();
+    public List<Classe> ClassesCatalogoRevisao { get; private set; } = new();
     public string TermoBuscaMagiaRevisao { get; set; } = string.Empty;
     public int XpEmLote { get; set; } = 0;
     public string TituloSessaoRevisao { get; set; } = string.Empty;
@@ -79,6 +80,7 @@ public partial class SessaoViewModel
 
             ItensCampanhaRevisao = revisao.Dados.ItensCampanha;
             MagiasCatalogoRevisao = revisao.Dados.MagiasCatalogo;
+            ClassesCatalogoRevisao = revisao.Dados.ClassesCatalogo;
             TermoBuscaMagiaRevisao = string.Empty;
             FichasRevisao = revisao.Dados.Fichas.Select(CriarVmRevisao).ToList();
             FichaRevisaoSelecionada = FichasRevisao.FirstOrDefault();
@@ -87,7 +89,7 @@ public partial class SessaoViewModel
                 ? $"Sessão #{Estado.NumeroSessao}"
                 : Estado.TituloSessao;
             ResumoSessaoRevisao = string.Empty;
-            FeedbackRevisao = "Sessão encerrada e todos os jogadores desconectados. Revise as fichas, distribua o XP, ajuste itens/magias, registre o resumo da sessão e conclua.";
+            FeedbackRevisao = "Sessão encerrada e todos os jogadores desconectados. Revise as fichas, distribua o XP, ajuste classes/itens/magias, registre o resumo da sessão e conclua.";
             ModoRevisaoPosSessao = true;
         }
         finally
@@ -116,6 +118,9 @@ public partial class SessaoViewModel
             .Select(id => new MagiaSlotSessaoDto { IdMagia = id })
             .ToList() ?? new List<MagiaSlotSessaoDto>();
 
+        var classes = ExtrairClassesDePersonagem(p);
+        AplicarResumoClassesNoModelo(p, classes);
+
         return new FichaRevisaoItemVm
         {
             Personagem = p,
@@ -126,6 +131,7 @@ public partial class SessaoViewModel
             MoedasPO = inv?.MoedasPO ?? 0,
             MoedasPL = inv?.MoedasPL ?? 0,
             NotasInventario = inv?.Notas ?? string.Empty,
+            Classes = classes,
             Itens = itens,
             Magias = magias
         };
@@ -135,6 +141,62 @@ public partial class SessaoViewModel
     {
         FichaRevisaoSelecionada = ficha;
         Notificar();
+    }
+
+    public List<string> ObterOpcoesClassesRevisao(FichaRevisaoItemVm? ficha, string? classeAtual = null) =>
+        ObterOpcoesClassesComFallback(ClassesCatalogoRevisao, ficha?.Classes, classeAtual);
+
+    public void AdicionarClasseRevisao(FichaRevisaoItemVm ficha)
+    {
+        if (ficha.Classes.Sum(c => Math.Max(1, c.Nivel)) >= 20)
+        {
+            FeedbackRevisao = $"O personagem {ficha.Personagem.Nome} já atingiu o nível máximo total (20).";
+            Notificar();
+            return;
+        }
+
+        var opcoes = ObterOpcoesClassesRevisao(ficha);
+        string novaClasse = opcoes.FirstOrDefault(op =>
+            !ficha.Classes.Any(c => c.NomeClasse.Equals(op, StringComparison.OrdinalIgnoreCase)))
+            ?? opcoes.FirstOrDefault()
+            ?? "Guerreiro";
+
+        ficha.Classes.Add(new ClasseSlotSessaoDto
+        {
+            NomeClasse = novaClasse,
+            Nivel = 1
+        });
+
+        FeedbackRevisao = null;
+        AplicarResumoClassesNoModelo(ficha.Personagem, ficha.Classes);
+        Notificar();
+    }
+
+    public void RemoverClasseRevisao(FichaRevisaoItemVm ficha, ClasseSlotSessaoDto classe)
+    {
+        if (ficha.Classes.Count <= 1) return;
+
+        ficha.Classes.Remove(classe);
+        FeedbackRevisao = null;
+        AplicarResumoClassesNoModelo(ficha.Personagem, ficha.Classes);
+        Notificar();
+    }
+
+    public void AlterarNomeClasseRevisao(FichaRevisaoItemVm ficha, ClasseSlotSessaoDto classe, string? novoNome)
+    {
+        classe.NomeClasse = string.IsNullOrWhiteSpace(novoNome) ? "Guerreiro" : novoNome.Trim();
+        AplicarResumoClassesNoModelo(ficha.Personagem, ficha.Classes);
+        Notificar();
+    }
+
+    public void AlterarNivelClasseRevisao(FichaRevisaoItemVm ficha, ClasseSlotSessaoDto classe, string? valorTexto)
+    {
+        if (int.TryParse(valorTexto, out int nivel))
+        {
+            classe.Nivel = Math.Clamp(nivel, 1, 20);
+            AplicarResumoClassesNoModelo(ficha.Personagem, ficha.Classes);
+            Notificar();
+        }
     }
 
     public void AplicarXpEmLote()
@@ -192,6 +254,24 @@ public partial class SessaoViewModel
     {
         if (SalvandoRevisao || Estado.IdCampanha <= 0) return;
 
+        foreach (var f in FichasRevisao)
+        {
+            var classesValidas = f.Classes
+                .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+                .ToList();
+
+            int somaNiveis = classesValidas.Sum(c => Math.Max(1, c.Nivel));
+            if (classesValidas.Count == 0 || somaNiveis < 1 || somaNiveis > 20)
+            {
+                FeedbackRevisao = $"As classes de {f.Personagem.Nome} devem somar nível total entre 1 e 20.";
+                FichaRevisaoSelecionada = f;
+                Notificar();
+                return;
+            }
+
+            AplicarResumoClassesNoModelo(f.Personagem, classesValidas);
+        }
+
         SalvandoRevisao = true;
         FeedbackRevisao = null;
         Notificar();
@@ -201,6 +281,11 @@ public partial class SessaoViewModel
         {
             var payload = FichasRevisao.Select(f =>
             {
+                var classesParaSalvar = f.Classes
+                    .Where(c => !string.IsNullOrWhiteSpace(c.NomeClasse))
+                    .Select(c => (NomeClasse: c.NomeClasse.Trim(), Nivel: Math.Clamp(c.Nivel, 1, 20)))
+                    .ToList();
+
                 var itensAgrupados = f.Itens
                     .Where(i => i.IdItem > 0 && i.Quantidade > 0)
                     .GroupBy(i => i.IdItem)
@@ -240,6 +325,7 @@ public partial class SessaoViewModel
                     Personagem = f.Personagem,
                     XpGanhoSessao = Math.Max(0, f.XpGanhoSessao),
                     DadosInventario = dadosInv,
+                    Classes = classesParaSalvar,
                     Itens = itensAgrupados,
                     IdsMagias = idsMagias
                 };

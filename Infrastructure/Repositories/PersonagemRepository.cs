@@ -101,6 +101,15 @@ public class PersonagemRepository : IPersonagemRepository
         }
     }
 
+    public async Task SalvarClassesPersonagemAsync(
+        int idPersonagem,
+        IEnumerable<(string NomeClasse, int Nivel)> classes)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+        await SalvarClassesInternoAsync(contexto, idPersonagem, classes);
+        await contexto.SaveChangesAsync();
+    }
+
     public async Task<int> ClonarPersonagemParaCampanhaAsync(
         int idPersonagemBase,
         int idCampanha,
@@ -253,18 +262,15 @@ public class PersonagemRepository : IPersonagemRepository
         }
     }
 
-    public async Task SalvarFichaCompleta3FNAsync(
+    private static async Task SalvarClassesInternoAsync(
+        AppDbContext contexto,
         int idPersonagem,
-        IEnumerable<(string NomeClasse, int Nivel)> classes,
-        IEnumerable<string> salvaguardas,
-        IEnumerable<string> pericias,
-        Inventario? dadosInventario,
-        IEnumerable<(int IdItem, int Quantidade)>? itens,
-        IEnumerable<Magia> magias)
+        IEnumerable<(string NomeClasse, int Nivel)> classes)
     {
-        await using var contexto = await _factory.CreateDbContextAsync();
+        var classesAntigas = await contexto.PersonagemClasses
+            .Where(pc => pc.IdPersonagem == idPersonagem)
+            .ToListAsync();
 
-        var classesAntigas = await contexto.PersonagemClasses.Where(pc => pc.IdPersonagem == idPersonagem).ToListAsync();
         contexto.PersonagemClasses.RemoveRange(classesAntigas);
         await contexto.SaveChangesAsync();
 
@@ -295,9 +301,23 @@ public class PersonagemRepository : IPersonagemRepository
             {
                 IdPersonagem = idPersonagem,
                 IdClasse = classeBanco.IdClasse,
-                NivelNaClasse = c.Nivel
+                NivelNaClasse = Math.Clamp(c.Nivel, 1, 20)
             });
         }
+    }
+
+    public async Task SalvarFichaCompleta3FNAsync(
+        int idPersonagem,
+        IEnumerable<(string NomeClasse, int Nivel)> classes,
+        IEnumerable<string> salvaguardas,
+        IEnumerable<string> pericias,
+        Inventario? dadosInventario,
+        IEnumerable<(int IdItem, int Quantidade)>? itens,
+        IEnumerable<Magia> magias)
+    {
+        await using var contexto = await _factory.CreateDbContextAsync();
+
+        await SalvarClassesInternoAsync(contexto, idPersonagem, classes);
 
         var salvAntigas = await contexto.PersonagemSalvaguardas.Where(s => s.IdPersonagem == idPersonagem).ToListAsync();
         contexto.PersonagemSalvaguardas.RemoveRange(salvAntigas);

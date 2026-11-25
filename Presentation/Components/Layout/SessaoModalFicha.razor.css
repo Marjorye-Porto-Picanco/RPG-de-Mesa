@@ -348,6 +348,84 @@
         color: #392819;
     }
 
+/* CLASSES NA FICHA DA SESSÃO */
+.fm-classes-box {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(126, 87, 31, 0.38);
+    background: rgba(255, 251, 241, 0.82);
+}
+
+.fm-classes-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+    .fm-classes-topo h3 {
+        margin: 0;
+        font-size: 13px;
+        color: #392819;
+    }
+
+.fm-classes-cabecalho,
+.fm-classe-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 92px 28px;
+    gap: 8px;
+    align-items: center;
+}
+
+.fm-classes-cabecalho {
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(141, 101, 37, 0.35);
+    color: #805b22;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.fm-classes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fm-classe-row select,
+.fm-classe-row input {
+    width: 100%;
+    padding: 6px 7px;
+    border: 1px solid rgba(126, 87, 31, 0.4);
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #392819;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.fm-classe-row input {
+    text-align: center;
+}
+
+.fm-classes-readonly {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fm-classe-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(141, 101, 37, 0.45);
+    background: rgba(164, 122, 45, 0.16);
+    color: #4a3112;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .fm-inv-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(240px, 0.85fr);
