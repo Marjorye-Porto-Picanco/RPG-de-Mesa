@@ -1,20 +1,38 @@
-@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Domain.Combate
 @using RPGdeMesa.Presentation.ViewModel
 
 <fieldset class="combate2014-campos" disabled="@ViewModel.ExecutandoAtaqueEntidade">
-    <label>Rolagem<select @bind="ViewModel.RolagemAtaqueMestre">@foreach (var item in Enum.GetValues<Rolagem2014>()) { <option value="@item">@item</option> }</select></label>
-    <label>Cobertura<select @bind="ViewModel.CoberturaAtaqueMestre"><option value="Nenhuma">Nenhuma</option><option value="Meia">Meia (+2 CA)</option><option value="TresQuartos">Três quartos (+5 CA)</option><option value="Total">Total</option></select></label>
+    <label>
+        Rolagem
+        <select @bind="ViewModel.RolagemAtaqueMestre">
+            @foreach (var item in Enum.GetValues<Rolagem2014>())
+            {
+                <option value="@item">@item</option>
+            }
+        </select>
+    </label>
+    <label>Cobertura<select @bind="ViewModel.CoberturaAtaqueMestre"><option value="@Cobertura2014.Nenhuma">Nenhuma</option><option value="@Cobertura2014.Meia">Meia (+2 CA)</option><option value="@Cobertura2014.TresQuartos">Três quartos (+5 CA)</option><option value="@Cobertura2014.Total">Total</option></select></label>
     <label>Alcance em metros<input type="number" min="0" max="1000" step="0.1" placeholder="Da ficha" @bind="ViewModel.AlcanceAtaqueMestre" /></label>
-    <label>Tipo de ação<select disabled="@ViewModel.AtaqueOportunidade2014" @bind="ViewModel.TipoAcaoMestre"><option value="Acao">Ação</option><option value="Bonus">Ação bônus</option><option value="Reacao">Reação</option><option value="Lendaria">Lendária</option><option value="Covil">Covil</option></select></label>
+    <label>Tipo de ação<select disabled="@ViewModel.AtaqueOportunidade2014" @bind="ViewModel.TipoAcaoMestre"><option value="@TipoAcao2014.Acao">Ação</option><option value="@TipoAcao2014.Bonus">Ação bônus</option><option value="@TipoAcao2014.Reacao">Reação</option><option value="@TipoAcao2014.Lendaria">Lendária</option><option value="@TipoAcao2014.Covil">Covil</option></select></label>
     @if (ViewModel.TipoAcaoMestre == TipoAcao2014.Lendaria)
-    { <label>Custo lendário<input type="number" min="1" max="10" @bind="ViewModel.CustoLendarioMestre" /></label> }
+    {
+        <label>Custo lendário<input type="number" min="1" max="10" @bind="ViewModel.CustoLendarioMestre" /></label>
+    }
     @if (ViewModel.Estado.Encontro.Fichas.GetValueOrDefault(ViewModel.IdPinoAtacanteMestre) is { Recursos.Count: > 0 } ficha)
     {
-        <label>Recurso usado<select @bind="ViewModel.RecursoAtaqueMestre"><option value="">Nenhum</option>
-            @foreach (var (nome, recurso) in ficha.Recursos) { <option value="@nome" disabled="@(recurso.Restantes == 0)">@nome (@recurso.Restantes/@recurso.Maximo)</option> }
-        </select></label>
+        <label>
+            Recurso usado
+            <select @bind="ViewModel.RecursoAtaqueMestre">
+                <option value="">Nenhum</option>
+                @foreach (var (nome, recurso) in ficha.Recursos)
+                {
+                    <option value="@nome" disabled="@(recurso.Restantes == 0)">@nome (@recurso.Restantes/@recurso.Maximo)</option>
+                }
+            </select>
+        </label>
     }
-    <label>Dano adicional
+    <label>
+        Dano adicional
         <input maxlength="80" placeholder="1d6" aria-invalid="@(ViewModel.DanoAdicionalMestreInvalido ? "true" : "false")"
                aria-describedby="@(ViewModel.DanoAdicionalMestreInvalido ? "erro-dano-adicional-mestre" : null)"
                @bind="ViewModel.DanoAdicionalMestre" @bind:after="ViewModel.AtualizarDanoAdicionalMestre" />
@@ -24,16 +42,31 @@
         }
     </label>
     <label>Tipo do dano adicional<input maxlength="30" placeholder="Ácido" @bind="ViewModel.TipoDanoAdicionalMestre" /></label>
-    <label>Condição no acerto<select @bind="ViewModel.CondicaoNoAcerto"><option value="">Nenhuma</option>
-        @foreach (var item in Enum.GetValues<Condicao2014>()) { <option value="@item">@item</option> }
-    </select></label>
+    <label>
+        Condição no acerto
+        <select @bind="ViewModel.CondicaoNoAcerto">
+            <option value="">Nenhuma</option>
+            @foreach (var item in Enum.GetValues<Condicao2014>())
+            {
+                <option value="@item">@item</option>
+            }
+        </select>
+    </label>
     @if (ViewModel.CondicaoNoAcerto.HasValue)
     {
         <label>Duração em rodadas<input type="number" min="1" max="100" placeholder="Manual" @bind="ViewModel.RodadasCondicaoNoAcerto" /></label>
         <label>CD opcional<input type="number" min="1" max="40" @bind="ViewModel.CdCondicaoNoAcerto" /></label>
         @if (ViewModel.CdCondicaoNoAcerto.HasValue)
         {
-            <label>Atributo<select @bind="ViewModel.AtributoCondicaoNoAcerto">@foreach (var item in Enum.GetValues<Atributo2014>()) { <option value="@item">@item</option> }</select></label>
+            <label>
+                Atributo
+                <select @bind="ViewModel.AtributoCondicaoNoAcerto">
+                    @foreach (var item in Enum.GetValues<Atributo2014>())
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </select>
+            </label>
             <label class="combate2014-check"><input type="checkbox" @bind="ViewModel.TesteParaEscaparNoAcerto" /> Testar para escapar depois</label>
             <label class="combate2014-check"><input type="checkbox" @bind="ViewModel.UsarResistenciaLendariaNoAcerto" /> Permitir resistência lendária do alvo</label>
         }

@@ -385,6 +385,25 @@
 .attack-master-options { border: 1px solid var(--game-line); border-radius: 4px; padding: 7px; }
 .attack-master-options summary { cursor: pointer; color: #e8cf92; }
 .attack-master-distance, .attack-master-queue { margin: 0; color: #ddcaa1; }
+.attack-master-queue {
+    display: grid;
+    gap: 5px;
+    padding-left: 18px;
+    font-size: 12px;
+}
+
+.attack-queue-row {
+    display: inline-flex;
+    width: calc(100% - 4px);
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.attack-queue-remove {
+    min-height: 22px;
+    padding: 0 7px;
+}
 .attack-popup ::deep .combate2014-campos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));

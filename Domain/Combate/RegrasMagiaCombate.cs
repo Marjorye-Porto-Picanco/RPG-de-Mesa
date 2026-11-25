@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace RPGdeMesa.Domain.Sessoes;
+namespace RPGdeMesa.Domain.Combate;
 
 public enum TipoConjuracaoClasse
 {
@@ -254,7 +254,7 @@ public static class RegrasMagiaCombate
 
         decimal metros = txt.Contains("mile") || txt.Contains("milha")
             ? valor * 1609m
-            : txt.Contains("feet") || txt.Contains("foot") || txt.Contains("ft") || txt.Contains("pés")
+            : txt.Contains("feet") || txt.Contains("foot") || txt.Contains("ft") || txt.Contains("pés") || txt.Contains("pes")
                 ? Math.Round(valor * 0.3m, 1)
                 : valor;
 

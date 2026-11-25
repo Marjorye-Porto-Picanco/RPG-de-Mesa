@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Infrastructure.Persistence;

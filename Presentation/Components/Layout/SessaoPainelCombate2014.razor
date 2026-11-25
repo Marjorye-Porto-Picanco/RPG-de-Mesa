@@ -1,4 +1,5 @@
 @using RPGdeMesa.Application.Services
+@using RPGdeMesa.Domain.Combate
 @using RPGdeMesa.Domain.Sessoes
 @using RPGdeMesa.Presentation.ViewModel
 
@@ -58,101 +59,146 @@ else
         else if (_aba == "Testes")
         {
             <div class="combate2014-campos">
-                <label>Destinatário<select @bind="_contaTeste"><option value="0">Todos os jogadores</option>
-                    @foreach (var jogador in ViewModel.Estado.Jogadores) { <option value="@jogador.IdAccount">@(jogador.NomePersonagem ?? jogador.Username)</option> }
-                </select></label>
+                <label>
+                    Destinatário
+                    <select @bind="_contaTeste">
+                        <option value="0">Todos os jogadores</option>
+                        @foreach (var jogador in ViewModel.Estado.Jogadores)
+                        {
+                            <option value="@jogador.IdAccount">@(jogador.NomePersonagem ?? jogador.Username)</option>
+                        }
+                    </select>
+                </label>
                 <label>Teste<input maxlength="100" placeholder="Percepção" @bind="_nomeTeste" /></label>
                 <label>CD<input type="number" min="1" max="40" @bind="_cdTeste" /></label>
                 <label>Modificador<input type="number" min="-20" max="30" @bind="_modTeste" /></label>
-                <label>Rolagem<select @bind="_modoTeste">@foreach (var modo in Enum.GetValues<Rolagem2014>()) { <option value="@modo">@modo</option> }</select></label>
-                <label class="combate2014-check"><input type="checkbox" @bind="_ocultarCd" /> Ocultar CD do jogador</label>
-            </div>
-            <button type="button" @onclick="SolicitarTesteAsync">Enviar teste</button>
-            <ul class="combate2014-registros">
-                @foreach (var pedido in ViewModel.Estado.PedidosTeste.AsEnumerable().Reverse().Take(12))
-                {
-                    var jogador = ViewModel.Estado.Jogadores.FirstOrDefault(j => j.IdAccount == pedido.IdConta);
-                    <li>@(jogador?.NomePersonagem ?? jogador?.Username) · @pedido.Nome · CD @pedido.Cd ·
-                        @(pedido.Total.HasValue ? $"{pedido.Total} ({(pedido.Total >= pedido.Cd ? "sucesso" : "falha")})" : "Pendente")</li>
+                <label>Rolagem<select @bind="_modoTeste">@foreach (var modo in Enum.GetValues<Rolagem2014>()) {
+                    <option value="@modo">@modo</option>
                 }
-            </ul>
-        }
-        else if (_aba == "Ambiente")
-        {
-            <SessaoHabilidade2014 ViewModel="ViewModel" IdOrigem="0" />
-        }
-        else
-        {
-            <label class="combate2014-selecao">Combatente<select @bind="_pino" @bind:after="TrocarCombatente">
-                <option value="0">Selecione um pino</option>
-                @foreach (var pino in Pinos) { <option value="@pino.IdPino">@pino.Nome · @pino.CoordenadaTexto</option> }
             </select></label>
-            @if (Pinos.FirstOrDefault(p => p.IdPino == _pino) is { } combatente)
+            <label class="combate2014-check"><input type="checkbox" @bind="_ocultarCd" /> Ocultar CD do jogador</label>
+        </div>
+        <button type="button" @onclick="SolicitarTesteAsync">Enviar teste</button>
+        <ul class="combate2014-registros">
+            @foreach (var pedido in ViewModel.Estado.PedidosTeste.AsEnumerable().Reverse().Take(12))
             {
-                var ficha = Encontro.Fichas.GetValueOrDefault(_pino);
-                <p class="combate2014-resumo">@combatente.Nome · @combatente.PvAtual/@combatente.PvMaximo PV
-                    @if (ficha?.Concentracao is { } concentracao) { <text> · Concentrando em @concentracao</text> }
-                </p>
-                @if (_aba == "Condições")
+                var jogador = ViewModel.Estado.Jogadores.FirstOrDefault(j => j.IdAccount == pedido.IdConta);
+                <li>
+                    @(jogador?.NomePersonagem ?? jogador?.Username) · @pedido.Nome · CD @pedido.Cd ·
+                    @(pedido.Total.HasValue ? $"{pedido.Total} ({(pedido.Total >= pedido.Cd ? "sucesso" : "falha")})" : "Pendente")
+                </li>
+            }
+        </ul>
+    }
+        else if (_aba == "Ambiente")
+    {
+        <SessaoHabilidade2014 ViewModel="ViewModel" IdOrigem="0" />
+    }
+    else
+    {
+        <label class="combate2014-selecao">
+            Combatente
+            <select @bind="_pino" @bind:after="TrocarCombatente">
+                <option value="0">Selecione um pino</option>
+                @foreach (var pino in Pinos)
                 {
-                    <div class="combate2014-campos">
-                        <label>Condição<select @bind="_condicao">@foreach (var item in Enum.GetValues<Condicao2014>()) { <option value="@item">@item</option> }</select></label>
-                        <label>Duração em rodadas<input type="number" min="1" max="100" placeholder="Manual" @bind="_duracao" /></label>
-                        <label>Expiração<select @bind="_momento"><option value="InicioTurno">Início do turno</option><option value="FimTurno">Fim do turno</option><option value="Manual">Manual</option></select></label>
-                        <label>CD para encerrar<input type="number" min="1" max="40" @bind="_cdCondicao" /></label>
-                        <label>Atributo<select @bind="_atributo">@foreach (var item in Enum.GetValues<Atributo2014>()) { <option value="@item">@item</option> }</select></label>
-                    </div>
-                    <div class="combate2014-opcoes">
-                        <button type="button" @onclick="() => CondicaoAsync(false)">Aplicar condição</button>
-                        <button type="button" @onclick="() => CondicaoAsync(true)">Remover condição</button>
-                        <button type="button" @onclick="TestarCondicaoAsync">Testar para encerrar</button>
-                        @if (ficha?.Concentracao is not null) { <button type="button" @onclick="EncerrarConcentracaoAsync">Encerrar concentração</button> }
-                    </div>
-                    <p>@string.Join(", ", (ficha?.Efeitos ?? []).Select(e => e.Rodadas.HasValue ? $"{e.Condicao} ({e.Rodadas})" : e.Condicao.ToString()))</p>
-                    <div class="combate2014-campos">
-                        <label>Tipo de dano<input maxlength="30" placeholder="Fogo" @bind="_tipoDano" /></label>
-                        <label>Afinidade<select @bind="_afinidade">@foreach (var item in Enum.GetValues<AfinidadeDano2014>()) { <option value="@item">@item</option> }</select></label>
-                    </div>
-                    <button type="button" @onclick="SalvarAfinidadeAsync">Salvar afinidade</button>
-                    @if (ficha is { Afinidades.Count: > 0 }) { <p>@string.Join(", ", ficha.Afinidades.Select(p => $"{p.Key} ({p.Value})"))</p> }
-                    <div class="combate2014-opcoes">
-                        @if (combatente.TipoEntidade != TiposPinoSessao.Personagem && ficha?.UsaTestesMorte != true)
-                        { <button type="button" @onclick='() => MorteAsync("acompanhar")'>Acompanhar testes de morte</button> }
-                        @if (combatente.PvAtual == 0 && ficha?.Morto != true)
-                        {
-                            <button type="button" @onclick='() => MorteAsync("rolar")'>Teste contra a morte</button>
-                            <button type="button" @onclick='() => MorteAsync("estabilizar")'>Estabilizar</button>
-                        }
-                        <label>Cura<input type="number" min="1" @bind="_cura" /></label>
-                        <button type="button" @onclick='() => MorteAsync("curar")'>Curar</button>
-                    </div>
-                    @if (ficha is not null && combatente.PvAtual == 0)
-                    { <p>@(ficha.Morto ? "Morto" : ficha.Estavel ? "Estável" : $"{ficha.SucessosMorte} sucesso(s) · {ficha.FalhasMorte} falha(s)")</p> }
+                    <option value="@pino.IdPino">@pino.Nome · @pino.CoordenadaTexto</option>
                 }
-                else
+            </select>
+        </label>
+        @if (Pinos.FirstOrDefault(p => p.IdPino == _pino) is { } combatente)
+        {
+            var ficha = Encontro.Fichas.GetValueOrDefault(_pino);
+            <p class="combate2014-resumo">
+                @combatente.Nome · @combatente.PvAtual/@combatente.PvMaximo PV
+                @if (ficha?.Concentracao is { } concentracao)
                 {
-                    <div class="combate2014-campos">
-                        <label>Nome da habilidade ou espaço<input maxlength="120" @bind="_recurso" /></label>
-                        <label>Usos máximos<input type="number" min="1" max="99" @bind="_usos" /></label>
-                        <label>Recarga no d6<input type="number" min="0" max="6" @bind="_recarga" /></label>
-                        <label class="combate2014-check"><input type="checkbox" @bind="_descansoCurto" /> Recupera no descanso curto</label>
-                        <label>Ações lendárias<input type="number" min="0" max="10" @bind="_lendarias" /></label>
-                        <label>Resistências lendárias<input type="number" min="0" max="10" @bind="_resistencias" /></label>
-                    </div>
-                    <button type="button" @onclick="SalvarRecursosAsync">Salvar recursos</button>
-                    @if (ficha is not null)
-                    {
-                        <p>Lendárias @ficha.UsosLendariosRestantes/@ficha.UsosLendariosMaximos · Resistências @ficha.ResistenciasLendariasRestantes/@ficha.ResistenciasLendariasMaximas</p>
-                        <ul class="combate2014-registros">@foreach (var (nome, recurso) in ficha.Recursos) { <li>@nome · @recurso.Restantes/@recurso.Maximo @(recurso.RecargaD6.HasValue ? $"· recarga {recurso.RecargaD6}–6" : "")</li> }</ul>
+                    <text> · Concentrando em @concentracao</text>
+                }
+            </p>
+            @if (_aba == "Condições")
+            {
+                <div class="combate2014-campos">
+                    <label>Condição<select @bind="_condicao">@foreach (var item in Enum.GetValues<Condicao2014>()) {
+                        <option value="@item">@item</option>
                     }
+                </select></label>
+                <label>Duração em rodadas<input type="number" min="1" max="100" placeholder="Manual" @bind="_duracao" /></label>
+                <label>Expiração<select @bind="_momento"><option value="@Momento2014.InicioTurno">Início do turno</option><option value="@Momento2014.FimTurno">Fim do turno</option><option value="@Momento2014.Manual">Manual</option></select></label>
+                <label>CD para encerrar<input type="number" min="1" max="40" @bind="_cdCondicao" /></label>
+                <label>Atributo<select @bind="_atributo">@foreach (var item in Enum.GetValues<Atributo2014>()) {
+                    <option value="@item">@item</option>
+                }
+            </select></label>
+        </div>
+        <div class="combate2014-opcoes">
+            <button type="button" @onclick="() => CondicaoAsync(false)">Aplicar condição</button>
+            <button type="button" @onclick="() => CondicaoAsync(true)">Remover condição</button>
+            <button type="button" @onclick="TestarCondicaoAsync">Testar para encerrar</button>
+            @if (ficha?.Concentracao is not null)
+            {
+                <button type="button" @onclick="EncerrarConcentracaoAsync">Encerrar concentração</button>
+            }
+        </div>
+        <p>@string.Join(", ", (ficha?.Efeitos ?? []).Select(e => e.Rodadas.HasValue ? $"{e.Condicao} ({e.Rodadas})" : e.Condicao.ToString()))</p>
+        <div class="combate2014-campos">
+            <label>Tipo de dano<input maxlength="30" placeholder="Fogo" @bind="_tipoDano" /></label>
+            <label>Afinidade<select @bind="_afinidade">@foreach (var item in Enum.GetValues<AfinidadeDano2014>()) {
+                <option value="@item">@item</option>
+            }
+        </select></label>
+    </div>
+    <button type="button" @onclick="SalvarAfinidadeAsync">Salvar afinidade</button>
+    @if (ficha is { Afinidades.Count: > 0 })
+    {
+        <p>@string.Join(", ", ficha.Afinidades.Select(p => $"{p.Key} ({p.Value})"))</p>
+    }
+    <div class="combate2014-opcoes">
+        @if (combatente.TipoEntidade != TiposPinoSessao.Personagem && ficha?.UsaTestesMorte != true)
+        {
+            <button type="button" @onclick='() => MorteAsync("acompanhar")'>Acompanhar testes de morte</button>
+        }
+        @if (combatente.PvAtual == 0 && ficha?.Morto != true)
+        {
+            <button type="button" @onclick='() => MorteAsync("rolar")'>Teste contra a morte</button>
+            <button type="button" @onclick='() => MorteAsync("estabilizar")'>Estabilizar</button>
+        }
+        <label>Cura<input type="number" min="1" @bind="_cura" /></label>
+        <button type="button" @onclick='() => MorteAsync("curar")'>Curar</button>
+    </div>
+    @if (ficha is not null && combatente.PvAtual == 0)
+    {
+        <p>@(ficha.Morto ? "Morto" : ficha.Estavel ? "Estável" : $"{ficha.SucessosMorte} sucesso(s) · {ficha.FalhasMorte} falha(s)")</p>
+    }
+}
+                else
+{
+    <div class="combate2014-campos">
+        <label>Nome da habilidade ou espaço<input maxlength="120" @bind="_recurso" /></label>
+        <label>Usos máximos<input type="number" min="1" max="99" @bind="_usos" /></label>
+        <label>Recarga no d6<input type="number" min="0" max="6" @bind="_recarga" /></label>
+        <label class="combate2014-check"><input type="checkbox" @bind="_descansoCurto" /> Recupera no descanso curto</label>
+        <label>Ações lendárias<input type="number" min="0" max="10" @bind="_lendarias" /></label>
+        <label>Resistências lendárias<input type="number" min="0" max="10" @bind="_resistencias" /></label>
+    </div>
+    <button type="button" @onclick="SalvarRecursosAsync">Salvar recursos</button>
+    @if (ficha is not null)
+    {
+        <p>Lendárias @ficha.UsosLendariosRestantes/@ficha.UsosLendariosMaximos · Resistências @ficha.ResistenciasLendariasRestantes/@ficha.ResistenciasLendariasMaximas</p>
+        <ul class="combate2014-registros">@foreach (var (nome, recurso) in ficha.Recursos) {
+            <li>@nome · @recurso.Restantes/@recurso.Maximo @(recurso.RecargaD6.HasValue ? $"· recarga {recurso.RecargaD6}–6" : "")</li>
+        }
+    </ul>
+}
                 }
             }
         }
-    </fieldset>
+</fieldset>
 }
 
 @code {
     [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
+
     private static readonly string[] Abas = ["Iniciativa", "Condições", "Ambiente", "Recursos", "Testes"];
     private readonly Dictionary<int, LinhaIniciativa> _linhas = [];
     private string _aba = "Iniciativa";
@@ -166,6 +212,7 @@ else
     private AfinidadeDano2014 _afinidade;
     private Rolagem2014 _modoTeste;
     private string _tipoDano = "", _nomeTeste = "", _recurso = "";
+
     private Encontro2014 Encontro => ViewModel.Estado.Encontro;
     private IEnumerable<PinoMapaDto> Pinos => ViewModel.PinosVisiveisNoMapa.OrderBy(p => p.Nome);
 
@@ -176,8 +223,14 @@ else
         if (_linhas.TryGetValue(pino.IdPino, out var linha)) return linha;
         var entrada = Encontro.Ordem.FirstOrDefault(e => e.IdPino == pino.IdPino);
         int bonus = pino.Modificador(Atributo2014.Destreza);
-        linha = new() { Incluir = entrada is not null || (Encontro.Rodada == 0 && pino.PvAtual > 0), Bonus = bonus,
-            Iniciativa = entrada?.Iniciativa ?? bonus, Desempate = entrada?.Desempate ?? pino.IdPino, Surpreso = entrada?.Surpreso == true };
+        linha = new()
+        {
+            Incluir = entrada is not null || (Encontro.Rodada == 0 && pino.PvAtual > 0),
+            Bonus = bonus,
+            Iniciativa = entrada?.Iniciativa ?? bonus,
+            Desempate = entrada?.Desempate ?? pino.IdPino,
+            Surpreso = entrada?.Surpreso == true
+        };
         _linhas[pino.IdPino] = linha;
         return linha;
     }
@@ -188,16 +241,30 @@ else
         foreach (var grupo in grupos)
         {
             int dado = Random.Shared.Next(1, 21);
-            foreach (var pino in grupo) Linha(pino).Iniciativa = dado + Linha(pino).Bonus;
+            foreach (var pino in grupo)
+                Linha(pino).Iniciativa = dado + Linha(pino).Bonus;
         }
     }
 
-    private string NomePino(int id) => id == Encontro2014.TurnoCovil ? "Ação de covil" : Pinos.FirstOrDefault(p => p.IdPino == id)?.Nome ?? "Pino removido";
+    private string NomePino(int id) => id == Encontro2014.TurnoCovil
+        ? "Ação de covil"
+        : Pinos.FirstOrDefault(p => p.IdPino == id)?.Nome ?? "Pino removido";
+
     private Task SalvarIniciativasAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarIniciativaAsync(e, conta,
         Pinos.Where(p => Linha(p).Incluir).Select(p => new EntradaIniciativa2014(p.IdPino, Linha(p).Iniciativa, Linha(p).Desempate, Linha(p).Surpreso)).ToList(), _covil));
+
     private Task EncerrarAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.EncerrarIniciativaAsync(e, conta));
+
     private Task CondicaoAsync(bool remover) => ViewModel.UsarControle2014Async((s, e, conta) => s.AlterarCondicaoAsync(e, conta, _pino,
-        new() { Condicao = _condicao, Rodadas = _momento == Momento2014.Manual ? null : _duracao, Momento = _momento, Cd = _cdCondicao, Atributo = _atributo }, remover));
+        new EfeitoCombate2014
+        {
+            Condicao = _condicao,
+            Rodadas = _momento == Momento2014.Manual ? null : _duracao,
+            Momento = _momento,
+            Cd = _cdCondicao,
+            Atributo = _cdCondicao.HasValue ? _atributo : null
+        }, remover));
+
     private Task TestarCondicaoAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.TestarCondicao2014Async(e, conta, _pino, _condicao, 0));
     private Task SalvarAfinidadeAsync() => ViewModel.UsarControle2014Async((s, e, conta) => s.ConfigurarAfinidadeAsync(e, conta, _pino, _tipoDano, _afinidade));
     private Task MorteAsync(string acao) => ViewModel.UsarControle2014Async((s, e, conta) => s.ResolverMorte2014Async(e, conta, _pino, acao, _cura));

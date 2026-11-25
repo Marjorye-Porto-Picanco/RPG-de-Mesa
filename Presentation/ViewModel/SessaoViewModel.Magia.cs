@@ -1,4 +1,5 @@
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;
 using System.Collections;
