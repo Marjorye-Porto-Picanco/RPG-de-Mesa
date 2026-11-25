@@ -1,4 +1,4 @@
-using RPGdeMesa.Domain.Common;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Domain.ValueObjects;
 
@@ -24,9 +24,9 @@ public partial class SessaoService
         int destreza = AtributosBase.CalcularModificador(npc.Destreza);
         int proficiencia = RegrasMagiaCombate.CalcularBonusProficiencia(npc.Nivel);
 
-        return npc.Itens.Where(x => !string.IsNullOrWhiteSpace(x.Item?.Dano)).Select(x =>
+        return npc.Itens.Where(x => x.Item is not null && !string.IsNullOrWhiteSpace(x.Item.Dano)).Select(x =>
         {
-            var item = x.Item;
+            var item = x.Item!;
             bool usaDestreza = item.Propriedades?.Contains("acuidade", StringComparison.OrdinalIgnoreCase) == true ||
                 item.Propriedades?.Contains("distância", StringComparison.OrdinalIgnoreCase) == true;
             int atributo = usaDestreza ? Math.Max(forca, destreza) : forca;
@@ -40,7 +40,8 @@ public partial class SessaoService
     }
 
     public Task<(bool Sucesso, string Mensagem)> AtacarComEntidadeAsync(SessaoEstadoDto estado, int conta,
-        int atacante, int ataque, int alvo) => ExecutarGolpes2014Async(estado, conta, atacante, [new(ataque, alvo)], new());
+        int atacante, int ataque, int alvo) =>
+        ExecutarGolpes2014Async(estado, conta, atacante, [new(ataque, alvo)], new());
 
     private static bool EhCorpoACorpo(string? descricao, string? alcance)
     {
@@ -49,10 +50,4 @@ public partial class SessaoService
         return !texto.Contains("ranged") && !texto.Contains("distância") && !texto.Contains("distancia") &&
             alcance?.Contains('/') != true;
     }
-}
-
-public sealed record AtaqueEntidadeDto(int Id, string Nome, string? Dano, string? TipoDano, int BonusAtaque, int BonusDano,
-    string? Alcance = null, bool CorpoACorpo = true)
-{
-    public bool TemFormulaDano => RegrasCombate2014.DanoValido(Dano);
 }

@@ -1,36 +1,92 @@
-namespace RPGdeMesa.Domain.Sessoes;
+using System.Text.Json;
+
+namespace RPGdeMesa.Domain.Combate;
 
 public sealed class ControleCombate2014
 {
     public Dictionary<int, Encontro2014> Mapas { get; set; } = [];
     public List<PedidoTeste2014> Pedidos { get; set; } = [];
 
+    public static ControleCombate2014 DesserializarSeguro(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new ControleCombate2014();
+
+        try
+        {
+            var controle = JsonSerializer.Deserialize<ControleCombate2014>(json) ?? new ControleCombate2014();
+            controle.GarantirIntegridade();
+            return controle;
+        }
+        catch
+        {
+            return new ControleCombate2014();
+        }
+    }
+
+    public void GarantirIntegridade()
+    {
+        Mapas ??= [];
+        Pedidos ??= [];
+
+        foreach (var chave in Mapas.Keys.ToList())
+        {
+            var encontro = Mapas[chave];
+            if (encontro is null)
+            {
+                Mapas[chave] = new Encontro2014();
+                continue;
+            }
+
+            encontro.GarantirIntegridade();
+        }
+    }
+
     public Encontro2014 ObterMapa(int idMapa)
     {
-        if (!Mapas.TryGetValue(idMapa, out var encontro))
+        Mapas ??= [];
+        if (!Mapas.TryGetValue(idMapa, out var encontro) || encontro is null)
         {
-            encontro = new();
-            Mapas.Add(idMapa, encontro);
+            encontro = new Encontro2014();
+            Mapas[idMapa] = encontro;
         }
+
+        encontro.GarantirIntegridade();
         return encontro;
     }
 }
 
-public sealed record PedidoTeste2014(Guid Id, int IdConta, string Nome, int? Cd, int Modificador,
-    Rolagem2014 Modo = Rolagem2014.Normal, bool OcultarCd = false, int? Total = null);
+public sealed record PedidoTeste2014(
+    Guid Id,
+    int IdConta,
+    string Nome,
+    int? Cd,
+    int Modificador,
+    Rolagem2014 Modo = Rolagem2014.Normal,
+    bool OcultarCd = false,
+    int? Total = null);
 
 public sealed record AlteracaoPvCombate2014(int IdPino, int PvAnterior, int PvMaximo, int PvNovo);
 
-public sealed record ResultadoComandoCombate2014(string? Mensagem = null,
-    IReadOnlyList<AlteracaoPvCombate2014>? AlteracoesPv = null, bool SincronizarTurno = false,
-    MovimentoPendente2014? MovimentoConfirmado = null, int? IdPinoParaOcultar = null);
+public sealed record ResultadoComandoCombate2014(
+    string? Mensagem = null,
+    IReadOnlyList<AlteracaoPvCombate2014>? AlteracoesPv = null,
+    bool SincronizarTurno = false,
+    MovimentoPendente2014? MovimentoConfirmado = null,
+    int? IdPinoParaOcultar = null);
 
-public sealed record MovimentoPendente2014(int IdMovendo, int ColunaOrigem, int LinhaOrigem, int Coluna, int Linha,
+public sealed record MovimentoPendente2014(
+    int IdMovendo,
+    int ColunaOrigem,
+    int LinhaOrigem,
+    int Coluna,
+    int Linha,
     List<int> ReacoesPendentes);
 
 public sealed class Encontro2014
 {
     public const int TurnoCovil = -1;
+
     public int Rodada { get; set; }
     public int IdPinoAtual { get; set; }
     public bool Covil { get; set; }
@@ -40,19 +96,47 @@ public sealed class Encontro2014
     public List<EntradaIniciativa2014> Ordem { get; set; } = [];
     public Dictionary<int, EstadoCombatente2014> Fichas { get; set; } = [];
 
+    public void GarantirIntegridade()
+    {
+        Ordem ??= [];
+        Fichas ??= [];
+
+        if (MovimentoPendente is not null && MovimentoPendente.ReacoesPendentes is null)
+        {
+            MovimentoPendente = MovimentoPendente with { ReacoesPendentes = [] };
+        }
+
+        foreach (var chave in Fichas.Keys.ToList())
+        {
+            var ficha = Fichas[chave];
+            if (ficha is null)
+            {
+                Fichas[chave] = new EstadoCombatente2014();
+                continue;
+            }
+
+            ficha.GarantirIntegridade();
+        }
+    }
+
     public EstadoCombatente2014 Ficha(int idPino)
     {
-        if (!Fichas.TryGetValue(idPino, out var ficha))
+        Fichas ??= [];
+        if (!Fichas.TryGetValue(idPino, out var ficha) || ficha is null)
         {
-            ficha = new();
-            Fichas.Add(idPino, ficha);
+            ficha = new EstadoCombatente2014();
+            Fichas[idPino] = ficha;
         }
+
+        ficha.GarantirIntegridade();
         return ficha;
     }
 
     public void Iniciar(IEnumerable<EntradaIniciativa2014> entradas, Func<int, bool>? disponivel = null)
     {
+        GarantirIntegridade();
         Ordem = OrdenarIniciativas(entradas);
+
         foreach (var entrada in Ordem.Where(e => e.IdPino > 0))
         {
             var ficha = Ficha(entrada.IdPino);
@@ -60,20 +144,31 @@ public sealed class Encontro2014
             ficha.UsosLendariosRestantes = ficha.UsosLendariosMaximos;
             ficha.RodadaUltimoTesteMorte = 0;
         }
+
         Rodada = 1;
         IdPinoAtual = 0;
         CovilDisponivel = false;
+        JanelaLendaria = false;
+        MovimentoPendente = null;
         Avancar(disponivel);
     }
 
     public void Avancar(Func<int, bool>? disponivel = null)
     {
-        if (Rodada == 0) return;
+        GarantirIntegridade();
+        if (Rodada == 0 || Ordem.Count == 0)
+        {
+            Encerrar();
+            return;
+        }
 
         int indice = Ordem.FindIndex(e => e.IdPino == IdPinoAtual);
-        if (!JanelaLendaria && indice >= 0 && IdPinoAtual > 0) Ficha(IdPinoAtual).TerminarTurno();
+        if (!JanelaLendaria && indice >= 0 && IdPinoAtual > 0)
+            Ficha(IdPinoAtual).TerminarTurno();
+
         JanelaLendaria = false;
         int proximo = indice + 1;
+
         for (int tentativas = 0; tentativas < Ordem.Count; tentativas++, proximo++)
         {
             if (proximo >= Ordem.Count)
@@ -85,15 +180,21 @@ public sealed class Encontro2014
             var entrada = Ordem[proximo];
             if (entrada.IdPino == TurnoCovil)
             {
-                if (Ordem.All(e => e.IdPino <= 0 || Ficha(e.IdPino).Morto || disponivel?.Invoke(e.IdPino) is false)) break;
+                if (Ordem.All(e => e.IdPino <= 0 || Ficha(e.IdPino).Morto || disponivel?.Invoke(e.IdPino) is false))
+                    break;
+
                 IdPinoAtual = TurnoCovil;
                 CovilDisponivel = true;
                 return;
             }
-            if (Ficha(entrada.IdPino).Morto || disponivel?.Invoke(entrada.IdPino) is false) continue;
+
+            if (Ficha(entrada.IdPino).Morto || disponivel?.Invoke(entrada.IdPino) is false)
+                continue;
 
             CovilDisponivel = false;
-            foreach (var ficha in Fichas.Values) ficha.UsouAcaoLendariaNesteIntervalo = false;
+            foreach (var ficha in Fichas.Values)
+                ficha.UsouAcaoLendariaNesteIntervalo = false;
+
             IdPinoAtual = entrada.IdPino;
             Ficha(IdPinoAtual).IniciarTurno(Rodada == 1 && entrada.Surpreso);
             return;
@@ -105,8 +206,13 @@ public sealed class Encontro2014
     public List<EntradaIniciativa2014> OrdenarIniciativas(IEnumerable<EntradaIniciativa2014> entradas)
     {
         var pinos = entradas.Where(e => e.IdPino > 0);
-        if (Covil) pinos = pinos.Append(new(TurnoCovil, 20, int.MaxValue));
-        return pinos.OrderByDescending(x => x.Iniciativa).ThenBy(x => x.Desempate).ToList();
+        if (Covil)
+            pinos = pinos.Append(new EntradaIniciativa2014(TurnoCovil, 20, int.MaxValue));
+
+        return pinos
+            .OrderByDescending(x => x.Iniciativa)
+            .ThenBy(x => x.Desempate)
+            .ToList();
     }
 
     public void Encerrar()
@@ -115,7 +221,7 @@ public sealed class Encontro2014
         IdPinoAtual = 0;
         CovilDisponivel = false;
         JanelaLendaria = false;
-        Ordem.Clear();
+        Ordem?.Clear();
         MovimentoPendente = null;
     }
 
@@ -127,14 +233,20 @@ public sealed class Encontro2014
             JanelaLendaria = true;
             return;
         }
+
         Avancar(disponivel);
     }
 
     public void RemoverEfeitosSemConcentracao()
     {
+        GarantirIntegridade();
         foreach (var ficha in Fichas.Values)
-            ficha.Efeitos.RemoveAll(e => e.ConcentracaoOrigem is not null && e.IdOrigem is int origem &&
+        {
+            ficha.Efeitos.RemoveAll(e =>
+                e.ConcentracaoOrigem is not null &&
+                e.IdOrigem is int origem &&
                 Fichas.GetValueOrDefault(origem)?.Concentracao != e.ConcentracaoOrigem);
+        }
     }
 }
 
@@ -170,10 +282,19 @@ public sealed class EstadoCombatente2014
     public int RodadaUltimoTesteMorte { get; set; }
     public bool Morto => FalhasMorte >= 3;
 
-    public bool Tem(Condicao2014 condicao) => Efeitos.Any(e => e.Condicao == condicao);
+    public void GarantirIntegridade()
+    {
+        Efeitos ??= [];
+        Afinidades ??= [];
+        Recursos ??= [];
+    }
+
+    public bool Tem(Condicao2014 condicao) =>
+        Efeitos is { Count: > 0 } && Efeitos.Any(e => e.Condicao == condicao);
 
     public void IniciarTurno(bool surpreso)
     {
+        GarantirIntegridade();
         AcaoUsada = BonusUsado = ReacaoUsada = surpreso;
         SurpresoNesteTurno = surpreso;
         DeslocamentoGasto = 0;
@@ -187,10 +308,11 @@ public sealed class EstadoCombatente2014
         if (RodadasConcentracao is int duracao)
         {
             RodadasConcentracao = duracao - 1;
-            if (RodadasConcentracao <= 0) EncerrarConcentracao();
+            if (RodadasConcentracao <= 0)
+                EncerrarConcentracao();
         }
 
-        foreach (var recurso in Recursos.Values.Where(r => r.RecargaD6 is >= 2 and <= 6 && r.Restantes == 0))
+        foreach (var recurso in Recursos.Values.Where(r => r is not null && r.RecargaD6 is >= 2 and <= 6 && r.Restantes == 0))
         {
             if (Random.Shared.Next(1, 7) >= recurso.RecargaD6)
                 recurso.Restantes = recurso.Maximo;
@@ -199,8 +321,10 @@ public sealed class EstadoCombatente2014
 
     public void TerminarTurno()
     {
+        GarantirIntegridade();
         AvancarEfeitos(Momento2014.FimTurno);
-        if (SurpresoNesteTurno) ReacaoUsada = SurpresoNesteTurno = SurpresaPendente = false;
+        if (SurpresoNesteTurno)
+            ReacaoUsada = SurpresoNesteTurno = SurpresaPendente = false;
     }
 
     private void AvancarEfeitos(Momento2014 momento)

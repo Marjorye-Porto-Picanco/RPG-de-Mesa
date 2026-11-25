@@ -1,5 +1,6 @@
 ﻿using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Npcs;
 using RPGdeMesa.Domain.Sessoes;
 using RPGdeMesa.Domain.ValueObjects;

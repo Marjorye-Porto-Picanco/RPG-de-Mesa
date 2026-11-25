@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using RPGdeMesa.Application.Services;
 using RPGdeMesa.Domain.Bestiario;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Personagens;
 using RPGdeMesa.Domain.Sessoes;

@@ -124,6 +124,11 @@ public partial class SessaoViewModel : IAsyncDisposable
         _circuloEmCarregamento = 0;
         ExibirModalEsquivar = false;
         ExibirModalEsconder = false;
+        ExibirCombateMestre = false;
+        ExibirPainel2014 = false;
+        _ataqueOportunidade2014 = false;
+        _deslocamentoPendente2014 = null;
+        _golpesMestre = [];
         LimparEstadoDisparadaInterno();
         ExibirPainelPinos = false;
         PinoParaPosicionar = null;

@@ -1,17 +1,20 @@
 using Microsoft.Extensions.Logging;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa.Presentation.ViewModel;
 
 public partial class SessaoViewModel
 {
+    private GolpeMestre2014[] _golpesMestre = [];
+
     public bool ExibirCombateMestre { get; private set; }
     public bool AtaqueMestreComAtacanteFixo { get; private set; }
     public int IdPinoAtacanteMestre { get; private set; }
     public int IdAtaqueMestre { get; set; }
     public int IdPinoAlvoMestre { get; private set; }
-    public List<GolpeMestre2014> GolpesMestre { get; } = [];
+    public IReadOnlyList<GolpeMestre2014> GolpesMestre => _golpesMestre;
     public Rolagem2014 RolagemAtaqueMestre { get; set; }
     public Cobertura2014 CoberturaAtaqueMestre { get; set; }
     public TipoAcao2014 TipoAcaoMestre { get; set; }
@@ -41,7 +44,7 @@ public partial class SessaoViewModel
         .Where(p => !AtaqueOportunidade2014 || p.IdPino == Estado.Encontro.MovimentoPendente?.IdMovendo);
 
     public bool PodeAtacarComoMestre => Estado.EhMestre && Estado.SessaoAtiva && !ExecutandoAtaqueEntidade &&
-        (GolpesMestre.Count > 0 || PodeAdicionarGolpeMestre);
+        (_golpesMestre.Length > 0 || PodeAdicionarGolpeMestre);
 
     public bool PodeAdicionarGolpeMestre => !ExecutandoAtaqueEntidade &&
         AtaquesMestre.Any(a => a.Id == IdAtaqueMestre && a.TemFormulaDano) && !DanoAdicionalMestreInvalido &&
@@ -51,7 +54,9 @@ public partial class SessaoViewModel
         !RegrasCombate2014.DanoValido(DanoAdicionalMestre);
 
     public decimal? DistanciaAtaqueMestre => AtacantesMestre.FirstOrDefault(p => p.IdPino == IdPinoAtacanteMestre) is { } atacante &&
-        AlvosMestre.FirstOrDefault(p => p.IdPino == IdPinoAlvoMestre) is { } alvo ? SessaoService.DistanciaPinos(atacante, alvo) : null;
+        AlvosMestre.FirstOrDefault(p => p.IdPino == IdPinoAlvoMestre) is { } alvo
+        ? SessaoService.DistanciaPinos(atacante, alvo)
+        : null;
 
     public void AbrirCombateMestre() => AbrirCombateMestre(null);
 
@@ -65,10 +70,13 @@ public partial class SessaoViewModel
     {
         if (!Estado.EhMestre || !Estado.SessaoAtiva || ExibirCombateMestre) return;
 
+        ExibirModalDados = false;
+        ExibirModalFicha = false;
+        ExibirPainel2014 = false;
         AtaqueMestreComAtacanteFixo = idPino.HasValue;
-        SelecionarAtacanteMestre(idPino ?? 0);
-        TipoAcaoMestre = TipoAcao2014.Acao;
         _ataqueOportunidade2014 = false;
+        TipoAcaoMestre = TipoAcao2014.Acao;
+        SelecionarAtacanteMestreInterno(idPino ?? 0);
         ExibirCombateMestre = true;
         AbaChatAtiva = CanaisSessao.Combate;
         Notificar();
@@ -79,65 +87,140 @@ public partial class SessaoViewModel
         if (ExecutandoAtaqueEntidade) return;
 
         ExibirCombateMestre = false;
+        _ataqueOportunidade2014 = false;
         Notificar();
     }
 
     public void SelecionarAtacanteMestre(int idPino)
     {
+        SelecionarAtacanteMestreInterno(idPino);
+        Notificar();
+    }
+
+    private void SelecionarAtacanteMestreInterno(int idPino)
+    {
         IdPinoAtacanteMestre = idPino;
-        IdAtaqueMestre = 0;
         IdPinoAlvoMestre = 0;
-        GolpesMestre.Clear();
+        _golpesMestre = [];
         RecursoAtaqueMestre = "";
         RolagemAtaqueMestre = Rolagem2014.Normal;
         CoberturaAtaqueMestre = Cobertura2014.Nenhuma;
         AlcanceAtaqueMestre = null;
-        DanoAdicionalMestre = TipoDanoAdicionalMestre = "";
+        DanoAdicionalMestre = "";
+        TipoDanoAdicionalMestre = "";
         CondicaoNoAcerto = null;
-        LimparFeedbackCombateMestre();
+        RodadasCondicaoNoAcerto = null;
+        CdCondicaoNoAcerto = null;
+        TesteParaEscaparNoAcerto = false;
+        UsarResistenciaLendariaNoAcerto = false;
+        FeedbackAtaqueEntidade = null;
+
+        IdAtaqueMestre = idPino > 0
+            ? AtaquesMestre.FirstOrDefault(a => a.TemFormulaDano)?.Id ?? 0
+            : 0;
     }
 
     public void SelecionarAlvoMestre(int idPino)
     {
         IdPinoAlvoMestre = idPino;
-        LimparFeedbackCombateMestre();
+        FeedbackAtaqueEntidade = null;
+        Notificar();
     }
 
-    public void LimparFeedbackCombateMestre() => FeedbackAtaqueEntidade = null;
+    public void LimparFeedbackCombateMestre()
+    {
+        FeedbackAtaqueEntidade = null;
+        Notificar();
+    }
 
     public void AtualizarDanoAdicionalMestre()
     {
-        LimparFeedbackCombateMestre();
+        FeedbackAtaqueEntidade = null;
         Notificar();
     }
 
     public void AdicionarGolpeMestre()
     {
-        if (PodeAdicionarGolpeMestre && GolpesMestre.Count < 12)
-            GolpesMestre.Add(MontarGolpeMestre());
+        if (!PodeAdicionarGolpeMestre || _golpesMestre.Length >= 12) return;
+
+        _golpesMestre = [.. _golpesMestre, MontarGolpeMestre()];
+        FeedbackAtaqueEntidade = null;
+        Notificar();
+    }
+
+    public void RemoverGolpeMestre(int indice)
+    {
+        if (ExecutandoAtaqueEntidade || indice < 0 || indice >= _golpesMestre.Length) return;
+
+        _golpesMestre = _golpesMestre.Where((_, i) => i != indice).ToArray();
+        Notificar();
+    }
+
+    public void LimparGolpesMestre()
+    {
+        if (ExecutandoAtaqueEntidade || _golpesMestre.Length == 0) return;
+
+        _golpesMestre = [];
+        FeedbackAtaqueEntidade = null;
+        Notificar();
     }
 
     public async Task ConfirmarAtaqueMestreAsync()
     {
         if (!PodeAtacarComoMestre) return;
-        IReadOnlyList<GolpeMestre2014> golpes = GolpesMestre.Count > 0 ? GolpesMestre.ToArray() : [MontarGolpeMestre()];
-        var uso = new UsoAcao2014(TipoAcaoMestre, RecursoAtaqueMestre, CustoLendarioMestre, _ataqueOportunidade2014);
-        if (await ExecutarComandoCombateUiAsync((estado, conta) => _sessaoService.ExecutarGolpes2014Async(estado, conta, IdPinoAtacanteMestre, golpes, uso)))
+
+        GolpeMestre2014[] golpes = _golpesMestre.Length > 0
+            ? _golpesMestre
+            : [MontarGolpeMestre()];
+
+        var uso = new UsoAcao2014(
+            TipoAcaoMestre,
+            string.IsNullOrWhiteSpace(RecursoAtaqueMestre) ? null : RecursoAtaqueMestre,
+            CustoLendarioMestre,
+            _ataqueOportunidade2014);
+
+        bool sucesso = await ExecutarComandoCombateUiAsync((estado, conta) =>
+            _sessaoService.ExecutarGolpes2014Async(estado, conta, IdPinoAtacanteMestre, golpes, uso));
+
+        if (sucesso)
         {
-            GolpesMestre.Clear();
-            if (_ataqueOportunidade2014) ExibirCombateMestre = false;
+            _golpesMestre = [];
+            if (_ataqueOportunidade2014)
+            {
+                ExibirCombateMestre = false;
+                _ataqueOportunidade2014 = false;
+            }
+            Notificar();
         }
     }
 
-    private GolpeMestre2014 MontarGolpeMestre() => new(IdAtaqueMestre, IdPinoAlvoMestre, RolagemAtaqueMestre,
-        CoberturaAtaqueMestre, AlcanceAtaqueMestre, string.IsNullOrWhiteSpace(DanoAdicionalMestre) ? null : [new(DanoAdicionalMestre, TipoDanoAdicionalMestre)],
-        CondicaoNoAcerto is { } condicao ? new EfeitoCombate2014 { Condicao = condicao, Momento = Momento2014.FimTurno,
-            Rodadas = RodadasCondicaoNoAcerto, Cd = CdCondicaoNoAcerto, Atributo = AtributoCondicaoNoAcerto, TesteParaEscapar = TesteParaEscaparNoAcerto } : null,
+    private GolpeMestre2014 MontarGolpeMestre() => new(
+        IdAtaqueMestre,
+        IdPinoAlvoMestre,
+        RolagemAtaqueMestre,
+        CoberturaAtaqueMestre,
+        AlcanceAtaqueMestre,
+        string.IsNullOrWhiteSpace(DanoAdicionalMestre)
+            ? null
+            : [new ParcelaDano2014(DanoAdicionalMestre.Trim(), TipoDanoAdicionalMestre.Trim())],
+        CondicaoNoAcerto is { } condicao
+            ? new EfeitoCombate2014
+            {
+                Condicao = condicao,
+                Momento = Momento2014.FimTurno,
+                Rodadas = RodadasCondicaoNoAcerto,
+                Cd = CdCondicaoNoAcerto,
+                Atributo = CdCondicaoNoAcerto.HasValue ? AtributoCondicaoNoAcerto : null,
+                TesteParaEscapar = TesteParaEscaparNoAcerto
+            }
+            : null,
         UsarResistenciaLendariaNoAcerto);
 
     private IEnumerable<PinoMapaDto> ObterAlvosDaEntidade(int idPinoAtacante) => PinosVisiveisNoMapa
-        .Where(p => p.IdPino != idPinoAtacante && (PinoVivo(p) || p.TipoEntidade == TiposPinoSessao.Personagem ||
-            Estado.Encontro.Fichas.GetValueOrDefault(p.IdPino)?.UsaTestesMorte == true) &&
+        .Where(p => p.IdPino != idPinoAtacante &&
+            (PinoVivo(p) ||
+             p.TipoEntidade == TiposPinoSessao.Personagem ||
+             Estado.Encontro.Fichas.GetValueOrDefault(p.IdPino)?.UsaTestesMorte == true) &&
             Estado.Encontro.Fichas.GetValueOrDefault(p.IdPino)?.Morto != true)
         .OrderBy(p => p.Nome);
 
@@ -152,11 +235,13 @@ public partial class SessaoViewModel
     }
 
     private Task ExecutarAtaqueEntidadeAsync(int idPinoAtacante, int idAtaque, int idPinoAlvo) =>
-        ExecutarComandoCombateUiAsync((estado, conta) => _sessaoService.AtacarComEntidadeAsync(estado, conta, idPinoAtacante, idAtaque, idPinoAlvo));
+        ExecutarComandoCombateUiAsync((estado, conta) =>
+            _sessaoService.AtacarComEntidadeAsync(estado, conta, idPinoAtacante, idAtaque, idPinoAlvo));
 
     private async Task<bool> ExecutarComandoCombateUiAsync(Func<SessaoEstadoDto, int, Task<(bool Sucesso, string Mensagem)>> executar)
     {
-        if (ExecutandoAtaqueEntidade) return false;
+        if (ExecutandoAtaqueEntidade || Estado.IdSessao <= 0 || !Estado.SessaoAtiva)
+            return false;
 
         ExecutandoAtaqueEntidade = true;
         FeedbackAtaqueEntidade = null;
@@ -169,10 +254,10 @@ public partial class SessaoViewModel
             int idSessao = Estado.IdSessao;
             int idCampanha = Estado.IdCampanha;
             int idAccount = _sessaoUsuario.IdUsuarioLogado;
+
             var resultado = await executar(Estado, idAccount);
             sucesso = resultado.Sucesso;
-            string mensagem = resultado.Mensagem;
-            FeedbackAtaqueEntidade = mensagem;
+            FeedbackAtaqueEntidade = resultado.Mensagem;
 
             var atualizado = await _sessaoService.SincronizarSessaoAsync(idCampanha, idSessao, idAccount);
             if (atualizado is not null && Estado.IdSessao == idSessao)
@@ -189,6 +274,7 @@ public partial class SessaoViewModel
             ExecutandoAtaqueEntidade = false;
             Notificar();
         }
+
         return sucesso;
     }
 }

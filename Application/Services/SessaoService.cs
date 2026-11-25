@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
-using System.Text.Json;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
@@ -217,7 +217,6 @@ public partial class SessaoService
             if (sinal.UltimaMensagem == anterior.UltimaMensagem)
                 return (null, sinal);
 
-            // Relê uma janela curta para incluir mensagens gravadas fora da ordem de IDs.
             int desdeId = atual.Mensagens.Select(m => m.IdMensagem).OrderDescending().Take(16)
                 .DefaultIfEmpty(0).Min();
             var recentes = await _sessaoRepo.ListarMensagensAsync(atual.IdSessao,
@@ -322,9 +321,6 @@ public partial class SessaoService
         }
     }
 
-    // =========================================================================
-    // CONTROLE DE TURNO (MESTRE OU JOGADOR DONO DO TURNO ATUAL)
-    // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> DefinirTurnoJogadorAsync(
         int idCampanha,
         int idSessao,
@@ -371,9 +367,6 @@ public partial class SessaoService
         }
     }
 
-    // =========================================================================
-    // GERENCIAMENTO DE PINOS POR MAPA (MESTRE OU JOGADOR MOVENDO SEU PINO NO TURNO)
-    // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> PosicionarPinoAsync(
         int idCampanha,
         int idSessao,
@@ -520,9 +513,6 @@ public partial class SessaoService
         }
     }
 
-    // =========================================================================
-    // COMBATE: ESQUIVAR (DESVANTAGEM 2D20 ATÉ RETORNAR O TURNO + PASSA TURNO)
-    // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> RegistrarEsquivaAsync(
         int idCampanha,
         int idSessao,
@@ -568,9 +558,6 @@ public partial class SessaoService
         }
     }
 
-    // =========================================================================
-    // COMBATE: ESCONDER (TESTE DE FURTIVIDADE -> PINO INVISÍVEL + PASSA TURNO)
-    // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> RegistrarEsconderAsync(
         int idCampanha,
         int idSessao,
@@ -634,9 +621,6 @@ public partial class SessaoService
         }
     }
 
-    // =========================================================================
-    // COMBATE: ATAQUE, ATAQUE DE OPORTUNIDADE E CONTROLE DE PV
-    // =========================================================================
     public async Task<(bool Sucesso, string Mensagem)> RegistrarAtaquesOportunidadeAsync(
         int idSessao,
         int idAccountJogador,
@@ -1463,9 +1447,7 @@ public partial class SessaoService
         }
 
         var mensagensDto = mensagens.Select(ParaMensagemDto).ToList();
-        var controleCombate = sessaoCompleta?.Combate2014Json is { Length: > 0 } combateJson
-            ? JsonSerializer.Deserialize<ControleCombate2014>(combateJson) ?? new()
-            : new ControleCombate2014();
+        var controleCombate = ControleCombate2014.DesserializarSeguro(sessaoCompleta?.Combate2014Json);
 
         return new SessaoEstadoDto
         {
@@ -1488,9 +1470,11 @@ public partial class SessaoService
             NpcsCampanha = npcsCampanha,
             MonstrosCampanha = monstrosCampanha,
             Pinos = pinosDto,
-            Encontro = idMapaAtivo.HasValue ? controleCombate.ObterMapa(idMapaAtivo.Value) : new(),
-            PedidosTeste = controleCombate.Pedidos.Where(p => campanha.IdAccount == idAccountLogado || p.IdConta == idAccountLogado)
-                .Select(p => campanha.IdAccount != idAccountLogado && p.OcultarCd ? p with { Cd = null } : p).ToList(),
+            Encontro = idMapaAtivo.HasValue ? controleCombate.ObterMapa(idMapaAtivo.Value) : new Encontro2014(),
+            PedidosTeste = controleCombate.Pedidos
+                .Where(p => campanha.IdAccount == idAccountLogado || p.IdConta == idAccountLogado)
+                .Select(p => campanha.IdAccount != idAccountLogado && p.OcultarCd ? p with { Cd = null } : p)
+                .ToList(),
             Mestre = mestreDto,
             Jogadores = jogadoresDto,
             Mensagens = mensagensDto

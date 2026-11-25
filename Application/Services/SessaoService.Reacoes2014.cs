@@ -1,3 +1,4 @@
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Sessoes;
 
@@ -6,7 +7,8 @@ namespace RPGdeMesa.Application.Services;
 public partial class SessaoService
 {
     public Task<(bool Sucesso, string Mensagem)> MoverComReacoes2014Async(SessaoEstadoDto estado, int conta,
-        int idPino, int coluna, int linha, bool desengajando, bool disparada = false) => RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
+        int idPino, int coluna, int linha, bool desengajando, bool disparada = false) =>
+        RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
         {
             var pino = ExigirPino(estado, pinos, idPino);
             if (encontro.Rodada == 0 || encontro.IdPinoAtual != idPino || encontro.MovimentoPendente != null || encontro.JanelaLendaria ||
@@ -15,8 +17,15 @@ public partial class SessaoService
                 throw new DomainException("Este movimento não está disponível no turno atual.");
 
             var ficha = encontro.Ficha(idPino);
-            if (PvAtual(pino) <= 0 || ficha.SurpresoNesteTurno || RegrasCombate2014.Incapacitado(ficha) || ficha.Tem(Condicao2014.Agarrado) || ficha.Tem(Condicao2014.Impedido))
+            if (PvAtual(pino) <= 0 || ficha.SurpresoNesteTurno || RegrasCombate2014.Incapacitado(ficha) ||
+                ficha.Tem(Condicao2014.Agarrado) || ficha.Tem(Condicao2014.Impedido))
                 throw new DomainException("Este combatente não pode se deslocar.");
+
+            decimal distancia = RegrasCombate2014.DistanciaMetros(pino.Coluna, pino.Linha, coluna, linha);
+            if (ficha.Tem(Condicao2014.Caido)) distancia *= 2;
+            bool iraDisparar = ficha.Disparada || disparada;
+            if (ficha.DeslocamentoGasto + distancia > pino.DeslocamentoMetros * (iraDisparar ? 2 : 1))
+                throw new DomainException("O destino excede o deslocamento restante neste turno.");
 
             if (disparada || desengajando)
             {
@@ -24,10 +33,7 @@ public partial class SessaoService
                 ficha.Disparada |= disparada;
                 ficha.Desengajando |= desengajando;
             }
-            decimal distancia = RegrasCombate2014.DistanciaMetros(pino.Coluna, pino.Linha, coluna, linha);
-            if (ficha.Tem(Condicao2014.Caido)) distancia *= 2;
-            if (ficha.DeslocamentoGasto + distancia > pino.DeslocamentoMetros * (ficha.Disparada ? 2 : 1))
-                throw new DomainException("O destino excede o deslocamento restante neste turno.");
+
             ficha.DeslocamentoGasto += distancia;
 
             var reacoes = new List<int>();
@@ -37,14 +43,19 @@ public partial class SessaoService
                     p.TipoEntidade is TiposPinoSessao.Monstro or TiposPinoSessao.Npc && PvAtual(p) > 0 && pinos.Any(x => x.IdPino == p.IdPino)))
                 {
                     var outro = encontro.Ficha(candidato.IdPino);
-                    if (outro.ReacaoUsada || RegrasCombate2014.Incapacitado(outro) || outro.Tem(Condicao2014.Cego)) continue;
+                    if (outro.ReacaoUsada || RegrasCombate2014.Incapacitado(outro) || outro.Tem(Condicao2014.Cego))
+                        continue;
+
                     if (ObterAtaquesEntidade(estado, candidato).Any(a => a.CorpoACorpo && a.TemFormulaDano &&
                         ProvocouOportunidade2014(candidato, pino, coluna, linha, a)))
                         reacoes.Add(candidato.IdPino);
                 }
             }
+
             var movimento = new MovimentoPendente2014(idPino, pino.Coluna, pino.Linha, coluna, linha, reacoes);
-            if (reacoes.Count == 0) return new($"{pino.Nome} se moveu.", MovimentoConfirmado: movimento);
+            if (reacoes.Count == 0)
+                return new($"{pino.Nome} se moveu.", MovimentoConfirmado: movimento);
+
             encontro.MovimentoPendente = movimento;
             return new($"Movimento de {pino.Nome} aguardando decisão de reação.");
         }, incluirJogador: true);
@@ -55,15 +66,18 @@ public partial class SessaoService
             var movimento = encontro.MovimentoPendente;
             if (movimento is null || !movimento.ReacoesPendentes.Contains(idAtor))
                 throw new DomainException("A reação já foi resolvida.");
+
             var confirmado = FinalizarReacao2014(encontro, idAtor, true);
-            return new(MovimentoConfirmado: confirmado);
+            return new(confirmado is null ? "Reação dispensada." : "Reação dispensada e movimento concluído.", MovimentoConfirmado: confirmado);
         });
 
     private static MovimentoPendente2014? FinalizarReacao2014(Encontro2014 encontro, int atacante, bool podeMover)
     {
         var movimento = encontro.MovimentoPendente!;
         movimento.ReacoesPendentes.Remove(atacante);
-        if (podeMover && movimento.ReacoesPendentes.Count > 0) return null;
+        if (podeMover && movimento.ReacoesPendentes.Count > 0)
+            return null;
+
         encontro.MovimentoPendente = null;
         return podeMover ? movimento : null;
     }

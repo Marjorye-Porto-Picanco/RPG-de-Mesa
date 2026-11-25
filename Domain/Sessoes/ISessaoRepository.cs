@@ -1,4 +1,5 @@
 ﻿using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
 using RPGdeMesa.Domain.Personagens;

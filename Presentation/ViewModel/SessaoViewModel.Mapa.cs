@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using RPGdeMesa.Application.Services;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Sessoes;
 
 namespace RPGdeMesa.Presentation.ViewModel;
