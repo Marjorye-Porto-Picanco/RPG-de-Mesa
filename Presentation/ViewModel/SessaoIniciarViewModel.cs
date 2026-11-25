@@ -29,6 +29,11 @@ namespace RPGdeMesa.Presentation.ViewModel
         private readonly AppCacheService _appCache;
         private readonly HomeCacheService _homeCache;
         private readonly NavigationManager _navigation;
+        private readonly SessaoUsuarioService _sessaoUsuario;
+        // Ataques personalizados de NPC desativados até a implementação da funcionalidade.
+        // private readonly EditorAtaques _editorAtaquesNpc = new();
+        private readonly EditorAtaques _editorAtaquesMonstro = new();
+        private List<AtaqueCatalogoCadastro> _catalogoAtaques = new();
 
         public SessaoIniciarViewModel(
             CampanhaService campanhaService,
@@ -39,7 +44,8 @@ namespace RPGdeMesa.Presentation.ViewModel
             ImagemPickerService imagemPicker,
             AppCacheService appCache,
             HomeCacheService homeCache,
-            NavigationManager navigation)
+            NavigationManager navigation,
+            SessaoUsuarioService sessaoUsuario)
         {
             _campanhaService = campanhaService;
             _personagemService = personagemService;
@@ -50,12 +56,14 @@ namespace RPGdeMesa.Presentation.ViewModel
             _appCache = appCache;
             _homeCache = homeCache;
             _navigation = navigation;
+            _sessaoUsuario = sessaoUsuario;
         }
 
         public int IdCampanha { get; set; }
         public Campanha? CampanhaAtual { get; private set; }
         public bool SessaoEmAndamento => HistoricoSessoes.Any(s => s.Ativa);
         public bool CarregandoImagem { get; private set; }
+        public bool SalvandoRegistro { get; private set; }
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
         public List<NPC> NpcsDisponiveis { get; private set; } = new();
         public List<Item> ItensDisponiveis { get; private set; } = new();
@@ -151,14 +159,26 @@ namespace RPGdeMesa.Presentation.ViewModel
         public string? MonstroImagem { get; set; } = ImagemPadraoMonstro;
         public string? ErroImagemMonstro { get; private set; }
         public bool TemFotoMonstro => MonstroImagem?.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase) == true;
-        public List<MonstroAtaque> AtaquesMonstro { get; } = new();
-        public List<Monstro> CatalogoMonstrosAtaques { get; private set; } = new();
-        public HashSet<int> AtaquesMonstroCatalogoAdicionados { get; } = new();
-        public string BuscaAtaqueMonstro { get; set; } = string.Empty;
-        public IEnumerable<(Monstro Monstro, MonstroAtaque Ataque)> AtaquesMonstroCatalogoFiltrados => CatalogoMonstrosAtaques
-            .SelectMany(m => m.Ataques.Select(a => (Monstro: m, Ataque: a)))
-            .Where(x => !AtaquesMonstroCatalogoAdicionados.Contains(x.Ataque.IdMonstroAtaque))
-            .Where(x => string.IsNullOrWhiteSpace(BuscaAtaqueMonstro) || x.Ataque.Nome.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) || x.Monstro.Nome.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) || (x.Ataque.Dano?.Contains(BuscaAtaqueMonstro, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        public IReadOnlyList<AtaqueCadastro> AtaquesMonstro => _editorAtaquesMonstro.Ataques;
+        public string BuscaAtaqueMonstro
+        {
+            get => _editorAtaquesMonstro.Busca;
+            set => _editorAtaquesMonstro.Busca = value;
+        }
+
+        public IEnumerable<AtaqueCatalogoCadastro> AtaquesMonstroCatalogoFiltrados
+        {
+            get
+            {
+                var selecionados = AtaquesMonstro.Select(a => a.IdCatalogo).ToHashSet();
+                var busca = BuscaAtaqueMonstro.Trim();
+                return _catalogoAtaques.Where(a => !selecionados.Contains(a.Id) &&
+                    (busca.Length == 0 || a.Nome.Contains(busca, StringComparison.OrdinalIgnoreCase) ||
+                     a.Origem.Contains(busca, StringComparison.OrdinalIgnoreCase) ||
+                     a.Dano?.Contains(busca, StringComparison.OrdinalIgnoreCase) == true));
+            }
+        }
 
         // Form Fields - Item
         public string ItemNome { get; set; } = string.Empty;
@@ -260,12 +280,17 @@ namespace RPGdeMesa.Presentation.ViewModel
             IdCampanha = idCampanha;
             if (IdCampanha > 0)
             {
-                var tarefaCampanha = _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+                var campanha = await _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+                if (campanha is not null && campanha.IdAccount != _sessaoUsuario.IdUsuarioLogado)
+                {
+                    CampanhaAtual = null;
+                    _catalogoAtaques.Clear();
+                    _navigation.NavigateTo("/campanhas", replace: true);
+                    return;
+                }
+
+                CampanhaAtual = campanha;
                 var tarefaHistorico = CarregarHistoricoInternoAsync();
-                await Task.WhenAll(tarefaCampanha, tarefaHistorico);
-
-                CampanhaAtual = tarefaCampanha.Result;
-
                 if (CampanhaAtual != null)
                 {
                     var tarefaMonstros = _campanhaService.ObterMonstrosParaSessaoAsync(CampanhaAtual.IdAccount);
@@ -274,9 +299,16 @@ namespace RPGdeMesa.Presentation.ViewModel
                     var tarefaMapas = _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
                     var tarefaMagias = _campanhaService.ObterTodasMagiasAsync();
 
-                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas, tarefaMagias);
+                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas, tarefaMagias, tarefaHistorico);
                     MagiasCatalogo = tarefaMagias.Result;
-                    CatalogoMonstrosAtaques = tarefaMonstros.Result;
+                    var catalogoAtaques = tarefaMonstros.Result.SelectMany(m => m.Ataques.Select(a =>
+                        new AtaqueCatalogoCadastro(a.IdMonstroAtaque, m.Nome, a.Nome,
+                            a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao)));
+                    // Ao reativar a origem NPC, diferenciar seus IDs dos IDs de monstros.
+                    // catalogoAtaques = catalogoAtaques.Concat(tarefaNpcs.Result.SelectMany(n => n.Ataques.Select(a =>
+                    //     new AtaqueCatalogoCadastro(a.IdNpcAtaque, n.Nome, a.Nome,
+                    //         a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao))));
+                    _catalogoAtaques = catalogoAtaques.OrderBy(a => a.Nome).ThenBy(a => a.Origem).ToList();
 
                     var idsMonstrosVinculados = CampanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
                     MonstrosDisponiveis = tarefaMonstros.Result.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
@@ -294,6 +326,11 @@ namespace RPGdeMesa.Presentation.ViewModel
                     {
                         MapaSelecionadoParaVer = null;
                     }
+                }
+                else
+                {
+                    _catalogoAtaques.Clear();
+                    await tarefaHistorico;
                 }
             }
             NotifyStateChanged();
@@ -441,6 +478,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         private void LimparFormularioNpc()
         {
+            // _editorAtaquesNpc.Limpar();
             NpcItensSelecionados.Clear();
             NpcMagiasSelecionadas.Clear();
             BuscaItemNpc = string.Empty;
@@ -506,9 +544,7 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         private void LimparFormularioMonstro()
         {
-            AtaquesMonstro.Clear();
-            AtaquesMonstroCatalogoAdicionados.Clear();
-            BuscaAtaqueMonstro = string.Empty;
+            _editorAtaquesMonstro.Limpar();
             MonstroNome = string.Empty;
             MonstroTipo = "Outro";
             MonstroTamanho = "Médio";
@@ -525,22 +561,29 @@ namespace RPGdeMesa.Presentation.ViewModel
             ErroImagemMonstro = null;
         }
 
-        public void AdicionarAtaqueMonstro()
+        public AtaqueCadastro AdicionarAtaqueMonstro()
         {
-            AtaquesMonstro.Add(new MonstroAtaque { Nome = "Ataque" });
+            var ataque = new AtaqueCadastro();
+            _editorAtaquesMonstro.Ataques.Add(ataque);
             NotifyStateChanged();
+            return ataque;
         }
 
-        public void RemoverAtaqueMonstro(MonstroAtaque ataque)
+        public void RemoverAtaqueMonstro(AtaqueCadastro ataque)
         {
-            AtaquesMonstro.Remove(ataque);
-            NotifyStateChanged();
+            if (_editorAtaquesMonstro.Ataques.Remove(ataque))
+                NotifyStateChanged();
         }
 
-        public void VincularAtaqueCatalogoMonstro(MonstroAtaque ataque)
+        public void VincularAtaqueCatalogoMonstro(AtaqueCatalogoCadastro ataque)
         {
-            AtaquesMonstro.Add(new MonstroAtaque
+            var ataques = _editorAtaquesMonstro.Ataques;
+            if (ataques.Any(a => a.IdCatalogo == ataque.Id))
+                return;
+
+            ataques.Add(new AtaqueCadastro
             {
+                IdCatalogo = ataque.Id,
                 Nome = ataque.Nome,
                 BonusAtaque = ataque.BonusAtaque,
                 Dano = ataque.Dano,
@@ -548,8 +591,22 @@ namespace RPGdeMesa.Presentation.ViewModel
                 Alcance = ataque.Alcance,
                 Descricao = ataque.Descricao
             });
-            AtaquesMonstroCatalogoAdicionados.Add(ataque.IdMonstroAtaque);
             NotifyStateChanged();
+        }
+
+        private sealed class EditorAtaques
+        {
+            public List<AtaqueCadastro> Ataques { get; } = new();
+            public string Busca { get; set; } = string.Empty;
+
+            public IEnumerable<AtaqueCadastro> AtaquesPreenchidos =>
+                Ataques.Where(a => !string.IsNullOrWhiteSpace(a.Nome));
+
+            public void Limpar()
+            {
+                Ataques.Clear();
+                Busca = string.Empty;
+            }
         }
 
         // --- MÉTODOS DE MAPAS ---
@@ -711,7 +768,11 @@ namespace RPGdeMesa.Presentation.ViewModel
         // --- CONFIGURAÇÕES (NPC, MONSTRO, ITEM) ---
         public async Task SalvarRegistroAsync()
         {
-            if (CampanhaAtual == null) return;
+            if (CampanhaAtual == null || CampanhaAtual.IdAccount != _sessaoUsuario.IdUsuarioLogado || SalvandoRegistro)
+                return;
+
+            SalvandoRegistro = true;
+            NotifyStateChanged();
 
             try
             {
@@ -739,6 +800,17 @@ namespace RPGdeMesa.Presentation.ViewModel
                     );
                     novoNpc.Itens = NpcItensSelecionados.Select(id => new NpcItem { IdItem = id, Quantidade = 1, Npc = novoNpc }).ToList();
                     novoNpc.Magias = NpcMagiasSelecionadas.Select(id => new NpcMagia { IdMagia = id, Npc = novoNpc }).ToList();
+                    /*
+                    novoNpc.Ataques = _editorAtaquesNpc.AtaquesPreenchidos.Select(a => new NpcAtaque
+                    {
+                        Nome = a.Nome.Trim(),
+                        BonusAtaque = a.BonusAtaque,
+                        Dano = a.Dano,
+                        TipoDano = a.TipoDano,
+                        Alcance = a.Alcance,
+                        Descricao = a.Descricao
+                    }).ToList();
+                    */
 
                     var resultado = await _npcService.CriarNpcAsync(idUsuario, novoNpc, IdCampanha);
                     MensagemFeedback = resultado.Sucesso ? "NPC cadastrado e vinculado à campanha!" : resultado.Mensagem;
@@ -776,7 +848,15 @@ namespace RPGdeMesa.Presentation.ViewModel
                         Habilidades = MonstroHabilidades,
                         Descricao = MonstroDescricao,
                         Imagem = MonstroImagem,
-                        Ataques = AtaquesMonstro.Where(a => !string.IsNullOrWhiteSpace(a.Nome)).ToList()
+                        Ataques = _editorAtaquesMonstro.AtaquesPreenchidos.Select(a => new MonstroAtaque
+                        {
+                            Nome = a.Nome.Trim(),
+                            BonusAtaque = a.BonusAtaque,
+                            Dano = a.Dano,
+                            TipoDano = a.TipoDano,
+                            Alcance = a.Alcance,
+                            Descricao = a.Descricao
+                        }).ToList()
                     };
 
                     var resultado = await _campanhaService.CriarE_VincularMonstroNaCampanhaAsync(IdCampanha, novoMonstro);
@@ -839,6 +919,10 @@ namespace RPGdeMesa.Presentation.ViewModel
             catch (Exception ex)
             {
                 MensagemFeedback = $"Erro: {ex.Message}";
+            }
+            finally
+            {
+                SalvandoRegistro = false;
                 NotifyStateChanged();
             }
         }

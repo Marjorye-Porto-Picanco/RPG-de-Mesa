@@ -9,7 +9,12 @@ public partial class SessaoService
     public Task<(bool Sucesso, string Mensagem)> MoverComReacoes2014Async(SessaoEstadoDto estado, int conta,
         int idPino, int coluna, int linha, bool desengajando, bool disparada = false) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, pinos) =>
-        {
+            ResolverMovimento2014(estado, conta, encontro, pinos, idPino, coluna, linha, desengajando, disparada),
+            incluirJogador: true);
+
+    private static ResultadoComandoCombate2014 ResolverMovimento2014(SessaoEstadoDto estado, int conta, Encontro2014 encontro,
+        IReadOnlyList<SessaoPino> pinos, int idPino, int coluna, int linha, bool desengajando, bool disparada)
+    {
             var pino = ExigirPino(estado, pinos, idPino);
             if (encontro.Rodada == 0 || encontro.IdPinoAtual != idPino || encontro.MovimentoPendente != null || encontro.JanelaLendaria ||
                 (!estado.EhMestre && (estado.IdAccountTurno != conta || pino.IdEntidade != estado.IdPersonagemLogado ||
@@ -58,7 +63,7 @@ public partial class SessaoService
 
             encontro.MovimentoPendente = movimento;
             return new($"Movimento de {pino.Nome} aguardando decisão de reação.");
-        }, incluirJogador: true);
+    }
 
     public Task<(bool Sucesso, string Mensagem)> DispensarOportunidade2014Async(SessaoEstadoDto estado, int conta, int idAtor) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, _) =>

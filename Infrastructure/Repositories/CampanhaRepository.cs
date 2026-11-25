@@ -34,6 +34,7 @@ public class CampanhaRepository : ICampanhaRepository
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Itens).ThenInclude(i => i.Item)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Magias).ThenInclude(m => m.Magia)
+            // .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Ataques)
             .Include(c => c.ItemCampanhas).ThenInclude(ic => ic.Item)
             .Include(c => c.MapaCampanhas).ThenInclude(mc => mc.Mapa)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha);

@@ -1,0 +1,101 @@
+.tabuleiro-dialogo {
+    --ficha-largura: 570px;
+    z-index: 2301;
+}
+
+.sessao-ficha-backdrop {
+    z-index: 2300;
+}
+
+.tabuleiro-dialogo header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px var(--ficha-recuo);
+    border-bottom: 1px solid var(--ficha-linha);
+    background: #f3e5c9;
+}
+
+#app .tabuleiro-dialogo h2 {
+    margin: 0;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.tabuleiro-dialogo :is(button, select) {
+    min-height: 44px;
+    padding: 7px 12px;
+    border: 1px solid #9a7952;
+    border-radius: 7px;
+    background: #fff7e7;
+    color: #352519;
+}
+
+.tabuleiro-dialogo button {
+    cursor: pointer;
+}
+
+.tabuleiro-dialogo button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.tabuleiro-dialogo header button {
+    min-width: 44px;
+    padding: 0;
+}
+
+.tabuleiro-dialogo .tabuleiro-primario {
+    background: #e8c481;
+    color: #23170d;
+    font-weight: 700;
+}
+
+.tabuleiro-dialogo label {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+#app .tabuleiro-dialogo :is(p, label, button, select) {
+    font-size: 1rem;
+}
+
+.tabuleiro-campos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.tabuleiro-botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tabuleiro-status,
+.tabuleiro-aviso {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: #efe0c3;
+}
+
+.tabuleiro-aviso {
+    border-inline-start: 4px solid #a34d38;
+    background: #fff0e8;
+    color: #652b1f;
+}
+
+@media (max-width: 400px) {
+    .tabuleiro-campos {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tabuleiro-botoes > button {
+        flex: 1 1 100%;
+    }
+}

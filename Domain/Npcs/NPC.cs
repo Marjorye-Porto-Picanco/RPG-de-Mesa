@@ -37,6 +37,7 @@ public class NPC : IAggregateRoot
     public virtual Usuario? Usuario { get; private set; }
     public virtual ICollection<NpcMagia> Magias { get; set; } = new List<NpcMagia>();
     public virtual ICollection<NpcItem> Itens { get; set; } = new List<NpcItem>();
+    // public virtual ICollection<NpcAtaque> Ataques { get; set; } = new List<NpcAtaque>();
 
     private readonly List<NpcCampanha> _npcCampanhas = new();
     public virtual IReadOnlyCollection<NpcCampanha> NpcCampanhas => _npcCampanhas.AsReadOnly();

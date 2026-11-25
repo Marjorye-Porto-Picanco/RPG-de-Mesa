@@ -18,6 +18,7 @@ public class NpcRepository : INpcRepository
             .Include(n => n.NpcCampanhas)
             .Include(n => n.Magias).ThenInclude(m => m.Magia)
             .Include(n => n.Itens).ThenInclude(i => i.Item)
+            // .Include(n => n.Ataques)
             .FirstOrDefaultAsync(n => n.IdNpc == idNpc);
     }
 
@@ -29,6 +30,7 @@ public class NpcRepository : INpcRepository
             .Include(n => n.NpcCampanhas)
             .Include(n => n.Magias).ThenInclude(m => m.Magia)
             .Include(n => n.Itens).ThenInclude(i => i.Item)
+            // .Include(n => n.Ataques)
             .Where(n => n.IdAccount == idAccount)
             .ToListAsync();
     }
@@ -41,6 +43,7 @@ public class NpcRepository : INpcRepository
             .Include(n => n.NpcCampanhas)
             .Include(n => n.Magias).ThenInclude(m => m.Magia)
             .Include(n => n.Itens).ThenInclude(i => i.Item)
+            // .Include(n => n.Ataques)
             .Where(n => n.NpcCampanhas.Any(nc => nc.IdCampanha == idCampanha))
             .ToListAsync();
     }

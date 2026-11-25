@@ -466,9 +466,8 @@ public class CampanhaService
             if (campanha == null) return (false, "Campanha não encontrada.");
 
             monstro.PrepararNovoMonstro(campanha.IdAccount);
+            monstro.VincularACampanha(idCampanha);
             await _monstroRepo.AdicionarAsync(monstro);
-
-            await _campanhaRepo.AdicionarMonstroCampanhaAsync(idCampanha, monstro.IdMonstro);
 
             return (true, "Monstro criado e vinculado com sucesso!");
         }

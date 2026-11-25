@@ -66,4 +66,13 @@ public class Monstro : IAggregateRoot
         IdAccount = idAccount;
         // A imagem não recebe valor padrão; somente uma imagem informada explicitamente será salva.
     }
+
+    public void VincularACampanha(int idCampanha)
+    {
+        if (idCampanha <= 0)
+            throw new DomainException("ID de campanha inválido para vínculo.");
+
+        if (!_monstroCampanhas.Any(mc => mc.IdCampanha == idCampanha))
+            _monstroCampanhas.Add(new MonstroCampanha(idCampanha, IdMonstro));
+    }
 }

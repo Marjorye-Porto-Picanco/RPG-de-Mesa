@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Common;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
@@ -30,6 +31,7 @@ public partial class SessaoRepository : ISessaoRepository
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Itens).ThenInclude(i => i.Item)
             .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Magias).ThenInclude(m => m.Magia)
+            // .Include(c => c.NpcCampanhas).ThenInclude(nc => nc.Npc).ThenInclude(n => n!.Ataques)
             .Include(c => c.MonstroCampanhas).ThenInclude(mc => mc.Monstro).ThenInclude(m => m!.Ataques)
             .FirstOrDefaultAsync(c => c.IdCampanha == idCampanha, cancellationToken);
     }
@@ -215,27 +217,24 @@ public partial class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
-    public async Task AtualizarMapaAtivoAsync(int idSessao, int? idMapa)
-    {
-        await using var contexto = await _factory.CreateDbContextAsync();
-
-        var sessao = await contexto.SessoesMesa
-            .FirstOrDefaultAsync(s => s.IdSessao == idSessao);
-
-        if (sessao == null) return;
-
-        sessao.AlterarMapaAtivo(idMapa);
-        await contexto.SaveChangesAsync();
-    }
+    public Task AtualizarMapaAtivoAsync(int idSessao, int? idMapa) =>
+        ExecutarOperacaoAsync(idSessao, Guid.NewGuid(), $"RPGdeMesa:combate:{idSessao}", async contexto =>
+        {
+            var sessao = await contexto.SessoesMesa.FirstOrDefaultAsync(s => s.IdSessao == idSessao);
+            if (sessao is null) return;
+            ExigirTabuleiroLivre(sessao.Combate2014Json);
+            sessao.AlterarMapaAtivo(idMapa);
+        });
 
     public Task AtualizarTurnoJogadorAsync(int idCampanha, int idSessao, int? idAccountJogador,
         int? idAccountQueDeveEstarNoTurno, Guid operacao, string aviso) =>
-        ExecutarOperacaoAsync(idSessao, operacao, $"RPGdeMesa:turno:{idSessao}", async contexto =>
+        ExecutarOperacaoAsync(idSessao, operacao, $"RPGdeMesa:combate:{idSessao}", async contexto =>
         {
             var sessao = await contexto.SessoesMesa.FirstOrDefaultAsync(s =>
                 s.IdSessao == idSessao && s.IdCampanha == idCampanha && s.Ativa);
             if (sessao is null)
                 throw new DomainException("A sessão não está ativa.");
+            ExigirTabuleiroLivre(sessao.Combate2014Json);
             if (idAccountQueDeveEstarNoTurno.HasValue && sessao.IdAccountTurno != idAccountQueDeveEstarNoTurno)
                 throw new DomainException("Apenas o Mestre ou o jogador no turno atual pode passar ou encerrar o turno.");
 
@@ -572,30 +571,38 @@ public partial class SessaoRepository : ISessaoRepository
             p.TipoEntidade == tipo && p.IdEntidade == idEntidade && (!idPino.HasValue || p.IdPino == idPino))
             .OrderBy(p => p.Instancia);
 
-    public async Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel, int? idPino = null)
+    public Task SalvarOuMoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel, int? idPino = null) =>
+        ExecutarOperacaoAsync(idSessao, Guid.NewGuid(), $"RPGdeMesa:combate:{idSessao}", async contexto =>
+        {
+            string? combate = await contexto.SessoesMesa.Where(s => s.IdSessao == idSessao).Select(s => s.Combate2014Json).FirstOrDefaultAsync();
+            ExigirTabuleiroLivre(combate);
+
+            var existente = await ConsultaPino(contexto, idSessao, idMapa, tipoEntidade, idEntidade, idPino).FirstOrDefaultAsync();
+
+            if (existente == null)
+            {
+                if (idPino.HasValue) throw new DomainException("Este pino não está mais no mapa.");
+                var novo = new SessaoPino(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
+                contexto.SessaoPinos.Add(novo);
+            }
+            else
+            {
+                existente.MoverPara(coluna, linha);
+                existente.DefinirVisibilidade(visivel);
+            }
+        });
+
+    private static void ExigirTabuleiroLivre(string? combate)
     {
-        await using var contexto = await _factory.CreateDbContextAsync();
-
-        var existente = await ConsultaPino(contexto, idSessao, idMapa, tipoEntidade, idEntidade, idPino).FirstOrDefaultAsync();
-
-        if (existente == null)
-        {
-            if (idPino.HasValue) throw new DomainException("Este pino não está mais no mapa.");
-            var novo = new SessaoPino(idSessao, idMapa, tipoEntidade, idEntidade, coluna, linha, visivel);
-            await contexto.SessaoPinos.AddAsync(novo);
-        }
-        else
-        {
-            existente.MoverPara(coluna, linha);
-            existente.DefinirVisibilidade(visivel);
-        }
-
-        await contexto.SaveChangesAsync();
+        if (ControleCombate2014.DesserializarSeguro(combate).Tabuleiro is not null)
+            throw new DomainException("Aguarde a resolução do movimento do tabuleiro físico.");
     }
 
     public Task CriarInstanciaPinoAsync(int idSessao, int idMapa, int idMestre, string tipoEntidade, int idEntidade, int coluna, int linha, bool visivel, Guid operacao) =>
-        ExecutarOperacaoAsync(idSessao, operacao, $"RPGdeMesa:instancia:{idSessao}:{idMapa}:{tipoEntidade}:{idEntidade}", async contexto =>
+        ExecutarOperacaoAsync(idSessao, operacao, $"RPGdeMesa:combate:{idSessao}", async contexto =>
         {
+            string? combate = await contexto.SessoesMesa.Where(s => s.IdSessao == idSessao).Select(s => s.Combate2014Json).FirstOrDefaultAsync();
+            ExigirTabuleiroLivre(combate);
             bool podeCriar = await contexto.SessoesMesa.AnyAsync(s => s.IdSessao == idSessao && s.Ativa &&
                 s.IdMapaAtivo == idMapa && s.Campanha.IdAccount == idMestre);
             if (!podeCriar || tipoEntidade is not (TiposPinoSessao.Monstro or TiposPinoSessao.Npc))
@@ -618,17 +625,15 @@ public partial class SessaoRepository : ISessaoRepository
         await contexto.SaveChangesAsync();
     }
 
-    public async Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int? idPino = null)
-    {
-        await using var contexto = await _factory.CreateDbContextAsync();
-
-        var existente = await ConsultaPino(contexto, idSessao, idMapa, tipoEntidade, idEntidade, idPino).FirstOrDefaultAsync();
-
-        if (existente == null) return;
-
-        contexto.SessaoPinos.Remove(existente);
-        await contexto.SaveChangesAsync();
-    }
+    public Task RemoverPinoAsync(int idSessao, int? idMapa, string tipoEntidade, int idEntidade, int? idPino = null) =>
+        ExecutarOperacaoAsync(idSessao, Guid.NewGuid(), $"RPGdeMesa:combate:{idSessao}", async contexto =>
+        {
+            string? combate = await contexto.SessoesMesa.Where(s => s.IdSessao == idSessao).Select(s => s.Combate2014Json).FirstOrDefaultAsync();
+            ExigirTabuleiroLivre(combate);
+            var existente = await ConsultaPino(contexto, idSessao, idMapa, tipoEntidade, idEntidade, idPino).FirstOrDefaultAsync();
+            if (existente is not null)
+                contexto.SessaoPinos.Remove(existente);
+        });
 
     public async Task AtualizarPvPinoAsync(
         int idSessao,

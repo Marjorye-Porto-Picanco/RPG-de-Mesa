@@ -24,7 +24,7 @@ public partial class SessaoService
         int destreza = AtributosBase.CalcularModificador(npc.Destreza);
         int proficiencia = RegrasMagiaCombate.CalcularBonusProficiencia(npc.Nivel);
 
-        return npc.Itens.Where(x => x.Item is not null && !string.IsNullOrWhiteSpace(x.Item.Dano)).Select(x =>
+        var ataquesDeItens = npc.Itens.Where(x => x.Item is not null && !string.IsNullOrWhiteSpace(x.Item.Dano)).Select(x =>
         {
             var item = x.Item!;
             bool usaDestreza = item.Propriedades?.Contains("acuidade", StringComparison.OrdinalIgnoreCase) == true ||
@@ -37,6 +37,12 @@ public partial class SessaoService
             string? alcance = contato ? (alcanceEstendido ? "3 m" : "1,5 m") : null;
             return new AtaqueEntidadeDto(x.IdItem, item.Nome, item.Dano, item.TipoDano, atributo + proficiencia, atributo, alcance, contato);
         });
+
+        // Ataques personalizados de NPC aguardam suporte de persistência.
+        // return ataquesDeItens.Concat(npc.Ataques.Where(a => a.IdNpcAtaque > 0).Select(a => new AtaqueEntidadeDto(
+        //     -a.IdNpcAtaque, a.Nome, a.Dano, a.TipoDano, a.BonusAtaque ?? 0, 0, a.Alcance,
+        //     EhCorpoACorpo(a.Descricao, a.Alcance))));
+        return ataquesDeItens;
     }
 
     public Task<(bool Sucesso, string Mensagem)> AtacarComEntidadeAsync(SessaoEstadoDto estado, int conta,

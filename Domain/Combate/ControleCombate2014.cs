@@ -6,6 +6,7 @@ public sealed class ControleCombate2014
 {
     public Dictionary<int, Encontro2014> Mapas { get; set; } = [];
     public List<PedidoTeste2014> Pedidos { get; set; } = [];
+    public MovimentoTabuleiro? Tabuleiro { get; set; }
 
     public static ControleCombate2014 DesserializarSeguro(string? json)
     {

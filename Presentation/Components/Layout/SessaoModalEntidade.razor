@@ -157,6 +157,13 @@
 
             <div class="em-grid-2">
                 <div class="em-bloco-pergaminho em-span-2"><h3>Ataques e itens equipados</h3>
+                    @* Ataques personalizados de NPC aguardam suporte de persistência.
+                    @foreach (var ataque in n.Ataques)
+                    {
+                        <p><b>@ataque.Nome</b> · @(ataque.BonusAtaque?.ToString("+0;-0;0") ?? "bônus —") · @(ataque.Dano ?? "dano —") @ataque.TipoDano · @(ataque.Alcance ?? "alcance —")</p>
+                        @if (!string.IsNullOrWhiteSpace(ataque.Descricao)) { <small>@ataque.Descricao</small> }
+                    }
+                    *@
                     @if (n.Itens?.Any() == true)
                     {
                         @foreach (var itemNpc in n.Itens)

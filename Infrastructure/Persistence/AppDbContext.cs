@@ -479,6 +479,23 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Item).WithMany().HasForeignKey(x => x.IdItem).OnDelete(DeleteBehavior.Cascade);
         });
 
+        /*
+        modelBuilder.Entity<NpcAtaque>(e =>
+        {
+            e.ToTable("NPC_Ataque");
+            e.HasKey(a => a.IdNpcAtaque);
+            e.Property(a => a.IdNpcAtaque).HasColumnName("id_npc_ataque");
+            e.Property(a => a.IdNpc).HasColumnName("id_npc");
+            e.Property(a => a.Nome).HasColumnName("nome").HasMaxLength(100).IsUnicode(false).IsRequired();
+            e.Property(a => a.BonusAtaque).HasColumnName("bonus_ataque");
+            e.Property(a => a.Dano).HasColumnName("dano").HasMaxLength(30).IsUnicode(false);
+            e.Property(a => a.TipoDano).HasColumnName("tipo_dano").HasMaxLength(30).IsUnicode(false);
+            e.Property(a => a.Alcance).HasColumnName("alcance").HasMaxLength(50).IsUnicode(false);
+            e.Property(a => a.Descricao).HasColumnName("descricao").HasColumnType("varchar(max)");
+            e.HasOne(a => a.Npc).WithMany(n => n.Ataques).HasForeignKey(a => a.IdNpc).OnDelete(DeleteBehavior.Cascade);
+        });
+        */
+
         modelBuilder.Entity<Item>(e =>
         {
             e.ToTable("Item");

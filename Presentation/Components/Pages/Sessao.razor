@@ -3,6 +3,7 @@
 @using RPGdeMesa.Application.Services
 @using RPGdeMesa.Presentation.ViewModel
 @using RPGdeMesa.Presentation.Components.Layout
+@using RPGdeMesa.Presentation.Services
 @inject SessaoViewModel ViewModel
 @implements IAsyncDisposable
 
@@ -188,6 +189,10 @@ else
                         </label>
                         @if (ViewModel.Estado.EhMestre)
                         {
+                            @if (ConexaoTabuleiro.Disponivel)
+                            {
+                                <button type="button" class="toolbar-settings-item" @onclick="() => _exibirTabuleiroFisico = true">Tabuleiro físico</button>
+                            }
                             <a class="toolbar-settings-item" href="@($"/sessao-iniciar/{ViewModel.Estado.IdCampanha}?aba=config")">Configurações</a>
                         }
                     </div>
@@ -429,6 +434,9 @@ else
             <p class="dice-popup-footer">O resultado é enviado automaticamente no Chat da sessão.</p>
         </section>
     }
+
+    <SessaoTabuleiroFisico @key="(ViewModel.Estado.IdSessao, ViewModel.Estado.IdMapaAtivo)"
+                          ViewModel="ViewModel" Aberto="_exibirTabuleiroFisico" OnFechar="() => _exibirTabuleiroFisico = false" />
 }
 
 @code {
@@ -442,6 +450,7 @@ else
     private int? _ultimoIdPersonagem;
     private bool _mostrarCoordenadas = true;
     private bool _exibirJogadoresMobile;
+    private bool _exibirTabuleiroFisico;
 
     private readonly int[] _facesPadrao = [4, 6, 8, 10, 12, 20, 100];
     private int _facesSelecionadas = 20;

@@ -51,17 +51,22 @@ public partial class SessaoService
             if (encontro.MovimentoPendente is not null)
                 return new() { Erro = "Resolva ou dispense as reações antes de avançar." };
 
-            var aptos = CombatentesNoEncontro(estado, encontro, pinos);
-            bool janelaLendaria = encontro.Ordem.Any(e =>
-                e.IdPino > 0 &&
-                e.IdPino != encontro.IdPinoAtual &&
-                encontro.Ficha(e.IdPino) is { UsosLendariosRestantes: > 0, SurpresaPendente: false } ficha &&
-                !RegrasCombate2014.Incapacitado(ficha) &&
-                estado.Pinos.Any(p => p.IdPino == e.IdPino && PvAtual(p) > 0));
-
-            encontro.ConcluirTurno(janelaLendaria, aptos.Contains);
-            return new(DescreverTurno(estado, encontro), SincronizarTurno: true);
+            return ConcluirTurno2014(estado, encontro, pinos);
         }, incluirJogador: true);
+
+    private static ResultadoComandoCombate2014 ConcluirTurno2014(SessaoEstadoDto estado, Encontro2014 encontro, IReadOnlyList<SessaoPino> pinos)
+    {
+        var aptos = CombatentesNoEncontro(estado, encontro, pinos);
+        bool janelaLendaria = encontro.Ordem.Any(e =>
+            e.IdPino > 0 &&
+            e.IdPino != encontro.IdPinoAtual &&
+            encontro.Ficha(e.IdPino) is { UsosLendariosRestantes: > 0, SurpresaPendente: false } ficha &&
+            !RegrasCombate2014.Incapacitado(ficha) &&
+            estado.Pinos.Any(p => p.IdPino == e.IdPino && PvAtual(p) > 0));
+
+        encontro.ConcluirTurno(janelaLendaria, aptos.Contains);
+        return new(DescreverTurno(estado, encontro), SincronizarTurno: true);
+    }
 
     public Task<(bool Sucesso, string Mensagem)> EncerrarIniciativaAsync(SessaoEstadoDto estado, int conta) =>
         RegistrarComandoCombateAsync(estado, conta, (_, encontro, _) =>
@@ -354,7 +359,8 @@ public partial class SessaoService
         SessaoEstadoDto estado,
         int conta,
         Func<ControleCombate2014, Encontro2014, IReadOnlyList<SessaoPino>, ResultadoComandoCombate2014> executar,
-        bool incluirJogador = false)
+        bool incluirJogador = false,
+        bool comandoTabuleiro = false)
     {
         if (!estado.SessaoAtiva || estado.IdMapaAtivo is not int mapa || (!estado.EhMestre && !incluirJogador))
             return (false, "Abra um mapa ativo para usar os controles de combate.");
@@ -367,10 +373,16 @@ public partial class SessaoService
             await _sessaoRepo.AlterarCombate2014Async(estado.IdSessao, mapa, conta, incluirJogador, Guid.NewGuid(), (controle, pinos) =>
             {
                 var encontro = controle.ObterMapa(mapa);
-                var resultado = executar(controle, encontro, pinos);
+                var tabuleiro = controle.Tabuleiro;
+                var resultado = !comandoTabuleiro && tabuleiro?.Fase is FaseMovimentoTabuleiro.Retorno or FaseMovimentoTabuleiro.AprovacaoMestre or FaseMovimentoTabuleiro.ConfirmacaoDisparada
+                    ? new ResultadoComandoCombate2014 { Erro = "Aguarde a resolução do movimento do tabuleiro físico." }
+                    : executar(controle, encontro, pinos);
                 erroComando = resultado.Erro;
                 if (erroComando is not null)
                     return resultado;
+
+                if (!comandoTabuleiro && tabuleiro is { Fase: FaseMovimentoTabuleiro.Reacoes } && encontro.MovimentoPendente is null)
+                    resultado = ConcluirReacoesTabuleiro(estado, controle, encontro, pinos, tabuleiro, resultado);
 
                 encontro.RemoverEfeitosSemConcentracao();
                 mensagem = resultado.Mensagem;

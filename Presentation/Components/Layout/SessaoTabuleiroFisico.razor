@@ -1,0 +1,363 @@
+@using RPGdeMesa.Domain.Combate
+@using RPGdeMesa.Domain.Sessoes
+@using RPGdeMesa.Application.Services
+@using RPGdeMesa.Presentation.ViewModel
+@using RPGdeMesa.Presentation.Services
+@implements IDisposable
+
+@{
+    var movimento = ViewModel.Estado.TabuleiroFisico;
+    bool mestre = ViewModel.Estado.EhMestre;
+    bool meuPino = movimento?.IdPersonagem == ViewModel.Estado.IdPersonagemLogado && movimento is not null;
+    bool retorno = movimento?.Fase == FaseMovimentoTabuleiro.Retorno;
+    bool aprovar = mestre && movimento?.Fase == FaseMovimentoTabuleiro.AprovacaoMestre;
+    bool disparada = meuPino && movimento?.Fase == FaseMovimentoTabuleiro.ConfirmacaoDisparada;
+    bool decisao = aprovar || disparada;
+    bool painel = mestre && Aberto && ConexaoTabuleiro.Disponivel;
+}
+
+@if (retorno || decisao || painel)
+{
+    <div class="sessao-ficha-backdrop" aria-hidden="true"></div>
+    <section class="sessao-ficha-popup tabuleiro-dialogo" role="@(retorno ? "alertdialog" : "dialog")" aria-modal="true"
+             aria-labelledby="tabuleiro-titulo" tabindex="-1">
+        <header>
+            <h2 id="tabuleiro-titulo">@(retorno ? "Mesa pausada" : disparada ? "Limite de deslocamento" : aprovar ? "Autorizar movimento?" : "Tabuleiro físico")</h2>
+            @if (!retorno && !decisao)
+            {
+                <button type="button" data-dialog-close aria-label="Fechar painel do tabuleiro" @onclick="OnFechar">×</button>
+            }
+        </header>
+        <div class="sessao-ficha-corpo">
+            @if (retorno)
+            {
+                <p class="tabuleiro-aviso">
+                    <strong>@movimento!.Motivo</strong>
+                    @if (meuPino)
+                    {
+                        <span>Tire sua peça de <b>@movimento.Destino</b> e devolva para <b>@movimento.Origem</b> para liberar a mesa.</span>
+                    }
+                    else
+                    {
+                        <span>A mesa aguarda <b>@movimento.Jogador</b> retirar a peça de <b>@movimento.Destino</b> e voltar para <b>@movimento.Origem</b>.</span>
+                    }
+                </p>
+            }
+            else if (decisao)
+            {
+                <p>@(disparada
+                    ? $"Você ultrapassou seu deslocamento. Quer usar Disparada para permanecer em {movimento!.Destino} e encerrar seu turno?"
+                    : $"Mover {movimento!.Jogador} de {movimento.Origem} para {movimento.Destino}?")</p>
+                <div class="tabuleiro-botoes">
+                    <button type="button" class="tabuleiro-primario" disabled="@ViewModel.ExecutandoAtaqueEntidade"
+                            @onclick="() => ViewModel.DecidirMovimentoTabuleiroAsync(movimento!.Id, true, disparada)">
+                        @(disparada ? "Usar Disparada e encerrar turno" : "Autorizar movimento")
+                    </button>
+                    <button type="button" disabled="@ViewModel.ExecutandoAtaqueEntidade"
+                            @onclick="() => ViewModel.DecidirMovimentoTabuleiroAsync(movimento!.Id, false, disparada)">
+                        @(disparada ? "Voltar à origem" : "Recusar")
+                    </button>
+                </div>
+            }
+
+            @if (mestre && ConexaoTabuleiro.Disponivel && (painel || retorno) && !decisao)
+            {
+                @if (_conexao is null)
+                {
+                    @if (OperatingSystem.IsWindows())
+                    {
+                        <div class="tabuleiro-campos">
+                            <label>Conexão
+                                <select @bind="_modo"><option value="@ModoTabuleiro.CaboMega">USB do Arduino Mega</option><option value="@ModoTabuleiro.CaboEsp">USB do ESP32</option></select>
+                            </label>
+                            <label>Porta COM
+                                <select @bind="_porta">
+                                    <option value="">Selecione a porta COM</option>
+                                    @foreach (var porta in _portas)
+                                    {
+                                        <option value="@porta">@porta</option>
+                                    }
+                                </select>
+                            </label>
+                        </div>
+                        <button type="button" @onclick="AtualizarPortas">Atualizar portas</button>
+                    }
+                    <button type="button" class="tabuleiro-primario" disabled="@(OperatingSystem.IsWindows() && string.IsNullOrEmpty(_porta))"
+                            @onclick="ConectarAsync">@(OperatingSystem.IsAndroid() ? "Conectar ao ESP32 por Bluetooth" : "Conectar por USB")</button>
+                }
+                else
+                {
+                    <button type="button" @onclick="Desconectar">Desconectar tabuleiro</button>
+                }
+
+                <p class="tabuleiro-status" role="status">@_mensagem</p>
+                @if (_conectado && !retorno && movimento is null && _movimentoLocal is null)
+                {
+                    <label>Jogador e casa do pino virtual
+                        <select @bind="_idSelecionado" disabled="@(_vinculando is not null)">
+                            <option value="0">Selecione o jogador</option>
+                            @foreach (var pino in PinosOrdenados())
+                            {
+                                <option value="@pino.IdPino">@pino.Nome · @pino.CoordenadaTexto @(_vinculos.ContainsValue(pino.IdPino) ? "· vinculado" : null)</option>
+                            }
+                        </select>
+                    </label>
+                    <div class="tabuleiro-botoes">
+                        <button type="button" disabled="@(_idSelecionado == 0 || _vinculando is not null || _levantada is not null)" @onclick="PrepararVinculo">Vincular peça</button>
+                        @if (_vinculando is not null)
+                        {
+                            <button type="button" @onclick="CancelarVinculo">Cancelar vínculo</button>
+                        }
+                        @if (_vinculos.Count > 0 || _levantada is not null)
+                        {
+                            <button type="button" @onclick="LimparVinculos">Recalibrar peças</button>
+                        }
+                    </div>
+                }
+            }
+            @if (ViewModel.FeedbackCombateEhErro && (decisao || retorno && mestre) && ViewModel.FeedbackAtaqueEntidade is { } aviso)
+            {
+                <p class="tabuleiro-aviso" role="alert">@aviso</p>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public SessaoViewModel ViewModel { get; set; } = default!;
+    [Parameter] public bool Aberto { get; set; }
+    [Parameter] public EventCallback OnFechar { get; set; }
+
+    private readonly Dictionary<CasaTabuleiro, int> _vinculos = [];
+    private string[] _portas = [];
+    private string _porta = "";
+    private ModoTabuleiro _modo = ModoTabuleiro.CaboMega;
+    private string _mensagem = OperatingSystem.IsAndroid()
+        ? "Pareie Tabuleiro_ESP32 nas configurações do Android antes de conectar."
+        : "Conecte a placa por USB, feche o Monitor Serial e selecione a porta COM.";
+    private CancellationTokenSource? _conexao;
+    private bool _conectado, _descartado, _enviando, _viuRetorno;
+    private int _idSelecionado;
+    private (int IdPino, CasaTabuleiro Casa)? _vinculando, _levantada;
+    private bool _levantouParaVincular;
+    private (int IdPino, CasaTabuleiro Origem, CasaTabuleiro Destino)? _movimentoLocal;
+    private readonly ConfirmacaoRetornoTabuleiro _retorno = new();
+
+    protected override void OnInitialized()
+    {
+        if (ViewModel.Estado.EhMestre && OperatingSystem.IsWindows())
+            AtualizarPortas();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_movimentoLocal is not { } local || _enviando)
+            return;
+
+        if (ViewModel.Estado.TabuleiroFisico is { } atual)
+        {
+            _viuRetorno |= atual.Fase == FaseMovimentoTabuleiro.Retorno && atual.IdPino == local.IdPino;
+            return;
+        }
+
+        if (PinosOrdenados().FirstOrDefault(p => p.IdPino == local.IdPino) is { } pino && CasaDoPino(pino) == local.Destino)
+        {
+            _vinculos.Remove(local.Origem);
+            _vinculos[local.Destino] = local.IdPino;
+            _movimentoLocal = null;
+            _mensagem = $"{pino.Nome} agora está em {local.Destino}.";
+        }
+        else if (_viuRetorno)
+        {
+            _viuRetorno = false;
+            _movimentoLocal = null;
+        }
+    }
+
+    private void AtualizarPortas()
+    {
+        try
+        {
+            _portas = ConexaoTabuleiro.PortasCabo();
+            _porta = _portas.Contains(_porta) ? _porta : _portas.Length == 1 ? _portas[0] : "";
+        }
+        catch (Exception)
+        {
+            _mensagem = "Não foi possível listar as portas COM.";
+        }
+    }
+
+    private async Task ConectarAsync()
+    {
+        if (_conexao is not null || !ViewModel.Estado.EhMestre)
+            return;
+
+        using var conexao = new CancellationTokenSource();
+        _conexao = conexao;
+        _retorno.Reiniciar();
+        _mensagem = "Conectando ao tabuleiro…";
+        bool falhou = false;
+        try
+        {
+            await ConexaoTabuleiro.LerAsync(OperatingSystem.IsAndroid() ? ModoTabuleiro.BluetoothEsp : _modo, _porta,
+                () => InvokeAsync(() =>
+                {
+                    if (_descartado || conexao.IsCancellationRequested) return;
+                    _conectado = true;
+                    _mensagem = ViewModel.Estado.TabuleiroFisico?.Fase == FaseMovimentoTabuleiro.Retorno
+                        ? "Conectado. Faça a retirada do destino e o retorno à origem enquanto a conexão estiver ativa."
+                        : "Conectado. Escolha um jogador para vincular a peça.";
+                    StateHasChanged();
+                }),
+                evento => InvokeAsync(async () =>
+                {
+                    if (_descartado || conexao.IsCancellationRequested || !ViewModel.Estado.EhMestre) return;
+                    await ReceberAsync(evento);
+                    if (!_descartado) StateHasChanged();
+                }), conexao.Token);
+        }
+        catch (Exception erro) when (!conexao.IsCancellationRequested)
+        {
+            falhou = true;
+            _mensagem = erro is InvalidOperationException or IOException or System.ComponentModel.Win32Exception
+                ? erro.Message
+                : "Não foi possível manter a conexão com o tabuleiro. Confira a placa e tente novamente.";
+        }
+        catch (Exception) when (conexao.IsCancellationRequested) { }
+        finally
+        {
+            _conexao = null;
+            _conectado = false;
+            _retorno.Reiniciar();
+            EsquecerPosicoes();
+            if (!falhou) _mensagem = "Tabuleiro desconectado. Reconecte e confira as posições antes de jogar.";
+        }
+    }
+
+    private void Desconectar() => _conexao?.Cancel();
+
+    private IEnumerable<PinoMapaDto> PinosOrdenados()
+    {
+        var ordem = ViewModel.Estado.Encontro.Ordem.Select((entrada, indice) => (entrada.IdPino, indice))
+            .DistinctBy(item => item.IdPino).ToDictionary(item => item.IdPino, item => item.indice);
+        return ViewModel.PinosVisiveisNoMapa.Where(p => p.TipoEntidade == TiposPinoSessao.Personagem)
+            .OrderBy(p => ordem.GetValueOrDefault(p.IdPino, int.MaxValue)).ThenBy(p => p.Nome);
+    }
+
+    private void PrepararVinculo()
+    {
+        var pino = PinosOrdenados().FirstOrDefault(p => p.IdPino == _idSelecionado);
+        if (!_conectado || pino is null || _levantada is not null || ViewModel.Estado.TabuleiroFisico is not null)
+            return;
+        _vinculando = (pino.IdPino, CasaDoPino(pino));
+        _levantouParaVincular = false;
+        _mensagem = $"Levante a peça de {pino.Nome} e recoloque em {pino.CoordenadaTexto}.";
+    }
+
+    private void CancelarVinculo()
+    {
+        _vinculando = null;
+        _levantouParaVincular = false;
+        _mensagem = "Vínculo cancelado.";
+    }
+
+    private void LimparVinculos()
+    {
+        EsquecerPosicoes();
+        _mensagem = "Alinhe as peças com o mapa virtual e refaça os vínculos.";
+    }
+
+    private void EsquecerPosicoes()
+    {
+        _vinculos.Clear();
+        _vinculando = _levantada = null;
+        _movimentoLocal = null;
+        _viuRetorno = _levantouParaVincular = false;
+    }
+
+    private async Task ReceberAsync(EventoTabuleiro evento)
+    {
+        if (ViewModel.Estado.TabuleiroFisico is { } compartilhado)
+        {
+            if (compartilhado.Fase != FaseMovimentoTabuleiro.Retorno) return;
+            _viuRetorno = true;
+            if (_retorno.Receber(compartilhado, evento))
+            {
+                if (await ViewModel.ConfirmarRetornoTabuleiroAsync(compartilhado.Id))
+                    _mensagem = $"Retorno para {compartilhado.Origem} confirmado.";
+                else
+                    _mensagem = "O retorno ainda não foi confirmado. Repita a retirada do destino e o retorno à origem.";
+            }
+            return;
+        }
+
+        if (_movimentoLocal is not null) return;
+        if (_vinculando is { } vinculo)
+        {
+            if (evento.Casa != vinculo.Casa)
+            {
+                if (!evento.Colocada && _vinculos.ContainsKey(evento.Casa))
+                    LimparVinculos();
+                return;
+            }
+            if (!evento.Colocada)
+                _levantouParaVincular = true;
+            else if (_levantouParaVincular)
+            {
+                if (_vinculos.TryGetValue(vinculo.Casa, out int outroPino) && outroPino != vinculo.IdPino)
+                {
+                    _mensagem = $"A casa {vinculo.Casa} já está vinculada a outro jogador.";
+                }
+                else
+                {
+                    foreach (var casa in _vinculos.Where(v => v.Value == vinculo.IdPino).Select(v => v.Key).ToList())
+                        _vinculos.Remove(casa);
+                    _vinculos[vinculo.Casa] = vinculo.IdPino;
+                    _mensagem = $"Peça vinculada em {vinculo.Casa}.";
+                }
+                _vinculando = null;
+            }
+            return;
+        }
+
+        if (!evento.Colocada)
+        {
+            if (_levantada is { } outra && outra.Casa != evento.Casa)
+            {
+                LimparVinculos();
+                _mensagem = "Duas casas foram liberadas durante o mesmo movimento. Alinhe as peças e refaça os vínculos.";
+            }
+            else if (_vinculos.TryGetValue(evento.Casa, out int id))
+                _levantada = (id, evento.Casa);
+            return;
+        }
+
+        if (_levantada is not { } levantada) return;
+        _levantada = null;
+        if (evento.Casa == levantada.Casa) return;
+        _enviando = true;
+        _viuRetorno = false;
+        _movimentoLocal = (levantada.IdPino, levantada.Casa, evento.Casa);
+        try
+        {
+            if (!await ViewModel.ProporMovimentoTabuleiroAsync(levantada.IdPino, levantada.Casa, evento.Casa))
+            {
+                LimparVinculos();
+                _mensagem = ViewModel.FeedbackAtaqueEntidade ?? "O movimento não foi confirmado. Confira as posições antes de vincular.";
+            }
+        }
+        finally
+        {
+            _enviando = false;
+            OnParametersSet();
+        }
+    }
+
+    private static CasaTabuleiro CasaDoPino(PinoMapaDto pino) => new(pino.Coluna, pino.Linha);
+
+    public void Dispose()
+    {
+        _descartado = true;
+        Desconectar();
+    }
+}

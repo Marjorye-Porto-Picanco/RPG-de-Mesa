@@ -337,7 +337,9 @@ h1:focus {
         line-height: 1.2;
     }
 
-    #app :is(.app-shell, .tela-rpg, .mesa-edicao) button:not(.game-home):not(.toolbar-tool):not(.toolbar-user):not(.toolbar-dice):not(.dice-close):not(.dialog-close):not(.btn-fechar):not(.modal-close-btn):not(.btn-add-item):not(.btn-add-item-edicao):not(.remover-item-edicao):not(.mais-adicionar):not(.btn-vinculo):not(.add-button) {
+    #app :is(.app-shell, .tela-rpg, .mesa-edicao) button:not(.game-home):not(.toolbar-tool):not(.toolbar-user):not(.toolbar-dice):not(.dice-close):not(.dialog-close):not(.btn-fechar):not(.modal-close-btn):not(.btn-add-item):not(.btn-add-item-edicao):not(.remover-item-edicao):not(.mais-adicionar):not(.btn-vinculo):not(
+        .add-button, .npc-recurso-add, .npc-recurso-remover, .ataque-cadastro-editar, .editor-add-button
+    ) {
         min-height: 42px;
         padding: 0.55rem 1rem;
         line-height: 1.2;

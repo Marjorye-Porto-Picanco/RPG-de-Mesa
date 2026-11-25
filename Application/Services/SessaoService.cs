@@ -1474,6 +1474,7 @@ public partial class SessaoService
             NpcsCampanha = npcsCampanha,
             MonstrosCampanha = monstrosCampanha,
             Pinos = pinosDto,
+            TabuleiroFisico = controleCombate.Tabuleiro,
             Encontro = idMapaAtivo.HasValue ? controleCombate.ObterMapa(idMapaAtivo.Value) : new Encontro2014(),
             PedidosTeste = controleCombate.Pedidos
                 .Where(p => campanha.IdAccount == idAccountLogado || p.IdConta == idAccountLogado)
@@ -1539,6 +1540,7 @@ public class SessaoEstadoDto
     public List<ParticipanteSessaoDto> Jogadores { get; set; } = new();
     public List<MensagemSessaoDto> Mensagens { get; set; } = new();
     public Encontro2014 Encontro { get; set; } = new();
+    public MovimentoTabuleiro? TabuleiroFisico { get; set; }
     public List<PedidoTeste2014> PedidosTeste { get; set; } = [];
 
     internal SessaoEstadoDto ComMensagens(List<MensagemSessaoDto> mensagens)
