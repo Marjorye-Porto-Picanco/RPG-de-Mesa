@@ -532,12 +532,12 @@
     text-align: left;
 }
 
-.app-shell ::deep .monster-card-open::after {
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    content: "";
-}
+    .app-shell ::deep .monster-card-open::after {
+        position: absolute;
+        z-index: 1;
+        inset: 0;
+        content: "";
+    }
 
 .app-shell ::deep .aside-portrait {
     font-size: clamp(1.8rem, 4vw, 2.5rem);
@@ -658,6 +658,94 @@
     font-size: 12px;
     display: flex;
     align-items: center;
+}
+
+.app-shell ::deep .caixa-ataques {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    height: auto;
+    padding: 10px;
+}
+
+.app-shell ::deep .monstro-ataque-item {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 12px;
+    border: 1px solid rgba(127, 93, 45, 0.34);
+    border-left: 3px solid #98712d;
+    border-radius: 4px;
+    background: rgba(246, 234, 204, 0.72);
+    color: #2b1c14;
+}
+
+.app-shell ::deep .monstro-ataque-topo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.app-shell ::deep .monstro-ataque-nome {
+    color: #241a14;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.app-shell ::deep .monstro-ataque-bonus {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid rgba(152, 113, 45, 0.55);
+    border-radius: 999px;
+    background: rgba(209, 169, 81, 0.25);
+    color: #5b3e12;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.app-shell ::deep .monstro-ataque-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.app-shell ::deep .monstro-ataque-chip {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid rgba(127, 93, 45, 0.26);
+    border-radius: 3px;
+    background: rgba(255, 251, 239, 0.9);
+    color: #3a2815;
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+    .app-shell ::deep .monstro-ataque-chip b {
+        color: #7a5420;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+.app-shell ::deep .monstro-ataque-descricao {
+    margin: 2px 0 0;
+    padding-top: 7px;
+    border-top: 1px dashed rgba(127, 93, 45, 0.3);
+    color: #44331f;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
 .app-shell ::deep .caixa-descricao {
