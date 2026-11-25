@@ -31,7 +31,12 @@
 .turno-bloqueado-txt {
     color: #b59a7a !important;
 }
-
+.turn-action-status {
+    margin-bottom: 6px;
+    color: #f3d379;
+    font-size: 11px;
+    font-weight: 700;
+}
 .action-slots {
     display: grid;
     min-height: 0;

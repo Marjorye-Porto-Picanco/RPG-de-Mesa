@@ -27,29 +27,29 @@
     transition: transform 150ms ease, filter 150ms ease;
 }
 
-.botao-acao-icone > img {
-    display: block;
-    flex: 0 0 22px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    object-fit: contain;
-}
+    .botao-acao-icone > img {
+        display: block;
+        flex: 0 0 22px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        object-fit: contain;
+    }
 
-.botao-acao-icone:hover {
-    transform: scale(1.08);
-    filter: brightness(1.08);
-}
+    .botao-acao-icone:hover {
+        transform: scale(1.08);
+        filter: brightness(1.08);
+    }
 
 .botao-acao-icone-inline {
     position: static;
 }
 
-.botao-acao-icone-inline:has(> span) {
-    width: auto;
-    max-width: none;
-    flex: 0 0 auto;
-    gap: 8px;
-    font-size: inherit;
-    line-height: normal;
-}
+    .botao-acao-icone-inline:has(> span) {
+        width: auto;
+        max-width: none;
+        flex: 0 0 auto;
+        gap: 8px;
+        font-size: inherit;
+        line-height: normal;
+    }

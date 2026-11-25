@@ -87,15 +87,53 @@
                             <span class="field-label-title">Ataques</span>
                             @if (MonstroSelecionado.Ataques?.Any() == true)
                             {
-                                <div class="field-value-box">
+                                <div class="field-value-box caixa-ataques">
                                     @foreach (var ataque in MonstroSelecionado.Ataques)
                                     {
-                                        <p><b>@ataque.Nome</b> · @(ataque.BonusAtaque.HasValue ? $"+{ataque.BonusAtaque}" : "Bônus não informado") · @(ataque.Dano ?? "Dano não informado") @(ataque.TipoDano ?? "") · @(ataque.Alcance ?? "Alcance não informado")</p>
-                                        @if (!string.IsNullOrWhiteSpace(ataque.Descricao)) { <small>@ataque.Descricao</small> }
+                                        <div class="monstro-ataque-item">
+                                            <div class="monstro-ataque-topo">
+                                                <strong class="monstro-ataque-nome">@(string.IsNullOrWhiteSpace(ataque.Nome) ? "Ataque sem nome" : ataque.Nome)</strong>
+                                                @if (ataque.BonusAtaque.HasValue)
+                                                {
+                                                    <span class="monstro-ataque-bonus">
+                                                        @(ataque.BonusAtaque.Value >= 0 ? $"+{ataque.BonusAtaque.Value}" : ataque.BonusAtaque.Value.ToString()) para acertar
+                                                    </span>
+                                                }
+                                            </div>
+
+                                            <div class="monstro-ataque-meta">
+                                                <span class="monstro-ataque-chip">
+                                                    <b>Dano:</b>
+                                                    @(string.IsNullOrWhiteSpace(ataque.Dano) ? "Não informado" : ataque.Dano)
+                                                    @if (!string.IsNullOrWhiteSpace(ataque.TipoDano))
+                                                    {
+                                                        <text> (@ataque.TipoDano)</text>
+                                                    }
+                                                </span>
+                                                <span class="monstro-ataque-chip">
+                                                    <b>Alcance:</b>
+                                                    @(string.IsNullOrWhiteSpace(ataque.Alcance) ? "Não informado" : ataque.Alcance)
+                                                </span>
+                                                @if (!ataque.BonusAtaque.HasValue)
+                                                {
+                                                    <span class="monstro-ataque-chip">
+                                                        <b>Bônus:</b> Não informado
+                                                    </span>
+                                                }
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(ataque.Descricao))
+                                            {
+                                                <p class="monstro-ataque-descricao">@ataque.Descricao</p>
+                                            }
+                                        </div>
                                     }
                                 </div>
                             }
-                            else { <div class="field-value-box">Nenhum ataque cadastrado.</div> }
+                            else
+                            {
+                                <div class="field-value-box">Nenhum ataque cadastrado.</div>
+                            }
                         </div>
                         <div class="form-field full-width">
                             <span class="field-label-title">Descrição</span>
