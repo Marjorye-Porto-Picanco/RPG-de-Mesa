@@ -530,16 +530,32 @@
     .revisao-shell {
         height: auto;
         min-height: 100vh;
+        grid-template-rows: auto 1fr;
         overflow: visible;
     }
 
     .revisao-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
         padding: 8px 12px;
-        flex-wrap: wrap;
+    }
+
+    .revisao-header-acoes {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        margin-left: 0;
+    }
+
+    .revisao-header-acoes .revisao-btn-prim {
+        min-height: 44px;
+    }
+
+    .xp-lote-box input {
+        min-width: 0;
     }
 
     .revisao-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .revisao-grid-stats,
