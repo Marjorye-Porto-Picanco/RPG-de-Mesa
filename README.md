@@ -126,7 +126,7 @@ O `AppDbContext` expõe conjuntos EF Core para as seguintes áreas:
 
 As entidades são mapeadas para tabelas com nomes singulares ou plurais definidos explicitamente em `OnModelCreating`. O modelo inclui chaves e relações como conta–perfil, conta–personagens, mestre–campanha, campanha–participantes e sessão–mensagens/pinos. As propriedades relacionais e algumas tabelas de associação devem ser consultadas diretamente no `AppDbContext` antes de alterações de esquema.
 
-O repositório não contém, na estrutura examinada, uma pasta de migrations do EF Core ou um script de criação/versionamento do banco. A aplicação pressupõe uma base SQL Server compatível já provisionada.
+A aplicação pressupõe uma base SQL Server compatível já provisionada. Para habilitar as notas da sessão nessa base, execute [AdicionarSessaoNota.sql](Infrastructure/Persistence/Sql/AdicionarSessaoNota.sql).
 
 ## Configuração e execução
 
@@ -180,7 +180,7 @@ O `UsuarioService` oferece cadastro, autenticação por nome de usuário ou e-ma
 ## Limitações conhecidas e próximos passos
 
 - A conexão do banco está codificada como fallback em `AppDbContext`; externalizar e proteger a configuração é necessário para uma entrega segura.
-- Não foram encontradas migrations ou scripts versionados de criação do banco no repositório examinado. Documente e versiona o processo de provisionamento/migração antes de novos ambientes.
+- O repositório não contém o esquema completo de criação do banco nem migrations do EF Core.
 - O README anterior menciona Arduino, mas não foi encontrado código de integração com hardware no projeto examinado. Essa funcionalidade precisa ser validada ou implementada separadamente.
 - O projeto referencia Dapper, porém o fluxo de persistência descrito pelo contexto e pelos repositórios usa EF Core; o uso efetivo de Dapper deve ser confirmado antes de removê-lo ou documentá-lo como requisito operacional.
 - Esta documentação não afirma cobertura de testes automatizados; não foi identificada uma suíte de testes na estrutura principal listada.

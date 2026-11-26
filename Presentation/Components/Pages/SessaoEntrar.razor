@@ -33,23 +33,34 @@
             <button class="botao-voltar" type="button" @onclick="ViewModel.VoltarParaHome"><span aria-hidden="true">←</span> Voltar</button>
         </header>
 
-        <!-- 2 ETAPAS INDEPENDENTES -->
-        <ol class="join-progress join-progress-2" aria-label="Etapas para entrar na sessão">
-            <li class="@(ViewModel.EtapaAtual == 1 ? "ativa" : ViewModel.PossuiAlgumaFichaAceita ? "concluida" : "")">
-                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 1 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapaAsync(1)">
-                    <span>@(ViewModel.PossuiAlgumaFichaAceita ? "✓" : "1")</span>
-                    <strong>1. Ficha e Inventário na Campanha (@ViewModel.VinculosDoJogador.Count)</strong>
+        <!-- ABAS INDEPENDENTES DA CAMPANHA -->
+        <ul class="join-progress join-progress-3" aria-label="Seções da campanha">
+            <li class="@(ViewModel.EtapaAtual == 1 ? "ativa" : "")">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 1 ? "page" : null)" @onclick="() => IrParaEtapaLocalAsync(1)">
+                    <strong>Ficha e Inventário na Campanha (@ViewModel.VinculosDoJogador.Count)</strong>
+                </button>
+            </li>
+            <li class="@(ViewModel.EtapaAtual == 3 ? "ativa" : "")">
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 3 ? "page" : null)" @onclick="() => IrParaEtapaLocalAsync(3)">
+                    <strong>Notas da Sessão</strong>
                 </button>
             </li>
             <li class="@(ViewModel.EtapaAtual == 2 ? "ativa" : "")">
-                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 2 ? "step" : null)" @onclick="() => ViewModel.IrParaEtapaAsync(2)">
-                    <span>2</span>
-                    <strong>2. Conectar na Sessão</strong>
+                <button type="button" class="join-step-link" aria-current="@(ViewModel.EtapaAtual == 2 ? "page" : null)" @onclick="() => IrParaEtapaLocalAsync(2)">
+                    <strong>Conectar na Sessão</strong>
                 </button>
             </li>
-        </ol>
+        </ul>
 
-        @if (ViewModel.CampanhaAtual is null)
+        @if (ViewModel.Carregando && ViewModel.CampanhaAtual is null)
+        {
+            <section class="join-step join-card">
+                <p class="page-kicker">Preparação</p>
+                <h2>Carregando campanha...</h2>
+                <p class="join-status" role="status">Buscando dados da campanha…</p>
+            </section>
+        }
+        else if (ViewModel.CampanhaAtual is null)
         {
             <section class="join-step join-card">
                 <p class="page-kicker">Aviso</p>
@@ -62,10 +73,10 @@
         }
         else if (ViewModel.EtapaAtual == 1)
         {
-            <section class="join-step join-card" id="etapa-personagem" aria-labelledby="titulo-personagem">
+            <section class="join-step join-card" id="secao-personagem" aria-labelledby="titulo-personagem">
                 <div class="step-header-row">
                     <div>
-                        <p class="page-kicker">Etapa 1 · Preparação dos Heróis</p>
+                        <p class="page-kicker">Preparação dos Heróis</p>
                         <h2 id="titulo-personagem">Suas Fichas e Equipamentos em @(ViewModel.CampanhaAtual.Nome)</h2>
                     </div>
 
@@ -305,8 +316,8 @@
                         {
                             <span></span>
                         }
-                        <button class="action-primary" type="button" @onclick="() => ViewModel.IrParaEtapaAsync(2)">
-                            Ir para Etapa 2: Conectar com @(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
+                        <button class="action-primary" type="button" @onclick="() => IrParaEtapaLocalAsync(2)">
+                            Conectar com @(ViewModel.FichaCompletaVinculada?.Nome ?? "Ficha") <span aria-hidden="true">→</span>
                         </button>
                     </div>
                 }
@@ -971,8 +982,8 @@
         }
         else if (ViewModel.EtapaAtual == 2)
         {
-            <section class="join-step join-card" id="etapa-confirmacao" aria-labelledby="titulo-confirmacao">
-                <p class="page-kicker">Etapa 2 · Sala de Jogo</p>
+            <section class="join-step join-card" id="secao-confirmacao" aria-labelledby="titulo-confirmacao">
+                <p class="page-kicker">Sala de Jogo</p>
                 <h2 id="titulo-confirmacao">Conectar na Sessão</h2>
                 <p class="join-session-name">Campanha: <strong>@(ViewModel.CampanhaAtual.Nome)</strong></p>
 
@@ -1093,15 +1104,15 @@
                 @if (ViewModel.StatusFichaAtual != "Aceita")
                 {
                     <div class="ficha-alert pendente" style="margin-top: 16px;">
-                        Para entrar na sala de jogo, selecione uma ficha que esteja <strong>Aceita pelo Mestre</strong> (na Etapa 1) ou clique em "Atualizar Status".
+                        Para entrar na sala de jogo, selecione uma ficha que esteja <strong>Aceita pelo Mestre</strong> (em Ficha e Inventário) ou clique em "Atualizar Status".
                     </div>
                 }
 
                 <p class="join-status @(ViewModel.TemErro ? "erro" : "")" role="status" aria-live="polite">@ViewModel.Mensagem</p>
 
                 <div class="join-actions">
-                    <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="() => ViewModel.IrParaEtapaAsync(1)">
-                        ← Voltar para Fichas (Etapa 1)
+                    <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="() => IrParaEtapaLocalAsync(1)">
+                        ← Ir para Fichas e Inventário
                     </button>
                     <div style="display: flex; gap: 10px;">
                         <button class="action-secondary" type="button" disabled="@ViewModel.Carregando" @onclick="ViewModel.RecarregarStatusAsync">
@@ -1121,6 +1132,46 @@
                 </div>
             </section>
         }
+        else if (ViewModel.EtapaAtual == 3)
+        {
+            var sessaoAtual = ViewModel.HistoricoSessoes.FirstOrDefault(sessao => sessao.Ativa);
+            var sessoesFinalizadas = ViewModel.HistoricoSessoes.Where(sessao => !sessao.Ativa).ToList();
+            int numeroAtual = sessaoAtual?.NumeroSessao ?? (sessoesFinalizadas.Any() ? sessoesFinalizadas.Max(s => s.NumeroSessao) : 0) + 1;
+            int numeroSelecionado = _numeroSessaoNotas ?? numeroAtual;
+            string rotuloAtual = sessaoAtual is null ? $"Próxima sessão (#{numeroAtual})" : $"Sessão em andamento (#{numeroAtual})";
+
+            <section class="join-step join-card" id="secao-notas" aria-labelledby="titulo-notas-jogador">
+                @if (_exibirCabecalhoNotas)
+                {
+                    <div class="notas-entrar-cabecalho">
+                        <p class="page-kicker">Anotações do aventureiro</p>
+                        <h2 id="titulo-notas-jogador">Notas</h2>
+                        @if (sessoesFinalizadas.Count > 0)
+                        {
+                            <label class="notas-sessao-seletor">
+                                Sessão
+                                <select @bind="_numeroSessaoNotas">
+                                    <option value="">@rotuloAtual</option>
+                                    @foreach (var sessao in sessoesFinalizadas)
+                                    {
+                                        <option value="@sessao.NumeroSessao">@($"#{sessao.NumeroSessao} · {sessao.Titulo}")</option>
+                                    }
+                                </select>
+                            </label>
+                        }
+                        else
+                        {
+                            <p class="join-session-name">@rotuloAtual</p>
+                        }
+                    </div>
+                }
+
+                <SessaoNotas @key="(ViewModel.CampanhaAtual.IdCampanha, numeroSelecionado)"
+                             IdCampanha="ViewModel.CampanhaAtual.IdCampanha"
+                             NumeroSessao="numeroSelecionado"
+                             OnModoListaAlterado="AtualizarCabecalhoNotas" />
+            </section>
+        }
     </main>
 </div>
 
@@ -1130,12 +1181,31 @@
     [SupplyParameterFromQuery(Name = "campanhaId")]
     public int? CampanhaIdQuery { get; set; }
 
+    private int? _ultimoIdCampanhaNotas;
+    private int? _numeroSessaoNotas;
+    private bool _exibirCabecalhoNotas = true;
+
     protected override async Task OnParametersSetAsync()
     {
         ViewModel.OnChange -= AtualizarUi;
         ViewModel.OnChange += AtualizarUi;
         await ViewModel.InicializarAsync(IdCampanha, CampanhaIdQuery);
+
+        if (_ultimoIdCampanhaNotas != ViewModel.CampanhaAtual?.IdCampanha)
+        {
+            _ultimoIdCampanhaNotas = ViewModel.CampanhaAtual?.IdCampanha;
+            _numeroSessaoNotas = null;
+            _exibirCabecalhoNotas = true;
+        }
     }
+
+    private Task IrParaEtapaLocalAsync(int etapa)
+    {
+        _exibirCabecalhoNotas = true;
+        return ViewModel.IrParaEtapaAsync(etapa);
+    }
+
+    private void AtualizarCabecalhoNotas(bool emLista) => _exibirCabecalhoNotas = emLista;
 
     private void AtualizarUi() => _ = InvokeAsync(StateHasChanged);
 

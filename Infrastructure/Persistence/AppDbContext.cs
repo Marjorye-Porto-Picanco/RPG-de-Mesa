@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RPGdeMesa.Domain.Bestiario;
 using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Itens;
@@ -46,6 +46,7 @@ public class AppDbContext : DbContext
     public DbSet<SessaoPino> SessaoPinos { get; set; }
 
     public DbSet<SessaoMesa> SessoesMesa { get; set; }
+    public DbSet<SessaoNota> SessaoNotas { get; set; }
     public DbSet<SessaoParticipante> SessaoParticipantes { get; set; }
     public DbSet<SessaoMensagem> SessaoMensagens { get; set; }
 
@@ -647,6 +648,22 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(s => s.IdMapaAtivo)
              .IsRequired(false);
+        });
+
+        modelBuilder.Entity<SessaoNota>(e =>
+        {
+            e.ToTable("Sessao_Nota");
+            e.HasKey(nota => nota.IdNota);
+            e.Property(nota => nota.IdNota).HasColumnName("id_nota").ValueGeneratedNever();
+            e.Property(nota => nota.IdCampanha).HasColumnName("id_campanha");
+            e.Property(nota => nota.NumeroSessao).HasColumnName("numero_sessao");
+            e.Property(nota => nota.IdAccount).HasColumnName("id_account");
+            e.Property(nota => nota.Nome).HasColumnName("nome").HasMaxLength(SessaoNota.LimiteNome).IsRequired();
+            e.Property(nota => nota.Conteudo).HasColumnName("conteudo").HasMaxLength(SessaoNota.LimiteConteudo).IsRequired();
+            e.Property(nota => nota.CriadaEmUtc).HasColumnName("criada_em_utc");
+            e.HasIndex(nota => new { nota.IdCampanha, nota.NumeroSessao, nota.IdAccount, nota.CriadaEmUtc });
+            e.HasOne<Campanha>().WithMany().HasForeignKey(nota => nota.IdCampanha).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(nota => nota.IdAccount).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<SessaoParticipante>(e =>

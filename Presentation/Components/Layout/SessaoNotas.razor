@@ -1,0 +1,282 @@
+@using RPGdeMesa.Domain.Common
+@using RPGdeMesa.Domain.Sessoes
+@using Microsoft.Extensions.Logging
+@inject SessaoService SessaoService
+@inject SessaoUsuarioService SessaoUsuario
+@inject ILogger<SessaoNotas> Logger
+
+<section class="notas" aria-label="Anotações da sessão">
+    @if (_telaAtual == TelaNotas.Criar)
+    {
+        <div class="nota-visao-cabecalho">
+            <button type="button" class="notas-secundario" disabled="@_salvando" @onclick="SolicitarVoltarDaCriacao">
+                ← Voltar
+            </button>
+            <h2>Nova nota</h2>
+        </div>
+
+        <form class="nota-form" @onsubmit="AdicionarNotaAsync" @onsubmit:preventDefault="true">
+            <label>
+                Nome da nota
+                <input type="text" class="notas-campo" maxlength="@SessaoNota.LimiteNome" required
+                       disabled="@_salvando" @bind="_nome" @bind:event="oninput" data-dialog-initial />
+            </label>
+            <label>
+                Conteúdo
+                <textarea class="notas-campo" rows="6" maxlength="@SessaoNota.LimiteConteudo" required
+                          disabled="@_salvando" @bind="_conteudo" @bind:event="oninput"></textarea>
+            </label>
+            @if (_erroFormulario is not null)
+            {
+                <p class="notas-erro" role="alert">@_erroFormulario</p>
+            }
+            <div class="nota-form-acoes">
+                <button type="submit" class="notas-primario" disabled="@_salvando">
+                    @(_salvando ? "Adicionando…" : "Adicionar nota")
+                </button>
+            </div>
+        </form>
+    }
+    else if (_telaAtual == TelaNotas.Detalhes && _notaSelecionada is not null)
+    {
+        <div class="nota-visao-cabecalho">
+            <button type="button" class="notas-secundario" @onclick="VoltarParaListaAsync">
+                ← Voltar
+            </button>
+            <h2>@_notaSelecionada.Nome</h2>
+        </div>
+
+        <article class="nota-detalhe">
+            <p class="nota-detalhe-conteudo">@_notaSelecionada.Conteudo</p>
+        </article>
+    }
+    else
+    {
+        <div class="notas-acoes">
+            <input type="search" class="notas-campo" aria-label="Buscar notas" placeholder="Buscar notas"
+                   @bind="_busca" @bind:event="oninput" data-dialog-initial />
+            <button type="button" class="notas-primario" disabled="@(_carregando || _erroLista is not null)"
+                    @onclick="AbrirNovaNotaAsync">Nova nota</button>
+        </div>
+
+        @if (_confirmacao is not null)
+        {
+            <p class="notas-status" role="status">@_confirmacao</p>
+        }
+
+        @if (_carregando)
+        {
+            <p class="notas-status" role="status">Carregando notas…</p>
+        }
+        else if (_erroLista is not null)
+        {
+            <p class="notas-erro" role="alert">@_erroLista</p>
+            <button type="button" class="notas-secundario" @onclick="CarregarNotasAsync">Tentar novamente</button>
+        }
+        else if (_notas.Count == 0)
+        {
+            <p class="notas-vazio">Nenhuma nota nesta sessão.</p>
+        }
+        else
+        {
+            var filtradas = FiltrarNotas();
+            if (filtradas.Count == 0)
+            {
+                <p class="notas-vazio" role="status">Nenhuma nota encontrada.</p>
+            }
+            else
+            {
+                <ul class="notas-lista" role="list">
+                    @foreach (var nota in filtradas)
+                    {
+                        <li @key="nota.IdNota">
+                            <button type="button" class="nota-item-botao" @onclick="() => AbrirDetalhesNotaAsync(nota)">
+                                @nota.Nome
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    }
+</section>
+
+@if (_exibirConfirmacaoVoltar)
+{
+    <div class="nota-confirmar-fundo" role="presentation" @onclick="CancelarVoltarDaCriacao">
+        <section class="nota-confirmar-modal" role="dialog" aria-modal="true"
+                 aria-labelledby="titulo-confirmar-voltar-nota" @onclick:stopPropagation="true">
+            <h2 id="titulo-confirmar-voltar-nota">Voltar para a lista?</h2>
+            <p>Se você voltar agora, as suas anotações serão perdidas.</p>
+            <div class="nota-confirmar-acoes">
+                <button type="button" class="notas-secundario" data-dialog-initial @onclick="CancelarVoltarDaCriacao">
+                    Continuar editando
+                </button>
+                <button type="button" class="notas-perigo" @onclick="ConfirmarVoltarDaCriacaoAsync">
+                    Voltar e descartar
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private enum TelaNotas
+    {
+        Lista,
+        Detalhes,
+        Criar
+    }
+
+    [Parameter, EditorRequired] public int IdCampanha { get; set; }
+    [Parameter, EditorRequired] public int NumeroSessao { get; set; }
+    [Parameter] public EventCallback<bool> OnModoListaAlterado { get; set; }
+
+    private List<SessaoNota> _notas = [];
+    private TelaNotas _telaAtual = TelaNotas.Lista;
+    private SessaoNota? _notaSelecionada;
+    private string _busca = string.Empty;
+    private string _nome = string.Empty;
+    private string _conteudo = string.Empty;
+    private string? _erroLista;
+    private string? _erroFormulario;
+    private string? _confirmacao;
+    private Guid? _idNovaNota;
+    private bool _carregando;
+    private bool _salvando;
+    private bool _exibirConfirmacaoVoltar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await NotificarModoListaAsync();
+        await CarregarNotasAsync();
+    }
+
+    private async Task CarregarNotasAsync()
+    {
+        _carregando = true;
+        _erroLista = null;
+
+        try
+        {
+            _notas = await SessaoService.ListarNotasAsync(IdCampanha, NumeroSessao, SessaoUsuario.IdUsuarioLogado);
+        }
+        catch (DomainException ex)
+        {
+            _erroLista = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao carregar notas da sessão {NumeroSessao} da campanha {IdCampanha}", NumeroSessao, IdCampanha);
+            _erroLista = "Não foi possível carregar as notas.";
+        }
+        finally
+        {
+            _carregando = false;
+        }
+    }
+
+    private IReadOnlyList<SessaoNota> FiltrarNotas()
+    {
+        var busca = _busca.Trim();
+        if (busca.Length == 0)
+            return _notas;
+
+        return _notas.Where(nota => nota.Nome.Contains(busca, StringComparison.OrdinalIgnoreCase) ||
+                                    nota.Conteudo.Contains(busca, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    private Task AbrirNovaNotaAsync()
+    {
+        LimparCamposCriacao();
+        _confirmacao = null;
+        _notaSelecionada = null;
+        _idNovaNota = Guid.NewGuid();
+        return DefinirTelaAsync(TelaNotas.Criar);
+    }
+
+    private Task AbrirDetalhesNotaAsync(SessaoNota nota)
+    {
+        _confirmacao = null;
+        _notaSelecionada = nota;
+        return DefinirTelaAsync(TelaNotas.Detalhes);
+    }
+
+    private Task VoltarParaListaAsync()
+    {
+        _notaSelecionada = null;
+        return DefinirTelaAsync(TelaNotas.Lista);
+    }
+
+    private void SolicitarVoltarDaCriacao()
+    {
+        if (_salvando)
+            return;
+
+        _exibirConfirmacaoVoltar = true;
+    }
+
+    private void CancelarVoltarDaCriacao() => _exibirConfirmacaoVoltar = false;
+
+    private Task ConfirmarVoltarDaCriacaoAsync()
+    {
+        _exibirConfirmacaoVoltar = false;
+        LimparCamposCriacao();
+        return DefinirTelaAsync(TelaNotas.Lista);
+    }
+
+    private void LimparCamposCriacao()
+    {
+        _nome = string.Empty;
+        _conteudo = string.Empty;
+        _erroFormulario = null;
+        _idNovaNota = null;
+    }
+
+    private Task DefinirTelaAsync(TelaNotas novaTela)
+    {
+        _telaAtual = novaTela;
+        return NotificarModoListaAsync();
+    }
+
+    private Task NotificarModoListaAsync()
+    {
+        return OnModoListaAlterado.HasDelegate
+            ? OnModoListaAlterado.InvokeAsync(_telaAtual == TelaNotas.Lista)
+            : Task.CompletedTask;
+    }
+
+    private async Task AdicionarNotaAsync()
+    {
+        if (_salvando || _idNovaNota is not Guid idNota)
+            return;
+
+        _salvando = true;
+        _erroFormulario = null;
+
+        try
+        {
+            var nota = await SessaoService.AdicionarNotaAsync(idNota, IdCampanha, NumeroSessao,
+                SessaoUsuario.IdUsuarioLogado, _nome, _conteudo);
+            _notas.Insert(0, nota);
+            _busca = string.Empty;
+            LimparCamposCriacao();
+            _exibirConfirmacaoVoltar = false;
+            _confirmacao = "Nota adicionada.";
+            await DefinirTelaAsync(TelaNotas.Lista);
+        }
+        catch (DomainException ex)
+        {
+            _erroFormulario = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Falha ao salvar nota da sessão {NumeroSessao} da campanha {IdCampanha}", NumeroSessao, IdCampanha);
+            _erroFormulario = "Não foi possível salvar a nota. Tente novamente.";
+        }
+        finally
+        {
+            _salvando = false;
+        }
+    }
+}

@@ -117,6 +117,31 @@ select {
         color: #f3e7ce;
     }
 
+.session-nav-link:focus-visible,
+.notas-sessao-seletor select:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+.notas-sessao-seletor {
+    display: grid;
+    gap: .3rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: .75rem;
+}
+
+.notas-sessao-seletor select {
+    min-width: 0;
+    max-width: 100%;
+    padding: .55rem .75rem;
+    border: 1px solid #695236;
+    border-radius: 3px;
+    background: #261c14;
+    color: #f3e7ce;
+    font: inherit;
+}
+
 .session-players-panel {
     padding-top: 15px;
     border-top: 1px solid var(--line);

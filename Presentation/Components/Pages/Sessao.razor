@@ -1,4 +1,4 @@
-﻿@page "/sessao/{IdCampanha:int}"
+@page "/sessao/{IdCampanha:int}"
 @page "/sessao/{IdCampanha:int}/{IdPersonagem:int}"
 @using RPGdeMesa.Application.Services
 @using RPGdeMesa.Presentation.ViewModel
@@ -107,96 +107,171 @@ else
 
         <div class="game-layout">
             <!-- BARRA LATERAL DE FERRAMENTAS -->
-            <aside class="game-toolbar @(ViewModel.Estado.EhMestre ? "game-toolbar-master" : "")" aria-label="Ferramentas da mesa">
-                <button class="toolbar-dice @(ViewModel.ExibirModalDados ? "selecionada" : "")"
-                        type="button"
-                        title="Rolar dados"
-                        aria-label="Abrir dados para rolar"
-                        @onclick="ViewModel.AbrirModalDados">
-                    <span class="toolbar-icon" aria-hidden="true">⚄</span>
-                    <span class="toolbar-label" aria-hidden="true">Dados</span>
-                </button>
+  <!-- BARRA LATERAL DE FERRAMENTAS -->
+<aside class="game-toolbar @(ViewModel.Estado.EhMestre ? "game-toolbar-master" : "")" aria-label="Ferramentas da mesa">
+    <button class="toolbar-tool toolbar-dice @(ViewModel.ExibirModalDados ? "selecionada" : "")"
+            type="button"
+            title="Rolar dados"
+            aria-label="Abrir dados para rolar"
+            @onclick="ViewModel.AbrirModalDados">
+        <span class="toolbar-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="8" cy="8" r="1.1" fill="currentColor" stroke="none" />
+                <circle cx="16" cy="8" r="1.1" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+                <circle cx="8" cy="16" r="1.1" fill="currentColor" stroke="none" />
+                <circle cx="16" cy="16" r="1.1" fill="currentColor" stroke="none" />
+            </svg>
+        </span>
+        <span class="toolbar-label" aria-hidden="true">Dados</span>
+    </button>
 
-                @if (ViewModel.Estado.EhMestre)
+    @if (ViewModel.Estado.EhMestre)
+    {
+        <button class="toolbar-tool @(ViewModel.ExibirPainelPinos ? "selecionada" : "")"
+                type="button"
+                title="Administrar Pinos no Mapa (Jogadores, NPCs e Monstros)"
+                aria-label="Administrar pinos no mapa"
+                @onclick="ViewModel.AlternarPainelPinos">
+            <span class="toolbar-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+                </svg>
+            </span>
+            <span class="toolbar-label" aria-hidden="true">Pinos</span>
+        </button>
+    }
+
+    @if (ViewModel.Estado.EhMestre)
+    {
+        <button class="toolbar-tool @(ViewModel.ExibirPainel2014 ? "selecionada" : "")"
+                type="button"
+                title="Encontro 5e 2014"
+                aria-label="Abrir Encontro 5e 2014"
+                aria-haspopup="dialog"
+                aria-expanded="@(ViewModel.ExibirPainel2014 ? "true" : "false")"
+                @onclick="ViewModel.AbrirPainel2014">
+            <span class="toolbar-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 17.5 3 6V3h3l11.5 11.5" />
+                    <path d="M13 19l6-6" />
+                    <path d="M16 16l4 4" />
+                    <path d="M19 21l2-2" />
+                    <path d="M14.5 6.5 18 3h3v3l-3.5 3.5" />
+                    <path d="M5 14l4 4" />
+                    <path d="M7 17l-3 3" />
+                    <path d="M3 19l2 2" />
+                </svg>
+            </span>
+            <span class="toolbar-label" aria-hidden="true">Encontro</span>
+        </button>
+    }
+    else
+    {
+        <button class="toolbar-tool @(ViewModel.ExibirModalAtaque ? "selecionada" : "")"
+                type="button"
+                disabled="@(!ViewModel.EhMeuTurno)"
+                title="@(ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno")"
+                aria-label="Abrir ataque"
+                @onclick="ViewModel.AbrirModalAtaqueAsync">
+            <span class="toolbar-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 17.5 3 6V3h3l11.5 11.5" />
+                    <path d="M13 19l6-6" />
+                    <path d="M16 16l4 4" />
+                    <path d="M19 21l2-2" />
+                    <path d="M14.5 6.5 18 3h3v3l-3.5 3.5" />
+                    <path d="M5 14l4 4" />
+                    <path d="M7 17l-3 3" />
+                    <path d="M3 19l2 2" />
+                </svg>
+            </span>
+            <span class="toolbar-label" aria-hidden="true">Ataque</span>
+        </button>
+    }
+
+    <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva != "inventario" ? "selecionada" : "")"
+            type="button"
+            title="Ficha do Personagem"
+            aria-label="Abrir ficha do personagem"
+            @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
+        <span class="toolbar-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 7.5H2v-3a2 2 0 0 1 4 0v15a2 2 0 0 0 4 0v-3h12v3a2 2 0 0 1-2 2H8" />
+                <path d="M4 2.5h13a2 2 0 0 1 2 2v12" />
+                <path d="M9 6h7M9 9.5h7M9 13h4.5" />
+            </svg>
+        </span>
+        <span class="toolbar-label" aria-hidden="true">Ficha</span>
+    </button>
+
+    <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva == "inventario" ? "selecionada" : "")"
+            type="button"
+            title="Inventário"
+            aria-label="Abrir itens do inventário"
+            @onclick='() => ViewModel.AbrirFichaPropriaAsync("inventario")'>
+        <span class="toolbar-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 6V4a3 3 0 0 1 6 0v2" />
+                <path d="M5 10a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9Z" />
+                <path d="M8 14h8v5H8z" />
+                <path d="M9 10h6" />
+            </svg>
+        </span>
+        <span class="toolbar-label" aria-hidden="true">Itens</span>
+    </button>
+
+    <button class="toolbar-tool @(_exibirNotas ? "selecionada" : "")"
+            type="button"
+            title="Notas"
+            aria-label="Abrir notas"
+            aria-haspopup="dialog"
+            aria-expanded="@(_exibirNotas ? "true" : "false")"
+            @onclick="() => _exibirNotas = true">
+        <span class="toolbar-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19.2 4.9V1.2H1.8v22h12.7l4.7-4.7v-8" />
+                <path d="M14.5 23.2v-4.7h4.7" />
+                <g transform="translate(13.2 13.5) rotate(-45)">
+                    <path d="M-11.5 0l4.3-2.1H9.4a2.1 2.1 0 0 1 0 4.2H-7.2Z" />
+                    <path d="M-7.2-2.1v4.2M-7.2 0H5.8M5.8-2.1v4.2M7.6-2.1v4.2" />
+                </g>
+            </svg>
+        </span>
+        <span class="toolbar-label" aria-hidden="true">Notas</span>
+    </button>
+
+    <span class="toolbar-spacer"></span>
+
+    <details class="toolbar-settings">
+        <summary title="Configurações da mesa" aria-label="Ajustes da mesa">
+            <span class="toolbar-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </span>
+            <span class="toolbar-label" aria-hidden="true">Ajustes</span>
+        </summary>
+        <div class="toolbar-settings-menu">
+            <label class="toolbar-settings-item toolbar-settings-toggle">
+                Coordenadas do mapa
+                <input type="checkbox" role="switch" @bind="_mostrarCoordenadas" />
+                <span class="toolbar-settings-switch" aria-hidden="true"></span>
+            </label>
+            @if (ViewModel.Estado.EhMestre)
+            {
+                @if (ConexaoTabuleiro.Disponivel)
                 {
-                    <button class="toolbar-tool @(ViewModel.ExibirPainelPinos ? "selecionada" : "")"
-                            type="button"
-                            title="Administrar Pinos no Mapa (Jogadores, NPCs e Monstros)"
-                            aria-label="Administrar pinos no mapa"
-                            @onclick="ViewModel.AlternarPainelPinos">
-                        <span class="toolbar-icon" aria-hidden="true">▦</span>
-                        <span class="toolbar-label" aria-hidden="true">Pinos</span>
-                    </button>
+                    <button type="button" class="toolbar-settings-item" @onclick="() => _exibirTabuleiroFisico = true">Tabuleiro físico</button>
                 }
-
-                @if (ViewModel.Estado.EhMestre)
-                {
-                    <button class="toolbar-tool @(ViewModel.ExibirPainel2014 ? "selecionada" : "")"
-                            type="button"
-                            title="Encontro 5e 2014"
-                            aria-label="Abrir Encontro 5e 2014"
-                            aria-haspopup="dialog"
-                            aria-expanded="@(ViewModel.ExibirPainel2014 ? "true" : "false")"
-                            @onclick="ViewModel.AbrirPainel2014">
-                        <span class="toolbar-icon" aria-hidden="true">⚔</span>
-                        <span class="toolbar-label" aria-hidden="true">Encontro</span>
-                    </button>
-                }
-                else
-                {
-                    <button class="toolbar-tool @(ViewModel.ExibirModalAtaque ? "selecionada" : "")"
-                            type="button"
-                            disabled="@(!ViewModel.EhMeuTurno)"
-                            title="@(ViewModel.EhMeuTurno ? "Atacar alvo no mapa" : "Aguarde o Mestre liberar seu turno")"
-                            aria-label="Abrir ataque"
-                            @onclick="ViewModel.AbrirModalAtaqueAsync">
-                        <span class="toolbar-icon" aria-hidden="true">⚔</span>
-                        <span class="toolbar-label" aria-hidden="true">Ataque</span>
-                    </button>
-                }
-
-                <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva != "inventario" ? "selecionada" : "")"
-                        type="button"
-                        title="Ficha do Personagem"
-                        aria-label="Abrir ficha do personagem"
-                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("atributos")'>
-                    <span class="toolbar-icon" aria-hidden="true">▤</span>
-                    <span class="toolbar-label" aria-hidden="true">Ficha</span>
-                </button>
-
-                <button class="toolbar-tool @(ViewModel.ExibirModalFicha && ViewModel.AbaFichaModalAtiva == "inventario" ? "selecionada" : "")"
-                        type="button"
-                        title="Inventário"
-                        aria-label="Abrir itens do inventário"
-                        @onclick='() => ViewModel.AbrirFichaPropriaAsync("inventario")'>
-                    <span class="toolbar-icon" aria-hidden="true">◇</span>
-                    <span class="toolbar-label" aria-hidden="true">Itens</span>
-                </button>
-
-                <span class="toolbar-spacer"></span>
-
-                <details class="toolbar-settings">
-                    <summary title="Configurações da mesa" aria-label="Ajustes da mesa">
-                        <span class="toolbar-icon" aria-hidden="true">⚙</span>
-                        <span class="toolbar-label" aria-hidden="true">Ajustes</span>
-                    </summary>
-                    <div class="toolbar-settings-menu">
-                        <label class="toolbar-settings-item toolbar-settings-toggle">
-                            Coordenadas do mapa
-                            <input type="checkbox" role="switch" @bind="_mostrarCoordenadas" />
-                            <span class="toolbar-settings-switch" aria-hidden="true"></span>
-                        </label>
-                        @if (ViewModel.Estado.EhMestre)
-                        {
-                            @if (ConexaoTabuleiro.Disponivel)
-                            {
-                                <button type="button" class="toolbar-settings-item" @onclick="() => _exibirTabuleiroFisico = true">Tabuleiro físico</button>
-                            }
-                            <a class="toolbar-settings-item" href="@($"/sessao-iniciar/{ViewModel.Estado.IdCampanha}?aba=config")">Configurações</a>
-                        }
-                    </div>
-                </details>
-            </aside>
+                <a class="toolbar-settings-item" href="@($"/sessao-iniciar/{ViewModel.Estado.IdCampanha}?aba=config")">Configurações</a>
+            }
+        </div>
+    </details>
+</aside>
 
             <!-- ÁREA PRINCIPAL: MAPA + CONSOLE -->
             <main class="game-main">
@@ -438,6 +513,22 @@ else
 
     <SessaoTabuleiroFisico @key="(ViewModel.Estado.IdSessao, ViewModel.Estado.IdMapaAtivo)"
                            ViewModel="ViewModel" Aberto="_exibirTabuleiroFisico" OnFechar="() => _exibirTabuleiroFisico = false" />
+
+    @if (_exibirNotas)
+    {
+        <div class="notas-mesa-fundo">
+            <section class="notas-mesa-janela" role="dialog" aria-modal="true" aria-labelledby="notas-mesa-titulo">
+                <header class="notas-mesa-cabecalho">
+                    <h2 id="notas-mesa-titulo">Notas da sessão #@ViewModel.Estado.NumeroSessao</h2>
+                    <button type="button" aria-label="Fechar notas" data-dialog-close @onclick="() => _exibirNotas = false">×</button>
+                </header>
+                <div class="notas-mesa-conteudo">
+                    <SessaoNotas @key="ViewModel.Estado.IdSessao" IdCampanha="ViewModel.Estado.IdCampanha"
+                                 NumeroSessao="ViewModel.Estado.NumeroSessao" />
+                </div>
+            </section>
+        </div>
+    }
 }
 
 @code {
@@ -452,6 +543,7 @@ else
     private bool _mostrarCoordenadas = true;
     private bool _exibirJogadoresMobile;
     private bool _exibirTabuleiroFisico;
+    private bool _exibirNotas;
 
     private readonly int[] _facesPadrao = [4, 6, 8, 10, 12, 20, 100];
     private int _facesSelecionadas = 20;
@@ -472,6 +564,7 @@ else
     {
         if (IdCampanha != _ultimoIdCampanha || IdPersonagem != _ultimoIdPersonagem)
         {
+            _exibirNotas = false;
             _ultimoIdCampanha = IdCampanha;
             _ultimoIdPersonagem = IdPersonagem;
             await ViewModel.InicializarAsync(IdCampanha, IdPersonagem);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -62,6 +62,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public int IdCampanha { get; set; }
         public Campanha? CampanhaAtual { get; private set; }
         public bool SessaoEmAndamento => HistoricoSessoes.Any(s => s.Ativa);
+        public bool CarregandoCampanha { get; private set; }
         public bool CarregandoImagem { get; private set; }
         public bool SalvandoRegistro { get; private set; }
         public List<Monstro> MonstrosDisponiveis { get; private set; } = new();
@@ -270,70 +271,84 @@ namespace RPGdeMesa.Presentation.ViewModel
 
         public async Task CarregarDadosCampanhaAsync(int idCampanha)
         {
-            if (!OpcoesRacaNpc.Any() || !OpcoesClasseNpc.Any())
+            bool trocouCampanha = CampanhaAtual?.IdCampanha != idCampanha;
+            if (trocouCampanha)
             {
-                var racasNpc = await _personagemService.ListarRacasAsync();
-                var classesNpc = await _personagemService.ListarClassesAsync();
-                OpcoesRacaNpc = racasNpc.Select(r => r.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                OpcoesClasseNpc = classesNpc.Select(c => c.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                CarregandoCampanha = true;
+                NotifyStateChanged();
             }
-            IdCampanha = idCampanha;
-            if (IdCampanha > 0)
+
+            try
             {
-                var campanha = await _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
-                if (campanha is not null && campanha.IdAccount != _sessaoUsuario.IdUsuarioLogado)
+                if (!OpcoesRacaNpc.Any() || !OpcoesClasseNpc.Any())
                 {
-                    CampanhaAtual = null;
-                    _catalogoAtaques.Clear();
-                    _navigation.NavigateTo("/campanhas", replace: true);
-                    return;
+                    var racasNpc = await _personagemService.ListarRacasAsync();
+                    var classesNpc = await _personagemService.ListarClassesAsync();
+                    OpcoesRacaNpc = racasNpc.Select(r => r.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    OpcoesClasseNpc = classesNpc.Select(c => c.Nome).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 }
-
-                CampanhaAtual = campanha;
-                var tarefaHistorico = CarregarHistoricoInternoAsync();
-                if (CampanhaAtual != null)
+                IdCampanha = idCampanha;
+                if (IdCampanha > 0)
                 {
-                    var tarefaMonstros = _campanhaService.ObterMonstrosParaSessaoAsync(CampanhaAtual.IdAccount);
-                    var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(CampanhaAtual.IdAccount);
-                    var tarefaItens = _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
-                    var tarefaMapas = _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
-                    var tarefaMagias = _campanhaService.ObterTodasMagiasAsync();
-
-                    await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas, tarefaMagias, tarefaHistorico);
-                    MagiasCatalogo = tarefaMagias.Result;
-                    var catalogoAtaques = tarefaMonstros.Result.SelectMany(m => m.Ataques.Select(a =>
-                        new AtaqueCatalogoCadastro(a.IdMonstroAtaque, m.Nome, a.Nome,
-                            a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao)));
-                    // Ao reativar a origem NPC, diferenciar seus IDs dos IDs de monstros.
-                    // catalogoAtaques = catalogoAtaques.Concat(tarefaNpcs.Result.SelectMany(n => n.Ataques.Select(a =>
-                    //     new AtaqueCatalogoCadastro(a.IdNpcAtaque, n.Nome, a.Nome,
-                    //         a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao))));
-                    _catalogoAtaques = catalogoAtaques.OrderBy(a => a.Nome).ThenBy(a => a.Origem).ToList();
-
-                    var idsMonstrosVinculados = CampanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
-                    MonstrosDisponiveis = tarefaMonstros.Result.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
-
-                    var idsNpcsVinculados = CampanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
-                    NpcsDisponiveis = tarefaNpcs.Result.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
-
-                    var idsItensVinculados = CampanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
-                    ItensDisponiveis = tarefaItens.Result.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
-
-                    var idsMapasVinculados = CampanhaAtual.MapaCampanhas.Select(mc => mc.IdMapa).ToList();
-                    MapasDisponiveis = tarefaMapas.Result.Where(m => !idsMapasVinculados.Contains(m.IdMapa)).ToList();
-
-                    if (MapaSelecionadoParaVer != null && !idsMapasVinculados.Contains(MapaSelecionadoParaVer.IdMapa))
+                    var campanha = await _campanhaService.ObterDetalhesCampanhaAsync(IdCampanha);
+                    if (campanha is not null && campanha.IdAccount != _sessaoUsuario.IdUsuarioLogado)
                     {
-                        MapaSelecionadoParaVer = null;
+                        CampanhaAtual = null;
+                        _catalogoAtaques.Clear();
+                        _navigation.NavigateTo("/campanhas", replace: true);
+                        return;
+                    }
+
+                    CampanhaAtual = campanha;
+                    var tarefaHistorico = CarregarHistoricoInternoAsync();
+                    if (CampanhaAtual != null)
+                    {
+                        var tarefaMonstros = _campanhaService.ObterMonstrosParaSessaoAsync(CampanhaAtual.IdAccount);
+                        var tarefaNpcs = _npcService.ObterNpcsPorUsuarioAsync(CampanhaAtual.IdAccount);
+                        var tarefaItens = _campanhaService.ObterItensParaSessaoAsync(CampanhaAtual.IdAccount);
+                        var tarefaMapas = _campanhaService.ObterMapasDoUsuarioAsync(CampanhaAtual.IdAccount);
+                        var tarefaMagias = _campanhaService.ObterTodasMagiasAsync();
+
+                        await Task.WhenAll(tarefaMonstros, tarefaNpcs, tarefaItens, tarefaMapas, tarefaMagias, tarefaHistorico);
+                        MagiasCatalogo = tarefaMagias.Result;
+                        var catalogoAtaques = tarefaMonstros.Result.SelectMany(m => m.Ataques.Select(a =>
+                            new AtaqueCatalogoCadastro(a.IdMonstroAtaque, m.Nome, a.Nome,
+                                a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao)));
+                        // Ao reativar a origem NPC, diferenciar seus IDs dos IDs de monstros.
+                        // catalogoAtaques = catalogoAtaques.Concat(tarefaNpcs.Result.SelectMany(n => n.Ataques.Select(a =>
+                        //     new AtaqueCatalogoCadastro(a.IdNpcAtaque, n.Nome, a.Nome,
+                        //         a.BonusAtaque, a.Dano, a.TipoDano, a.Alcance, a.Descricao))));
+                        _catalogoAtaques = catalogoAtaques.OrderBy(a => a.Nome).ThenBy(a => a.Origem).ToList();
+
+                        var idsMonstrosVinculados = CampanhaAtual.MonstroCampanhas.Select(mc => mc.IdMonstro).ToList();
+                        MonstrosDisponiveis = tarefaMonstros.Result.Where(m => !idsMonstrosVinculados.Contains(m.IdMonstro)).ToList();
+
+                        var idsNpcsVinculados = CampanhaAtual.NpcCampanhas.Select(nc => nc.IdNpc).ToList();
+                        NpcsDisponiveis = tarefaNpcs.Result.Where(n => !idsNpcsVinculados.Contains(n.IdNpc)).ToList();
+
+                        var idsItensVinculados = CampanhaAtual.ItemCampanhas.Select(ic => ic.IdItem).ToList();
+                        ItensDisponiveis = tarefaItens.Result.Where(i => !idsItensVinculados.Contains(i.IdItem)).ToList();
+
+                        var idsMapasVinculados = CampanhaAtual.MapaCampanhas.Select(mc => mc.IdMapa).ToList();
+                        MapasDisponiveis = tarefaMapas.Result.Where(m => !idsMapasVinculados.Contains(m.IdMapa)).ToList();
+
+                        if (MapaSelecionadoParaVer != null && !idsMapasVinculados.Contains(MapaSelecionadoParaVer.IdMapa))
+                        {
+                            MapaSelecionadoParaVer = null;
+                        }
+                    }
+                    else
+                    {
+                        _catalogoAtaques.Clear();
+                        await tarefaHistorico;
                     }
                 }
-                else
-                {
-                    _catalogoAtaques.Clear();
-                    await tarefaHistorico;
-                }
             }
-            NotifyStateChanged();
+            finally
+            {
+                CarregandoCampanha = false;
+                NotifyStateChanged();
+            }
         }
 
         private async Task CarregarHistoricoInternoAsync()
@@ -978,6 +993,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public void AbrirIniciar() { AbaMenu = "iniciar"; NotifyStateChanged(); }
         public void AbrirConfig() { AbaMenu = "config"; NotifyStateChanged(); }
         public void AbrirMapas() { AbaMenu = "mapas"; NotifyStateChanged(); }
+        public void AbrirNotas() { AbaMenu = "notas"; NotifyStateChanged(); }
         public void AbrirFichas()
         {
             AbaMenu = "fichas";

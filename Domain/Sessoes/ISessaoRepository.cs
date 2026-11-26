@@ -1,4 +1,4 @@
-﻿using RPGdeMesa.Domain.Campanhas;
+using RPGdeMesa.Domain.Campanhas;
 using RPGdeMesa.Domain.Combate;
 using RPGdeMesa.Domain.Itens;
 using RPGdeMesa.Domain.Magias;
@@ -14,6 +14,8 @@ public interface ISessaoRepository
     Task<SessaoMesa?> ObterSessaoPorIdAsync(int idSessao, CancellationToken cancellationToken = default);
     Task<SessaoMesa> AbrirOuReabrirSessaoAsync(int idCampanha, int? idMapaInicial = null);
     Task<SessaoMesa?> ObterSessaoCompletaAsync(int idSessao, CancellationToken cancellationToken = default);
+    Task<List<SessaoNota>> ListarNotasAsync(int idCampanha, int numeroSessao, int idUsuario);
+    Task<SessaoNota> AdicionarNotaAsync(SessaoNota nota, int idUsuario);
     Task<SessaoSinal?> LerSinalSessaoAsync(int idSessao, CancellationToken cancellationToken);
     Task<bool> ConectarParticipanteAsync(int idSessao, int idAccount, int? idPersonagem);
     Task AtualizarHeartbeatAsync(int idSessao, int idAccount, CancellationToken cancellationToken = default);

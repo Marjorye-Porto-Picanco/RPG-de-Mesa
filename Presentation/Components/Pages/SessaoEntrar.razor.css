@@ -1225,3 +1225,52 @@
             display: none;
         }
 }
+
+/* ============================================================
+   Etapa 3: Notas individuais do jogador
+   ============================================================ */
+.join-progress-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.notas-entrar-cabecalho {
+    margin-bottom: 18px;
+}
+
+    .notas-entrar-cabecalho h2 {
+        margin-bottom: 10px;
+    }
+
+.notas-sessao-seletor {
+    display: grid;
+    gap: 5px;
+    width: fit-content;
+    max-width: 100%;
+    color: #d7bd77;
+    font-size: 11px;
+}
+
+    .notas-sessao-seletor select {
+        min-width: 0;
+        max-width: 100%;
+        min-height: 36px;
+        padding: 6px 10px;
+        border: 1px solid rgba(217, 184, 120, 0.4);
+        border-radius: 3px;
+        background: #18110c;
+        color: #f3e7ce;
+        font: inherit;
+        font-size: 12px;
+    }
+
+@media (max-width: 520px) {
+    .join-progress-3 {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+        .join-progress-3 .join-step-link {
+            flex-direction: row;
+            align-items: center;
+            font-size: 11px;
+        }
+}

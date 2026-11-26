@@ -1,4 +1,4 @@
-﻿@page "/sessao-iniciar/{idCampanha:int}"
+@page "/sessao-iniciar/{idCampanha:int}"
 @using RPGdeMesa.Presentation.Components.Layout
 @using RPGdeMesa.Presentation.ViewModel
 @using RPGdeMesa.Domain.Itens
@@ -17,6 +17,7 @@
                     <a class="session-nav-link @(ViewModel.AbaMenu == "iniciar" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirIniciar">Iniciar sessão</a>
                     <a class="session-nav-link @(ViewModel.AbaMenu == "config" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirConfig">Configurações</a>
                     <a class="session-nav-link @(ViewModel.AbaMenu == "mapas" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirMapas">Mapas</a>
+                    <a class="session-nav-link @(ViewModel.AbaMenu == "notas" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirNotas">Notas</a>
                     <a class="session-nav-link @(ViewModel.AbaMenu == "fichas" ? "ativa" : "")" href="javascript:void(0)" @onclick="ViewModel.AbrirFichas" style="display:flex; justify-content:space-between; align-items:center;">
                         <span>Fichas dos Jogadores</span>
                         @if (ViewModel.FichasPendentes.Any())
@@ -80,6 +81,66 @@
                             }
                         </div>
                     </section>
+                }
+
+                @if (ViewModel.AbaMenu == "notas")
+                {
+                    @if (ViewModel.CarregandoCampanha || ViewModel.CampanhaAtual?.IdCampanha != IdCampanha)
+                    {
+                        <header class="page-heading">
+                            <div>
+                                <p class="page-kicker">Anotações do mestre</p>
+                                <h1>Notas</h1>
+                                <p class="page-description">Carregando...</p>
+                            </div>
+                        </header>
+
+                        <div class="session-page-content">
+                            <p class="empty-message" role="status">Carregando notas…</p>
+                        </div>
+                    }
+                    else
+                    {
+                        var sessaoAtual = ViewModel.HistoricoSessoes.FirstOrDefault(sessao => sessao.Ativa);
+                        var sessoesFinalizadas = ViewModel.HistoricoSessoes.Where(sessao => !sessao.Ativa).ToList();
+                        int numeroAtual = sessaoAtual?.NumeroSessao ?? (sessoesFinalizadas.FirstOrDefault()?.NumeroSessao ?? 0) + 1;
+                        int numeroSelecionado = _numeroSessaoNotas ?? numeroAtual;
+                        string rotuloAtual = sessaoAtual is null ? $"Próxima sessão (#{numeroAtual})" : $"Sessão em andamento (#{numeroAtual})";
+
+                        @if (_exibirCabecalhoNotas)
+                        {
+                            <header class="page-heading">
+                                <div>
+                                    <p class="page-kicker">Anotações do mestre</p>
+                                    <h1>Notas</h1>
+                                    @if (sessoesFinalizadas.Count > 0)
+                                    {
+                                        <label class="notas-sessao-seletor">
+                                            Sessão
+                                            <select @bind="_numeroSessaoNotas">
+                                                <option value="">@rotuloAtual</option>
+                                                @foreach (var sessao in sessoesFinalizadas)
+                                                {
+                                                    <option value="@sessao.NumeroSessao">@($"#{sessao.NumeroSessao} · {sessao.Titulo}")</option>
+                                                }
+                                            </select>
+                                        </label>
+                                    }
+                                    else
+                                    {
+                                        <p class="page-description">@rotuloAtual</p>
+                                    }
+                                </div>
+                            </header>
+                        }
+
+                        <div class="session-page-content">
+                            <SessaoNotas @key="(IdCampanha, numeroSelecionado)"
+                                         IdCampanha="IdCampanha"
+                                         NumeroSessao="numeroSelecionado"
+                                         OnModoListaAlterado="AtualizarCabecalhoNotas" />
+                        </div>
+                    }
                 }
 
                 @if (ViewModel.AbaMenu == "config")
@@ -1290,15 +1351,24 @@
     [Parameter] public int IdCampanha { get; set; }
     [SupplyParameterFromQuery(Name = "aba")] public string? AbaInicial { get; set; }
     private AtaqueCadastro? _ataqueEmEdicao;
+    private int? _numeroSessaoNotas;
+    private bool _exibirCabecalhoNotas = true;
 
     protected override async Task OnParametersSetAsync()
     {
         ViewModel.OnChange -= StateHasChanged;
         ViewModel.OnChange += StateHasChanged;
+        if (ViewModel.IdCampanha != IdCampanha)
+        {
+            _numeroSessaoNotas = null;
+            _exibirCabecalhoNotas = true;
+        }
         await ViewModel.CarregarDadosCampanhaAsync(IdCampanha);
         if (string.Equals(AbaInicial, "config", StringComparison.OrdinalIgnoreCase))
             ViewModel.AbrirConfig();
     }
+
+    private void AtualizarCabecalhoNotas(bool emLista) => _exibirCabecalhoNotas = emLista;
 
     public void Dispose()
     {

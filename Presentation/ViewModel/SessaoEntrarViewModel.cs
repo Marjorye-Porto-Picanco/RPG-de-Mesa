@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -60,6 +60,7 @@ namespace RPGdeMesa.Presentation.ViewModel
         public bool PodeConectarNaSessao => StatusFichaAtual == "Aceita" && SessaoAtiva;
 
         public Campanha? CampanhaAtual { get; private set; }
+        public List<HistoricoSessaoDto> HistoricoSessoes { get; private set; } = new();
         public List<Personagem> PersonagensDisponiveis { get; private set; } = new();
         public List<PersonagemCampanha> VinculosDoJogador { get; private set; } = new();
 
@@ -183,7 +184,12 @@ namespace RPGdeMesa.Presentation.ViewModel
                 {
                     CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(idAlvo);
                     SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(idAlvo);
+                    HistoricoSessoes = await _sessaoService.ObterHistoricoSessoesAsync(idAlvo);
                     await SincronizarVinculosDoJogadorAsync();
+                }
+                else
+                {
+                    HistoricoSessoes.Clear();
                 }
             }
             catch (Exception ex)
@@ -733,6 +739,7 @@ namespace RPGdeMesa.Presentation.ViewModel
                 int? idAtual = VinculoSelecionado?.IdPersonagem;
                 CampanhaAtual = await _campanhaService.ObterDetalhesCampanhaAsync(CampanhaAtual.IdCampanha);
                 SessaoAtiva = await _sessaoService.VerificarSessaoAtivaAsync(CampanhaAtual.IdCampanha);
+                HistoricoSessoes = await _sessaoService.ObterHistoricoSessoesAsync(CampanhaAtual.IdCampanha);
                 await SincronizarVinculosDoJogadorAsync(idAtual);
 
                 if (StatusFichaAtual == "Aceita" && SessaoAtiva)
@@ -799,6 +806,10 @@ namespace RPGdeMesa.Presentation.ViewModel
 
                 if (StatusFichaAtual != "Aceita" && FichasAceitasDoJogador.Any())
                     await SelecionarVinculoExistenteAsync(FichasAceitasDoJogador.First());
+            }
+            else if (etapa == 3 && CampanhaAtual != null)
+            {
+                HistoricoSessoes = await _sessaoService.ObterHistoricoSessoesAsync(CampanhaAtual.IdCampanha);
             }
 
             EtapaAtual = etapa;
