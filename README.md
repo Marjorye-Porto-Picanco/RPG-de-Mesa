@@ -26,7 +26,7 @@ O domínio cobre contas e perfis, campanhas, fichas de personagens, bestiário, 
 
 ## Funcionalidades
 
-- Cadastro, autenticação e atualização de perfil de usuário.
+- Cadastro e atualização de perfil de usuário.
 - Criação, consulta, atualização e exclusão de campanhas; participação como mestre ou jogador por código de convite.
 - Envio de fichas para avaliação do mestre, aprovação, recusa com motivo, reenvio e remoção da campanha.
 - Criação e edição de personagens, com atributos, características, vínculo de campanha e inventário.
@@ -92,7 +92,7 @@ RPGdeMesa.slnx                  Solução .NET
 
 | Rota | Página | Finalidade observada |
 |---|---|---|
-| `/`, `/login` | Login | Autenticação |
+| `/`, `/login` | Login  |
 | `/cadastro` | Register | Cadastro |
 | `/home` | Home | Página inicial autenticada |
 | `/perfil` | Perfil | Visualização/edição de perfil |
