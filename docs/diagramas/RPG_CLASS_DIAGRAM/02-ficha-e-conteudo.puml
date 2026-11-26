@@ -1,0 +1,132 @@
+@startuml
+title RPG de Mesa — Ficha e conteúdo de jogo
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam classBackgroundColor #F3F6FB
+skinparam classBorderColor #3C506D
+skinparam classArrowColor #3C506D
+skinparam classFontColor #172B45
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+
+' Domain/Personagens/*.cs, Domain/ValueObjects/AtributosBase.cs, Domain/Npcs/*.cs,
+' Domain/Bestiario/*.cs, Domain/Itens/Item.cs, Domain/Magias/Magia.cs
+' Infrastructure/Persistence/AppDbContext.cs, mapeamentos Personagem, Inventario, Magia, Monstro, NPC e Item.
+class Personagem {
+  IdPersonagem : int
+  IdPersonagemOrigem : int?
+  Nome : string
+  Nivel : int
+  ExperienciaXp : int
+  PvAtual : int
+  PvMaximo : int
+  DefinirAtributos(atributos : AtributosBase) : void
+}
+
+class AtributosBase <<record>> {
+  Forca : int
+  Destreza : int
+  Constituicao : int
+  Inteligencia : int
+  Sabedoria : int
+  Carisma : int
+  {static} CalcularModificador(valorAtributo : int) : int
+}
+class Raca
+class Antecedente
+class Classe {
+  Nome : string
+  DadoVida : string
+}
+class PersonagemClasse {
+  NivelNaClasse : int
+}
+class PersonagemSalvaguarda {
+  Atributo : string
+}
+class PersonagemPericia {
+  NomePericia : string
+}
+
+class PersonagemCirculoMagico {
+  CirculoNivel : int
+  TotalSlots : int
+  SlotsUsados : int
+  TotalSlotsPendente : int?
+  SlotsRestantes : int
+  AplicarDescanso() : void
+}
+class PersonagemMagia
+class Magia {
+  Nome : string
+  CirculoNivel : int
+  TempoConjuracao : string?
+  Alcance : string?
+  Duracao : string?
+}
+
+class Inventario {
+  IdInventario : int
+  CapacidadeCarga : decimal?
+  PesoAtual : decimal?
+}
+class InventarioItem {
+  Quantidade : int
+}
+class Item {
+  Nome : string
+  Tipo : string?
+  Dano : string?
+  TipoDano : string?
+  CaBonus : int
+}
+
+class NPC {
+  Nome : string
+  Nivel : int
+  PvMaximo : int
+  ClasseArmadura : int
+}
+class NpcItem {
+  Quantidade : int
+}
+class NpcMagia
+
+class Monstro {
+  Nome : string
+  NivelDesafio : decimal?
+  PvMaximo : int
+  ClasseArmadura : int
+}
+class MonstroAtaque {
+  Nome : string
+  BonusAtaque : int?
+  Dano : string?
+  TipoDano : string?
+  Alcance : string?
+}
+
+Personagem "0..*" -up- "0..1" Raca
+Personagem "0..*" -up- "0..1" Antecedente
+Personagem .up.> AtributosBase : DefinirAtributos
+Personagem "1" -- "0..*" PersonagemClasse
+PersonagemClasse "0..*" -- "1" Classe
+Personagem "1" -- "0..*" PersonagemSalvaguarda
+Personagem "1" -- "0..*" PersonagemPericia
+Personagem "1" -- "0..*" PersonagemCirculoMagico
+Personagem "1" -- "0..*" PersonagemMagia
+PersonagemMagia "0..*" -- "1" Magia
+Personagem "1" -- "0..1" Inventario
+Inventario "1" -- "0..*" InventarioItem
+InventarioItem "0..*" -- "1" Item
+
+NPC "1" -- "0..*" NpcItem
+NpcItem "0..*" -- "1" Item
+NPC "1" -- "0..*" NpcMagia
+NpcMagia "0..*" -- "1" Magia
+Monstro "1" -- "0..*" MonstroAtaque
+
+NPC -[hidden]right- Monstro
+@enduml

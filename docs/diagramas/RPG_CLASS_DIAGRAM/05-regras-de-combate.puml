@@ -1,0 +1,99 @@
+@startuml
+title RPG de Mesa — Regras e comandos de combate
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam classBackgroundColor #F3F6FB
+skinparam classBorderColor #3C506D
+skinparam classArrowColor #3C506D
+skinparam classFontColor #172B45
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+
+' Domain/Combate/{ComandosCombate2014,CombateEnums2014,RegrasCombate2014,RegrasMagiaCombate}.cs
+' Application/Services/SessaoService.{CombateMestre,Habilidades2014,Resolucao2014}.cs
+class GolpeMestre2014 <<record>> {
+  IdAtaque : int
+  IdAlvo : int
+  Rolagem : Rolagem2014
+  Cobertura : Cobertura2014
+  UsarResistenciaLendaria : bool
+}
+
+class HabilidadeMestre2014 <<record>> {
+  Nome : string
+  IdOrigem : int
+  Alvos : IReadOnlyList<int>
+  Resolucao : ResolucaoHabilidade2014
+  Area : SistemaArea2014
+  Concentracao : bool
+}
+
+class UsoAcao2014 <<record>> {
+  Acao : TipoAcao2014
+  Recurso : string?
+  CustoLendario : int
+  Oportunidade : bool
+}
+
+enum TipoAcao2014 {
+  Acao
+  Bonus
+  Reacao
+  Lendaria
+  Covil
+}
+
+enum ResolucaoHabilidade2014 {
+  Salvaguarda
+  AtaqueMagico
+  Dano
+  Cura
+  Efeito
+}
+
+class EfeitoCombate2014 <<record>> {
+  Condicao : Condicao2014
+  Rodadas : int?
+  Momento : Momento2014
+  Cd : int?
+}
+
+class AtaqueEntidadeDto <<record>> {
+  Nome : string
+  Dano : string?
+  BonusAtaque : int
+  BonusDano : int
+  TemFormulaDano : bool
+}
+
+class RegrasCombate2014 {
+  {static} RolarD20(modo : Rolagem2014, out primeiro : int, out segundo : int?) : int
+  {static} BonusCobertura(cobertura : Cobertura2014) : int
+  {static} AjustarDano(dano : int, afinidade : AfinidadeDano2014) : int
+  {static} RegistrarTesteMorte(d20 : int, combatente : EstadoCombatente2014) : int
+}
+
+class RegrasMagiaCombate {
+  {static} CalcularBonusProficiencia(nivel : int) : int
+  {static} IdentificarTipoConjuracao(nomeClasse : string?) : TipoConjuracaoClasse
+  {static} ObterEspacosPorCirculo(tipo : TipoConjuracaoClasse, nivel : int) : Dictionary<int, int>
+  {static} InferirModoResolucao(magia : MagiaSessaoItemDto) : ModoResolucaoMagia
+}
+
+class EstadoCombatente2014
+class MagiaSessaoItemDto
+
+GolpeMestre2014 --> "0..1" EfeitoCombate2014 : efeito
+HabilidadeMestre2014 --> "0..1" EfeitoCombate2014 : efeito
+HabilidadeMestre2014 --> "1" UsoAcao2014 : custo da ação
+HabilidadeMestre2014 --> ResolucaoHabilidade2014
+UsoAcao2014 --> TipoAcao2014
+AtaqueEntidadeDto ..> RegrasCombate2014 : valida fórmula de dano
+RegrasCombate2014 ..> EstadoCombatente2014 : testes de morte e condições
+RegrasMagiaCombate ..> MagiaSessaoItemDto : interpreta a magia
+
+HabilidadeMestre2014 -[hidden]right- AtaqueEntidadeDto
+AtaqueEntidadeDto -[hidden]right- RegrasMagiaCombate
+@enduml

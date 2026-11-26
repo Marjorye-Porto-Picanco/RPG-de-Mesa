@@ -1,0 +1,100 @@
+@startuml
+title Casos de uso — RPG de Mesa
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Usuário" as Usuario
+actor "Mestre" as Mestre
+actor "Jogador" as Jogador
+actor "Tabuleiro físico" as Tabuleiro
+
+Mestre --|> Usuario
+Jogador --|> Usuario
+
+rectangle "RPG de Mesa" {
+  package "Conta e biblioteca" {
+    usecase "Criar conta" as Registrar
+    usecase "Entrar na conta" as Login
+    usecase "Editar perfil" as Perfil
+    usecase "Consultar biblioteca de conteúdo" as Biblioteca
+    usecase "Cadastrar ou excluir monstros,\nNPCs e itens próprios" as Conteudo
+    usecase "Editar monstro próprio" as EditarMonstro
+  }
+  package "Campanha e fichas" {
+    usecase "Criar ou excluir campanha própria" as GerirCampanha
+    usecase "Consultar campanhas" as ConsultarCampanha
+    usecase "Entrar por código de convite" as EntrarCampanha
+    usecase "Sair da campanha" as SairCampanha
+    usecase "Vincular ou desvincular\nmonstros, NPCs, itens e mapas" as Vincular
+    usecase "Criar e vincular mapa" as CriarMapa
+    usecase "Criar, consultar, editar\nou excluir ficha própria" as Ficha
+    usecase "Ajustar classes, perícias,\nmagias e inventário da ficha" as AjustarFicha
+    usecase "Enviar ou reenviar ficha\npara avaliação" as EnviarFicha
+    usecase "Aprovar ou recusar ficha" as AvaliarFicha
+  }
+  package "Sessão de jogo" {
+    usecase "Abrir ou retomar mesa" as AbrirMesa
+    usecase "Entrar em mesa ativa" as EntrarMesa
+    usecase "Usar chat e registrar rolagens" as Chat
+    usecase "Selecionar mapa e gerenciar pinos" as Pinos
+    usecase "Controlar iniciativa e turnos" as Iniciativa
+    usecase "Atacar, conjurar magia\nou usar ações de combate" as ExecutarAcao
+    usecase "Vincular peças e sincronizar\nmovimento do tabuleiro" as SincronizarTabuleiro
+    usecase "Decidir sobre movimento físico\nou uso de Disparada" as DecidirMovimento
+    usecase "Finalizar e revisar sessão" as Encerrar
+  }
+}
+
+Usuario -- Registrar
+Usuario -- Login
+Usuario -- Perfil
+Usuario -- Biblioteca
+Usuario -- Conteudo
+Usuario -- EditarMonstro
+Usuario -- ConsultarCampanha
+Usuario -- Ficha
+Usuario -- AjustarFicha
+
+Mestre -- GerirCampanha
+Mestre -- Vincular
+Mestre -- CriarMapa
+Mestre -- AvaliarFicha
+Mestre -- AbrirMesa
+Mestre -- Chat
+Mestre -- Pinos
+Mestre -- Iniciativa
+Mestre -- ExecutarAcao
+Mestre -- SincronizarTabuleiro
+Mestre -- DecidirMovimento
+Mestre -- Encerrar
+
+Jogador -- EntrarCampanha
+Jogador -- SairCampanha
+Jogador -- EnviarFicha
+Jogador -- EntrarMesa
+Jogador -- Chat
+Jogador -- ExecutarAcao
+Jogador -- DecidirMovimento
+
+SincronizarTabuleiro -- Tabuleiro
+
+note right of EntrarMesa
+  Requer mesa ativa e ficha aceita
+  pelo mestre da campanha.
+end note
+
+note right of SincronizarTabuleiro
+  Cabo USB no Windows ou
+  Bluetooth ESP32 no Android.
+end note
+
+note right of DecidirMovimento
+  O mestre autoriza movimento fora do turno.
+  O jogador decide se usa Disparada no próprio turno.
+end note
+
+' Fontes: Presentation/Components/Pages (Login, Register, Perfil, BibliotecaGeral,
+' Campanhas, CriarCampanha, PersonagemLib, PersonagemEditar, SessaoEntrarCode,
+' SessaoEntrar, SessaoIniciar, Sessao) e Presentation/Components/Layout/SessaoTabuleiroFisico.razor.
+@enduml

@@ -1,0 +1,51 @@
+@startuml criar-npc
+title Criar NPC
+hide footbox
+
+actor "Usuário autenticado" as Usuario
+boundary "NpcCriar.razor" as Tela
+participant NpcCriarViewModel as VM
+control NpcService as Servico
+entity NPC
+participant "NpcRepository\n(INpcRepository)" as Repositorio
+database "SQL Server" as Banco
+
+Usuario -> Tela : Preencher ficha e selecionar itens e magias
+Usuario -> Tela : Salvar NPC
+Tela -> VM : SalvarAsync()
+alt Conta não identificada
+    VM --> Tela : Solicitar novo login
+else Conta identificada
+    VM -> VM : Montar coleções NpcItem e NpcMagia
+    VM -> Servico : CriarNpcAsync(conta, npc)
+    Servico -> NPC : PrepararNovoNpc(conta, nome)
+    alt Nome ou conta inválidos
+        NPC --> Servico : DomainException
+        Servico --> VM : Mensagem de validação
+        VM --> Tela : Exibir erro
+    else NPC válido
+        Servico -> Repositorio : AdicionarAsync(npc)
+        Repositorio -> Banco : Salvar NPC com itens e magias
+        Servico --> VM : Resultado do cadastro
+        alt Cadastro salvo
+            VM -> VM : Invalidar os caches afetados
+            opt Formulário recebeu uma campanha
+                VM -> Servico : VincularNpcACampanhaAsync(npc, campanha)
+                Servico -> Repositorio : ObterPorIdAsync(npc)
+                Repositorio --> Servico : NPC
+                Servico -> NPC : VincularACampanha(campanha)
+                Servico -> Repositorio : AtualizarAsync(npc)
+                Repositorio -> Banco : Salvar vínculo NpcCampanha
+                Servico --> VM : Resultado do vínculo
+            end
+            VM --> Tela : Exibir resultado do cadastro e do vínculo
+        else Falha ao salvar NPC
+            VM --> Tela : Exibir erro de persistência
+        end
+    end
+end
+
+' Evidências: Presentation/Components/Pages/NpcCriar.razor:16, :387,
+' Presentation/ViewModel/NpcCriarViewModel.cs:239, Application/Services/NpcService.cs:21,
+' Domain/Npcs/NPC.cs:82, Infrastructure/Repositories/NpcRepository.cs:48.
+@enduml

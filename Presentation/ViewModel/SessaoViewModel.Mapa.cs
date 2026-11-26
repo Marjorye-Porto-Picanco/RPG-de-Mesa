@@ -11,6 +11,7 @@ public partial class SessaoViewModel
     private bool _moveuDuranteArraste;
     private bool _gravandoMovimentoPino;
     private int? _idPinoAcoesMestre;
+    private int? _idPinoParaMover;
 
     public double NivelZoom { get; private set; } = 1.0;
     public const double ZoomMinimo = 0.6;
@@ -25,11 +26,20 @@ public partial class SessaoViewModel
     public PinoMapaDto? PinoArrastando { get; private set; }
     public (int Coluna, int Linha)? CelulaDestinoArraste { get; private set; }
     public bool NovoPinoVisivel { get; set; } = true;
+    public bool GravandoMovimentoPino => _gravandoMovimentoPino;
 
     public PinoMapaDto? PinoAcoesMestre => Estado.EhMestre && Estado.SessaoAtiva &&
         Estado.IdMapaAtivo is int idMapa && _idPinoAcoesMestre is int idPino
         ? Estado.Pinos.Find(p => p.IdPino == idPino && p.IdMapa == idMapa)
         : null;
+
+    public PinoMapaDto? PinoParaMover => Estado.EhMestre && Estado.SessaoAtiva &&
+        Estado.IdMapaAtivo is int idMapa && _idPinoParaMover is int idPino
+        ? Estado.Pinos.Find(p => p.IdPino == idPino && p.IdMapa == idMapa)
+        : null;
+
+    public bool ModoPosicionamentoOuMovimentoMestre =>
+        Estado.EhMestre && (PinoParaPosicionar is not null || PinoParaMover is not null);
 
     public IEnumerable<PinoMapaDto> PinosVisiveisNoMapa
     {
@@ -54,8 +64,13 @@ public partial class SessaoViewModel
     {
         if (!Estado.EhMestre) return;
         ExibirPainelPinos = !ExibirPainelPinos;
-        if (!ExibirPainelPinos)
-            PinoParaPosicionar = null;
+        Notificar();
+    }
+
+    public void FecharPainelPinos()
+    {
+        if (!ExibirPainelPinos) return;
+        ExibirPainelPinos = false;
         Notificar();
     }
 
@@ -94,7 +109,12 @@ public partial class SessaoViewModel
         return $"Salvo em: {string.Join(", ", nomes)}";
     }
 
-    public void SelecionarPinoParaPosicionar(string tipoEntidade, int idEntidade, string nome, bool novaInstancia = false)
+    public void SelecionarPinoParaPosicionar(
+        string tipoEntidade,
+        int idEntidade,
+        string nome,
+        bool novaInstancia = false,
+        bool recolherPainel = false)
     {
         if (!Estado.EhMestre) return;
 
@@ -107,30 +127,68 @@ public partial class SessaoViewModel
 
         if (PinoParaPosicionar is not null &&
             PinoParaPosicionar.TipoEntidade == tipoEntidade &&
-            PinoParaPosicionar.IdEntidade == idEntidade && PinoParaPosicionar.NovaInstancia == novaInstancia)
+            PinoParaPosicionar.IdEntidade == idEntidade &&
+            PinoParaPosicionar.NovaInstancia == novaInstancia)
         {
             PinoParaPosicionar = null;
             FeedbackAcao = null;
         }
         else
         {
+            _idPinoParaMover = null;
             PinoParaPosicionar = new PinoSelecionadoParaColocar(tipoEntidade, idEntidade, nome, novaInstancia);
-            FeedbackAcao = $"Clique em uma casa de \"{Estado.MapaAtivo?.NomeRegiao}\" para posicionar \"{nome}\".";
+            FeedbackAcao = null;
+
+            if (recolherPainel)
+                ExibirPainelPinos = false;
         }
+
+        Notificar();
+    }
+
+    public void AlternarMovimentoPinoPorToque(PinoMapaDto pino)
+    {
+        if (!Estado.EhMestre || _gravandoMovimentoPino || !Estado.IdMapaAtivo.HasValue || pino.IdMapa != Estado.IdMapaAtivo)
+            return;
+
+        if (_idPinoParaMover == pino.IdPino)
+        {
+            _idPinoParaMover = null;
+            FeedbackAcao = null;
+        }
+        else
+        {
+            PinoParaPosicionar = null;
+            PinoArrastando = null;
+            CelulaDestinoArraste = null;
+            _moveuDuranteArraste = false;
+            _idPinoAcoesMestre = pino.IdPino;
+            _idPinoParaMover = pino.IdPino;
+            ExibirPainelPinos = false;
+            FeedbackAcao = null;
+        }
+
+        Notificar();
+    }
+
+    public void CancelarMovimentoPinoPorToque()
+    {
+        if (_idPinoParaMover is null) return;
+        _idPinoParaMover = null;
         Notificar();
     }
 
     public void CancelarSelecaoPino()
     {
         PinoParaPosicionar = null;
+        _idPinoParaMover = null;
         FeedbackAcao = null;
         Notificar();
     }
 
     public void IniciarArrastePino(PinoMapaDto pino)
     {
-        if (!Estado.EhMestre || _gravandoMovimentoPino) return;
-        PinoParaPosicionar = null;
+        if (!Estado.EhMestre || _gravandoMovimentoPino || ModoPosicionamentoOuMovimentoMestre) return;
         PinoArrastando = pino;
         CelulaDestinoArraste = (pino.Coluna, pino.Linha);
         _moveuDuranteArraste = false;
@@ -156,40 +214,41 @@ public partial class SessaoViewModel
         Notificar();
     }
 
-    public async Task SoltarPinoNaCelulaAsync(int coluna, int linha)
+    public async Task<bool> MoverPinoPorIdAsync(int idPino, int coluna, int linha)
     {
-        if (!Estado.EhMestre || PinoArrastando is null || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue)
-        {
-            FinalizarArrastePino();
-            return;
-        }
+        if (!Estado.EhMestre || _gravandoMovimentoPino || Estado.IdSessao <= 0 || Estado.IdMapaAtivo is not int idMapaAlvo)
+            return false;
 
-        var pino = PinoArrastando;
-        int? idMapaAlvo = Estado.IdMapaAtivo;
+        var pino = Estado.Pinos.Find(p => p.IdPino == idPino && p.IdMapa == idMapaAlvo);
+        if (pino is null)
+            return false;
+
         int colClamped = Math.Clamp(coluna, 0, GradeColunas - 1);
         int linClamped = Math.Clamp(linha, 0, GradeLinhas - 1);
 
-        bool realmenteMoveu = _moveuDuranteArraste && (pino.Coluna != colClamped || pino.Linha != linClamped);
-
-        PinoArrastando = null;
-        CelulaDestinoArraste = null;
-        _moveuDuranteArraste = false;
-
-        if (!realmenteMoveu)
-        {
-            await AoClicarPinoMapaAsync(pino);
-            return;
-        }
+        if (pino.Coluna == colClamped && pino.Linha == linClamped)
+            return true;
 
         if (Estado.Encontro.Rodada > 0 && Estado.Encontro.IdPinoAtual == pino.IdPino)
         {
-            await UsarControle2014Async((s, e, conta) => s.MoverComReacoes2014Async(e, conta, pino.IdPino, colClamped, linClamped, false));
-            FeedbackAcao = FeedbackAtaqueEntidade;
+            _gravandoMovimentoPino = true;
             Notificar();
-            return;
+            try
+            {
+                bool sucessoCombate = await UsarControle2014Async(
+                    (s, e, conta) => s.MoverComReacoes2014Async(e, conta, pino.IdPino, colClamped, linClamped, false));
+                FeedbackAcao = FeedbackAtaqueEntidade;
+                return sucessoCombate;
+            }
+            finally
+            {
+                _gravandoMovimentoPino = false;
+                Notificar();
+            }
         }
 
         var posicaoAnterior = (pino.Coluna, pino.Linha);
+        bool gravadoComSucesso = false;
         _gravandoMovimentoPino = true;
         pino.Coluna = colClamped;
         pino.Linha = linClamped;
@@ -213,16 +272,48 @@ public partial class SessaoViewModel
 
             if (!sucesso)
             {
-                (pino.Coluna, pino.Linha) = posicaoAnterior;
                 FeedbackAcao = erro;
+                return false;
             }
+
+            gravadoComSucesso = true;
+            return true;
         }
         finally
         {
+            if (!gravadoComSucesso)
+                (pino.Coluna, pino.Linha) = posicaoAnterior;
+
             _gravandoMovimentoPino = false;
             _dbLock.Release();
             Notificar();
         }
+    }
+
+    public async Task SoltarPinoNaCelulaAsync(int coluna, int linha)
+    {
+        if (!Estado.EhMestre || PinoArrastando is null || Estado.IdSessao <= 0 || !Estado.IdMapaAtivo.HasValue)
+        {
+            FinalizarArrastePino();
+            return;
+        }
+
+        var pino = PinoArrastando;
+        int colClamped = Math.Clamp(coluna, 0, GradeColunas - 1);
+        int linClamped = Math.Clamp(linha, 0, GradeLinhas - 1);
+        bool realmenteMoveu = _moveuDuranteArraste && (pino.Coluna != colClamped || pino.Linha != linClamped);
+
+        PinoArrastando = null;
+        CelulaDestinoArraste = null;
+        _moveuDuranteArraste = false;
+
+        if (!realmenteMoveu)
+        {
+            await AoClicarPinoMapaAsync(pino);
+            return;
+        }
+
+        await MoverPinoPorIdAsync(pino.IdPino, colClamped, linClamped);
     }
 
     public async Task AoClicarCelulaMapaAsync(int coluna, int linha)
@@ -233,7 +324,21 @@ public partial class SessaoViewModel
             return;
         }
 
-        if (!Estado.EhMestre || PinoParaPosicionar is null || Estado.IdSessao <= 0)
+        if (!Estado.EhMestre || Estado.IdSessao <= 0 || _gravandoMovimentoPino)
+            return;
+
+        if (PinoParaMover is { } pinoParaMover)
+        {
+            bool moveu = await MoverPinoPorIdAsync(pinoParaMover.IdPino, coluna, linha);
+            if (moveu)
+            {
+                _idPinoParaMover = null;
+                Notificar();
+            }
+            return;
+        }
+
+        if (PinoParaPosicionar is null)
             return;
 
         if (!Estado.IdMapaAtivo.HasValue)
@@ -246,6 +351,9 @@ public partial class SessaoViewModel
         var alvo = PinoParaPosicionar;
         var existente = ObterPinoNoMapa(alvo.TipoEntidade, alvo.IdEntidade);
         bool visivel = alvo.NovaInstancia ? NovoPinoVisivel : existente?.Visivel ?? NovoPinoVisivel;
+
+        _gravandoMovimentoPino = true;
+        Notificar();
 
         await _dbLock.WaitAsync();
         try
@@ -264,6 +372,7 @@ public partial class SessaoViewModel
 
             if (!sucesso)
             {
+                // Mantém PinoParaPosicionar ativo para o mestre tentar outra casa
                 FeedbackAcao = erro;
             }
             else
@@ -279,12 +388,12 @@ public partial class SessaoViewModel
 
             if (atualizado != null)
                 Estado = atualizado;
-
-            Notificar();
         }
         finally
         {
+            _gravandoMovimentoPino = false;
             _dbLock.Release();
+            Notificar();
         }
     }
 
@@ -345,7 +454,12 @@ public partial class SessaoViewModel
                 idPino);
 
             FeedbackAcao = sucesso ? null : erro;
-            if (sucesso && pino is not null) Estado.Pinos.Remove(pino);
+            if (sucesso && pino is not null)
+            {
+                if (_idPinoParaMover == pino.IdPino)
+                    _idPinoParaMover = null;
+                Estado.Pinos.Remove(pino);
+            }
             await SincronizarAposAcaoPinoAsync();
             return sucesso;
         }
@@ -386,6 +500,12 @@ public partial class SessaoViewModel
 
         if (Estado.EhMestre)
         {
+            if (ModoPosicionamentoOuMovimentoMestre)
+            {
+                await AoClicarCelulaMapaAsync(pino.Coluna, pino.Linha);
+                return;
+            }
+
             if (Estado.SessaoAtiva && pino.IdMapa == Estado.IdMapaAtivo && _idPinoAcoesMestre != pino.IdPino)
             {
                 _idPinoAcoesMestre = pino.IdPino;
@@ -469,6 +589,7 @@ public partial class SessaoViewModel
             : null;
 
         PinoParaPosicionar = null;
+        _idPinoParaMover = null;
         PinoArrastando = null;
         CelulaDestinoArraste = null;
         _moveuDuranteArraste = false;

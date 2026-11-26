@@ -1,0 +1,51 @@
+@startuml
+title Criar personagem — ficha da biblioteca
+autonumber
+skinparam shadowing false
+
+actor "Usuário" as Usuario
+boundary "PersonagemCriar.razor" as Tela
+control PersonagemCriarViewModel as VM
+control PersonagemService as Servico
+entity PersonagemRepository as Repositorio
+control CampanhaService as Campanhas
+entity CampanhaRepository as RepoCampanha
+database "SQL Server (EF Core)" as Banco
+
+Usuario -> Tela : Preencher e salvar a ficha
+Tela -> VM : SalvarPersonagemAsync()
+alt Nome ausente ou conta indisponível
+    VM --> Tela : Exibir mensagem de validação
+else Dados iniciais válidos
+    VM -> Servico : CriarPersonagemAsync(idAccount, personagem)
+    Servico -> Servico : personagem.PrepararNovoPersonagem(idAccount)
+    Servico -> Repositorio : AdicionarAsync(personagem)
+    Repositorio -> Banco : Inserir personagem
+    Repositorio --> Servico : Personagem com ID
+    Servico --> VM : Resultado da criação
+    alt Ficha base criada
+        VM -> Servico : SalvarComplementos3FNAsync(id, classes, salvaguardas, perícias, magias)
+        Servico -> Repositorio : SalvarFichaCompleta3FNAsync(...)
+        Repositorio -> Banco : Persistir classes, salvaguardas, perícias e magias
+        Servico --> VM : Resultado dos complementos
+        opt Criação a partir de uma campanha
+            VM -> Campanhas : AdicionarPersonagemNaCampanhaAsync(idCampanha, idPersonagem)
+            Campanhas -> RepoCampanha : EnviarFichaCampanhaAsync(idCampanha, idPersonagem, Aceita)
+            RepoCampanha -> Banco : Persistir vínculo Aceita
+        end
+        VM -> VM : Atualizar caches de personagem e da Home
+        VM --> Tela : Exibir sucesso e navegar para o destino da ficha
+    else Falha na ficha base
+        VM --> Tela : Exibir motivo da falha
+    end
+end
+
+note over VM,Servico
+    A interface verifica o resultado da ficha base.
+    As chamadas de complementos e vínculo são etapas separadas.
+end note
+
+' Fontes: Presentation/ViewModel/PersonagemCriarViewModel.cs,
+' Application/Services/PersonagemService.cs, Application/Services/CampanhaService.cs
+' e Infrastructure/Repositories/PersonagemRepository.cs.
+@enduml

@@ -115,15 +115,72 @@
 .map-stage {
     position: relative;
     display: flex;
+    flex-direction: column;
     min-height: 0;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
     border: 1px solid rgba(207, 178, 113, 0.28);
     background-color: #22251f;
     background-image: radial-gradient(ellipse at center, rgba(125, 128, 94, 0.1), transparent 74%);
     box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
 }
+
+.map-stage-body {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.map-placement-bar {
+    flex: 0 0 auto;
+    z-index: 19;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(212, 180, 96, 0.45);
+    background: rgba(42, 33, 23, 0.96);
+    color: #f3e4c3;
+    font-size: 11px;
+}
+
+.map-placement-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.map-placement-cancel {
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid rgba(212, 180, 96, 0.5);
+    border-radius: 3px;
+    background: rgba(24, 20, 16, 0.85);
+    color: #f0d17f;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+    .map-placement-cancel:hover:not(:disabled) {
+        border-color: #f0d17f;
+        background: rgba(164, 122, 45, 0.28);
+    }
+
+    .map-placement-cancel:focus-visible {
+        outline: 2px solid #ead18a;
+        outline-offset: 2px;
+    }
+
+    .map-placement-cancel:disabled {
+        opacity: 0.55;
+        cursor: wait;
+    }
 
 .map-alert {
     position: absolute;
@@ -259,6 +316,17 @@
         background-color: rgba(212, 180, 96, 0.35);
     }
 
+.map-art.modo-posicionar .mapa-pino {
+    pointer-events: none;
+}
+
+.mapa-pino.em-movimento-toque {
+    opacity: 0.72;
+    outline: 2px dashed #f0d17f;
+    outline-offset: 2px;
+    box-shadow: 0 0 12px rgba(240, 209, 127, 0.75);
+}
+
 /* ==========================================================================
    MODO DISPARADA (DESTAQUE VISUAL DE ALCANCE PARA O JOGADOR)
    ========================================================================== */
@@ -347,10 +415,10 @@
     transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.mapa-pino ::deep .retrato-rpg {
-    background: transparent;
-    color: inherit;
-}
+    .mapa-pino ::deep .retrato-rpg {
+        background: transparent;
+        color: inherit;
+    }
 
     .mapa-pino:hover {
         transform: scale(1.14);
@@ -778,10 +846,10 @@
             color: #f0d17f;
         }
 
-        .map-fit-label {
-            display: inline;
-            font-size: 12px;
-        }
+    .map-fit-label {
+        display: inline;
+        font-size: 12px;
+    }
 
     #nivel-zoom {
         font-size: 12px;
@@ -829,6 +897,23 @@
         display: none;
     }
 
+    .map-placement-bar {
+        padding: 4px 6px 4px 10px;
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .map-placement-text {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .map-placement-cancel {
+        min-height: 44px;
+        padding: 0 14px;
+        font-size: 13px;
+    }
+
     .map-alert {
         inset: 8px 8px auto;
         justify-content: space-between;
@@ -840,13 +925,13 @@
         overflow-wrap: anywhere;
     }
 
-    .map-alert button,
-    .pinos-drawer-close,
-    .pino-btn-acao {
-        width: 44px;
-        min-height: 44px;
-        flex-shrink: 0;
-    }
+        .map-alert button,
+        .pinos-drawer-close,
+        .pino-btn-acao {
+            width: 44px;
+            min-height: 44px;
+            flex-shrink: 0;
+        }
 
     .pinos-drawer {
         width: clamp(270px, 84%, 350px);
@@ -925,6 +1010,7 @@
     line-height: 1;
     pointer-events: none;
 }
+
 .pino-badge-condicao {
     position: absolute;
     top: 0;

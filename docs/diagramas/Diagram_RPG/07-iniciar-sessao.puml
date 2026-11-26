@@ -1,0 +1,69 @@
+@startuml iniciar-sessao
+title Iniciar Sessão
+hide footbox
+
+actor Mestre
+actor Jogador
+boundary "SessaoIniciar.razor" as Preparacao
+boundary "SessaoEntrar.razor" as Entrada
+participant SessaoEntrarViewModel as EntradaVM
+boundary "Sessao.razor" as Sala
+participant SessaoViewModel as VM
+control SessaoService as Servico
+participant "SessaoRepository\n(ISessaoRepository)" as Repositorio
+
+alt Mestre abre ou retoma a mesa
+    Mestre -> Preparacao : Abrir sala de jogo / Retomar sessão
+    Preparacao -> Sala : Navegar com o ID da campanha
+else Jogador pede conexão
+    Jogador -> Entrada : Selecionar ficha aceita e conectar
+    Entrada -> EntradaVM : ConectarNaSalaAsync()
+    alt Campanha carregada e ficha aceita
+        EntradaVM -> Servico : VerificarSessaoAtivaAsync(campanha)
+        Servico --> EntradaVM : Sessão ativa?
+        alt Sessão ativa
+            EntradaVM -> Sala : Navegar com os IDs da campanha e da ficha
+        else Sessão inativa
+            EntradaVM --> Entrada : Informar que o mestre precisa abrir a mesa
+        end
+    else Campanha ausente ou sem ficha aceita
+        EntradaVM --> Entrada : Mostrar impedimento de entrada
+    end
+end
+
+opt A navegação para a sala foi concluída
+    Sala -> VM : InicializarAsync(campanha, ficha opcional)
+    VM -> Servico : EntrarNaSessaoAsync(campanha, conta, nome, ficha opcional)
+    Servico -> Repositorio : ObterCampanhaParaSessaoAsync(campanha)
+    alt Campanha encontrada e usuário com acesso
+        alt Mestre
+            Servico -> Repositorio : AbrirOuReabrirSessaoAsync(campanha, mapa inicial)
+            note over Servico, Repositorio : A criação e a retomada estão detalhadas em Criar Sessão.
+        else Jogador
+            Servico -> Repositorio : ObterSessaoPorCampanhaAsync(campanha)
+            Servico -> Servico : Exigir sessão ativa e selecionar ficha aceita da conta
+        end
+        alt Sessão e ficha válidas para o papel
+            Servico -> Repositorio : ConectarParticipanteAsync(sessão, conta, ficha)
+            opt É preciso anunciar a entrada
+                Servico -> Repositorio : AdicionarMensagemAsync(avisar abertura ou entrada no chat)
+            end
+            Servico -> Servico : MontarEstadoSessaoAsync(campanha, sessão, conta)
+            Servico --> VM : SessaoEstadoDto
+            VM -> VM : IniciarSincronizacaoPeriodica()
+            VM --> Sala : Mostrar o estado inicial da mesa
+        else Sessão inativa ou jogador sem ficha aceita
+            Servico --> VM : Mensagem de erro
+            VM --> Sala : Mostrar falha ao entrar
+        end
+    else Campanha ausente ou acesso recusado
+        Servico --> VM : Mensagem de erro
+        VM --> Sala : Mostrar falha ao entrar
+    end
+end
+
+' Evidências: Presentation/Components/Pages/SessaoIniciar.razor:72, SessaoEntrar.razor:1113,
+' Presentation/ViewModel/SessaoEntrarViewModel.cs:752,
+' Presentation/ViewModel/SessaoViewModel.cs:102, Application/Services/SessaoService.cs:95,
+' Infrastructure/Repositories/SessaoRepository.cs:66.
+@enduml

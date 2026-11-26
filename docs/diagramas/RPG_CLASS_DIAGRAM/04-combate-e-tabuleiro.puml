@@ -1,0 +1,99 @@
+@startuml
+title RPG de Mesa — Combate 2014 e tabuleiro físico
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam classBackgroundColor #F3F6FB
+skinparam classBorderColor #3C506D
+skinparam classArrowColor #3C506D
+skinparam classFontColor #172B45
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+
+' Domain/Combate/{ControleCombate2014,MovimentoTabuleiro}.cs
+' Infrastructure/Repositories/SessaoRepository.Combate2014.cs, serialização do controle na sessão.
+class ControleCombate2014 {
+  Mapas : Dictionary<int, Encontro2014>
+  ObterMapa(idMapa : int) : Encontro2014
+}
+
+class Encontro2014 {
+  Rodada : int
+  IdPinoAtual : int
+  JanelaLendaria : bool
+  Ficha(idPino : int) : EstadoCombatente2014
+  Encerrar() : void
+}
+
+class EstadoCombatente2014 {
+  Concentracao : string?
+  AcaoUsada : bool
+  BonusUsado : bool
+  ReacaoUsada : bool
+  DeslocamentoGasto : decimal
+  SucessosMorte : int
+  FalhasMorte : int
+}
+
+class EntradaIniciativa2014 <<record>> {
+  IdPino : int
+  Iniciativa : int
+  Desempate : int
+  Surpreso : bool
+}
+
+class EfeitoCombate2014 <<record>> {
+  Condicao : Condicao2014
+  Rodadas : int?
+  Momento : Momento2014
+  Cd : int?
+}
+
+class RecursoCombate2014 {
+  Maximo : int
+  Restantes : int
+  RecargaD6 : int?
+  DescansoCurto : bool
+}
+
+class PedidoTeste2014 <<record>>
+class MovimentoPendente2014 <<record>>
+
+class MovimentoTabuleiro <<record>> {
+  IdPino : int
+  IdPersonagem : int
+  Rodada : int
+  Fase : FaseMovimentoTabuleiro
+  Disparada : bool
+}
+
+class CasaTabuleiro <<record struct>> {
+  Coluna : int
+  Linha : int
+  Valida : bool
+}
+
+enum FaseMovimentoTabuleiro {
+  AprovacaoMestre
+  ConfirmacaoDisparada
+  Reacoes
+  Retorno
+}
+
+ControleCombate2014 "1" *-- "0..*" Encontro2014 : por mapa
+ControleCombate2014 "1" *-- "0..*" PedidoTeste2014
+ControleCombate2014 "1" *-- "0..1" MovimentoTabuleiro : movimento físico
+Encontro2014 "1" *-- "0..*" EntradaIniciativa2014 : ordem
+Encontro2014 "1" *-- "0..*" EstadoCombatente2014 : por pino
+Encontro2014 "1" *-- "0..1" MovimentoPendente2014 : reações pendentes
+EstadoCombatente2014 "1" *-- "0..*" EfeitoCombate2014
+EstadoCombatente2014 "1" *-- "0..*" RecursoCombate2014
+MovimentoTabuleiro --> "2" CasaTabuleiro : origem e destino
+MovimentoTabuleiro --> FaseMovimentoTabuleiro : fase
+
+note left of ControleCombate2014
+  O repositório serializa o controle
+  em SessaoMesa.Combate2014Json.
+end note
+@enduml

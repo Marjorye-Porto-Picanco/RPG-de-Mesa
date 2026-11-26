@@ -1,0 +1,51 @@
+@startuml editar-personagem
+title Editar Personagem
+hide footbox
+
+actor Jogador
+boundary "PersonagemEditar.razor" as Tela
+participant PersonagemEditarViewModel as VM
+control PersonagemService as Servico
+participant "PersonagemRepository\n(IPersonagemRepository)" as Repositorio
+database "SQL Server" as Banco
+
+Jogador -> Tela : Abrir /personagem-editar/{id}
+Tela -> VM : CarregarPersonagemAsync(id)
+VM -> Servico : ObterPorIdAsync(id)
+Servico -> Repositorio : ObterPorIdAsync(id)
+Repositorio -> Banco : Consultar personagem e os dados vinculados
+Repositorio --> Servico : Personagem ou resultado vazio
+Servico --> VM : Resultado da consulta
+alt Ficha encontrada
+    VM --> Tela : Apresentar dados para edição
+    Jogador -> Tela : Alterar a ficha e salvar
+    Tela -> VM : SalvarAlteracoesAsync()
+    alt Soma dos níveis fora de 1 a 20
+        VM --> Tela : Pedir correção dos níveis
+    else Soma dos níveis válida
+        VM -> Servico : AtualizarPersonagemAsync(personagem)
+        Servico -> Repositorio : AtualizarAsync(personagem)
+        Repositorio -> Banco : Atualizar os campos editáveis do personagem
+        Servico --> VM : Resultado da atualização principal
+        alt Atualização principal bem-sucedida
+            VM -> Servico : SalvarComplementos3FNAsync(classes, salvaguardas, perícias, magias)
+            Servico -> Repositorio : SalvarFichaCompleta3FNAsync(...)
+            Repositorio -> Banco : Gravar classes, salvaguardas, perícias e grimório
+            Servico --> VM : Resultado dos complementos
+            opt Complementos salvos
+                VM -> VM : Atualizar caches da ficha
+            end
+            VM --> Tela : Exibir confirmação ou falha dos complementos
+        else Falha na atualização principal
+            VM --> Tela : Exibir mensagem de erro
+        end
+    end
+else Ficha ausente
+    VM --> Tela : Informar que o personagem não foi encontrado
+end
+
+' Evidências: Presentation/Components/Pages/PersonagemEditar.razor:553,
+' Presentation/ViewModel/PersonagemEditarViewModel.cs:237, :484,
+' Application/Services/PersonagemService.cs:35, :100,
+' Infrastructure/Repositories/PersonagemRepository.cs:74, :309.
+@enduml

@@ -1,0 +1,65 @@
+@startuml
+title Entrar em campanha — convite e envio de ficha
+autonumber
+skinparam shadowing false
+
+actor Jogador
+boundary "SessaoEntrarCode.razor" as Tela
+control SessaoEntrarCodeViewModel as VM
+control CampanhaService as Campanhas
+entity CampanhaRepository as RepoCampanha
+control PersonagemService as Fichas
+entity PersonagemRepository as RepoFicha
+database "SQL Server (EF Core)" as Banco
+
+Jogador -> Tela : Informar código de convite
+Tela -> VM : ValidarCodigoAsync()
+alt Código vazio ou conta indisponível
+    VM --> Tela : Exibir mensagem de validação
+else Código preenchido e conta autenticada
+    VM -> Campanhas : BuscarPorCodigoAsync(código)
+    Campanhas -> RepoCampanha : ObterPorCodigoConviteAsync(código)
+    RepoCampanha -> Banco : Consultar campanha
+    Campanhas --> VM : Campanha ou null
+    alt Campanha encontrada
+        VM -> Campanhas : EntrarNaCampanhaPorCodigoAsync(conta, código)
+        alt Novo participante e conta diferente do mestre
+            Campanhas -> RepoCampanha : AdicionarUsuarioNaCampanhaAsync(vínculo)
+            RepoCampanha -> Banco : Inserir UsuarioCampanha
+        end
+        Campanhas --> VM : Resultado da participação
+        alt Participação nova ou existente
+            VM -> Campanhas : ObterDetalhesCampanhaAsync(idCampanha)
+            opt Biblioteca ausente no cache
+                VM -> Fichas : ObterPersonagensPorUsuarioAsync(conta)
+            end
+            VM --> Tela : Exibir campanha e fichas disponíveis
+            opt Jogador envia uma ficha
+                Jogador -> Tela : Selecionar personagem, ajustar inventário e enviar
+                Tela -> VM : EnviarFichaParaAnaliseAsync()
+                VM -> Fichas : InstanciarPersonagemParaCampanhaAsync(base, campanha, inventário, itens)
+                Fichas -> RepoFicha : ClonarPersonagemParaCampanhaAsync(...)
+                RepoFicha -> Banco : Persistir cópia da ficha e inventário
+                Fichas --> VM : Resultado da criação da instância
+                alt Instância criada
+                    VM -> Campanhas : EnviarFichaParaAvaliacaoAsync(campanha, instância)
+                    Campanhas -> RepoCampanha : EnviarFichaCampanhaAsync(campanha, instância, Pendente)
+                    RepoCampanha -> Banco : Persistir PersonagemCampanha pendente
+                    Campanhas --> VM : Resultado do envio
+                    VM --> Tela : Exibir envio pendente ou a falha retornada
+                else Falha ao criar instância
+                    VM --> Tela : Exibir motivo da falha
+                end
+            end
+        else Conta do mestre ou falha no vínculo
+            VM --> Tela : Exibir a mensagem recebida
+        end
+    else Campanha ausente
+        VM --> Tela : Informar código não encontrado
+    end
+end
+
+' Fontes: Presentation/ViewModel/SessaoEntrarCodeViewModel.cs,
+' Application/Services/CampanhaService.cs, Application/Services/PersonagemService.cs,
+' Infrastructure/Repositories/CampanhaRepository.cs e Infrastructure/Repositories/PersonagemRepository.cs.
+@enduml

@@ -44,8 +44,7 @@ else if (!string.IsNullOrWhiteSpace(ViewModel.ErroCarregamento))
 }
 else
 {
-    <div class="sala-jogo @(ViewModel.PinoArrastando != null ? "em-arraste-pino" : "")"
-         @onpointerup="ViewModel.FinalizarArrastePino">
+    <div class="sala-jogo">
         <header class="game-header @(ViewModel.Estado.EhMestre ? "" : "game-header-player")">
             <button type="button"
                     class="game-home"
@@ -80,7 +79,7 @@ else
                 {
                     <span>Mesa aberta</span>
                     <span class="presence-divider">·</span>
-                    @ContarOnline() @(ContarOnline() == 1 ? "conectado" : "conectados")
+                    @ContarOnline()@(ContarOnline() == 1 ? "conectado" : "conectados")
                 }
             </div>
 
@@ -211,7 +210,9 @@ else
 
             <!-- PAINEL LATERAL DIREITO: MESTRE E JOGADORES -->
             <aside class="players-panel @(_exibirJogadoresMobile ? "players-expanded" : "")" aria-label="Jogadores">
-                @{ bool podeBloquearTurno = ViewModel.Estado.EhMestre && ViewModel.Estado.IdAccountTurno.HasValue; }
+                @{
+                    bool podeBloquearTurno = ViewModel.Estado.EhMestre && ViewModel.Estado.IdAccountTurno.HasValue;
+                }
                 <button type="button"
                         class="players-toggle"
                         aria-expanded="@(_exibirJogadoresMobile ? "true" : "false")"
@@ -436,7 +437,7 @@ else
     }
 
     <SessaoTabuleiroFisico @key="(ViewModel.Estado.IdSessao, ViewModel.Estado.IdMapaAtivo)"
-                          ViewModel="ViewModel" Aberto="_exibirTabuleiroFisico" OnFechar="() => _exibirTabuleiroFisico = false" />
+                           ViewModel="ViewModel" Aberto="_exibirTabuleiroFisico" OnFechar="() => _exibirTabuleiroFisico = false" />
 }
 
 @code {

@@ -1,0 +1,51 @@
+@startuml gerenciar-inventario
+title Gerenciar Inventário
+hide footbox
+
+actor "Jogador ou mestre" as Usuario
+boundary "SessaoModalFicha.razor" as Tela
+participant SessaoViewModel as VM
+control SessaoService as Servico
+participant "SessaoRepository\n(ISessaoRepository)" as SessaoRepo
+participant "PersonagemRepository\n(IPersonagemRepository)" as PersonagemRepo
+database "SQL Server" as Banco
+
+Usuario -> Tela : Abrir o inventário na ficha da sessão
+Tela -> VM : MudarAbaFichaModal("inventario")
+VM --> Tela : Exibir itens, quantidades, moedas e notas da ficha
+loop Enquanto a ficha está em edição
+    Usuario -> Tela : Adicionar/remover item ou editar valores
+    Tela -> VM : Atualizar itens, quantidades, moedas ou notas em memória
+end
+Usuario -> Tela : Salvar ficha
+Tela -> VM : SalvarFichaEmVisualizacaoAsync()
+alt Sem classe ou nível total fora de 1 a 20
+    VM --> Tela : Pedir correção da ficha
+else Ficha válida
+    VM -> VM : Agrupar itens por ID e montar dados de inventário
+    VM -> Servico : SalvarFichaNaSessaoAsync(campanha, conta, ficha, inventário, itens, magias, classes)
+    Servico -> Servico : Verificar campanha e permissão do mestre ou titular
+    alt Campanha ausente ou edição sem permissão
+        Servico --> VM : Mensagem de erro
+        VM --> Tela : Exibir feedback
+    else Edição autorizada
+        Servico -> PersonagemRepo : AtualizarAsync(ficha) e SalvarClassesPersonagemAsync(...)
+        Servico -> PersonagemRepo : SalvarInventarioPersonagem3FNAsync(ficha, inventário, itens)
+        PersonagemRepo -> Banco : Atualizar dados do inventário e seus vínculos de item
+        Servico -> SessaoRepo : SalvarMagiasPersonagemAsync(ficha, magias)
+        Servico --> VM : Resultado da gravação
+        alt Gravação concluída
+            VM -> Servico : ObterFichaCompletaAsync(ficha)
+            Servico -> SessaoRepo : ObterFichaCompletaAsync(ficha)
+            Servico --> VM : Ficha recarregada
+            VM --> Tela : Exibir inventário atualizado
+        else Falha na gravação
+            VM --> Tela : Exibir erro ao salvar
+        end
+    end
+end
+
+' Evidências: Presentation/Components/Layout/SessaoModalFicha.razor:281,
+' Presentation/ViewModel/SessaoViewModel.ModalFicha.cs:295, :354,
+' Application/Services/SessaoService.cs:911, Infrastructure/Repositories/PersonagemRepository.cs:367.
+@enduml

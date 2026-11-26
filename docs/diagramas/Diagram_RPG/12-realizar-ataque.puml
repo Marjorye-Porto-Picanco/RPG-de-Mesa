@@ -1,0 +1,57 @@
+@startuml realizar-ataque
+title Realizar Ataque
+hide footbox
+
+actor Jogador
+boundary "SessaoAcoes.razor" as Tela
+participant SessaoViewModel as VM
+control SessaoService as Servico
+participant "SessaoRepository\n(ISessaoRepository)" as Repositorio
+
+Jogador -> Tela : Abrir ataque
+Tela -> VM : AbrirModalAtaqueAsync()
+alt Ficha aprovada e jogador no turno
+    VM -> Servico : ObterFichaCompletaAsync(personagem)
+    Servico -> Repositorio : ObterFichaCompletaAsync(personagem)
+    Repositorio --> Servico : Ficha e inventário
+    Servico --> VM : Ficha e inventário
+    VM --> Tela : Exibir armas da ficha e alvos
+    Jogador -> Tela : Selecionar arma e alvo e rolar d20
+    Tela -> VM : RolarDadoAtaqueAsync()
+    alt Arma, turno, ação ou alvo inválido
+        VM --> Tela : Exibir motivo da recusa
+    else Ataque válido
+        VM -> VM : Consumir ação e comparar d20 + bônus com a CA
+        opt Ataque acertou
+            VM --> Tela : Solicitar rolagem de dano
+            Jogador -> Tela : Rolar dano
+            Tela -> VM : RolarDanoEAplicarAsync()
+            VM -> VM : Calcular dano, dobrando a quantidade de dados no crítico
+        end
+        VM -> Servico : RegistrarAtaqueAsync(sessão, mapa, conta, resultado, estado)
+        Servico -> Repositorio : ObterSessaoPorIdAsync(sessão)
+        alt Sessão ativa e conta no turno
+            alt Alvo tem pino e há rodada ativa ou ficha de encontro (2014)
+                Servico -> Servico : RegistrarResultadoJogador2014Async(...)
+                Servico -> Repositorio : AlterarCombate2014Async(...)
+            else Fora do encontro de combate 2014
+                opt Acerto
+                    Servico -> Repositorio : Atualizar PV do personagem ou pino
+                end
+                Servico -> Repositorio : Adicionar mensagens aos canais de chat e combate
+            end
+            Servico --> VM : Resultado do registro
+        else Sessão encerrada ou turno alterado
+            Servico --> VM : Mensagem de erro
+        end
+        VM -> Servico : SincronizarSessaoAsync(campanha, sessão, conta)
+        Servico --> VM : Estado atualizado
+        VM --> Tela : Exibir resultado ou erro do registro
+    end
+else Sem ficha aprovada ou fora do turno
+    VM --> Tela : Mostrar feedback
+end
+
+' Evidências: Presentation/ViewModel/SessaoViewModel.Acoes.cs:967, :1115,
+' Application/Services/SessaoService.cs:683, Application/Services/SessaoService.Resolucao2014.cs:9.
+@enduml

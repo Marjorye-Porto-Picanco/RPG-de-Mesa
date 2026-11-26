@@ -1,0 +1,41 @@
+@startuml
+title Realizar login — usuário ou e-mail e senha
+autonumber
+skinparam shadowing false
+
+actor "Usuário" as Usuario
+boundary "Login.razor" as Tela
+control LoginViewModel as VM
+control UsuarioService as Servico
+entity UsuarioRepository as Repositorio
+control SessaoUsuarioService as Sessao
+database "SQL Server (EF Core)" as Banco
+
+Usuario -> Tela : Informar usuário ou e-mail e senha
+Tela -> VM : EntrarAsync()
+VM -> Servico : AutenticarAsync(loginOuEmail, senha)
+alt Entrada inválida
+    Servico --> VM : Falha de validação
+else Entrada preenchida
+    Servico -> Repositorio : ObterPorLoginOuEmailAsync(loginOuEmail)
+    Repositorio -> Banco : Consultar conta e perfil
+    Banco --> Repositorio : Conta e perfil, se encontrados
+    Repositorio --> Servico : Usuario ou null
+    Servico -> Servico : Verificar senha e status da conta
+    alt Credenciais aceitas
+        Servico --> VM : Usuário autenticado
+        VM -> Sessao : FazerLogin(id, nome, e-mail)
+        Sessao -> Sessao : Persistir dados locais da sessão
+        VM -> Sessao : AtualizarAvatar(perfil.AvatarUrl)
+        VM --> Tela : Navegar para /home
+    else Conta ausente, inativa ou bloqueada, senha inválida ou erro de comunicação
+        Servico --> VM : Mensagem de falha
+    end
+end
+opt Falha informada pelo serviço
+    VM --> Tela : Exibir mensagem de erro
+end
+
+' Fontes: Presentation/Components/Pages/Login.razor, Presentation/ViewModel/LoginViewModel.cs,
+' Application/Services/UsuarioService.cs e Application/Services/SessaoUsuarioService.cs.
+@enduml

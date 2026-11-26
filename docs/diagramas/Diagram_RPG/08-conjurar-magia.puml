@@ -1,0 +1,67 @@
+@startuml conjurar-magia
+title Conjurar Magia
+hide footbox
+
+actor Jogador
+boundary "SessaoAcoes.razor" as Tela
+participant SessaoViewModel as VM
+control SessaoService as Servico
+participant "SessaoRepository\n(ISessaoRepository)" as Repositorio
+
+Jogador -> Tela : Abrir Conjurar Magia
+Tela -> VM : AbrirModalMagiaAsync()
+alt Ficha aprovada, turno do jogador e conjuração disponível
+    VM -> Servico : ObterFichaCompletaAsync(personagem)
+    Servico -> Repositorio : ObterFichaCompletaAsync(personagem)
+    Repositorio --> Servico : Ficha com grimório e espaços de magia
+    Servico --> VM : Ficha
+    VM -> VM : Obter espaços por círculo e calcular bônus e CD
+    VM --> Tela : Exibir magias da ficha
+    Jogador -> Tela : Escolher magia, círculo, modo e alvo quando aplicável
+    Tela -> VM : ExecutarEtapa1MagiaAsync()
+    alt Turno, espaço, ação ou seleção inválidos
+        VM --> Tela : Bloquear a conjuração e exibir feedback quando aplicável
+    else A conjuração exige turnos de preparo
+        VM -> VM : Consumir ação e iniciar carregamento
+        opt Magia usa espaço de círculo
+            VM -> Servico : SalvarCirculosMagicosAsync(personagem, espaços)
+            Servico -> Repositorio : SalvarCirculosMagicosAsync(personagem, espaços)
+        end
+        VM --> Tela : Informar turnos restantes
+    else Pode resolver a magia
+        VM -> VM : Consumir ação se não estiver concluindo carregamento
+        opt Modo de ataque mágico
+            VM -> VM : Rolar d20 e comparar com a CA do alvo
+        end
+        opt Círculo usado é maior que zero
+            VM -> Servico : SalvarCirculosMagicosAsync(personagem, espaços)
+            Servico -> Repositorio : SalvarCirculosMagicosAsync(personagem, espaços)
+        end
+        alt Ataque mágico
+            opt Acerto
+                VM --> Tela : Solicitar rolagem de dano
+                Jogador -> Tela : Rolar dano
+                Tela -> VM : RolarDanoMagiaEAplicarAsync()
+            end
+            VM -> Servico : RegistrarAtaqueAsync(resultado)
+        else Salvaguarda
+            VM -> VM : Rolar salvaguarda e calcular dano
+            opt Há alvo e dano positivo
+                VM -> Servico : RegistrarAtaqueAsync(resultado)
+            end
+            VM -> Servico : EnviarMensagemChatAsync(resultado da salvaguarda)
+        else Cura ou efeito
+            VM -> VM : Montar o resultado para exibição
+            VM -> Servico : EnviarMensagemChatAsync(cura ou efeito)
+        end
+        VM -> Servico : SincronizarSessaoAsync(campanha, sessão, conta)
+        Servico --> VM : Estado atualizado
+        VM --> Tela : Exibir resultado
+    end
+else Sem ficha, fora do turno ou carregamento ainda em curso
+    VM --> Tela : Mostrar feedback
+end
+
+' Evidências: Presentation/ViewModel/SessaoViewModel.Magia.cs:144, :295, :605, :973,
+' Application/Services/SessaoService.cs:683, :847, :902.
+@enduml

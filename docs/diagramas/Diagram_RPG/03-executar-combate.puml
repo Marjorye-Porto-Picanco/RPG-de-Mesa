@@ -1,0 +1,64 @@
+@startuml
+title Executar combate — iniciativa e turnos no mapa ativo
+autonumber
+skinparam shadowing false
+
+actor Mestre
+boundary "SessaoPainelCombate2014.razor" as Painel
+control SessaoViewModel as VM
+control SessaoService as Servico
+entity SessaoRepository as Repositorio
+entity Encontro2014 as Encontro
+database "SQL Server (EF Core)" as Banco
+
+Mestre -> Painel : Selecionar pinos e informar iniciativa
+Painel -> VM : UsarControle2014Async(comando)
+VM -> Servico : ConfigurarIniciativaAsync(estado, conta, entradas, covil)
+Servico -> Repositorio : AlterarCombate2014Async(sessão, mapa, conta, operação, comando)
+Repositorio -> Banco : Carregar sessão ativa, pinos e estado persistido
+Repositorio -> Servico : Executar comando com o estado atual
+alt Ao menos um combatente apto e entradas válidas
+    Servico -> Encontro : Iniciar(entradas, aptos) ou reordenar encontro ativo
+    Servico --> Repositorio : Resultado com atualização do turno
+    Repositorio -> Banco : Salvar estado do combate, turno e registro
+    Repositorio --> Servico : Operação concluída
+    Servico --> VM : Sucesso
+    VM --> Painel : Atualizar ordem e turno
+else Sem autorização, mapa mudou ou iniciativa inválida
+    Servico --> VM : Falha com mensagem
+    VM --> Painel : Exibir motivo
+end
+
+loop Enquanto a iniciativa estiver ativa
+    Mestre -> Painel : Avançar turno
+    Painel -> VM : AvancarEncontro2014Async()
+    VM -> Servico : AvancarIniciativaAsync(estado, conta)
+    Servico -> Repositorio : AlterarCombate2014Async(...)
+    Repositorio -> Servico : Validar turno e reações pendentes
+    alt Turno atual e reações resolvidas
+        Servico -> Encontro : ConcluirTurno(janelaLendaria, aptos)
+        Servico --> Repositorio : Resultado com atualização do turno
+        Repositorio -> Banco : Salvar nova rodada ou turno e registro
+        Servico --> VM : Sucesso
+    else Turno mudou ou há reações pendentes
+        Servico --> VM : Falha com mensagem
+    end
+    VM --> Painel : Atualizar painel ou exibir mensagem
+end
+
+Mestre -> Painel : Encerrar iniciativa
+Painel -> VM : UsarControle2014Async(comando)
+VM -> Servico : EncerrarIniciativaAsync(estado, conta)
+Servico -> Repositorio : AlterarCombate2014Async(...)
+Repositorio -> Servico : Executar comando com o estado atual
+Servico -> Encontro : Encerrar()
+Servico --> Repositorio : Resultado com limpeza do turno
+Repositorio -> Banco : Salvar encerramento e registro
+Servico --> VM : Sucesso
+VM --> Painel : Atualizar painel
+
+' Fontes: Presentation/Components/Layout/SessaoPainelCombate2014.razor,
+' Presentation/ViewModel/SessaoViewModel.Encontro2014.cs,
+' Application/Services/SessaoService.Encontro2014.cs,
+' Domain/Combate/ControleCombate2014.cs e Infrastructure/Repositories/SessaoRepository.Combate2014.cs.
+@enduml

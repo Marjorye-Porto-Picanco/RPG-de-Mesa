@@ -56,6 +56,15 @@
             </div>
         }
         <div class="action-slots">
+            <button class="action-slot @(ViewModel.PinoParaMover?.IdPino == pino.IdPino ? "ativa" : "")"
+                    type="button"
+                    disabled="@(ocupado || ViewModel.GravandoMovimentoPino)"
+                    title="@(ViewModel.PinoParaMover?.IdPino == pino.IdPino ? "Cancelar movimento por toque" : "Mover este pino tocando na casa de destino")"
+                    @onclick="() => AlternarMoverPinoMestre(pino)">
+                <img class="slot-icon-image" src="@IconeMover" width="24" height="24" alt="" />
+                <span>@(ViewModel.PinoParaMover?.IdPino == pino.IdPino ? "Cancelar" : "Mover pino")</span>
+                <small>Mapa</small>
+            </button>
             <button class="action-slot @(ViewModel.ExibirCombateMestre ? "ativa" : "")" type="button"
                     disabled="@(ocupado || !podeAgir || pino.TipoEntidade == TiposPinoSessao.Personagem)"
                     @onclick="ViewModel.AbrirAtaquePinoAcoesMestre">
@@ -103,14 +112,14 @@
                     disabled="@(!ViewModel.EhMeuTurno || ViewModel.ExecutandoDisparada)"
                     title="Movimente seu pino até o deslocamento da raça; não consome ação"
                     @onclick="ViewModel.AlternarModoMovimentoLivreAsync">
-                <img class="slot-icon-image" src="/img/acoes/mover.png" width="24" height="24" alt="" />
+                <img class="slot-icon-image" src="@IconeMover" width="24" height="24" alt="" />
                 <span>@(ViewModel.ModoMovimentoLivreAtivo ? "Cancelar movimento" : "Mover")</span><small>Deslocamento</small>
             </button>
             <button class="action-slot @(ViewModel.ExibirModalAtaque || ViewModel.ExibirCombateMestre ? "ativa" : "")"
                     type="button"
                     disabled="@(ViewModel.Estado.EhMestre
-                        ? ViewModel.ExecutandoAtaqueEntidade
-                        : !ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
+                                        ? ViewModel.ExecutandoAtaqueEntidade
+                                        : !ViewModel.EhMeuTurno || ViewModel.AcoesDisponiveisNoTurno <= 0 || ViewModel.BloquearAtaquePorConjuracao)"
                     title="@(ViewModel.Estado.EhMestre ? "Atacar com monstro ou NPC" : ViewModel.EhMeuTurno ? "Realizar ataque" : "Aguarde o Mestre liberar seu turno")"
                     @onclick="ViewModel.AbrirModalAtaqueAsync">
                 <img class="slot-icon-image" src="@IconeAtaque" width="24" height="24" alt="" />
@@ -1198,6 +1207,7 @@
     [Parameter, EditorRequired]
     public SessaoViewModel ViewModel { get; set; } = default!;
 
+    private const string IconeMover = "/img/acoes/mover.png";
     private const string IconeAtaque = "/img/acoes/ataque.png";
     private const string IconeMagia = "/img/acoes/conjurar-magia.png";
     private const string IconeDisparada = "/img/acoes/disparada.png";
@@ -1242,8 +1252,16 @@
             .OrderBy(p => p.Nome)
             .ToList();
 
+    private void AlternarMoverPinoMestre(PinoMapaDto pino)
+    {
+        _acaoBasicaMestre = null;
+        _exibirHabilidadeMestre = false;
+        ViewModel.AlternarMovimentoPinoPorToque(pino);
+    }
+
     private void AbrirAcaoBasicaMestre(AcaoBasica2014 acao)
     {
+        ViewModel.CancelarMovimentoPinoPorToque();
         ViewModel.LimparFeedbackCombateMestre();
         _exibirHabilidadeMestre = false;
         _tipoAcaoBasicaMestre = TipoAcao2014.Acao;
@@ -1263,6 +1281,7 @@
 
     private void AbrirHabilidadeMestre()
     {
+        ViewModel.CancelarMovimentoPinoPorToque();
         ViewModel.LimparFeedbackCombateMestre();
         _acaoBasicaMestre = null;
         _exibirHabilidadeMestre = true;

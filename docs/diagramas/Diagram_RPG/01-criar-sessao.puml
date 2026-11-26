@@ -1,0 +1,51 @@
+@startuml
+title Criar sessão — registro da sessão ativa
+autonumber
+skinparam shadowing false
+
+actor Mestre
+boundary "SessaoIniciar.razor" as Preparacao
+control SessaoIniciarViewModel as PreparacaoVM
+boundary "Sessao.razor" as Mesa
+control SessaoViewModel as MesaVM
+control SessaoService as Servico
+entity SessaoRepository as Repositorio
+entity SessaoMesa as Sessao
+database "SQL Server (EF Core)" as Banco
+
+Mestre -> Preparacao : Abrir preparação da campanha
+Preparacao -> PreparacaoVM : CarregarDadosCampanhaAsync(idCampanha)
+PreparacaoVM --> Preparacao : Campanha e histórico de sessões
+Mestre -> Preparacao : Abrir Sala de Jogo ou Retomar sessão
+Preparacao -> Mesa : Navegação para /sessao/{idCampanha}
+Mesa -> MesaVM : InicializarAsync(idCampanha)
+MesaVM -> Servico : EntrarNaSessaoAsync(idCampanha, conta, nome)
+Servico -> Repositorio : ObterCampanhaParaSessaoAsync(idCampanha)
+Repositorio --> Servico : Campanha e recursos vinculados
+
+alt Campanha encontrada e conta do mestre
+    Servico -> Repositorio : AbrirOuReabrirSessaoAsync(idCampanha, mapaInicial)
+    Repositorio -> Banco : Abrir transação, bloquear por campanha e consultar sessão ativa
+    alt Nenhuma sessão ativa
+        Repositorio -> Banco : Consultar o último número de sessão
+        Repositorio -> Sessao : new SessaoMesa(campanha, próximo número, mapa inicial)
+        Repositorio -> Banco : Inserir SessaoMesa
+    else Sessão ativa existente
+        Repositorio -> Sessao : AbrirSessao(mapaInicial)
+    end
+    Repositorio -> Banco : Salvar alterações e confirmar transação
+    Repositorio --> Servico : SessaoMesa
+else Campanha ausente
+    Servico --> MesaVM : Falha e mensagem
+    MesaVM --> Mesa : Exibe mensagem
+end
+
+note over Repositorio,Sessao
+    A primeira abertura cria uma sessão já ativa.
+    Retomar reutiliza a sessão ativa da campanha.
+end note
+
+' Fontes: Presentation/Components/Pages/SessaoIniciar.razor e Sessao.razor,
+' Presentation/ViewModel/SessaoViewModel.cs, Application/Services/SessaoService.cs,
+' Infrastructure/Repositories/SessaoRepository.cs e Domain/Sessoes/SessaoMesa.cs.
+@enduml

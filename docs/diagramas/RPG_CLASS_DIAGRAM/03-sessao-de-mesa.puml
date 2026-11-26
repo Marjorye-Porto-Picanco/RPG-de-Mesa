@@ -1,0 +1,87 @@
+@startuml
+title RPG de Mesa — Sessão de mesa
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam classBackgroundColor #F3F6FB
+skinparam classBorderColor #3C506D
+skinparam classArrowColor #3C506D
+skinparam classFontColor #172B45
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+
+' Domain/Sessoes/{SessaoMesa,SessaoParticipante,SessaoMensagem,SessaoPino}.cs
+' Infrastructure/Persistence/AppDbContext.cs, mapeamentos SessaoMesa, SessaoParticipante, SessaoMensagem e SessaoPino.
+class Campanha
+class Mapa
+class Usuario
+class Personagem
+class Magia
+
+class SessaoMesa {
+  IdSessao : int
+  NumeroSessao : int
+  Titulo : string?
+  Ativa : bool
+  DataInicio : DateTime
+  DataFim : DateTime?
+  Resumo : string?
+  XpTotalDistribuido : int
+  Combate2014Json : string?
+  AbrirSessao(idMapaPadrao : int?) : void
+  FinalizarSessao() : void
+  AlterarMapaAtivo(idMapa : int?) : void
+  AtualizarResumo(titulo : string?, resumo : string?, xpTotalDistribuido : int?) : void
+}
+
+class SessaoParticipante {
+  Online : bool
+  UltimoHeartbeat : DateTime
+  TurnosConjuracaoRestantes : int
+  Conectar(idPersonagem : int?) : void
+  AtualizarHeartbeat() : void
+  Desconectar() : void
+}
+
+class SessaoMensagem {
+  IdMensagem : int
+  Canal : string
+  Conteudo : string
+  DataEnvio : DateTime
+}
+
+class SessaoPino {
+  IdPino : int
+  TipoEntidade : string
+  IdEntidade : int
+  Instancia : int
+  Coluna : int
+  Linha : int
+  Visivel : bool
+  PvAtual : int?
+  MoverPara(coluna : int, linha : int) : void
+  AplicarDano(dano : int, pvMaximo : int) : int
+}
+
+Campanha "1" -- "0..*" SessaoMesa
+SessaoMesa "0..*" -- "0..1" Mapa : mapa ativo
+SessaoMesa "1" -- "0..*" SessaoPino
+SessaoMesa "1" -- "0..*" SessaoParticipante
+SessaoMesa "1" -- "0..*" SessaoMensagem
+SessaoPino "0..*" -- "0..1" Mapa : posição no mapa
+SessaoParticipante "0..*" -- "1" Usuario
+SessaoParticipante "0..*" -- "0..1" Personagem : ficha em uso
+SessaoParticipante "0..*" -- "0..1" Magia : conjuração em andamento
+SessaoMensagem "0..*" -- "0..1" Usuario : autor
+
+note left of SessaoMesa
+  Uma campanha pode ter várias sessões no histórico
+  e no máximo uma sessão ativa por vez.
+end note
+
+note right of SessaoPino
+  TipoEntidade e IdEntidade identificam
+  um Personagem, NPC ou Monstro.
+end note
+@enduml

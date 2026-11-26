@@ -1,0 +1,56 @@
+@startuml
+title Criar campanha — cadastro e recursos iniciais
+autonumber
+skinparam shadowing false
+
+actor Mestre
+boundary "CriarCampanha.razor" as Tela
+control CriarCampanhaViewModel as VM
+control CampanhaService as Servico
+entity CampanhaRepository as Repositorio
+entity NpcRepository as Npcs
+database "SQL Server (EF Core)" as Banco
+
+Mestre -> Tela : Preencher dados, selecionar recursos e salvar
+Tela -> VM : SalvarCampanhaAsync()
+alt Nome ausente ou conta indisponível
+    VM --> Tela : Exibir mensagem de validação
+else Dados iniciais válidos
+    VM -> Servico : CriarCampanhaCompletaAsync(conta, nome, notas, código, capa, recursos)
+    Servico -> Repositorio : CodigoConviteExisteAsync(código)
+    Repositorio -> Banco : Consultar código de convite
+    Repositorio --> Servico : Código livre ou em uso
+    alt Código livre
+        Servico -> Repositorio : Listar itens e monstros do catálogo
+        Servico -> Servico : Vincular conteúdo padrão e recursos selecionados
+        Servico -> Repositorio : AdicionarAsync(novaCampanha)
+        Repositorio -> Banco : Inserir campanha com vínculos existentes
+        opt NPCs novos
+            Servico -> Npcs : AdicionarAsync(npc preparado para a campanha)
+            Npcs -> Banco : Inserir NPC e vínculo
+        end
+        loop Mapas escolhidos
+            opt Mapa novo
+                Servico -> Repositorio : AdicionarMapaAsync(mapa)
+                Repositorio -> Banco : Inserir mapa
+            end
+            Servico -> Repositorio : AdicionarMapaCampanhaAsync(idCampanha, idMapa)
+            Repositorio -> Banco : Persistir vínculo do mapa
+        end
+        Servico --> VM : Resultado da criação
+    else Código já utilizado
+        Servico --> VM : Falha por código em uso
+    end
+    alt Criação bem-sucedida
+        VM -> Servico : ObterCampanhasPorUsuarioAsync(conta)
+        VM -> VM : Atualizar caches com a nova campanha
+        VM --> Tela : Navegar para /campanhas
+    else Falha de validação ou persistência
+        VM --> Tela : Exibir a mensagem recebida
+    end
+end
+
+' Fontes: Presentation/ViewModel/CriarCampanhaViewModel.cs,
+' Application/Services/CampanhaService.cs, Infrastructure/Repositories/CampanhaRepository.cs
+' e Infrastructure/Repositories/NpcRepository.cs.
+@enduml

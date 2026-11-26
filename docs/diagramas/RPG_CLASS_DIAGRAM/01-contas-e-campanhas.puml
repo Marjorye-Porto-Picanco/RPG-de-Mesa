@@ -1,0 +1,86 @@
+@startuml
+title RPG de Mesa — Contas e campanhas
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam classBackgroundColor #F3F6FB
+skinparam classBorderColor #3C506D
+skinparam classArrowColor #3C506D
+skinparam classFontColor #172B45
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+
+' Domain/Usuarios/{Usuario,Perfil}.cs, Domain/Campanha/*.cs
+' Infrastructure/Persistence/AppDbContext.cs, mapeamentos Usuario, Perfil, Campanha e vínculos.
+class Usuario {
+  IdAccount : int
+  UsarName : string
+  EMail : string
+  StatusConta : string
+  AtualizarPerfil(nomeExibicao : string?, biografia : string?, avatarUrl : string?) : void
+}
+
+class Perfil {
+  IdPerfil : int
+  NomeExibicao : string?
+  Biografia : string?
+  AvatarUrl : string?
+}
+
+class Campanha {
+  IdCampanha : int
+  Nome : string
+  CodigoConvite : string
+  DataCriacao : DateTime
+  AtualizarDetalhes(nome : string, descricao : string?) : void
+}
+
+class UsuarioCampanha
+class PersonagemCampanha {
+  StatusAprovacao : string
+  MotivoRecusa : string?
+  AprovarFicha() : void
+  RecusarFicha(motivo : string?) : void
+  ReenviarFicha() : void
+}
+
+class MapaCampanha
+class MonstroCampanha
+class NpcCampanha
+class ItemCampanha
+
+class Personagem
+class Monstro
+class NPC
+class Item
+class Mapa {
+  IdMapa : int
+  NomeRegiao : string
+  Escala : string?
+}
+
+Usuario "1" -left- "0..1" Perfil
+Usuario "1" -- "0..*" Campanha : mestre
+Usuario "1" -- "0..*" Personagem : fichas
+Usuario "1" -- "0..*" UsuarioCampanha
+Campanha "1" -- "0..*" UsuarioCampanha : integrantes
+
+Campanha "1" -- "0..*" PersonagemCampanha
+PersonagemCampanha "0..*" -- "1" Personagem
+
+Campanha "1" -- "0..*" MapaCampanha
+MapaCampanha "0..*" -- "1" Mapa
+Campanha "1" -- "0..*" MonstroCampanha
+MonstroCampanha "0..*" -- "1" Monstro
+Campanha "1" -- "0..*" NpcCampanha
+NpcCampanha "0..*" -- "1" NPC
+Campanha "1" -- "0..*" ItemCampanha
+ItemCampanha "0..*" -- "1" Item
+
+note right of PersonagemCampanha
+  Uma ficha enviada para avaliação fica Pendente.
+  O mestre pode marcá-la como Aceita ou Recusada.
+  O reenvio volta a ficha para Pendente.
+end note
+@enduml
